@@ -26,7 +26,7 @@ class ProjectionNodeTest : public BaseTest {
     _b = _mock_node->get_column("b");
     _c = _mock_node->get_column("c");
 
-    // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
+    // SELECT c, a, b, b+c AS some_addition, a+c [...]
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
   }
 
@@ -63,5 +63,48 @@ TEST_F(ProjectionNodeTest, NodeExpressions) {
   EXPECT_EQ(*_projection_node->node_expressions.at(3), *add_(_b, _c));
   EXPECT_EQ(*_projection_node->node_expressions.at(4), *add_(_a, _c));
 }
+
+TEST_F(ProjectionNodeTest, NoConstraints) {
+  EXPECT_TRUE(_mock_node->get_constraints()->empty());
+  EXPECT_TRUE(_projection_node->get_constraints()->empty());
+}
+
+TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
+  const auto pk_constraint_0_1 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto unique_constraint_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+
+  _mock_node = MockNode::make(
+      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a", UniqueConstraintDefinitions{pk_constraint_0_1, unique_constraint_2});
+
+  // Reorder columns (0, 1, 2) -> (1, 2, 0)
+  _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
+  const auto projection_constraints = _projection_node->get_constraints();
+
+  const auto pk_constraint_1_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{1}, ColumnID{2}}, IsPrimaryKey::Yes};
+  const auto unique_constraint_0 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}}, IsPrimaryKey::No};
+
+  EXPECT_EQ(projection_constraints->size(), 2);
+  EXPECT_TRUE(projection_constraints->at(0).equals(pk_constraint_1_2));
+  EXPECT_TRUE(projection_constraints->at(1).equals(unique_constraint_0));
+}
+
+TEST_F(ProjectionNodeTest, ConstraintsArithmetics) {
+  const auto pk_constraint_0_1 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto unique_constraint_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+
+  _mock_node = MockNode::make(
+      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a", UniqueConstraintDefinitions{pk_constraint_0_1, unique_constraint_2});
+
+  // a + b
+  _projection_node = ProjectionNode::make(add_(_a, _b), _mock_node);
+  EXPECT_TRUE(_projection_node->get_constraints()->empty());
+
+  // c + 1
+  _projection_node = ProjectionNode::make(add_(_c, 1));
+  EXPECT_EQ(_projection_node->get_constraints()->size(), 1);
+  const auto unique_constraint_0 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}}, IsPrimaryKey::No};
+  EXPECT_TRUE(_projection_node->get_constraints()->at(0).equals(unique_constraint_0));
+}
+
 
 }  // namespace opossum
