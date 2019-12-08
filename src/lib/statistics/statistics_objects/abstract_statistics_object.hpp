@@ -14,7 +14,7 @@ namespace opossum {
  */
 class AbstractStatisticsObject : private Noncopyable {
  public:
-  explicit AbstractStatisticsObject(const DataType data_type);
+  explicit AbstractStatisticsObject(const DataType data_type, bool contains_null_init = true);
   virtual ~AbstractStatisticsObject() = default;
 
   /**
@@ -42,6 +42,8 @@ class AbstractStatisticsObject : private Noncopyable {
    * DataType of the data that this statistics object represents
    */
   const DataType data_type;
+
+  bool contains_null = true;
 };
 
 }  // namespace opossum

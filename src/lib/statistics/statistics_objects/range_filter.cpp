@@ -15,8 +15,8 @@
 namespace opossum {
 
 template <typename T>
-RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
-    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {
+RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges, bool contains_null_init)
+    : AbstractStatisticsObject(data_type_from_type<T>(), contains_null_init), ranges(std::move(ranges)) {
       DebugAssert(!this->ranges.empty(), "Cannot construct empty RangeFilter");
     }
 
@@ -278,6 +278,12 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
           (end_lower != ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
       return !start_in_value_range && !end_in_value_range && start_lower == end_lower;
+    }
+    case PredicateCondition::IsNull: {
+      return !contains_null;
+    }
+    case PredicateCondition::IsNotNull: {
+      return contains_null;
     }
     default:
       return false;

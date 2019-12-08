@@ -698,10 +698,15 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
       // TODO(anybody) Pruning for (NOT) LIKE not supported, yet
       return clone();
 
-    case PredicateCondition::In:
-    case PredicateCondition::NotIn:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
+      // TODO(anybody) Pruning for (NOT) NULL not supported, yet
+      return clone();
+
+    case PredicateCondition::In:
+    case PredicateCondition::NotIn:
+    // case PredicateCondition::IsNull:
+    // case PredicateCondition::IsNotNull:
       Fail("PredicateCondition not supported by Histograms");
   }
 

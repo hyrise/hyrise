@@ -53,11 +53,14 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       using ColumnDataType = typename decltype(type)::type;
 
       const auto segment_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+      bool contains_null = false;
 
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+
+        contains_null = typed_segment.contains_null;
       } else {
         // if we have a generic segment we create the dictionary ourselves
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
@@ -66,13 +69,20 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           // we are only interested in non-null values
           if (!value.is_null()) {
             values.insert(value.value());
+          } else {
+            contains_null = true;
           }
         });
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
         std::sort(dictionary.begin(), dictionary.end());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
-
+      if (segment_statistics->min_max_filter)
+        segment_statistics->min_max_filter->contains_null = contains_null;
+      if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+        if (segment_statistics->range_filter)
+          segment_statistics->range_filter->contains_null = contains_null;
+      }
       chunk_statistics[column_id] = segment_statistics;
     });
   }

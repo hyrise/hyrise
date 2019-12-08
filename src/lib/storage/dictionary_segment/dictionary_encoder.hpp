@@ -64,6 +64,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     temp_dictionary->shrink_to_fit();
 
     const auto null_value_id = static_cast<uint32_t>(temp_dictionary->size());
+    bool contains_null = false;
 
     auto create_compressed_attribute_vector = [&](const auto& dictionary) {
       auto attribute_vector = pmr_vector<uint32_t>{allocator};
@@ -77,6 +78,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
           ++values_iter;
         } else {
           attribute_vector[current_position] = null_value_id;
+          contains_null = true;
         }
       }
 
@@ -99,7 +101,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       // Encode a segment with a pmr_vector<T> as dictionary
       const auto compressed_attribute_vector = create_compressed_attribute_vector(temp_dictionary);
       return std::allocate_shared<DictionarySegment<T>>(allocator, temp_dictionary, compressed_attribute_vector,
-                                                        ValueID{null_value_id});
+                                                        ValueID{null_value_id}, contains_null);
     }
   }
 

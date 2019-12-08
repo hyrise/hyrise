@@ -14,6 +14,7 @@ class FileBasedTableGenerator : public AbstractTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  private:
+  SortOrderByTable _sort_order_by_table() const override;
   const std::string _path;
 };
 

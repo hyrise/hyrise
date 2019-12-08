@@ -16,7 +16,8 @@ std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& varian
   // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
   // doesn't resolve NULL)
   if ((source_data_type == DataType::Null) != (target_data_type == DataType::Null)) {
-    return std::nullopt;
+    // return std::nullopt;
+    return NullValue{};
   }
 
   std::optional<AllTypeVariant> result;

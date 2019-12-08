@@ -13,7 +13,7 @@ namespace opossum {
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                        const ValueID null_value_id)
+                                        const ValueID null_value_id, bool contains_null_init)
     : BaseDictionarySegment(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
@@ -26,6 +26,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
   DebugAssert(ValueID{static_cast<uint32_t>(_dictionary->size())} == _null_value_id,
               "Invalid NULL value id");  // NOLINT
+  contains_null = contains_null_init;
 }
 
 template <typename T>

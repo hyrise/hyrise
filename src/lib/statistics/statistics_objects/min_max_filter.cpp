@@ -13,7 +13,7 @@
 namespace opossum {
 
 template <typename T>
-MinMaxFilter<T>::MinMaxFilter(T min, T max) : AbstractStatisticsObject(data_type_from_type<T>()), min(min), max(max) {}
+MinMaxFilter<T>::MinMaxFilter(T min, T max, bool contains_null_init) : AbstractStatisticsObject(data_type_from_type<T>(), contains_null_init), min(min), max(max) {}
 
 template <typename T>
 Cardinality MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
@@ -98,11 +98,14 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
                                        const AllTypeVariant& variant_value,
                                        const std::optional<AllTypeVariant>& variant_value2) const {
   // Early exit for NULL variants.
-  if (variant_is_null(variant_value)) {
-    return false;
-  }
+  // if (variant_is_null(variant_value)) {
+  //   return false;
+  // }
 
-  const auto value = boost::get<T>(variant_value);
+  T value = T{};
+  if (!variant_is_null(variant_value)) {
+    value = boost::get<T>(variant_value);
+  }
 
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
@@ -150,6 +153,12 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
+    }
+    case PredicateCondition::IsNull: {
+      return !contains_null;
+    }
+    case PredicateCondition::IsNotNull: {
+      return contains_null;
     }
     default:
       return false;
