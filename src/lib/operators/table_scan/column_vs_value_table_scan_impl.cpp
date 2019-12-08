@@ -153,6 +153,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                                          boost::get<ColumnDataType>(value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          if (begin == end) return;
           size_t output_idx = matches.size();
 
           matches.resize(matches.size() + std::distance(begin, end));
