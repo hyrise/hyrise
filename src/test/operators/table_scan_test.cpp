@@ -311,7 +311,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsOnlyNull) {
+TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqualNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", 1);
 
   auto scan = create_table_scan(get_int_sorted_only_null_op(), ColumnID{0}, PredicateCondition::Equals, 2);
@@ -320,7 +320,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsOnlyNull) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllEqual) {
+TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqual) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", 1);
 
   auto scan = create_table_scan(get_int_sorted_all_equal_op(), ColumnID{0}, PredicateCondition::Equals, 6);
