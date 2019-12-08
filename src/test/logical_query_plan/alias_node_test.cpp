@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/lqp_column_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -9,6 +10,7 @@
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -17,8 +19,8 @@ class AliasNodeTest : public ::testing::Test {
   void SetUp() override {
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
 
-    a = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{0}});
-    b = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{1}});
+    a = lqp_column_(mock_node->get_column("a"));
+    b = lqp_column_(mock_node->get_column("b"));
 
     aliases = {"x", "y"};
     expressions = {b, a};
@@ -56,8 +58,8 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
 
   const auto other_mock_node =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "named");
-  const auto expr_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{0}});
-  const auto expr_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{1}});
+  const auto expr_a = lqp_column_(other_mock_node->get_column("a"));
+  const auto expr_b = lqp_column_(other_mock_node->get_column("b"));
   const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
   const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
   EXPECT_NE(*alias_node, *alias_node_other_expressions);

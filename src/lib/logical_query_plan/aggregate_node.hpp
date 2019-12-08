@@ -27,7 +27,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  // node_expression contains both the group_by- and the aggregate_expressions in that order.
+  // node_expressions contains both the group_by- and the aggregate_expressions in that order.
   const size_t aggregate_expressions_begin_idx;
 
  protected:
