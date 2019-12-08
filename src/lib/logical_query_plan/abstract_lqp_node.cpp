@@ -246,9 +246,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<UniqueConstraintDefinitions> AbstractLQPNode::get_constraints() const {
-  Assert(left_input() && !right_input(),
-         "Can only forward constraint definitions if there is a left input and no right input");
-  return left_input()->get_constraints();
+  return std::make_shared<UniqueConstraintDefinitions>();
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
