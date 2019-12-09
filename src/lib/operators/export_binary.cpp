@@ -223,7 +223,7 @@ void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment
       case CompressedVectorType::FixedSize1ByteAligned:
         return 1u;
       default:
-        return 0u;
+        Fail("Any other type should have been caught before.");
     }
   }();
 
@@ -277,7 +277,7 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
       case CompressedVectorType::FixedSize1ByteAligned:
         return 1u;
       default:
-        return 0u;
+        Fail("Any other type should have been caught before.");
     }
   }();
 
@@ -313,7 +313,7 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 
   if (lz4_segment.lz4_blocks().size() == 0) {
     // No blocks at all: write just last block size = 0
-    export_value(ofstream, static_cast<uint32_t>(0));
+    export_value(ofstream, uint32_t{0});
   } else {
     // if more than one block, write block size
     if (lz4_segment.lz4_blocks().size() > 1) {
@@ -325,12 +325,12 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
   }
 
   // Write size for each LZ4 Block
-  for (auto& lz4_block : lz4_segment.lz4_blocks()) {
+  for (const auto& lz4_block : lz4_segment.lz4_blocks()) {
     export_value(ofstream, static_cast<uint32_t>(lz4_block.size()));
   }
 
   // Write LZ4 Blocks
-  for (auto& lz4_block : lz4_segment.lz4_blocks()) {
+  for (const auto& lz4_block : lz4_segment.lz4_blocks()) {
     export_values(ofstream, lz4_block);
   }
 
@@ -341,7 +341,7 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
     export_values(ofstream, *lz4_segment.null_values());
   } else {
     // No NULL values
-    export_value(ofstream, static_cast<uint32_t>(0));
+    export_value(ofstream, uint32_t{0});
   }
 
   // Write dictionary size
@@ -352,15 +352,15 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 
   if (lz4_segment.string_offsets() && *lz4_segment.string_offsets()) {
     // Write string_offset size
-    export_value(ofstream, static_cast<uint32_t>((**lz4_segment.string_offsets()).size()));
+    export_value(ofstream, static_cast<uint32_t>((*lz4_segment.string_offsets())->size()));
     // Write string_offset data_size
     export_value(ofstream, static_cast<uint32_t>(
-                               dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets()).data().size()));
+                               dynamic_cast<const SimdBp128Vector&>(*lz4_segment.string_offsets().value()).data().size()));
     // Write string offsets
     _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *lz4_segment.string_offsets().value());
   } else {
     // Write string_offset size = 0
-    export_value(ofstream, static_cast<uint32_t>(0));
+    export_value(ofstream, uint32_t{0});
   }
 }
 
