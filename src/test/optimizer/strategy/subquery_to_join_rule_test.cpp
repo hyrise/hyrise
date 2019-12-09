@@ -4,6 +4,7 @@
 #include "testing_assert.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -641,7 +642,7 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesCorrelatedExis
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
   EXPECT_FALSE(input_info->join_predicate);
 }
@@ -654,7 +655,7 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesCorrelatedNotE
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::AntiNullAsFalse);
   EXPECT_FALSE(input_info->join_predicate);
 }
@@ -666,9 +667,12 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesIn) {
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, b_a));
+
+  const auto mapping = lqp_create_node_mapping(subquery_expression->lqp, input_info->subquery->lqp);
+  const auto copied_b_a = expression_adapt_to_different_lqp(*lqp_column_(b_a), mapping);
+  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, copied_b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesUncorrelatedNotIn) {
@@ -678,9 +682,12 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesUncorrelatedNo
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::AntiNullAsTrue);
-  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, b_a));
+
+  const auto mapping = lqp_create_node_mapping(subquery_expression->lqp, input_info->subquery->lqp);
+  const auto copied_b_a = expression_adapt_to_different_lqp(*lqp_column_(b_a), mapping);
+  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, copied_b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesComparison) {
@@ -690,9 +697,12 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesComparison) {
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_EQ(*input_info->join_predicate, *less_than_(a_a, b_a));
+
+  const auto mapping = lqp_create_node_mapping(subquery_expression->lqp, input_info->subquery->lqp);
+  const auto copied_b_a = expression_adapt_to_different_lqp(*lqp_column_(b_a), mapping);
+  EXPECT_EQ(*input_info->join_predicate, *less_than_(a_a, copied_b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateRejectsCorrelatedNotIn) {

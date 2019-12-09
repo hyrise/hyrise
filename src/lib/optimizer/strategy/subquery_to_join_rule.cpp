@@ -239,7 +239,8 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     }
 
     result.join_mode = in_expression->is_negated() ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
-    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
+    // We need to deep_copy the subquery before modifying it as it might be in use somewhere else, too.
+    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set()->deep_copy());
     result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->column_expressions()[0]);
 
     // Correlated NOT IN is very weird w.r.t. handling of null values and cannot be turned into a
@@ -289,16 +290,16 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
 
     if (const auto left_subquery_expression =
             std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->left_operand())) {
+      result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(left_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           flip_predicate_condition(binary_predicate->predicate_condition), binary_predicate->right_operand(),
-          left_subquery_expression->lqp->column_expressions()[0]);
-      result.subquery = left_subquery_expression;
+          result.subquery->lqp->column_expressions()[0]);
     } else if (const auto right_subquery_expression =
                    std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->right_operand())) {
+      result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(right_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           binary_predicate->predicate_condition, binary_predicate->left_operand(),
-          right_subquery_expression->lqp->column_expressions()[0]);
-      result.subquery = right_subquery_expression;
+          result.subquery->lqp->column_expressions()[0]);
     } else {
       return std::nullopt;
     }
@@ -307,7 +308,7 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     result.join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists
                            ? JoinMode::Semi
                            : JoinMode::AntiNullAsFalse;
-    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(exists_expression->subquery());
+    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(exists_expression->subquery()->deep_copy());
 
     // We cannot optimize uncorrelated EXISTS into a join
     if (!result.subquery->is_correlated()) {

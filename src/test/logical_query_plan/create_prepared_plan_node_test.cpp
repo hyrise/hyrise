@@ -4,6 +4,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/prepared_plan.hpp"
+#include "utils/string_utils.hpp"
 
 namespace opossum {
 
@@ -21,10 +22,10 @@ class CreatePreparedPlanNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreatePreparedPlanNodeTest, Description) {
-  EXPECT_EQ(create_prepared_plan_node->description(),
+  EXPECT_EQ(replace_addresses(create_prepared_plan_node->description(AbstractLQPNode::DescriptionMode::Detailed)),
             R"([CreatePreparedPlan] 'some_prepared_plan' {
 ParameterIDs: []
-[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns
+[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000
 })");
 }
 

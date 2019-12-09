@@ -66,7 +66,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto chunk_count_input_table = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{expressions.size()};
 
@@ -104,7 +104,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
     // information so that following operators (currently, the Validate operator) can use it for optimizations.
