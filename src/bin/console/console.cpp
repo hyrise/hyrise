@@ -138,6 +138,7 @@ Console::Console()
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
   register_command("ssac", std::bind(&Console::_save_segment_access_counter, this, std::placeholders::_1));
   register_command("csac", std::bind(&Console::_clear_segment_access_counter, this, std::placeholders::_1));
+  register_command("set_capture_interval", std::bind(&Console::_set_capture_interval, this, std::placeholders::_1));
 }
 
 int Console::read() {
@@ -490,6 +491,26 @@ int Console::_clear_segment_access_counter(const std::string& args) {
   boost::algorithm::split(arguments, input, boost::is_space());
 
   SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
+
+  return ReturnCode::Ok;
+}
+
+int Console::_set_capture_interval(const std::string& args) {
+  auto input = args;
+  boost::algorithm::trim<std::string>(input);
+  auto arguments = std::vector<std::string>{};
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  // Check whether there is eaxctly one argument.
+  auto args_valid = !arguments.empty() && arguments.size() <= 1;
+  if (!args_valid || arguments[0].empty()) {
+    out("Wrong input.\n");
+    out("Usage: set_capture_interval INTERVAL");
+    return ReturnCode::Error;
+  }
+
+  const auto interval = std::stoi(arguments[0]);
+  AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{interval};
 
   return ReturnCode::Ok;
 }
