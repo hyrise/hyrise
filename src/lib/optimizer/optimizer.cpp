@@ -191,7 +191,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
     });
   }
 
-  // (1) Make sure that all outputs found anywhere in the entire plan are also part of the plan
+  // (1) Make sure that all outputs found in an LQP are also part of the same LQP (excluding subqueries)
   // (2) Make sure each node has the number of inputs expected for that node type
   // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP
   for (const auto& lqp : lqps) {
@@ -214,8 +214,10 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         }
       }
 
-      // Check that all LQPColumnExpressions in the node can be resolved. This does, however, not guarantee that it is
-      // correctly used as one of the (transitive) inputs of `node`. Checking that would be more expensive.
+      // Check that all LQPColumnExpressions in the node can be resolved. This mostly guards against expired columns
+      // leaving an optimizer rule. It does not guarantee that it the LQPColumnExpressions are correctly returned from
+      // one of the (transitive) inputs of `node`. If that is not the case, that will be caught by the LQPTranslator,
+      // at the latest. However, feel free to add that check here.
       for (const auto& node_expression : node->node_expressions) {
         visit_expression(node_expression, [&](const auto& sub_expression) {
           if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
