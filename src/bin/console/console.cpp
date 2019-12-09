@@ -469,17 +469,19 @@ int Console::_save_segment_access_counter(const std::string& args) {
   auto arguments = std::vector<std::string>{};
   boost::algorithm::split(arguments, input, boost::is_space());
 
-  // Check whether there is eaxctly one argument.
-  auto args_valid = !arguments.empty() && arguments.size() <= 1;
-  if (!args_valid || arguments[0].empty()) {
+  // Check whether there is exactly one argument.
+  auto args_valid = arguments.size() == 2;
+  if (!args_valid || arguments[0].empty() || arguments[1].empty()) {
     out("Wrong input.\n");
-    out("Usage: ssac PATH");
+    out("Usage: ssac PATH_TO_META_DATA PATH_TO_ACCESS_COUNTERS");
     return ReturnCode::Error;
   }
 
-  const auto path = arguments[0];
+  const auto path_to_meta_data = arguments[0];
+  const auto path_to_access_counters = arguments[1];
 
-  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), path);
+  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), path_to_meta_data,
+    path_to_access_counters);
 
   return ReturnCode::Ok;
 }

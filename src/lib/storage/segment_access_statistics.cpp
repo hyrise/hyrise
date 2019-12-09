@@ -82,7 +82,7 @@ std::vector<std::string> AtomicTimedAccessStrategy::to_string() const {
     for (uint8_t type = 0; type < Count; ++type) {
       sum += _count[time_slot][type];
     }
-//    if (sum > 0) {
+    if (sum > 0) {
       str.append(std::to_string(time_slot) + ',' + std::to_string(_count[time_slot][0]));
       for (uint8_t type = 1; type < Count; ++type) {
         str.append(",");
@@ -90,16 +90,8 @@ std::vector<std::string> AtomicTimedAccessStrategy::to_string() const {
       }
       counters.push_back(str);
       str.clear();
-//    }
+    }
   }
-
-//  if (counters.empty()) {
-//    str.append("0,0");
-//    for (uint8_t type = 1; type < Count; ++type) {
-//      str.append(",0");
-//    }
-//    counters.push_back(str);
-//  }
 
   return counters;
 }

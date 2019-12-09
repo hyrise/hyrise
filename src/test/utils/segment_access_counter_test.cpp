@@ -53,7 +53,8 @@ TEST(SegmentAccessCounter, ExportStatistics) {
 
   tables["addresses"] = std::move(table_ptr);
 
-  SegmentAccessStatistics_T::save_to_csv(tables, "segment_access_statistics_test.csv");
+  SegmentAccessStatistics_T::save_to_csv(tables, "segment_access_statistics_test_meta.csv",
+    "segment_access_statistics_test.csv");
 }
 
 TEST(SegmentAccessCounter, Reset) {

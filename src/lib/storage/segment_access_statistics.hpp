@@ -243,10 +243,15 @@ class SegmentAccessStatistics {
     return std::vector<std::string>{str};
   }
 
-  static void save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables, const std::string& path) {
-    std::ofstream output_file{path};
-    output_file << "table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage," + AccessStrategyType::header() +
-                   "\n";
+  static void save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables,
+    const std::string& path_to_meta_data, const std::string& path_to_access_statistics) {
+    // meta-daten mit abspeichern.
+    auto entry_id = 0;
+    std::ofstream meta_file{path_to_meta_data};
+    std::ofstream output_file{path_to_access_statistics};
+
+    meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
+    output_file << "entry_id," + AccessStrategyType::header() + "\n";
     // iterate over all tables, chunks and segments
     for (const auto&[table_name, table_ptr] : tables) {
       for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
@@ -257,16 +262,19 @@ class SegmentAccessStatistics {
           const auto& segment_ptr = chunk_ptr->get_segment(column_id);
           const auto& access_statistics = segment_ptr->access_statistics();
 
+          meta_file << entry_id << ',' << table_name << ',' << column_name << ',' << chunk_id << ','
+                    << segment_ptr->size() << ',' << segment_ptr->estimate_memory_usage() << '\n';
+
           for (const auto& str : access_statistics._data_access_strategy.to_string()) {
-            output_file << table_name << ',' << column_name << ',' << chunk_id << ',' << segment_ptr->size() << ','
-                        << segment_ptr->estimate_memory_usage() << ',' << str << '\n';
+            output_file << entry_id << ',' << str << '\n';
           }
+
+          ++entry_id;
         }
       }
     }
 
-//  for (auto&[key, value] : _statistics)
-//    output_file << "key" << key << ": " << value.to_string() << std::endl;
+    meta_file.close();
     output_file.close();
   }
 
