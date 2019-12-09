@@ -58,7 +58,8 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
     auto group_by_list_changed = false;
 
-    // Main loop. Iterate over the tables and its group-by columns, gather primary keys/unique columns and check if we can reduce.
+    // Main loop. Iterate over the tables and its group-by columns, get table constraints, and try to reduce for each
+    // constraint.
     for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
       auto unique_columns = std::set<ColumnID>();
 
