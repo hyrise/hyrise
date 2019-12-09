@@ -151,7 +151,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
         auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, predicate_condition,
                                                          boost::get<ColumnDataType>(value));
-        
+
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           if (begin == end) return;
 
