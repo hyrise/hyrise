@@ -57,12 +57,49 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
       auto typed_left_value = boost::get<ColumnDataType>(left_value);
       auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
-      with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
-        auto between_comparator = [&](const auto& position) {
-          return between_comparator_function(position.value(), typed_left_value, typed_right_value);
-        };
-        _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
-      });
+
+      auto& ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
+      if (ordered_by && ordered_by->first == _column_id) {
+        std::cout << "Is ordered by" << std::endl;
+        auto& ordered_by_mode = ordered_by->second;
+        auto lower_bound_it = it;
+        auto upper_bound_it = it;
+        if (ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::AscendingNullsLast) {
+          if (is_lower_inclusive_between(predicate_condition)) {
+            lower_bound_it = std::lower_bound(it, end, left_value);
+          } else {
+            lower_bound_it = std::upper_bound(it, end, left_value);
+          }
+          if (is_upper_inclusive_between(predicate_condition)) {
+            upper_bound_it = std::upper_bound(it, end, right_value);
+          } else {
+            upper_bound_it = std::lower_bound(it, end, right_value);
+          }
+        } else {
+          if (is_lower_inclusive_between(predicate_condition)) {
+            lower_bound_it = std::upper_bound(it, end, left_value);
+          } else {
+            lower_bound_it = std::lower_bound(it, end, left_value);
+          }
+          if (is_upper_inclusive_between(predicate_condition)) {
+            upper_bound_it = std::lower_bound(it, end, right_value);
+          } else {
+            upper_bound_it = std::upper_bound(it, end, right_value);
+          }
+        }
+        matches.resize(matches.size() + std::distance(lower_bound_it, upper_bound_it));
+        for (auto match_value_it = lower_bound_it; match_value_it != upper_bound_it; ++match_value_it) {
+        // TODO emplace back
+          matches.push_back(RowID{chunk_id, match_value_it->chunk_offset() });
+        }
+      } else {
+        with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
+          auto between_comparator = [&](const auto& position) {
+            return between_comparator_function(position.value(), typed_left_value, typed_right_value);
+          };
+          _scan_with_iterators<true>(between_comparator, it, end, chunk_id, matches);
+        });
+      }
     } else {
       Fail("Dictionary and Reference segments have their own code paths and should be handled there");
     }
