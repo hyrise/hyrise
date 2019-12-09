@@ -158,7 +158,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return !contains_null;
     }
     case PredicateCondition::IsNotNull: {
-      return contains_null;
+      return contains_null && max == min;
     }
     default:
       return false;

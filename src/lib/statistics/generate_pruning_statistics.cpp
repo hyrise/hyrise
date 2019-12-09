@@ -30,6 +30,8 @@ void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_stati
   } else {
     if (!dictionary.empty()) {
       pruning_statistics = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+    } else {
+      pruning_statistics = std::make_shared<MinMaxFilter<T>>(T{}, T{});
     }
   }
 
