@@ -1360,7 +1360,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             return std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
           case AggregateFunction::Any:
-            Fail("ANY() is a pure internal aggregation function.");
+            Fail("ANY() is an internal aggregation function.");
           case AggregateFunction::Count:
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {

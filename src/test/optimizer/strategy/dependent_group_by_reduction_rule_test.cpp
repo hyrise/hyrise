@@ -37,7 +37,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_a_2 = stored_table_node_a->get_column("column2");
 
     table_b = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-    table_b->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
+    table_b->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
     storage_manager.add_table("table_b", table_b);
     stored_table_node_b = StoredTableNode::make("table_b");
     column_b_0 = stored_table_node_b->get_column("column0");
@@ -55,17 +55,29 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     table_d = std::make_shared<Table>(TableColumnDefinitions{{"column0", DataType::Int, false}}, TableType::Data, 2,
                                       UseMvcc::Yes);
     storage_manager.add_table("table_d", table_d);
+    stored_table_node_d = StoredTableNode::make("table_d");
+
+    table_e = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    table_e->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
+    table_e->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+    storage_manager.add_table("table_e", table_e);
+    stored_table_node_e = StoredTableNode::make("table_e");
+    column_e_0 = stored_table_node_e->get_column("column0");
+    column_e_1 = stored_table_node_e->get_column("column1");
+    column_e_2 = stored_table_node_e->get_column("column2");
 
     rule = std::make_shared<DependentGroupByReductionRule>();
   }
 
   std::shared_ptr<DependentGroupByReductionRule> rule;
 
-  std::shared_ptr<Table> table_a, table_b, table_c, table_d;
-  std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_b, stored_table_node_c;
+  std::shared_ptr<Table> table_a, table_b, table_c, table_d, table_e;
+  std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_b, stored_table_node_c, stored_table_node_d, stored_table_node_e;
   LQPColumnReference column_a_0, column_a_1, column_a_2;
   LQPColumnReference column_b_0, column_b_1, column_b_2;
   LQPColumnReference column_c_0, column_c_1, column_c_2;
+  LQPColumnReference column_d_0;
+  LQPColumnReference column_e_0, column_e_1, column_e_2;
 };
 
 // Test simple cases
@@ -80,11 +92,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     EXPECT_EQ(lqp, unmodified_lqp);
   }
 
-  // Early out for LQP where table does not have a primary key
+  // Early out for LQP where table does not have a primary key/unique constraint
   {
-    auto stored_table_node_d = StoredTableNode::make("table_d");
-    auto column_d_0 = stored_table_node_d->get_column("column0");
-
     auto lqp =
     PredicateNode::make(equals_(column_d_0, 17), stored_table_node_d);
 
@@ -117,7 +126,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test that a non-primary-key column is not removed if the full primary key is not present in the group by list.
+// Test that a non-primary-key column is not removed if the full unique constraint is not present in the group by list.
 TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   // clang-format off
   auto lqp =
@@ -138,7 +147,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test that a group by with the full (multi-column) primary key is not altered.
+// Test that a group by with the full (multi-column) unique constraint is not altered.
 TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   // clang-format off
   auto lqp =
@@ -265,6 +274,47 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
       AggregateNode::make(expression_vector(column_a_0),
                           expression_vector(sum_(column_a_0), any_(column_a_1)),
                           stored_table_node_a)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// When a primary key column is nullable after an outer join, check that we do not modify the aggregate.
+TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
+  // clang-format off
+  auto lqp =
+  AggregateNode::make(expression_vector(column_a_0, column_a_1, column_b_2),
+                      expression_vector(sum_(column_a_0)),
+    JoinNode::make(JoinMode::FullOuter, equals_(column_a_0, column_b_0),
+                   stored_table_node_a,
+                   stored_table_node_b));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(column_a_0, column_a_1, column_b_2),
+                      expression_vector(sum_(column_a_0)),
+    JoinNode::make(JoinMode::FullOuter, equals_(column_a_0, column_b_0),
+                   stored_table_node_a,
+                   stored_table_node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// Check that we reduce using the shortest (in term of number of columns) constraints.s
+TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
+  // clang-format off
+  auto lqp =
+  AggregateNode::make(expression_vector(column_e_0, column_e_1, column_e_2), expression_vector(),
+                      stored_table_node_e);
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_e_0, column_e_1, column_e_2),
+    AggregateNode::make(expression_vector(column_e_2), expression_vector(any_(column_e_0), any_(column_e_1)),
+                        stored_table_node_e));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

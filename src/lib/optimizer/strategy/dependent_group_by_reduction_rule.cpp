@@ -30,6 +30,14 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     for (auto expression_idx = size_t{0}; expression_idx < aggregate_node.aggregate_expressions_begin_idx;
          ++expression_idx) {
       const auto& expression = aggregate_node.node_expressions[expression_idx];
+
+      // Check that group by columns are not nullable. Unique columns can generally store NULLs while previous
+      // operators (e.g., outer joins) might have added NULLs to a primary key column. For now, we take the safe route
+      // and ignore all cases where group-by columns are nullable.
+      if (expression->is_nullable_on_lqp(aggregate_node)) {
+        continue;
+      }
+
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       if (!column_expression) {
         // In case the group-by column is not a column expression (e.g., grouping by `a+1`), we take the safe route and
@@ -46,80 +54,41 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       group_by_columns_per_table[stored_table_node].insert(column_id);
     }
 
-    bool group_by_list_changed = false;
+    // Store copy of the aggregate's column expressions to later check if this order is the query's final column order
+    const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
+    auto group_by_list_changed = false;
 
     // Main loop. Iterate over the tables and its group-by columns, gather primary keys/unique columns and check if we can reduce.
     for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
       auto unique_columns = std::set<ColumnID>();
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      if (table->get_soft_unique_constraints().empty()) {
+      const auto& table_constraints = table->get_soft_unique_constraints();
+      if (table_constraints.empty()) {
         // early exit for current table if no constraints are set
         continue;
       }
 
-      for (const auto& table_constraint : table->get_soft_unique_constraints()) {
-        // Check that non of the unique/primary key columns is nullable. Unique columns can generally store NULLs while
-        // previous operators (e.g., outer joins) might have added NULLs to a primary key column.
-        auto columns_not_nullable = std::none_of(table_constraint.columns.begin(), table_constraint.columns.end(),
-                                                 [&, stored_table_node = stored_table_node](const auto& column_id) {
-                                                   const auto column_reference = std::make_shared<LQPColumnExpression>(
-                                                       LQPColumnReference{stored_table_node, column_id});
-                                                   return column_reference->is_nullable_on_lqp(aggregate_node);
-                                                 });
-
-        if (columns_not_nullable) {
-          unique_columns.insert(table_constraint.columns.begin(), table_constraint.columns.end());
-          break;
-        }
+      // Gather sizes of table constraints (i.e., the number of columns) to start with the shortest constraint (either
+      // unique or primary key) in hope that the shorter one will later form the group-by clause.
+      std::vector<std::pair<size_t, size_t>> constraints_position_and_size;
+      constraints_position_and_size.reserve(table_constraints.size());
+      auto constraint_id = size_t{0};
+      for (const auto& table_constraint : table_constraints) {
+        constraints_position_and_size.push_back({constraint_id, table_constraint.columns.size()});
+        ++constraint_id;
       }
+      std::sort(
+          constraints_position_and_size.begin(), constraints_position_and_size.end(),
+          [](const auto& constraint_1, const auto& constraint_2) { return constraint_1.second < constraint_2.second; });
 
-      // Intersect primary key/unique columns and group-by columns. In case a primary key/unique constraint covers
-      // multiple columns, we need to check that all columns are present in order to later remove dependent columns.
-      std::vector<ColumnID> intersection;
-      std::set_intersection(unique_columns.begin(), unique_columns.end(), group_by_columns.begin(),
-                            group_by_columns.end(), std::back_inserter(intersection));
-
-      // Skip the current table as the primary key/unique constraint is not completely present.
-      if (intersection.size() != unique_columns.size()) {
-        continue;
-      }
-
-      // Every column that is part of the table but not of the primary key/unique constraint is going to be moved from
-      // the group-by list to the list of aggregates wrapped in an ANY().
-      for (const auto& group_by_column : group_by_columns) {
-        if (unique_columns.find(group_by_column) != unique_columns.end()) {
-          // Do not touch primary key/unique constraint columns.
-          continue;
-        }
-
-        // Remove node if it is a column reference and references the correct stored table node. Further, decrement
-        // the aggregate's index which denotes the end of group-by expressions.
-        aggregate_node.node_expressions.erase(
-            std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
-                           [&, stored_table_node = stored_table_node](const auto expression) {
-                             const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                             if (!column_expression) return false;
-
-                             const auto& expression_stored_table_node =
-                                 std::dynamic_pointer_cast<const StoredTableNode>(
-                                     column_expression->column_reference.original_node());
-                             if (!expression_stored_table_node) return false;
-
-                             const auto column_id = column_expression->column_reference.original_column_id();
-                             if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
-                               // Adjust the number of group by expressions.
-                               --aggregate_node.aggregate_expressions_begin_idx;
-                               group_by_list_changed = true;
-                               return true;
-                             }
-                             return false;
-                           }),
-            aggregate_node.node_expressions.end());
-
-        // Add the ANY() aggregate to the list of aggregate columns.
-        const auto aggregate_any_expression = any_(lqp_column_({stored_table_node, group_by_column}));
-        aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+      // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. As soon as
+      // one reduction took place, we can ignore the remaining constraints.
+      for (const auto& [position, size] : constraints_position_and_size) {
+        auto const& table_constraint = table_constraints[position];
+        group_by_list_changed |=
+            reduce_for_constraint(table_constraint, group_by_columns, stored_table_node, aggregate_node);
+        if (group_by_list_changed) break;
       }
     }
 
@@ -128,7 +97,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
     // by adding a projection with the initial column_references since we changed the column order by moving columns
     // from the group-by list to the aggregations.
-    if (group_by_list_changed && aggregate_node.column_expressions() == root_column_expressions &&
+    if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
         lqp->type != LQPNodeType::Projection) {
       const auto projection_node = std::make_shared<ProjectionNode>(root_column_expressions);
       lqp_insert_node(lqp, LQPInputSide::Left, projection_node);
@@ -136,6 +105,62 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
     return LQPVisitation::VisitInputs;
   });
+}
+
+bool DependentGroupByReductionRule::reduce_for_constraint(
+    const TableConstraintDefinition& table_constraint, const std::set<ColumnID>& group_by_columns,
+    const std::shared_ptr<const StoredTableNode>& stored_table_node, AggregateNode& aggregate_node) const {
+  auto group_by_list_changed = false;
+  const auto& constraint_columns = table_constraint.columns;
+
+  // Intersect primary key/unique columns and group-by columns. In case a primary key/unique constraint covers
+  // multiple columns, we need to check that all columns are present in order to later remove dependent columns.
+  std::vector<ColumnID> intersection;
+  std::set_intersection(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
+                        group_by_columns.end(), std::back_inserter(intersection));
+
+  // Skip the current table as the primary key/unique constraint is not completely present.
+  if (intersection.size() != constraint_columns.size()) {
+    return false;
+  }
+
+  // Every column that is part of the table but not of the primary key/unique constraint is going to be moved from
+  // the group-by list to the list of aggregates wrapped in an ANY().
+  for (const auto& group_by_column : group_by_columns) {
+    if (std::find(constraint_columns.begin(), constraint_columns.end(), group_by_column) != constraint_columns.end()) {
+      // Do not touch primary key/unique constraint columns.
+      continue;
+    }
+
+    // Remove node if it is a column reference and references the correct stored table node. Further, decrement
+    // the aggregate's index which denotes the end of group-by expressions.
+    aggregate_node.node_expressions.erase(
+        std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
+                       [&, stored_table_node = stored_table_node](const auto expression) {
+                         const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+                         if (!column_expression) return false;
+
+                         const auto& expression_stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(
+                             column_expression->column_reference.original_node());
+                         if (!expression_stored_table_node) return false;
+
+                         const auto column_id = column_expression->column_reference.original_column_id();
+                         if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
+                           // Adjust the number of group by expressions.
+                           --aggregate_node.aggregate_expressions_begin_idx;
+                           group_by_list_changed = true;
+                           return true;
+                         }
+                         return false;
+                       }),
+        aggregate_node.node_expressions.end());
+
+    // Add the ANY() aggregate to the list of aggregate columns.
+    const auto aggregate_any_expression = any_(lqp_column_({stored_table_node, group_by_column}));
+    aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+  }
+
+  return group_by_list_changed;
 }
 
 }  // namespace opossum
