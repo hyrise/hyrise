@@ -1,4 +1,5 @@
 #include <tuple>
+#include <utility>
 
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/print.hpp"
@@ -63,7 +64,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     }
 
     for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
-      data_table->get_chunk(chunk_id)->set_ordered_by(std::make_pair<ColumnID, OrderByMode>(0, OrderByMode::Ascending));
+      data_table->get_chunk(chunk_id)->set_ordered_by(std::make_pair<ColumnID, OrderByMode>(ColumnID{0}, OrderByMode::Ascending));
     }
 
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);
