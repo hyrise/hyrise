@@ -156,8 +156,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
           if (begin == end) return;
 
           // General note: If the predicate is NotEquals, there might be two matching ranges. scan_sorted_segment
-          // combines these two ranges into a single one via boost::join(range_1, range_2). See sorted_segment_search.hpp
-          // for further details.
+          // combines these two ranges into a single one via boost::join(range_1, range_2).
+          // See sorted_segment_search.hpp for further details.
 
           size_t output_idx = matches.size();
 
