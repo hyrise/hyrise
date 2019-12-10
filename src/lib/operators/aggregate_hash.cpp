@@ -498,7 +498,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 The following template functions write the aggregated values for the different aggregate functions.
 They are separate and templated to avoid compiler errors for invalid type/function combinations.
 */
-// MIN, MAX, SUM write the current aggregated value
+// MIN, MAX, SUM, ANY write the current aggregated value
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum ||
                      func == AggregateFunction::Any,

@@ -149,10 +149,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
       // ANY() is expected to be only executed on groups whose size is either 1 or whose values are all equal
       DebugAssert(!current_primary_aggregate || *current_primary_aggregate == new_value,
                   "ANY() expects all values in the group to be equal.");
-
-      if (!current_primary_aggregate) {
-        current_primary_aggregate = new_value;
-      }
+      current_primary_aggregate = new_value;
     };
   }
 };
