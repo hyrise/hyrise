@@ -76,7 +76,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       constraints_position_and_size.reserve(table_constraints.size());
       auto constraint_id = size_t{0};
       for (const auto& table_constraint : table_constraints) {
-        constraints_position_and_size.push_back({constraint_id, table_constraint.columns.size()});
+        constraints_position_and_size.emplace_back(constraint_id, table_constraint.columns.size());
         ++constraint_id;
       }
       std::sort(
@@ -110,7 +110,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
 bool DependentGroupByReductionRule::reduce_for_constraint(
     const TableConstraintDefinition& table_constraint, const std::set<ColumnID>& group_by_columns,
-    const std::shared_ptr<const StoredTableNode>& stored_table_node, AggregateNode& aggregate_node) const {
+    const std::shared_ptr<const StoredTableNode>& stored_table_node, AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
   const auto& constraint_columns = table_constraint.columns;
 

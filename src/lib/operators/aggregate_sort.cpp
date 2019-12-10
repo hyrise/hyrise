@@ -155,7 +155,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
           value_count++;
           if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
             unique_values.insert(new_value);
-          } else if constexpr (function == AggregateFunction::Any) {
+          } else if constexpr (function == AggregateFunction::Any) {  // NOLINT
             // Gathering the group's first value for ANY() is sufficient
             return;
           }

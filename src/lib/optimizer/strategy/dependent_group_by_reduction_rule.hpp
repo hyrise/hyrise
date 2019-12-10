@@ -44,10 +44,10 @@ class StoredTableNode;
 class DependentGroupByReductionRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-  bool reduce_for_constraint(const TableConstraintDefinition& table_constraint,
+  static bool reduce_for_constraint(const TableConstraintDefinition& table_constraint,
                              const std::set<ColumnID>& group_by_columns,
                              const std::shared_ptr<const StoredTableNode>& stored_table_node,
-                             AggregateNode& aggregate_node) const;
+                             AggregateNode& aggregate_node);
 };
 
 }  // namespace opossum
