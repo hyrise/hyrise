@@ -13,6 +13,7 @@
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
+#include "magic_enum.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -471,7 +472,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     _write_groupby_output(pos_list);
   }
 
-  staged_performance_data.stage_runtimes.push_back(timer.lap());
+  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::GroupByColumns)] = timer.lap();
 
   /*
   Write the aggregated columns to the output
@@ -489,13 +490,13 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     ++column_index;
   }
 
-  staged_performance_data.stage_runtimes.push_back(timer.lap());
+  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::AggregateColumns)] = timer.lap();
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   output->append_chunk(_output_segments);
 
-  staged_performance_data.stage_runtimes.push_back(timer.lap());
+  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();  
 
   return output;
 }

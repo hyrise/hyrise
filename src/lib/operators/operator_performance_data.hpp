@@ -25,14 +25,12 @@ struct OperatorPerformanceData : public Noncopyable {
                                 DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 };
 
-// Small vector with a size of 4 is chosen as the operator with the currently most stages has six stages.
 struct StagedOperatorPerformanceData : public OperatorPerformanceData {
-  StagedOperatorPerformanceData() : OperatorPerformanceData{} {}
-  boost::container::small_vector<std::chrono::nanoseconds, 6> stage_runtimes;
+  StagedOperatorPerformanceData() : OperatorPerformanceData{}, stage_runtimes{10} {}
 
-  std::chrono::nanoseconds get_stage_runtime(const uint8_t stage) const {
-  	return stage_runtimes[stage];
-  }
+  std::vector<std::chrono::nanoseconds> stage_runtimes;
+
+  std::chrono::nanoseconds get_stage_runtime(const size_t stage) const { return stage_runtimes[stage]; }
 };
 
 std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& performance_data);

@@ -13,6 +13,7 @@
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
+#include "magic_enum.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
@@ -43,7 +44,8 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const OperatorJoinPredicate& primary_predicate,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates,
                    const std::optional<size_t>& radix_bits)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates, std::make_unique<StagedOperatorPerformanceData>()),
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates,
+                           std::make_unique<StagedOperatorPerformanceData>()),
       _radix_bits(radix_bits) {}
 
 const std::string& JoinHash::name() const {
@@ -55,11 +57,19 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
-  stream << " \nStage Runtimes: ";
-  auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*_performance_data);
-  for (const auto& phase_runtime : staged_performance_data.stage_runtimes) {
-    stream << format_duration(phase_runtime) << " | ";
+  
+  if (description_mode == DescriptionMode::MultiLine) {
+    stream << " \nStage Runtimes ";
+    auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*_performance_data);
+    const auto stage_count = magic_enum::enum_count<OperatorStages>();
+    stream << "[";
+    for (auto stage = size_t{0}; stage < stage_count; ++stage) {
+      stream << format_duration(staged_performance_data.stage_runtimes[stage]);
+      if (stage < stage_count - 1) stream << "|";
+    } 
+    stream << "]";
   }
+  
   return stream.str();
 }
 
@@ -207,8 +217,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
-            staged_performance_data, std::move(adjusted_secondary_predicates));
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, staged_performance_data,
+            std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -235,7 +245,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _staged_performance_data(staged_performance_data),
+        _performance(staged_performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)),
         _radix_bits(radix_bits) {}
@@ -246,7 +256,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-  StagedOperatorPerformanceData& _staged_performance_data;
+  StagedOperatorPerformanceData& _performance;
 
   OutputColumnOrder _output_column_order;
 
@@ -283,17 +293,17 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto probe_chunk_offsets = determine_chunk_offsets(_probe_input_table);
 
     // Containers used to store histograms for (potentially subsequent) radix
-    // partitioning phase (in cases _radix_bits > 0). Created during materialization phase.
+    // partitioning stage (in cases _radix_bits > 0). Created during materialization stage.
     std::vector<std::vector<size_t>> histograms_build_column;
     std::vector<std::vector<size_t>> histograms_probe_column;
 
-    // Output containers of materialization phase. Type similar to the output
-    // of radix partitioning phase to allow short cut for _radix_bits == 0
+    // Output containers of materialization stage. Type similar to the output
+    // of radix partitioning stage to allow short cut for _radix_bits == 0
     // (in this case, we can skip the partitioning altogether).
     RadixContainer<BuildColumnType> materialized_build_column;
     RadixContainer<ProbeColumnType> materialized_probe_column;
 
-    // Containers for potential (skipped when build side small) radix partitioning phase
+    // Containers for potential (skipped when build side small) radix partitioning stage
     RadixContainer<BuildColumnType> radix_build_column;
     RadixContainer<ProbeColumnType> radix_probe_column;
 
@@ -407,9 +417,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
-    _staged_performance_data.stage_runtimes.push_back(clock_materialization_build_column + clock_materialization_probe_column);
-    _staged_performance_data.stage_runtimes.push_back(clock_clustering_build_column + clock_clustering_probe_column);
-    _staged_performance_data.stage_runtimes.push_back(clock_hash_map_build);
+    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Materialization)] =
+        clock_materialization_build_column + clock_materialization_probe_column;
+    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Clustering)] =
+        clock_clustering_build_column + clock_clustering_probe_column;
+    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Building)] = clock_hash_map_build;
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted
@@ -418,8 +430,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //   chance detecting a NULL value on the build side there.
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto& build_column_null_values = radix_build_column.null_value_bitvector;
-      const auto build_has_any_null_value = std::any_of(
-          build_column_null_values->begin(), build_column_null_values->end(), [](const bool is_null) { return is_null; });
+      const auto build_has_any_null_value =
+          std::any_of(build_column_null_values->begin(), build_column_null_values->end(),
+                      [](const bool is_null) { return is_null; });
 
       if (build_has_any_null_value) {
         return _join_hash._build_output_table({});
@@ -427,7 +440,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     /**
-     * 2. Probe phase
+     * 2. Probe stage
      */
     std::vector<PosList> build_side_pos_lists;
     std::vector<PosList> probe_side_pos_lists;
@@ -442,7 +455,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       probe_side_pos_lists[i].reserve(result_rows_per_partition);
     }
 
-    Timer clock_probe_phase;
+    Timer clock_probe_stage;
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
@@ -483,7 +496,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _staged_performance_data.stage_runtimes.push_back(clock_probe_phase.lap());
+    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Probing)] = clock_probe_stage.lap();
 
     // After probing, the partitioned columns are not needed anymore.
     radix_build_column.clear();
@@ -494,7 +507,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      */
 
     /**
-     * After the probe phase build_side_pos_lists and probe_side_pos_lists contain all pairs of joined rows grouped by
+     * After the probe stage build_side_pos_lists and probe_side_pos_lists contain all pairs of joined rows grouped by
      * partition. Let p be a partition index and r a row index. The value of build_side_pos_lists[p][r] will match
      * probe_side_pos_lists[p][r].
      */
@@ -515,7 +528,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByChunk build_side_pos_lists_by_segment;
     PosListsByChunk probe_side_pos_lists_by_segment;
 
-    Timer clock_output_phase;
+    Timer clock_output_stage;
 
     // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
     if (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::ProbeOnly) {
@@ -574,7 +587,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
       ++output_chunk_id;
     }
-    _staged_performance_data.stage_runtimes.push_back(clock_output_phase.lap());
+    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = clock_output_stage.lap();
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

@@ -10,6 +10,7 @@
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
+#include "magic_enum.hpp" 
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/abstract_index.hpp"
@@ -17,6 +18,7 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -132,6 +134,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
+  Timer timer;
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 
@@ -181,14 +184,17 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                                        reference_segment_pos_list);
             });
           }
+          performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
           performance_data.chunks_scanned_with_index++;
         } else {
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
+          performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
         }
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
+        performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
@@ -218,9 +224,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           });
         }
         performance_data.chunks_scanned_with_index++;
+        performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
+        performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
       }
     }
 
@@ -248,8 +256,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     PerformanceWarning(
         std::string("Only ") + std::to_string(performance_data.chunks_scanned_with_index) + " of " +
         std::to_string(performance_data.chunks_scanned_with_index + performance_data.chunks_scanned_without_index) +
-        " chunks scanned using an index");
+        " chunks processed using an index.");
   }
+  performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
 
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }

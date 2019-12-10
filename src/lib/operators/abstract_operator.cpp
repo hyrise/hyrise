@@ -54,8 +54,8 @@ void AbstractOperator::execute() {
   _on_cleanup();
 
   _performance_data->walltime = performance_timer.lap();
-  if (_input_left)  _performance_data->input_row_count_left = _input_left->get_output()->row_count();
-  if (_input_right)  _performance_data->input_row_count_right = _input_right->get_output()->row_count();
+  if (_input_left) _performance_data->input_row_count_left = _input_left->get_output()->row_count();
+  if (_input_right) _performance_data->input_row_count_right = _input_right->get_output()->row_count();
   _performance_data->output_row_count = _output->row_count();
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
