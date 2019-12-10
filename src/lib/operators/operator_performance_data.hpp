@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include <boost/container/small_vector.hpp>
-
 #include "types.hpp"
 
 namespace opossum {
