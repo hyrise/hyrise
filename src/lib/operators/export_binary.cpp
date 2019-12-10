@@ -311,7 +311,7 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
   // Write number of blocks
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().size()));
 
-  if (lz4_segment.lz4_blocks().size() == 0) {
+  if (lz4_segment.lz4_blocks().empty()) {
     // No blocks at all: write just last block size = 0
     export_value(ofstream, uint32_t{0});
   } else {
