@@ -124,7 +124,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
       // increase value counter
       ++result.aggregate_count;
 
-      if constexpr (function == AggregateFunction::CountDistinct) {
+      if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
         // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
         // for the case of CountDistinct, insert this value into the set to keep track of distinct values
         result.distinct_values.insert(position.value());
