@@ -149,7 +149,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   auto blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   // (4) Prepare clean-up of chunk 2
-  // (4.1) Create and run a thread which invalidates and reinserts rows of chunk 2 and 3
+  // (4.1) Create and run a thread that invalidates and reinserts rows of chunk 2 and 3
   // It calls update_next_row() continuously. As a PausableLoopThread, it gets terminated together with the
   // test.
   auto table_update_thread =

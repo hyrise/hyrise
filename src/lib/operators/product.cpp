@@ -37,11 +37,11 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
     const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
-    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
       const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
-      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
