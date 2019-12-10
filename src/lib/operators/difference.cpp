@@ -43,7 +43,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   const auto chunk_count_right = input_table_right()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count_right; chunk_id++) {
     const auto chunk = input_table_right()->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
@@ -74,7 +74,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   const auto chunk_count_left = input_table_left()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count_left; chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
-    Assert(in_chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(in_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
 

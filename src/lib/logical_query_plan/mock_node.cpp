@@ -70,7 +70,7 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
 
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }
 
-std::string MockNode::description() const {
+std::string MockNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
   stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
 
@@ -95,7 +95,7 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-size_t MockNode::_shallow_hash() const {
+size_t MockNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(_table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
@@ -108,10 +108,9 @@ size_t MockNode::_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  const auto mock_node = MockNode::make(_column_definitions);
+  const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
-  mock_node->name = name;
   return mock_node;
 }
 

@@ -16,7 +16,7 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::string ValueExpression::as_column_name() const {
+std::string ValueExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   if (value.type() == typeid(pmr_string)) {
