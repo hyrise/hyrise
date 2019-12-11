@@ -8,11 +8,11 @@
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "typed_operator_base_test.hpp"
+#include "typed_ordered_operator_base_test.hpp"
 
 namespace opossum {
 
-class TableScanBetweenTest : public TypedOperatorBaseTest {
+class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
  protected:
   std::shared_ptr<AbstractOperator> _data_table_wrapper;
 
@@ -31,7 +31,12 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.
 
-    const auto& [data_type, encoding, nullable] = GetParam();
+    const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
+
+    const bool descending = ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
+    const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
+    const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
+    const int number_of_nulls_last = (nullable && !nulls_first) ? 3 : 0;
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
 
@@ -40,10 +45,20 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
       using Type = typename decltype(type)::type;
-      for (auto i = 0; i <= 10; ++i) {
-        auto double_value = 10.25 + i * 2.0;
+      if (nullable && nulls_first) {
+        for (int i = 0; i < number_of_nulls_first; ++i) {
+          data_table->append({NullValue{}, i});
+        }
+      }
+      for (auto i = number_of_nulls_first; i <= 10; ++i) {
+        double double_value;
+        if (descending) {
+          double_value = 30.25 - i * 2.0;
+        } else {
+          double_value = 10.25 + i * 2.0;
+        }
 
-        if (nullable && i % 3 == 2) {
+        if (nullable && !ordered_by_mode && i % 3 == 2) {
           data_table->append({NullValue{}, i});
         } else {
           if constexpr (std::is_same_v<pmr_string, Type>) {
@@ -51,6 +66,11 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
           } else {
             data_table->append({static_cast<Type>(double_value), i});
           }
+        }
+      }
+      if (nullable && ordered_by_mode && !nulls_first) {
+        for (int i = 0; i < number_of_nulls_last; ++i) {
+          data_table->append({NullValue{}, i});
         }
       }
     });
@@ -61,10 +81,6 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
       ChunkEncoder::encode_chunk(data_table->get_chunk(chunk_id), {data_type, DataType::Int},
                                  {encoding, EncodingType::Unencoded});
-    }
-
-    for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
-      data_table->get_chunk(chunk_id)->set_ordered_by(std::make_pair<ColumnID, OrderByMode>(ColumnID{0}, OrderByMode::Ascending));
     }
 
     _data_table_wrapper = std::make_shared<TableWrapper>(data_table);
@@ -84,7 +100,10 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   // }
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
-    const auto& [data_type, encoding, nullable] = GetParam();
+    const auto& [data_type, encoding, ordered_by_mode,  nullable] = GetParam();
+    const bool descending = ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
+    const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
+    const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
@@ -127,11 +146,20 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
         std::sort(result_ints.begin(), result_ints.end());
 
         auto expected = expected_with_null;
-        if (nullable) {
+        if (descending) {
+          // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of lowest)
+          std::transform(expected.begin(), expected.end(), expected.begin(),
+                                   [&expected](int expected_index) -> int { return expected.size() - expected_index; });
+        }
+        if (nullable && !ordered_by_mode) {
           // Remove the positions that should not be included because they are meant to be NULL
-          // In this case, remove approximately every third value.
+          // In this case, remove every third value.
           expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
                          expected.end());
+        } else if (nullable && nulls_first) {
+          // Since we prepended three Null values we need to correct our indices
+          std::transform(expected.begin(), expected.end(), expected.begin(),
+                                   [&expected, number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
         }
 
         ASSERT_EQ(result_ints, expected);
@@ -191,7 +219,7 @@ TEST_P(TableScanBetweenTest, Exclusive) {
   _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
 }
 
-INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
-                         TypedOperatorBaseTest::format);
+INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TypedOrderedOperatorBaseTest, testing::ValuesIn(create_test_params()),
+                         TypedOrderedOperatorBaseTest::format);
 
 }  // namespace opossum
