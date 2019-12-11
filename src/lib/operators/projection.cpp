@@ -12,6 +12,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -81,6 +82,40 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
+      } else if (expression->type == ExpressionType::PQPColumn && !forward_columns) {
+        // Cannot immediately forward the column because it is a ReferenceSegment and we need to return a ValueSegment.
+        // However, instead of going through the ExpressionEvaluator just to materialize the segment, we can do it
+        // here:
+        const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
+        const auto segment = input_chunk->get_segment(pqp_column_expression->column_id);
+
+        resolve_data_type(expression->data_type(), [&](const auto data_type) {
+          using DataType = typename decltype(data_type)::type;
+          bool has_null = false;
+          auto values = pmr_concurrent_vector<DataType>(segment->size());
+          auto null_values = pmr_concurrent_vector<bool>(segment->size());
+
+          auto chunk_offset = ChunkOffset{0};
+          segment_iterate<DataType>(*segment, [&](const auto& position) {
+            if (position.is_null()) {
+              has_null = true;
+              null_values[chunk_offset] = true;
+            } else {
+              values[chunk_offset] = position.value();
+            }
+            ++chunk_offset;
+          });
+
+          auto value_segment = std::shared_ptr<ValueSegment<DataType>>{};
+          if (has_null) {
+            value_segment = std::make_shared<ValueSegment<DataType>>(std::move(values), std::move(null_values));
+          } else {
+            value_segment = std::make_shared<ValueSegment<DataType>>(std::move(values));
+          }
+
+          output_segments[column_id] = std::move(value_segment);
+          column_is_nullable[column_id] = has_null;
+        });
       } else {
         auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
