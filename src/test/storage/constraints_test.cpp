@@ -83,10 +83,10 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
 }
 
 TEST_F(ConstraintsTest, Equals) {
-  const auto constraint_a = UniqueConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No};
-  const auto constraint_a_pk = UniqueConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes};
-  const auto constraint_b = UniqueConstraintDefinition{{ColumnID{2}, ColumnID{3}}, IsPrimaryKey::No};
-  const auto constraint_c = UniqueConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No};
+  const auto constraint_a = TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No};
+  const auto constraint_a_pk = TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes};
+  const auto constraint_b = TableConstraintDefinition{{ColumnID{2}, ColumnID{3}}, IsPrimaryKey::No};
+  const auto constraint_c = TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No};
 
   EXPECT_TRUE(constraint_a.equals(constraint_a));
 

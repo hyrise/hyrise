@@ -18,12 +18,12 @@ class MockNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
 
-    const auto a_b_pk_constraint = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-    const auto c_constraint = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+    const auto a_b_pk_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+    const auto c_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
 
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
         {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}},
-                                  std::optional<std::string>{}, UniqueConstraintDefinitions{a_b_pk_constraint, c_constraint});
+                                  std::optional<std::string>{}, TableConstraintDefinitions{a_b_pk_constraint, c_constraint});
 
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");

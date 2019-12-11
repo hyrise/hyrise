@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "storage/constraints/unique_constraint_definition.hpp"
+#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "types.hpp"
@@ -146,7 +146,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  virtual const std::shared_ptr<UniqueConstraintDefinitions> get_constraints() const;
+  virtual const std::shared_ptr<ExpressionsConstraintDefinition> get_constraints() const;
 
   /**
    * Perform a deep equality check

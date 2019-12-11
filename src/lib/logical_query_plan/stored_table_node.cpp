@@ -92,14 +92,14 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-const std::shared_ptr<UniqueConstraintDefinitions> StoredTableNode::get_constraints() const {
-  auto lqp_constraints = std::make_shared<UniqueConstraintDefinitions>();
+const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_constraints() const {
+  auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
   // Extract relevant constraints from table
   const auto& table_constraints = Hyrise::get().storage_manager.get_table(table_name).get()->get_soft_unique_constraints();
   lqp_constraints->reserve(table_constraints.size());
 
-  for (const UniqueConstraintDefinition& constraint : table_constraints) {
+  for (const TableConstraintDefinition& constraint : table_constraints) {
 
     // Discard constraints which involve pruned column(s)
     const auto discard_constraint = [&]() {
@@ -113,6 +113,7 @@ const std::shared_ptr<UniqueConstraintDefinitions> StoredTableNode::get_constrai
     }();
 
     if(!discard_constraint) {
+      // TODO build ExpressionsConstraintDefinition
       lqp_constraints->push_back(constraint);
     }
   }

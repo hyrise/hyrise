@@ -11,8 +11,13 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name, const UniqueConstraintDefinitions& constraints)
-    : AbstractLQPNode(LQPNodeType::Mock), name(name), _column_definitions(column_definitions), _constraints(std::make_shared<UniqueConstraintDefinitions>(constraints)) {}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name, const TableConstraintDefinitions& constraints)
+    : AbstractLQPNode(LQPNodeType::Mock), name(name), _column_definitions(column_definitions), _constraints(std::make_shared<ExpressionsConstraintDefinitions>()) {
+
+  //TODO Create ExpressionsConstraintDefinitions from ColumnExpressions
+  // Mabye also check for validity of constraints
+
+}
 
 LQPColumnReference MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
@@ -67,7 +72,7 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _column_expressions.reset();
 }
 
-const std::shared_ptr<UniqueConstraintDefinitions> MockNode::get_constraints() const {
+const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraints() const {
   return _constraints;
 }
 
