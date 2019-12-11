@@ -7,7 +7,6 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/reference_segment/create_iterable_from_segment.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/segment_iterate.hpp"
