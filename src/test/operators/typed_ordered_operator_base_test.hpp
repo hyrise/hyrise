@@ -9,12 +9,15 @@
 #include "storage/encoding_type.hpp"
 
 namespace opossum {
-class TypedOrderedOperatorBaseTest : public BaseTestWithParam<std::tuple<DataType, EncodingType, std::optional<OrderByMode>, bool /*nullable*/>> {
+class TypedOrderedOperatorBaseTest :
+        public BaseTestWithParam<std::tuple<DataType, EncodingType, std::optional<OrderByMode>, bool /*nullable*/>> {
 public:
   static std::string format(testing::TestParamInfo<ParamType> info) {
     const auto& [data_type, encoding, order_mode, nullable] = info.param;
 
-    return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) + order_by_mode_to_string.left.at(order_mode) + (nullable ? "" : "Not") + "Nullable";
+    return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
+           (order_mode ? order_by_mode_to_string.left.at(*order_mode) : "Unordered") +
+           (nullable ? "" : "Not") + "Nullable";
   }
 };
 

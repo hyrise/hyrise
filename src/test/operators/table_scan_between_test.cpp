@@ -68,14 +68,20 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
           }
         }
       }
-      if (nullable && ordered_by_mode && !nulls_first) {
+      if (nullable && !nulls_first) {
         for (int i = 0; i < number_of_nulls_last; ++i) {
           data_table->append({NullValue{}, i});
         }
       }
     });
 
-    data_table->last_chunk()->finalize();
+    if (ordered_by_mode) {
+      for (ChunkID chunk_id{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
+        data_table->get_chunk(chunk_id)->set_ordered_by(std::make_pair(ColumnID{0}, *ordered_by_mode));
+      }
+    }
+
+     data_table->last_chunk()->finalize();
 
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
@@ -149,7 +155,8 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
         if (descending) {
           // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of lowest)
           std::transform(expected.begin(), expected.end(), expected.begin(),
-                                   [&expected](int expected_index) -> int { return expected.size() - expected_index; });
+                          [](int expected_index) -> int { return 10 - expected_index; });
+          std::reverse(expected.begin(), expected.end());
         }
         if (nullable && !ordered_by_mode) {
           // Remove the positions that should not be included because they are meant to be NULL
@@ -219,7 +226,7 @@ TEST_P(TableScanBetweenTest, Exclusive) {
   _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
 }
 
-INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TypedOrderedOperatorBaseTest, testing::ValuesIn(create_test_params()),
+INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
                          TypedOrderedOperatorBaseTest::format);
 
 }  // namespace opossum
