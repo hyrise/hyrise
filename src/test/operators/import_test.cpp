@@ -95,25 +95,6 @@ TEST_F(OperatorsImportTest, FallbackToRetrieveFromStorageManager) {
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
 }
 
-TEST_F(OperatorsImportTest, Parallel) {
-  Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  auto importer = std::make_shared<OperatorTask>(
-      std::make_shared<Import>("resources/test_data/csv/float_int_large.csv"), CleanupTemporaries::Yes);
-  importer->schedule();
-
-  TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
-
-  for (int i = 0; i < 100; ++i) {
-    expected_table->append({458.7f, 12345});
-  }
-
-  Hyrise::get().scheduler()->finish();
-  EXPECT_TABLE_EQ_ORDERED(importer->get_operator()->get_output(), expected_table);
-  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
-}
-
 TEST_F(OperatorsImportTest, ChunkSize) {
   auto importer =
       std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", std::nullopt, ChunkOffset{20});
