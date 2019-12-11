@@ -200,7 +200,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _results[item_id].duration = {};
     auto& result = _results[item_id];
 
-//    SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
+    SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
@@ -217,8 +217,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
-//    SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(),
-//      "access_statistics_" + name + ".csv");
+    SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(),
+      "access_statistics_" + name + "_meta.csv", "access_statistics_" + name + ".csv");
 
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
@@ -236,8 +236,6 @@ void BenchmarkRunner::_benchmark_ordered() {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
-
-//    SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), "access_statistics.csv");
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     Hyrise::get().scheduler()->wait_for_all_tasks();
