@@ -381,7 +381,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // Cannot handle subqueries
       return input_table_statistics;
     }
-    
+
     const auto& list_expression = static_cast<const ListExpression&>(*in_expression->set());
     auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
     expressions.reserve(list_expression.elements().size());
