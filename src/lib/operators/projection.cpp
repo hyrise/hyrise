@@ -90,13 +90,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         const auto segment = input_chunk->get_segment(pqp_column_expression->column_id);
 
         resolve_data_type(expression->data_type(), [&](const auto data_type) {
-          using DataType = typename decltype(data_type)::type;
+          using ColumnDataType = typename decltype(data_type)::type;
           bool has_null = false;
-          auto values = pmr_concurrent_vector<DataType>(segment->size());
+          auto values = pmr_concurrent_vector<ColumnDataType>(segment->size());
           auto null_values = pmr_concurrent_vector<bool>(segment->size());
 
           auto chunk_offset = ChunkOffset{0};
-          segment_iterate<DataType>(*segment, [&](const auto& position) {
+          segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
             if (position.is_null()) {
               has_null = true;
               null_values[chunk_offset] = true;
@@ -106,11 +106,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             ++chunk_offset;
           });
 
-          auto value_segment = std::shared_ptr<ValueSegment<DataType>>{};
+          auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
           if (has_null) {
-            value_segment = std::make_shared<ValueSegment<DataType>>(std::move(values), std::move(null_values));
+            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
           } else {
-            value_segment = std::make_shared<ValueSegment<DataType>>(std::move(values));
+            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
           }
 
           output_segments[column_id] = std::move(value_segment);
