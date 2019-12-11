@@ -256,8 +256,8 @@ void AggregateHash::_aggregate() {
           auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
           auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-          auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
-                                           decltype(allocator)>(allocator);
+          auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+                                           std::equal_to<>, decltype(allocator)>(allocator);
           AggregateKeyEntry id_counter = 1u;
 
           for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
