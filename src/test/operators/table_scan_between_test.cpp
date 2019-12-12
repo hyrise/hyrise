@@ -8,11 +8,11 @@
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "typed_ordered_operator_base_test.hpp"
+#include "typed_operator_base_test.hpp"
 
 namespace opossum {
 
-class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
+class TableScanBetweenTest : public TypedOperatorBaseTest {
  protected:
   std::shared_ptr<AbstractOperator> _data_table_wrapper;
 
@@ -23,10 +23,12 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
     // a<DataType>  b<int>
     // 10.25         0
     // 12.25         1
-    // 14.25 / NULL  2       (each third row is nulled if the table is marked as nullable)
+    // 14.25 / NULL  2       (each third row is nulled if the table is marked as nullable and no ordering is expected)
     // 16.25         3
     // ...
     // 30.25         10
+    //
+    // If the table is ordered, NULL values are added up front or to the back.
     //
     // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.
@@ -115,7 +117,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
     const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable, ordered_by_mode = ordered_by_mode](const auto data_type_t) {
+    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       for (const auto& [left, right, expected_with_null] : tests) {
@@ -161,7 +163,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
           // lowest)
           // We need to substract number_of_nulls_first as well because the expected values need to be shifted
           // towards the added nulls. number_of_nulls_last is ok because the nulls at the end aren't processed by
-          // the between scan
+          // the between scan and thus shouldn't appear in the results (actual or expected).
 
           const int max_index = 10 + number_of_nulls_first;
           std::transform(expected.begin(), expected.end(), expected.begin(),
@@ -241,6 +243,6 @@ TEST_P(TableScanBetweenTest, Exclusive) {
 }
 
 INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
-                         TypedOrderedOperatorBaseTest::format);
+                         TypedOperatorBaseTest::format);
 
 }  // namespace opossum
