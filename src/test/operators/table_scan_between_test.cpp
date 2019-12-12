@@ -8,11 +8,11 @@
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "typed_ordered_operator_base_test.hpp"
+#include "typed_operator_base_test.hpp"
 
 namespace opossum {
 
-class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
+class TableScanBetweenTest : public TypedOperatorBaseTest {
  protected:
   std::shared_ptr<AbstractOperator> _data_table_wrapper;
 
@@ -253,6 +253,6 @@ TEST_P(TableScanBetweenTest, Exclusive) {
 }
 
 INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
-                         TypedOrderedOperatorBaseTest::format);
+                         TypedOperatorBaseTest::format);
 
 }  // namespace opossum
