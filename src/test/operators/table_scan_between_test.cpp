@@ -108,6 +108,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, ordered_by_mode,  nullable] = GetParam();
     const bool descending = ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
+    const bool ascending = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::AscendingNullsLast;
     const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     std::ignore = encoding;
@@ -152,25 +153,47 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
         std::sort(result_ints.begin(), result_ints.end());
 
         auto expected = expected_with_null;
+        std::cout << "result" << std::endl;
+        for (auto i : result_ints) {
+          std::cout << i << "\t";
+        }
+        std::cout << std::endl;
+
+        std::cout << "expected" << std::endl;
+        for (auto i : expected) {
+          std::cout << i << "\t";
+        } 
+        std::cout << std::endl;
+        
         if (descending) {
           // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of lowest)
           // We need to substract number_of_nulls_first as well because the expected values need to be shifted
           // towards the added nulls. number_of_nulls_last is ok because the nulls at the end aren't processed by
           // the between scan
+
           std::transform(expected.begin(), expected.end(), expected.begin(),
-                          [number_of_nulls_first](int expected_index) -> int { return (10 - number_of_nulls_first) - expected_index; });
+                          [number_of_nulls_first](int expected_index) -> int { return (10 + number_of_nulls_first) - expected_index; });
           std::reverse(expected.begin(), expected.end());
         }
-        if (nullable && !ordered_by_mode) {
-          // Remove the positions that should not be included because they are meant to be NULL
-          // In this case, remove every third value.
-          expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
-                         expected.end());
-        } else if (nullable && nulls_first) {
+      
+        if (ascending) {
           // Since we prepended three Null values we need to correct our indices
           std::transform(expected.begin(), expected.end(), expected.begin(),
                   [number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
         }
+
+        if (nullable && !ascending && !descending) {
+          // Remove the positions that should not be included because they are meant to be NULL
+          // In this case, remove every third value.
+          expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
+                         expected.end());
+        }
+
+        std::cout << "expected transformed" << std::endl;
+        for (auto i : expected) {
+          std::cout << i << "\t";
+        } 
+        std::cout << std::endl;
 
         ASSERT_EQ(result_ints, expected);
       }
