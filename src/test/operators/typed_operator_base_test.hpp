@@ -24,8 +24,8 @@ public:
   }
 };
 
-static std::vector<TypedOrderedOperatorBaseTest::ParamType> create_test_params() {
-  std::vector<TypedOrderedOperatorBaseTest::ParamType> pairs;
+static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
+  std::vector<TypedOperatorBaseTest::ParamType> pairs;
 
   hana::for_each(data_type_pairs, [&](auto pair) {
     const auto& data_type = hana::first(pair);
