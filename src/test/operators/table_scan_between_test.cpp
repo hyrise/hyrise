@@ -23,17 +23,20 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
     // a<DataType>  b<int>
     // 10.25         0
     // 12.25         1
-    // 14.25 / NULL  2       (each third row is nulled if the table is marked as nullable)
+    // 14.25 / NULL  2       (each third row is nulled if the table is marked as nullable and no ordering is expected)
     // 16.25         3
     // ...
     // 30.25         10
+    //
+    // If the table is ordered, NULL values are added up front or to the back.
     //
     // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.
 
     const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
 
-    const bool descending = ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
+    const bool descending =
+        ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
     const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     const int number_of_nulls_last = (nullable && !nulls_first) ? 3 : 0;
@@ -81,7 +84,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
       }
     }
 
-     data_table->last_chunk()->finalize();
+    data_table->last_chunk()->finalize();
 
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
@@ -106,13 +109,15 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
   // }
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
-    const auto& [data_type, encoding, ordered_by_mode,  nullable] = GetParam();
-    const bool descending = ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
-    const bool ascending = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::AscendingNullsLast;
+    const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
+    const bool descending =
+        ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
+    const bool ascending =
+        ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::AscendingNullsLast;
     const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable, ordered_by_mode = ordered_by_mode](const auto data_type_t) {
+    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       for (const auto& [left, right, expected_with_null] : tests) {
@@ -155,20 +160,21 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
         auto expected = expected_with_null;
         if (descending) {
           // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of lowest)
-          // We need to substract number_of_nulls_first as well because the expected values need to be shifted
+          // We need to subtract number_of_nulls_first as well because the expected values need to be shifted
           // towards the added nulls. number_of_nulls_last is ok because the nulls at the end aren't processed by
-          // the between scan
+          // the between scan and thus shouldn't appear in the results (actual or expected).
 
           const int max_index = 10 + number_of_nulls_first;
           std::transform(expected.begin(), expected.end(), expected.begin(),
-                          [max_index](int expected_index) -> int { return max_index - expected_index; });
+                         [max_index](int expected_index) -> int { return max_index - expected_index; });
           std::reverse(expected.begin(), expected.end());
         }
-      
+
         if (ascending) {
           // Since we prepended three Null values we need to correct our indices
-          std::transform(expected.begin(), expected.end(), expected.begin(),
-                  [number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
+          std::transform(
+              expected.begin(), expected.end(), expected.begin(),
+              [number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
         }
 
         if (nullable && !ascending && !descending) {
