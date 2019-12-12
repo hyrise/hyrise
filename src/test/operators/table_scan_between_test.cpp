@@ -153,26 +153,15 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
         std::sort(result_ints.begin(), result_ints.end());
 
         auto expected = expected_with_null;
-        std::cout << "result" << std::endl;
-        for (auto i : result_ints) {
-          std::cout << i << "\t";
-        }
-        std::cout << std::endl;
-
-        std::cout << "expected" << std::endl;
-        for (auto i : expected) {
-          std::cout << i << "\t";
-        } 
-        std::cout << std::endl;
-        
         if (descending) {
           // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of lowest)
           // We need to substract number_of_nulls_first as well because the expected values need to be shifted
           // towards the added nulls. number_of_nulls_last is ok because the nulls at the end aren't processed by
           // the between scan
 
+          const int max_index = 10 + number_of_nulls_first;
           std::transform(expected.begin(), expected.end(), expected.begin(),
-                          [number_of_nulls_first](int expected_index) -> int { return (10 + number_of_nulls_first) - expected_index; });
+                          [max_index](int expected_index) -> int { return max_index - expected_index; });
           std::reverse(expected.begin(), expected.end());
         }
       
@@ -188,12 +177,6 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
           expected.erase(std::remove_if(expected.begin(), expected.end(), [](int x) { return x % 3 == 2; }),
                          expected.end());
         }
-
-        std::cout << "expected transformed" << std::endl;
-        for (auto i : expected) {
-          std::cout << i << "\t";
-        } 
-        std::cout << std::endl;
 
         ASSERT_EQ(result_ints, expected);
       }
@@ -216,6 +199,7 @@ TEST_P(TableScanBetweenTest, Inclusive) {
   };
 
   _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
+  std::cout << "test between scan finished" << std::endl;
 }
 
 TEST_P(TableScanBetweenTest, LowerExclusive) {

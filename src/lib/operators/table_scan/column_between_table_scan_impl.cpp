@@ -172,11 +172,13 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
                 matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
               }
             } else {
-              const auto first_offset = begin->chunk_offset();
               const auto distance = std::distance(begin, end);
+              if (distance > 0) {
+                const auto first_offset = begin->chunk_offset();
 
-              for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-                matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
+                for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+                  matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
+                }
               }
             }
           });
