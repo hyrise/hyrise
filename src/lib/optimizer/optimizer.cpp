@@ -219,7 +219,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
           if (other_lqp == lqp) continue;
           Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
-                                                       node->description() + "` found in different LQP");
+                                            node->description() + "` found in different LQP");
         }
       }
 
