@@ -18,7 +18,7 @@ class ListExpression : public AbstractExpression {
   const std::vector<std::shared_ptr<AbstractExpression>>& elements() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

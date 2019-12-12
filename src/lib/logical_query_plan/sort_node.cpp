@@ -17,13 +17,15 @@ SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expre
   Assert(expressions.size() == order_by_modes.size(), "Expected as many Expressions as OrderByModes");
 }
 
-std::string SortNode::description() const {
+std::string SortNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
+
   std::stringstream stream;
 
   stream << "[Sort] ";
 
   for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
-    stream << node_expressions[expression_idx]->as_column_name() << " ";
+    stream << node_expressions[expression_idx]->description(expression_mode) << " ";
     stream << "(" << order_by_modes[expression_idx] << ")";
 
     if (expression_idx + 1 < node_expressions.size()) stream << ", ";
@@ -31,7 +33,7 @@ std::string SortNode::description() const {
   return stream.str();
 }
 
-size_t SortNode::_shallow_hash() const {
+size_t SortNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& order_by_mode : order_by_modes) {
     boost::hash_combine(hash, order_by_mode);

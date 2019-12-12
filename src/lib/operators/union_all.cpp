@@ -34,7 +34,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
     const auto chunk_count = input->chunk_count();
     for (ChunkID in_chunk_id{0}; in_chunk_id < chunk_count; in_chunk_id++) {
       const auto chunk = input->get_chunk(in_chunk_id);
-      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       // creating empty chunk to add segments with positions
       Segments output_segments;
