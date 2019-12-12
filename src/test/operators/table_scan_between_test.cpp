@@ -43,7 +43,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
     const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, 6);
 
     // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
-    resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
+    resolve_data_type(data_type, [&, nullable = nullable, ordered_by_mode = ordered_by_mode](const auto type) {
       using Type = typename decltype(type)::type;
       if (nullable && nulls_first) {
         for (int i = 0; i < number_of_nulls_first; ++i) {
@@ -111,7 +111,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
     const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     std::ignore = encoding;
-    resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
+    resolve_data_type(data_type, [&, nullable = nullable, ordered_by_mode = ordered_by_mode](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
       for (const auto& [left, right, expected_with_null] : tests) {
@@ -166,7 +166,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
         } else if (nullable && nulls_first) {
           // Since we prepended three Null values we need to correct our indices
           std::transform(expected.begin(), expected.end(), expected.begin(),
-                                   [&expected, number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
+                  [number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
         }
 
         ASSERT_EQ(result_ints, expected);
