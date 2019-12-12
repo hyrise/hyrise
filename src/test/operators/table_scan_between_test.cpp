@@ -50,7 +50,7 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
           data_table->append({NullValue{}, i});
         }
       }
-      for (auto i = number_of_nulls_first; i <= 10; ++i) {
+      for (auto i = 0; i <= 10; ++i) {
         double double_value;
         if (descending) {
           double_value = 30.25 - i * 2.0;
@@ -59,12 +59,12 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
         }
 
         if (nullable && !ordered_by_mode && i % 3 == 2) {
-          data_table->append({NullValue{}, i});
+          data_table->append({NullValue{}, i + number_of_nulls_first});
         } else {
           if constexpr (std::is_same_v<pmr_string, Type>) {
-            data_table->append({pmr_string{std::to_string(double_value)}, i});
+            data_table->append({pmr_string{std::to_string(double_value)}, i + number_of_nulls_first});
           } else {
-            data_table->append({static_cast<Type>(double_value), i});
+            data_table->append({static_cast<Type>(double_value), i + number_of_nulls_first});
           }
         }
       }
