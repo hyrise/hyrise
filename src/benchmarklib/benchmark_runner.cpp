@@ -63,7 +63,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       Timer per_table_timer;
-      sqlite_wrapper->create_table(*table, table_name);
+      sqlite_wrapper->create_sqlite_table(*table, table_name);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
@@ -123,6 +123,7 @@ void BenchmarkRunner::run() {
 
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
+      if (result.successful_runs.empty()) continue;
       Assert(result.verification_passed.load(), "Verification result should have been set");
       any_verification_failed |= !(*result.verification_passed.load());
     }
@@ -130,7 +131,10 @@ void BenchmarkRunner::run() {
     Assert(!any_verification_failed, "Verification failed");
   }
 
-  Hyrise::get().scheduler()->finish();
+  if (Hyrise::get().scheduler()) {
+    Hyrise::get().scheduler()->finish();
+    Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
+  }
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -391,6 +395,12 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   const auto compression_strings_option =
       boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
+  // Make TPC-C run in shuffled mode. While it can also run in ordered mode, it would run out of orders to fulfill at
+  // some point. The way this is solved here is not really nice, but as the TPC-C benchmark binary has just a main
+  // method and not a class, retrieving this default value properly would require some major refactoring of how
+  // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
+  const auto default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
+
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
   // clang-format off
@@ -402,7 +412,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
-    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
+    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value(default_mode)) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT

@@ -2,11 +2,10 @@
 
 #include <memory>
 
+#include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-class AbstractLQPNode;
 
 /**
  * Used for identifying a Column in an LQP by the Node and the ColumnID in that node in which it was created.
@@ -22,6 +21,9 @@ class LQPColumnReference final {
   ColumnID original_column_id() const;
 
   bool operator==(const LQPColumnReference& rhs) const;
+
+  // Indirection through AbstractExpression will be gone with #1893
+  std::string description(AbstractExpression::DescriptionMode mode) const;
 
  private:
   // Needs to be weak since Nodes can hold ColumnReferences referring to themselves

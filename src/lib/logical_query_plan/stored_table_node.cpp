@@ -49,7 +49,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
 
-std::string StoredTableNode::description() const {
+std::string StoredTableNode::description(const DescriptionMode mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
@@ -128,7 +128,7 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   return pruned_indexes_statistics;
 }
 
-size_t StoredTableNode::_shallow_hash() const {
+size_t StoredTableNode::_on_shallow_hash() const {
   size_t hash{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {

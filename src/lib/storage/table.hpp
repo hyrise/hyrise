@@ -63,7 +63,7 @@ class Table : private Noncopyable {
 
   TableType type() const;
 
-  UseMvcc has_mvcc() const;
+  UseMvcc uses_mvcc() const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   ChunkOffset max_chunk_size() const;
@@ -81,10 +81,14 @@ class Table : private Noncopyable {
    * @defgroup Accessing and adding Chunks
    * @{
    */
-  // returns the number of chunks (cannot exceed ChunkID (uint32_t))
+  // Returns the number of chunks, or, more correctly, the ID of the last chunk plus one (see get_chunk / #1686).
+  // This cannot exceed ChunkID (uint32_t).
   ChunkID chunk_count() const;
 
-  // returns the chunk with the given id
+  // Returns the chunk with the given id. If a previously existing chunk has been physically deleted by the
+  // MvccDeletePlugin, this returns nullptr. In the execution engine, it is the GetTable operator's job to
+  // filter these nullptrs and return only existing chunks to the following operator. Thus, all other operators
+  // should not accept nullptrs and instead assert that this function returned a chunk.
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
@@ -146,6 +150,11 @@ class Table : private Noncopyable {
     Fail("Row does not exist.");
   }
 
+  template <typename T>
+  T get_value(const std::string& column_name, const size_t row_number) const {
+    return get_value<T>(column_id_by_name(column_name), row_number);
+  }
+
   // Materialize a single Tuple
   std::vector<AllTypeVariant> get_row(size_t row_idx) const;
 
@@ -174,7 +183,7 @@ class Table : private Noncopyable {
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       chunk->create_index<Index>(column_ids);
     }

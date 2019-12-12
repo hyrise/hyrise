@@ -10,9 +10,9 @@
 
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "import_export/binary.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "utils/assert.hpp"
 
@@ -155,15 +155,17 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
 template <typename ColumnDataType>
 std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            bool is_nullable) {
-  const auto column_type = _read_value<BinarySegmentType>(file);
+  const auto column_type = _read_value<EncodingType>(file);
 
   switch (column_type) {
-    case BinarySegmentType::value_segment:
+    case EncodingType::Unencoded:
       return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
-    case BinarySegmentType::dictionary_segment:
+    case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
+    case EncodingType::RunLength:
+      return _import_run_length_segment<ColumnDataType>(file, row_count);
     default:
-      // This case happens if the read column type is not a valid BinarySegmentType.
+      // This case happens if the read column type is not a valid EncodingType.
       Fail("Cannot import column: invalid column type");
   }
 }
@@ -209,6 +211,17 @@ std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(s
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
+}
+
+template <typename T>
+std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(std::ifstream& file,
+                                                                              ChunkOffset row_count) {
+  const auto size = _read_value<uint32_t>(file);
+  const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
+  const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
+  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
+
+  return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
 }
 
 }  // namespace opossum

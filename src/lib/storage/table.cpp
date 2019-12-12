@@ -63,7 +63,7 @@ const TableColumnDefinitions& Table::column_definitions() const { return _column
 
 TableType Table::type() const { return _type; }
 
-UseMvcc Table::has_mvcc() const { return _use_mvcc; }
+UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
 
 ColumnCount Table::column_count() const {
   return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
@@ -209,7 +209,9 @@ void Table::remove_chunk(ChunkID chunk_id) {
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
-         "Supply MvccData to data Tables iff MVCC is enabled");
+         "Supply MvccData to data Tables, if MVCC is enabled.");
+  AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
+              "Input does not have the same number of columns.");
 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& segment : segments) {

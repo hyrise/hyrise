@@ -19,13 +19,15 @@
 #include "bytell_hash_map.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+// empty base class for AggregateResultContext
+class SegmentVisitorContext {};
 
 template <typename AggregateKey>
 struct GroupByContext;
