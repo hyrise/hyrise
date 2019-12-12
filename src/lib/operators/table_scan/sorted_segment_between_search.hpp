@@ -123,8 +123,7 @@ class SortedSegmentBetweenSearch {
   }
 
  private:
-  // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer, except when
-  // handling NotEquals (see _handle_not_equals).
+  // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer
   IteratorType _begin;
   IteratorType _end;
   const PredicateCondition _predicate_condition;

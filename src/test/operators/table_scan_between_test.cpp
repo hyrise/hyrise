@@ -204,7 +204,6 @@ TEST_P(TableScanBetweenTest, Inclusive) {
   };
 
   _test_between_scan(inclusive_tests, PredicateCondition::BetweenInclusive);
-  std::cout << "test between scan finished" << std::endl;
 }
 
 TEST_P(TableScanBetweenTest, LowerExclusive) {
