@@ -4,8 +4,8 @@
 #include <string>
 #include <type_traits>
 
-#include "sorted_segment_between_search.hpp"
 #include "expression/between_expression.hpp"
+#include "sorted_segment_between_search.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -33,11 +33,10 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
 
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
-
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-//  // Select optimized or generic scanning implementation based on segment type
+  //  // Select optimized or generic scanning implementation based on segment type
 
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
@@ -141,50 +140,51 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   });
 }
 
-  void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                        PosList& matches,
-                                                        const std::shared_ptr<const PosList>& position_filter,
-                                                        const OrderByMode order_by_mode) const {
-    resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-      using ColumnDataType = typename decltype(type)::type;
+void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                      PosList& matches,
+                                                      const std::shared_ptr<const PosList>& position_filter,
+                                                      const OrderByMode order_by_mode) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    using ColumnDataType = typename decltype(type)::type;
 
-      if constexpr (std::is_same_v<std::decay_t<decltype(typed_segment)>, ReferenceSegment>) {
-        Fail("Expected ReferenceSegments to be handled before calling this method");
-      } else {
-        auto segment_iterable = create_iterable_from_segment(typed_segment);
-        segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-          auto sorted_segment_search = SortedSegmentBetweenSearch(segment_begin, segment_end, order_by_mode,
-                  predicate_condition, boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
+    if constexpr (std::is_same_v<std::decay_t<decltype(typed_segment)>, ReferenceSegment>) {
+      Fail("Expected ReferenceSegments to be handled before calling this method");
+    } else {
+      auto segment_iterable = create_iterable_from_segment(typed_segment);
+      segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
+        auto sorted_segment_search =
+            SortedSegmentBetweenSearch(segment_begin, segment_end, order_by_mode, predicate_condition,
+                                       boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
 
-          sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-            size_t output_idx = matches.size();
+        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          size_t output_idx = matches.size();
 
-            matches.resize(matches.size() + std::distance(begin, end));
+          matches.resize(matches.size() + std::distance(begin, end));
 
-            /**
+          /**
              * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
              * by calculating the offsets based on the first offset instead of calling chunk_offset()
              * for every match.
              * ChunkOffsets in position_filter are not necessarily continuous, therefore we need to use the iterator.
              */
-            if (position_filter) {
-              for (; begin != end; ++begin) {
-                matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
-              }
-            } else {
-              const auto distance = std::distance(begin, end);
-              if (distance > 0) {
-                const auto first_offset = begin->chunk_offset();
+          if (position_filter) {
+            for (; begin != end; ++begin) {
+              matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
+            }
+          } else {
+            const auto distance = std::distance(begin, end);
+            if (distance > 0) {
+              const auto first_offset = begin->chunk_offset();
 
-                for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-                  matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
-                }
+              for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+                matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
               }
             }
-          });
+          }
         });
-      }
-    });
-  }
+      });
+    }
+  });
+}
 
 }  // namespace opossum

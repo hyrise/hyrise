@@ -159,8 +159,9 @@ class TableScanBetweenTest : public TypedOrderedOperatorBaseTest {
 
         auto expected = expected_with_null;
         if (descending) {
-          // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of lowest)
-          // We need to subtract number_of_nulls_first as well because the expected values need to be shifted
+          // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of
+          // lowest)
+          // We need to substract number_of_nulls_first as well because the expected values need to be shifted
           // towards the added nulls. number_of_nulls_last is ok because the nulls at the end aren't processed by
           // the between scan and thus shouldn't appear in the results (actual or expected).
 

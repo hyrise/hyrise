@@ -16,8 +16,8 @@ template <typename IteratorType, typename SearchValueType>
 class SortedSegmentBetweenSearch {
  public:
   SortedSegmentBetweenSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by,
-                      const PredicateCondition& predicate_condition,
-                      const SearchValueType& left_value, const SearchValueType& right_value)
+                             const PredicateCondition& predicate_condition, const SearchValueType& left_value,
+                             const SearchValueType& right_value)
       : _begin{begin},
         _end{end},
         _predicate_condition{predicate_condition},
@@ -27,7 +27,6 @@ class SortedSegmentBetweenSearch {
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
-  // TODO update comment?
   /**
    * _get_first_bound and _get_last_bound are used to retrieve the lower and upper bound in a sorted segment but are
    * independent of its sort order. _get_first_bound will always return the bound with the smaller offset and
@@ -38,7 +37,6 @@ class SortedSegmentBetweenSearch {
    * behind the last matching one.
    */
   IteratorType _get_first_bound(const SearchValueType& search_value) const {
-    // TODO handle nulls?
     if (_is_ascending) {
       return std::lower_bound(_begin, _end, search_value, [](const auto& segment_position, const auto& value) {
         return segment_position.value() < value;
@@ -51,7 +49,6 @@ class SortedSegmentBetweenSearch {
   }
 
   IteratorType _get_last_bound(const SearchValueType& search_value) const {
-    // TODO handle nulls?
     if (_is_ascending) {
       return std::upper_bound(_begin, _end, search_value, [](const auto& value, const auto& segment_position) {
         return segment_position.value() > value;
@@ -71,7 +68,7 @@ class SortedSegmentBetweenSearch {
           _begin = _get_first_bound(_left_value);
           _end = _get_last_bound(_right_value);
           return;
-        case PredicateCondition::BetweenLowerExclusive: // upper inclusive
+        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
           _begin = _get_last_bound(_left_value);
           _end = _get_last_bound(_right_value);
           return;
@@ -83,7 +80,8 @@ class SortedSegmentBetweenSearch {
           _begin = _get_last_bound(_left_value);
           _end = _get_first_bound(_right_value);
           return;
-        default: Fail("Unsupported predicate condition encountered");
+        default:
+          Fail("Unsupported predicate condition encountered");
       }
     } else {
       switch (_predicate_condition) {
@@ -91,7 +89,7 @@ class SortedSegmentBetweenSearch {
           _begin = _get_first_bound(_right_value);
           _end = _get_last_bound(_left_value);
           return;
-        case PredicateCondition::BetweenLowerExclusive: // upper inclusive
+        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
           _begin = _get_first_bound(_right_value);
           _end = _get_first_bound(_left_value);
           return;
@@ -103,7 +101,8 @@ class SortedSegmentBetweenSearch {
           _begin = _get_last_bound(_right_value);
           _end = _get_first_bound(_left_value);
           return;
-        default: Fail("Unsupported predicate condition encountered");
+        default:
+          Fail("Unsupported predicate condition encountered");
       }
     }
   }
