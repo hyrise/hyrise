@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
@@ -14,8 +15,6 @@
 #include "storage/segment_iterables.hpp"
 
 namespace opossum {
-
-enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 
 template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {

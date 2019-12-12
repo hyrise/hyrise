@@ -6,14 +6,15 @@
 
 #include "base_value_segment.hpp"
 #include "chunk.hpp"
-#include "table.hpp"
-#include "types.hpp"
-
+#include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
+#include "table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
