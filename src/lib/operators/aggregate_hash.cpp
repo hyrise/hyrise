@@ -97,8 +97,8 @@ struct AggregateResultContext : SegmentVisitorContext {
 template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
-    auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
     if constexpr(!std::is_same_v<AggregateKey, std::tuple<>>) {
+      auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
       // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
       result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
     }
@@ -121,8 +121,8 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   auto& results = context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  const auto get_aggregate_key = [&](const auto chunk_offset) {  // TODO dedup
-    if constexpr (std::is_same_v<AggregateKey, std::tuple<>>) {
+  const auto get_aggregate_key = [&]([[maybe_unused]] const auto chunk_offset) {  // TODO dedup
+    if constexpr (!std::is_same_v<AggregateKey, std::tuple<>>) {
       return hash_keys[chunk_offset];
     } else {
       return std::tuple<>{};
@@ -364,7 +364,7 @@ void AggregateHash::_aggregate() {
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
     const auto get_aggregate_key = [&](const auto chunk_offset) {
-      if constexpr (std::is_same_v<AggregateKey, std::tuple<>>) {
+      if constexpr (!std::is_same_v<AggregateKey, std::tuple<>>) {
         return hash_keys[chunk_offset];
       } else {
         return std::tuple<>{};
