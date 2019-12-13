@@ -90,11 +90,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       if (functor_was_called) return;
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
-      // As accessor is an AbstractSegmentAccessor here, functor only gets initialized only once, no matter how many
-      // different accessors there might be.
-
-      auto accessor =
-          std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
 
       const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
       segment_iterable.with_iterators(pos_list, functor);
