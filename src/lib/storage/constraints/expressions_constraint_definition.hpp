@@ -1,8 +1,9 @@
 #pragma once
 
 #include <vector>
-
 #include "types.hpp"
+#include "storage/constraints/table_constraint_definition.hpp"
+#include "expression/abstract_expression.hpp"
 
 namespace opossum {
 

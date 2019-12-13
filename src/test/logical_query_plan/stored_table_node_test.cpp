@@ -13,6 +13,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/constraints/table_constraint_definition.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -158,10 +159,19 @@ TEST_F(StoredTableNodeTest, GetConstraints) {
   EXPECT_EQ(table_constraints.size(), 2);
   EXPECT_EQ(lqp_constraints->size(), 2);
 
-  // Check for constraint equality
+  // Check whether all table constraints are represented in StoredTableNode
   for (const auto& table_constraint : table_constraints) {
-    EXPECT_NE(std::find_if(lqp_constraints->cbegin(), lqp_constraints->cend(),
-                           [&](const auto& lqp_constraint) { return lqp_constraint.equals(table_constraint); }), lqp_constraints->cend());
+    EXPECT_TRUE(std::find_if(lqp_constraints->cbegin(), lqp_constraints->cend(),
+              [&table_constraint](ExpressionsConstraintDefinition& lqp_constraint) {
+                if(table_constraint.is_primary_key != lqp_constraint.is_primary_key) return false;
+                // Check whether all column ids are represented by lqp_constraint
+                return std::find_if(table_constraint.columns.cbegin(), table_constraint.columns.cend(),
+                    [lqp_constraint.column_expressions](ColumnID table_constraint_column_id) {
+
+                }); // Continue here 11.12. 19:18 Uhr
+
+              }) != lqp_constraints->cend());
+
   }
 }
 
