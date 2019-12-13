@@ -96,8 +96,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto accessor =
           std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
 
-      auto begin = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, begin_it};
-      auto end = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, end_it};
+      const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+      segment_iterable.with_iterators(pos_list, functor);
 
       functor(begin, end);
     } else {
