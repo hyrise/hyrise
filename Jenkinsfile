@@ -69,8 +69,6 @@ try {
           // GCC produces non-deterministics files when precompiled headers are built: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92717
           // Disable ASLR for the gcc build process (not for the resulting executable) to stop this from happening:
           disable_aslr = 'setarch x86_64 -R'
-          // TODO: verify this in cmake
-          // TODO: reduce cmake verbosity
 
           // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
           sh "mkdir clang-debug && cd clang-debug &&                                                       ${cmake} ${ccache} ${debug}   ${clang}          .. && make -j libjemalloc-build"

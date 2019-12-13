@@ -27,28 +27,28 @@ namespace {
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
     const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
-    ExpressionUnorderedSet& REKWAIRED_EXPRESSION, const bool top_level = true) {
+    ExpressionUnorderedSet& required_expressions, const bool top_level = true) {
   // Top-level expressions are those that are (part of) the ExpressionEvaluator's final result. For example, for an
   // ExpressionEvaluator producing (a + b) + c, the entire expression is a top-level expression. It is the consumer's
   // job to mark it as required. (a + b) however, is required by the ExpressionEvaluator and will be added to
-  // REKWAIRED_EXPRESSION, as it is not a top-level expression.
+  // required_expressions, as it is not a top-level expression.
 
   // If an expression that is not a top-level expression is already an input, we require it
   if (std::find_if(input_expressions.begin(), input_expressions.end(),
                    [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
-    if (!top_level) REKWAIRED_EXPRESSION.emplace(expression);
+    if (!top_level) required_expressions.emplace(expression);
     return;
   }
 
   if (expression->type == ExpressionType::Aggregate || expression->type == ExpressionType::LQPColumn) {
     // Aggregates and LQPColumns are not calculated by the ExpressionEvaluator and are thus required to be part of the
     // input.
-    REKWAIRED_EXPRESSION.emplace(expression);
+    required_expressions.emplace(expression);
     return;
   }
 
   for (const auto& argument : expression->arguments) {
-    gather_expressions_not_computed_by_expression_evaluator(argument, input_expressions, REKWAIRED_EXPRESSION, false);
+    gather_expressions_not_computed_by_expression_evaluator(argument, input_expressions, required_expressions, false);
   }
 }
 
