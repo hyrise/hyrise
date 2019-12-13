@@ -34,7 +34,7 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
                                               const RowID& row_id) {
   // Get the result id for the current key or add it to the id map
   auto result_id = size_t{};
-  if constexpr(std::is_same_v<AggregateKey, std::tuple<>>) {
+  if constexpr(std::is_same_v<AggregateKey, char>) {
     if (results.empty()) {
       results.emplace_back();
       results[0].row_id = row_id;
@@ -97,7 +97,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
-    if constexpr(!std::is_same_v<AggregateKey, std::tuple<>>) {
+    if constexpr(!std::is_same_v<AggregateKey, char>) {
       auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
       // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
       result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
@@ -122,10 +122,10 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
   const auto get_aggregate_key = [&]([[maybe_unused]] const auto chunk_offset) {  // TODO dedup
-    if constexpr (!std::is_same_v<AggregateKey, std::tuple<>>) {
+    if constexpr (!std::is_same_v<AggregateKey, char>) {
       return hash_keys[chunk_offset];
     } else {
-      return std::tuple<>{};
+      return char{};
     }
   };
 
@@ -179,7 +179,7 @@ void AggregateHash::_aggregate() {
 
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  if constexpr (!std::is_same_v<AggregateKey, std::tuple<>>) {
+  if constexpr (!std::is_same_v<AggregateKey, char>) {
     /*
     PARTITIONING PHASE
     First we partition the input chunks by the given group key(s).
@@ -363,11 +363,11 @@ void AggregateHash::_aggregate() {
     if (!chunk_in) continue;
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
-    const auto get_aggregate_key = [&](const auto chunk_offset) {
-      if constexpr (!std::is_same_v<AggregateKey, std::tuple<>>) {
+    const auto get_aggregate_key = [&]([[maybe_unused]] const auto chunk_offset) {
+      if constexpr (!std::is_same_v<AggregateKey, char>) {
         return hash_keys[chunk_offset];
       } else {
-        return std::tuple<>{};
+        return char{};
       }
     };
 
@@ -490,7 +490,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
   switch (_groupby_column_ids.size()) {
     case 0:
-      _aggregate<std::tuple<>>();
+      _aggregate<char>();
       break;
     case 1:
       // No need for a complex data structure if we only have one entry
