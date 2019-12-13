@@ -5,6 +5,7 @@
 
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -67,6 +68,8 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 }  // namespace
 
 namespace opossum {
+
+using namespace opossum::expression_functional;  // NOLINT
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -370,6 +373,25 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
     const auto row_count = Cardinality{input_table_statistics->row_count * PLACEHOLDER_SELECTIVITY_HIGH};
     return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+  }
+
+  if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(predicate)) {
+    // Estimate `x IN (1, 2, 3)` by treating it as `x = 1 OR x = 2 ...`
+    if (in_expression->set()->type != ExpressionType::List) {
+      // Cannot handle subqueries
+      return input_table_statistics;
+    }
+
+    const auto& list_expression = static_cast<const ListExpression&>(*in_expression->set());
+    auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+    expressions.reserve(list_expression.elements().size());
+    for (const auto& list_element : list_expression.elements()) {
+      expressions.emplace_back(equals_(in_expression->value(), list_element));
+    }
+
+    const auto disjunction = inflate_logical_expressions(expressions, LogicalOperator::Or);
+    const auto new_predicate_node = PredicateNode::make(disjunction, predicate_node.left_input());
+    return estimate_predicate_node(*new_predicate_node, input_table_statistics);
   }
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
