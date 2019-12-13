@@ -99,7 +99,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraint
             return column_expr;
           }
         }
-        return nullptr;
+        return nullptr;  // Continue here 13.12. 15:32 -- throws an error
       };
 
       // Search for column expressions representing the constraint's ColumnIDs

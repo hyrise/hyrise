@@ -114,7 +114,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_con
 
     if(!discard_constraint) {
 
-      const auto get_expression = [this](ColumnID column_id) {
+      const auto get_column_expression = [this](ColumnID column_id) {
         for(auto expr : this->column_expressions()) {
           const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
           Assert(column_expr, "Unexpected expression type in column_expression()");
@@ -128,7 +128,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_con
       // Search for column expressions representing the constraint's ColumnIDs
       auto constraint_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
       for(const auto& column_id : constraint.columns) {
-        const auto column_expr = get_expression(column_id);
+        const auto column_expr = get_column_expression(column_id);
         Assert(column_expr, "Did not find column expression in LQPNode");
         constraint_column_expressions.push_back(column_expr);
       }
