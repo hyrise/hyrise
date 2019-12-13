@@ -113,7 +113,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_con
     }();
 
     if(!discard_constraint) {
-      // Get column expressions from TableDefinitionConstraint-ColumnIDs
+
       const auto get_expression = [this](ColumnID column_id) {
         for(auto expr : this->column_expressions()) {
           const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
@@ -125,6 +125,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_con
         return nullptr;
       };
 
+      // Search for column expressions representing the constraint's ColumnIDs
       auto constraint_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
       for(const auto& column_id : constraint.columns) {
         const auto column_expr = get_expression(column_id);
@@ -132,7 +133,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_con
         constraint_column_expressions.push_back(column_expr);
       }
 
-      // Create ExpressionConstraintDefinition
+      // Create ExpressionsConstraintDefinition
       lqp_constraints->push_back(ExpressionsConstraintDefinition{constraint_column_expressions, constraint.is_primary_key});
     }
   }
