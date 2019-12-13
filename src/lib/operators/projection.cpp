@@ -77,7 +77,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       const auto& expression = expressions[column_id];
 
       // Forward input column if possible
-      if (forward_columns) {
+      if (expression->type == ExpressionType::PQPColumn && forward_columns) {
         const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
