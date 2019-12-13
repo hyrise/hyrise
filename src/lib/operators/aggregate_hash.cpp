@@ -121,8 +121,6 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   auto& results = context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  ChunkOffset chunk_offset{0};
-
   const auto get_aggregate_key = [&](const auto chunk_offset) {  // TODO dedup
     if constexpr (std::is_same_v<AggregateKey, std::tuple<>>) {
       return hash_keys[chunk_offset];
@@ -130,6 +128,8 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
       return std::tuple<>{};
     }
   };
+
+  ChunkOffset chunk_offset{0};
 
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
     auto& result = get_or_add_result(result_ids, results, get_aggregate_key(chunk_offset), RowID{chunk_id, chunk_offset});
