@@ -47,14 +47,14 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     result_id = results.size();
 
     result_ids.emplace_hint(it, key, result_id);
+
+    // If it was added to the id map, add the current row id to the result list so that we can revert the
+    // value(s) -> key mapping
+    results.emplace_back();
+    results[result_id].row_id = row_id;
+
+    return results[result_id];
   }
-
-  // If it was added to the id map, add the current row id to the result list so that we can revert the
-  // value(s) -> key mapping
-  results.emplace_back();
-  results[result_id].row_id = row_id;
-
-  return results[result_id];
 }
 }  // namespace
 
