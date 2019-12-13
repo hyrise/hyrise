@@ -93,8 +93,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
       segment_iterable.with_iterators(pos_list, functor);
-
-      functor(begin, end);
     } else {
       using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
 
