@@ -63,7 +63,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
-  std::shared_ptr<ExpressionsConstraintDefinitions> _constraints;
+  TableConstraintDefinitions _table_constraints;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
 };

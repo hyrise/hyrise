@@ -12,11 +12,9 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name, const TableConstraintDefinitions& constraints)
-    : AbstractLQPNode(LQPNodeType::Mock), name(name), _column_definitions(column_definitions), _constraints(std::make_shared<ExpressionsConstraintDefinitions>()) {
+    : AbstractLQPNode(LQPNodeType::Mock), name(name), _column_definitions(column_definitions), _table_constraints(constraints) {
 
-  //TODO Create ExpressionsConstraintDefinitions from ColumnExpressions
-  // Mabye also check for validity of constraints
-
+  //TODO(Julian) Maybe check for validity of constraints
 }
 
 LQPColumnReference MockNode::get_column(const std::string& column_name) const {
@@ -73,7 +71,51 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraints() const {
-  return _constraints;
+
+  auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+
+  // Extract relevant constraints from table
+  lqp_constraints->reserve(_table_constraints.size());
+
+  for (const TableConstraintDefinition& constraint : _table_constraints) {
+    // Discard constraints which involve pruned column(s)
+    const auto discard_constraint = [&]() {
+      for(const auto& column_id : constraint.columns) {
+        //  Check whether constraint involves pruned column id(s).
+        if(std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
+          return true;
+        }
+      }
+      return false;
+    }();
+
+    if(!discard_constraint) {
+
+      const auto get_column_expression = [this](ColumnID column_id) {
+        for(auto expr : this->column_expressions()) {
+          const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
+          Assert(column_expr, "Unexpected expression type in column_expression()");
+          if(column_expr->column_reference.original_column_id() == column_id) {
+            return column_expr;
+          }
+        }
+        return nullptr;
+      };
+
+      // Search for column expressions representing the constraint's ColumnIDs
+      auto constraint_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+      for(const auto& column_id : constraint.columns) {
+        const auto column_expr = get_column_expression(column_id);
+        Assert(column_expr, "Did not find column expression in LQPNode");
+        constraint_column_expressions.push_back(column_expr);
+      }
+
+      // Create ExpressionsConstraintDefinition
+      lqp_constraints->push_back(ExpressionsConstraintDefinition{constraint_column_expressions, constraint.is_primary_key});
+    }
+  }
+
+  return lqp_constraints;
 }
 
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }
