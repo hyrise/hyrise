@@ -77,15 +77,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       const auto& expression = expressions[column_id];
 
       // Forward input column if possible
-      if (expression->type == ExpressionType::PQPColumn && forward_columns) {
+      if (forward_columns) {
         const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
       } else if (expression->type == ExpressionType::PQPColumn && !forward_columns) {
-        // Cannot immediately forward the column because it is a ReferenceSegment and we need to return a ValueSegment.
-        // However, instead of going through the ExpressionEvaluator just to materialize the segment, we can do it
-        // here:
+        // The current column will be returned without any logical modifications. As other columns do get modified (and
+        // returned as a ValueSegment), all segments (including this one) need to become ValueSegments. This segment is
+        // not yet a ValueSegment (otherwise forward_columns would be true); thus we need to materialize it.
         const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
         const auto segment = input_chunk->get_segment(pqp_column_expression->column_id);
 
