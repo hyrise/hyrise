@@ -100,12 +100,13 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
 void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
-    const std::string& mode,
+    const std::string& mode, const bool is_between_scan,
     std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)> table_creator) {
   micro_benchmark_clear_cache();
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
+  auto lower_search_value = AllTypeVariant{};
   auto search_value = AllTypeVariant{};
 
   const auto table_wrapper = table_creator(encoding_type, mode);
@@ -117,18 +118,28 @@ void BM_TableScanSorted(
 
   resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
+    const double raw_value = table_size * selectivity;
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-      search_value = pad_string(std::to_string(table_size * selectivity), STRING_SIZE);
+      lower_search_value = pad_string(std::to_string(0.0), STRING_SIZE);
+      search_value = pad_string(std::to_string(raw_value), STRING_SIZE);
     } else {
-      search_value = static_cast<ColumnDataType>(table_size * selectivity);
+      lower_search_value = static_cast<ColumnDataType>(0.0);
+      search_value = static_cast<ColumnDataType>(raw_value);
     }
   });
 
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
-  auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, column_expression,
+  std::shared_ptr<BinaryPredicateExpression> predicate;
+  if (is_between_scan) {
+    predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
+                                                            value_(lower_search_value), value_(search_value));
+  } else {
+    predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, column_expression,
                                                                value_(search_value));
+  }
+
   auto warm_up = std::make_shared<TableScan>(table_wrapper, predicate);
   warm_up->execute();
   for (auto _ : state) {
@@ -162,6 +173,7 @@ void registerTableScanSortedBenchmarks() {
                    }}};
 
   const std::vector<std::string> modes{"Sorted", "SortedNotMarked", "Shuffled"};
+  const std::vector<bool> between_modes{false, true};
 
   for (const auto& encoding : encoding_types) {
     const auto encoding_name = encoding.first;
@@ -171,12 +183,15 @@ void registerTableScanSortedBenchmarks() {
     for (const auto selectivity : selectivities) {
       for (const auto& data_type : supported_data_types) {
         for (const auto& mode : modes) {
-          const auto& table_generator = table_types.at(data_type);
+          for (const auto is_between_scan : between_modes) {
+            const auto& table_generator = table_types.at(data_type);
 
-          benchmark::RegisterBenchmark(
-              ("BM_TableScanSorted/" + encoding_name + "/" + std::to_string(selectivity) + "/" + data_type + "/" + mode)
-                  .c_str(),
-              BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, table_generator);
+            const std::string between_label = is_between_scan ? "Between" : "";
+            benchmark::RegisterBenchmark(
+                ("BM_TableScanSorted" + between_label + "/" + encoding_name + "/"
+                + std::to_string(selectivity) + "/" + data_type + "/" + mode).c_str(),
+                BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, table_generator);
+          }
         }
       }
     }
