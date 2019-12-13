@@ -131,9 +131,9 @@ void BM_TableScanSorted(
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
-  std::shared_ptr<BinaryPredicateExpression> predicate;
+  std::shared_ptr<AbstractPredicateExpression> predicate;
   if (is_between_scan) {
-    predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
+    predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
                                                             value_(lower_search_value), value_(search_value));
   } else {
     predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, column_expression,
@@ -188,7 +188,7 @@ void registerTableScanSortedBenchmarks() {
 
             const std::string between_label = is_between_scan ? "Between" : "";
             benchmark::RegisterBenchmark(
-                ("BM_TableScanSorted" + between_label + "/" + encoding_name + "/"
+                ("BM_Table" + between_label + "ScanSorted/" + encoding_name + "/"
                 + std::to_string(selectivity) + "/" + data_type + "/" + mode).c_str(),
                 BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, table_generator);
           }
