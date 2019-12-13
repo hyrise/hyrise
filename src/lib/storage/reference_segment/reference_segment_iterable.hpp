@@ -13,6 +13,7 @@
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -91,7 +92,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
 
-      const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+      const auto segment_iterable = create_any_segment_iterable<T>(typed_segment);
       segment_iterable.with_iterators(pos_list, functor);
     } else {
       using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
