@@ -221,24 +221,33 @@ void AggregateHash::_aggregate() {
         using ColumnDataType = typename decltype(type)::type;
 
         if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
-          // For values smaller than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry. We cannot
-          // do this for values with the same size as we need have a special NULL value.
+          // For values with a type than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry. We
+          // cannot do this for types with the same size as AggregateKeyEntry as we need tohave a special NULL value.
+          // By using the value itself, we can save us the effort of building the id_map.
           for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
             const auto chunk_in = input_table->get_chunk(chunk_id);
             const auto base_segment = chunk_in->get_segment(column_id);
             ChunkOffset chunk_offset{0};
             segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+              const auto normalize = [](const int32_t value) {
+                // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
+                // about preserving the value, just its uniqueness.
+                const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::lowest();
+                DebugAssert(shifted_value > 0, "Type conversion failed");
+                return static_cast<uint64_t>(shifted_value);
+              };
+
               if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                 if (position.is_null()) {
                   keys_per_chunk[chunk_id][chunk_offset] = 0;
                 } else {
-                  keys_per_chunk[chunk_id][chunk_offset] = position.value() + 1;
+                  keys_per_chunk[chunk_id][chunk_offset] = normalize(position.value()) + 1;
                 }
               } else {
                 if (position.is_null()) {
                   keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
                 } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = position.value() + 1;
+                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = normalize(position.value()) + 1;
                 }
               }
               ++chunk_offset;
