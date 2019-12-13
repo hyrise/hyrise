@@ -92,7 +92,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
 
-      const auto segment_iterable = create_any_segment_iterable<T>(typed_segment);
+      const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
       segment_iterable.with_iterators(pos_list, functor);
     } else {
       using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
