@@ -5,11 +5,6 @@
 
 #include <fstream>
 #include <sstream>
-#include <stdio.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/sysctl.h>
-#include <sys/vmmeter.h>
 
 // using namespace opossum;  // NOLINT
 
