@@ -74,7 +74,11 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
     const auto first = values.cbegin() + CHUNK_SIZE * chunk_index;
     const auto last = values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
-    const auto value_segment = std::make_shared<ValueSegment<Type>>(std::vector(first, last));
+    std::vector<Type> value_vector = std::vector(first, last);
+    if (mode == "SortedDescending") {
+      std::reverse(value_vector.begin(), value_vector.end());
+    }
+    const auto value_segment = std::make_shared<ValueSegment<Type>>(value_vector);
     table->append_chunk({value_segment});
   }
 
@@ -88,6 +92,14 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
       const auto chunk = table->get_chunk(chunk_id);
 
       chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
+    }
+  }
+  if (mode == "SortedDescending") {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+
+      chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
     }
   }
 
@@ -172,7 +184,7 @@ void registerTableScanSortedBenchmarks() {
                                                      mode);
                    }}};
 
-  const std::vector<std::string> modes{"Sorted", "SortedNotMarked", "Shuffled"};
+  const std::vector<std::string> modes{"Sorted", "SortedDescending", "SortedNotMarked", "Shuffled"};
   const std::vector<bool> between_modes{false, true};
 
   for (const auto& encoding : encoding_types) {
