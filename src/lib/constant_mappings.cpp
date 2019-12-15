@@ -67,13 +67,4 @@ std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_comp
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
-  stream << spec.encoding_type;
-  if (spec.vector_compression_type) {
-    stream << "-" << *spec.vector_compression_type;
-  }
-
-  return stream;
-}
-
 }  // namespace opossum
