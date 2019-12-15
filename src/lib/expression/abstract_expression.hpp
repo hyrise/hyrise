@@ -65,9 +65,19 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
   /**
-   * @return a human readable string representing the Expression that can be used as a column name
+   * @return the expression's column name or, optionally, a more detailed description of the expression
    */
-  virtual std::string as_column_name() const = 0;
+  enum class DescriptionMode {
+    ColumnName,  // returns only the column name
+    Detailed     // additionally includes the address of referenced nodes
+  };
+  virtual std::string description(const DescriptionMode mode = DescriptionMode::Detailed) const = 0;
+
+  /**
+   * @return a human readable string representing the Expression that can be used as a column name
+   *         (shortcut for description(DescriptionMode::ColumnName))
+   */
+  std::string as_column_name() const;
 
   /**
    * @return the DataType of the result of the expression
@@ -100,12 +110,12 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * Override to hash data fields in derived types. No override needed if derived expression has no
    * data members.
    */
-  virtual size_t _on_hash() const;
+  virtual size_t _shallow_hash() const;
 
   virtual bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
 
   /**
-   * Used internally in _enclose_argument_as_column_name() to put parentheses around expression arguments if they have a lower
+   * Used internally in _enclose_argument to put parentheses around expression arguments if they have a lower
    * precedence than the expression itself.
    * Lower precedence indicates tighter binding, compare https://en.cppreference.com/w/cpp/language/operator_precedence
    *
@@ -114,25 +124,31 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual ExpressionPrecedence _precedence() const;
 
   /**
-   * @return    argument.as_column_name(), enclosed by parentheses if the argument precedence is lower than
+   * @return    argument.description(mode), enclosed by parentheses if the argument precedence is lower than
    *            this->_precedence()
    */
-  std::string _enclose_argument_as_column_name(const AbstractExpression& argument) const;
+  std::string _enclose_argument(const AbstractExpression& argument, const DescriptionMode mode) const;
 };
 
 // So that google test, e.g., prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& expression) {
-  return stream << expression.as_column_name();
+  return stream << expression.description();
 }
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }
+  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const { return expression->hash(); }
 };
 
 // Wrapper around AbstractExpression::operator==(), to enable hash based containers containing
 // std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrEqual final {
+  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression_a,
+                    const std::shared_ptr<const AbstractExpression>& expression_b) const {
+    return *expression_a == *expression_b;
+  }
+
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression_a,
                     const std::shared_ptr<AbstractExpression>& expression_b) const {
     return *expression_a == *expression_b;
@@ -142,6 +158,11 @@ struct ExpressionSharedPtrEqual final {
 template <typename Value>
 using ExpressionUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractExpression>, Value, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
+
+template <typename Value>
+using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const AbstractExpression>, Value,
+                                                       ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
+
 using ExpressionUnorderedSet =
     std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 

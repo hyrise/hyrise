@@ -1,5 +1,13 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include <boost/version.hpp>
+#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
+#include "utils/boost_curry_override.hpp"  // NOLINT
+#endif
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/map.hpp>
@@ -7,19 +15,12 @@
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
-
 #include <boost/mpl/push_front.hpp>
-
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
-
 #include <boost/variant.hpp>
-
-#include <cstdint>
-#include <string>
-#include <vector>
 
 #include "null_value.hpp"
 #include "types.hpp"
@@ -49,13 +50,7 @@ namespace detail {
 #define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
 #define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-// We use a boolean data type in the JitOperatorWrapper.
-// However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
-// and should thus be avoided for compilation performance reasons.
-// We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in
-// "lib/operators/jit_operator/jit_types.hpp".
-// We need to append to the end of the enum to not break the matching of indices between DataType and AllTypeVariant.
-enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES), Bool };
+enum class DataType : uint8_t { Null, BOOST_PP_SEQ_ENUM(DATA_TYPE_ENUM_VALUES) };
 
 static constexpr auto data_types = hana::to_tuple(hana::tuple_t<BOOST_PP_SEQ_ENUM(DATA_TYPES)>);
 static constexpr auto data_type_enum_values =

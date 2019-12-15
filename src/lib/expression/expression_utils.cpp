@@ -60,6 +60,19 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
   return copied_expressions;
 }
 
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
+                             const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping) {
+  visit_expression(expression, [&](auto& sub_expression) {
+    const auto replacement_iter = mapping.find(sub_expression);
+    if (replacement_iter != mapping.end()) {
+      sub_expression = replacement_iter->second;
+      return ExpressionVisitation::DoNotVisitArguments;
+    } else {
+      return ExpressionVisitation::VisitArguments;
+    }
+  });
+}
+
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
@@ -106,12 +119,13 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
   return std::make_shared<LQPColumnExpression>(adapted_column_reference);
 }
 
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                    const AbstractExpression::DescriptionMode mode) {
   std::stringstream stream;
 
-  if (!expressions.empty()) stream << expressions.front()->as_column_name();
+  if (!expressions.empty()) stream << expressions.front()->description(mode);
   for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
-    stream << ", " << expressions[expression_idx]->as_column_name();
+    stream << ", " << expressions[expression_idx]->description(mode);
   }
 
   return stream.str();
@@ -144,7 +158,29 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
 
   visit_expression(expression, [&](const auto& sub_expression) {
     if (lqp.find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
+
+    if (AggregateExpression::is_count_star(*sub_expression)) {
+      // COUNT(*) needs special treatment. Because its argument is the invalid column id, it is not part of any node's
+      // column_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
+      // its original_node is part of lqp.
+      const auto& aggregate_expression = static_cast<const AggregateExpression&>(*sub_expression);
+      const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());
+      const auto& original_node = lqp_column_expression.column_reference.original_node();
+
+      // Now check if lqp contains that original_node
+      evaluable = false;
+      visit_lqp(lqp.shared_from_this(), [&](const auto& sub_lqp) {
+        if (sub_lqp == original_node) {
+          evaluable = true;
+        }
+        return LQPVisitation::VisitInputs;
+      });
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
     if (sub_expression->type == ExpressionType::LQPColumn) evaluable = false;
+
     return ExpressionVisitation::VisitArguments;
   });
 
@@ -229,15 +265,27 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
   }
 }
 
-bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression) {
+bool expression_contains_placeholder(const std::shared_ptr<AbstractExpression>& expression) {
   auto placeholder_found = false;
 
   visit_expression(expression, [&](const auto& sub_expression) {
     placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression) != nullptr;
-    return ExpressionVisitation::VisitArguments;
+    return !placeholder_found ? ExpressionVisitation::VisitArguments : ExpressionVisitation::DoNotVisitArguments;
   });
 
   return placeholder_found;
+}
+
+bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpression>& expression) {
+  auto correlated_parameter_found = false;
+
+  visit_expression(expression, [&](const auto& sub_expression) {
+    correlated_parameter_found |= std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression) != nullptr;
+    return !correlated_parameter_found ? ExpressionVisitation::VisitArguments
+                                       : ExpressionVisitation::DoNotVisitArguments;
+  });
+
+  return correlated_parameter_found;
 }
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {

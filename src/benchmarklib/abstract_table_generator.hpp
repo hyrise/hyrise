@@ -39,7 +39,9 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds generation_duration{};
   std::chrono::nanoseconds encoding_duration{};
   std::chrono::nanoseconds binary_caching_duration{};
+  std::chrono::nanoseconds sort_duration{};
   std::chrono::nanoseconds store_duration{};
+  std::chrono::nanoseconds index_duration{};
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
@@ -58,9 +60,21 @@ class AbstractTableGenerator {
 
   TableGenerationMetrics metrics;
 
-  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size);
+  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(ChunkOffset chunk_size);
 
  protected:
+  // Creates indexes, expects the table to have been added to the StorageManager and, if requested, encoded
+  using IndexesByTable = std::map<std::string, std::vector<std::vector<std::string>>>;
+  virtual IndexesByTable _indexes_by_table() const;
+
+  // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
+  // (right side).
+  using SortOrderByTable = std::map<std::string, std::string>;
+  virtual SortOrderByTable _sort_order_by_table() const;
+
+  // Optionally, the benchmark may add constraints once the tables are generated / loaded from binary
+  virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
+
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };
 

@@ -12,7 +12,6 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
-#include "table_generator.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

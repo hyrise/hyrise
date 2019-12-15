@@ -20,12 +20,16 @@ std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
   return std::make_shared<ListExpression>(expressions_deep_copy(arguments));
 }
 
-std::string ListExpression::as_column_name() const {
-  return std::string("(") + expression_column_names(arguments) + ")";
+std::string ListExpression::description(const DescriptionMode mode) const {
+  return std::string("(") + expression_descriptions(arguments, mode) + ")";
 }
 
-bool ListExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
+bool ListExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ListExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
+  return true;
+}
 
-size_t ListExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+size_t ListExpression::_shallow_hash() const { return AbstractExpression::_shallow_hash(); }
 
 }  // namespace opossum

@@ -21,7 +21,6 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
@@ -232,6 +231,14 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, add_(b, NullValue{})), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *add_(empty_a, empty_b), {}));
+  // clang-format on
+}
+
+TEST_F(ExpressionEvaluatorToValuesTest, ExpressionReuse) {
+  // We can't really test that the reoccuring subexpressions are evaluated only once, but at least we have a test
+  // where reoccuring subexpressions are used.
+  // clang-format off
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(mul_(a, b), mul_(a, b)), {4, 12, 24, 40}));
   // clang-format on
 }
 

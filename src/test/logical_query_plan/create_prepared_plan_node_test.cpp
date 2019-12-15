@@ -4,6 +4,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/prepared_plan.hpp"
+#include "utils/string_utils.hpp"
 
 namespace opossum {
 
@@ -21,17 +22,17 @@ class CreatePreparedPlanNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreatePreparedPlanNodeTest, Description) {
-  EXPECT_EQ(create_prepared_plan_node->description(),
+  EXPECT_EQ(replace_addresses(create_prepared_plan_node->description(AbstractLQPNode::DescriptionMode::Detailed)),
             R"([CreatePreparedPlan] 'some_prepared_plan' {
 ParameterIDs: []
-[0] [MockNode 'Unnamed'] pruned: 0/1 columns
+[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000
 })");
 }
 
-TEST_F(CreatePreparedPlanNodeTest, Equals) {
-  EXPECT_EQ(*create_prepared_plan_node, *create_prepared_plan_node);
+TEST_F(CreatePreparedPlanNodeTest, HashingAndEqualityCheck) {
+  const auto deep_copied_node = create_prepared_plan_node->deep_copy();
+  EXPECT_EQ(*create_prepared_plan_node, *deep_copied_node);
 
-  const auto same_prepared_plan_node = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
   const auto different_prepared_plan_node_a = CreatePreparedPlanNode::make("some_prepared_plan2", prepared_plan);
 
   const auto different_lqp = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
@@ -42,6 +43,9 @@ TEST_F(CreatePreparedPlanNodeTest, Equals) {
 
   EXPECT_NE(*different_prepared_plan_node_a, *create_prepared_plan_node);
   EXPECT_NE(*different_prepared_plan_node_b, *create_prepared_plan_node);
+
+  EXPECT_NE(different_prepared_plan_node_a->hash(), create_prepared_plan_node->hash());
+  EXPECT_NE(different_prepared_plan_node_b->hash(), create_prepared_plan_node->hash());
 }
 
 TEST_F(CreatePreparedPlanNodeTest, Copy) {

@@ -8,6 +8,16 @@ This is the repository for the current Hyrise version, which has been rewritten 
 
 Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
 
+## Supported Benchmarks
+We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
+
+| Benchmark  | Notes                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| TPC-C      | In development, no proper optimization done yet                                                                          |
+| TPC-DS     | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
+| TPC-H      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch)  |
+| Join Order |                                                                                                                          |
+
 # Getting started
 
 *Have a look at our [contributor guidelines](CONTRIBUTING.md)*.
@@ -18,7 +28,7 @@ The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guid
 
 ## Native Setup
 You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS High Sierra and Ubuntu 19.04 (apt-get).
+The install script was tested under macOS Catalina (10.15) and Ubuntu 19.10 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -103,6 +113,7 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Timo      Djürken
 -   Fabian    Dumke
+-   Fabian    Engel
 -   Moritz    Eyssen
 -   Martin    Fischer
 -   Christian Flach
@@ -115,6 +126,7 @@ Contact: firstname.lastname@hpi.de
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
+-   David     Justen
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
@@ -132,6 +144,7 @@ Contact: firstname.lastname@hpi.de
 -   David     Schumann
 -   Simon     Siegert
 -   Arthur    Silber
+-   Toni      Stachewicz
 -   Daniel    Stolpe
 -   Jonathan  Striebel
 -   Nils      Thamm

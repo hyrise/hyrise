@@ -1,11 +1,12 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
 #include <iomanip>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <boost/algorithm/string.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -28,7 +29,8 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                       std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
                       ExpressionUnorderedSet& visualized_sub_queries);
 
-  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to);
+  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to,
+                       const InputSide side);
 
   CardinalityEstimator _cardinality_estimator;
 };

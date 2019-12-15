@@ -1,10 +1,6 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
-#include <boost/bimap.hpp>
-#include <boost/circular_buffer.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/operators.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -13,6 +9,11 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
+#include <boost/bimap.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/operators.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
@@ -38,6 +39,7 @@
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
 STRONG_TYPEDEF(uint16_t, ColumnID);
+STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
@@ -95,14 +97,6 @@ constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max(
 struct RowID {
   ChunkID chunk_id{INVALID_CHUNK_ID};
   ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
-
-  RowID() = default;
-
-  RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset) : chunk_id(chunk_id), chunk_offset(chunk_offset) {
-    DebugAssert((chunk_offset == INVALID_CHUNK_OFFSET) == (chunk_id == INVALID_CHUNK_ID),
-                "If you pass in one of the arguments as INVALID/NULL, the other has to be INVALID/NULL as well. This "
-                "makes sure there is just one value representing an invalid row id.");
-  }
 
   // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
   bool is_null() const { return chunk_offset == INVALID_CHUNK_OFFSET; }
@@ -224,6 +218,12 @@ enum class UseMvcc : bool { Yes = true, No = false };
 
 enum class CleanupTemporaries : bool { Yes = true, No = false };
 
+enum class HasNullTerminator : bool { Yes = true, No = false };
+
+enum class SendExecutionInfo : bool { Yes = true, No = false };
+
+enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
+
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.
@@ -253,6 +253,8 @@ std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
 std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
+
+using BoolAsByteType = uint8_t;
 
 }  // namespace opossum
 

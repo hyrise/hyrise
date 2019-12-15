@@ -33,13 +33,13 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
 class SQLPipeline : public Noncopyable {
  public:
   // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
-              const std::shared_ptr<LQPTranslator>& lqp_translator, const std::shared_ptr<Optimizer>& optimizer,
+  SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
+              const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
               const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
               const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache, const CleanupTemporaries cleanup_temporaries);
 
   // Returns the original SQL string
-  const std::string get_sql() const;
+  const std::string& get_sql() const;
 
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_per_statement();
@@ -67,10 +67,15 @@ class SQLPipeline : public Noncopyable {
   // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
   // explicitly return it as part of get_result_table(s) to force the caller to take the possibility of a failed
   // transaction into account.
-  std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> get_result_tables();
+  //
+  // If the pipeline is an xvalue, provide a variant that returns non-reference tables:
+  //   const auto result = SQLPipelineBuilder{"SELECT ..."}.create_pipeline().get_result_tables()
+  std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> get_result_tables() &;
+  std::pair<SQLPipelineStatus, std::vector<std::shared_ptr<const Table>>> get_result_tables() &&;
 
   // Shorthand for `get_result_tables().back()`
-  std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table();
+  std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table() &;
+  std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> get_result_table() &&;
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;

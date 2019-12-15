@@ -3,6 +3,7 @@
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 
 namespace opossum {
 
@@ -53,6 +54,51 @@ class JoinHashStepsTest : public BaseTest {
   inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros;
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
 };
+
+TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
+  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
+  for (auto i = 0; i < 10; ++i) {
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
+  }
+  const auto expected_pos_list = boost::container::small_vector<RowID, 1>{RowID{ChunkID{105}, ChunkOffset{205}},
+                                                                          RowID{ChunkID{105}, ChunkOffset{206}}};
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(5);
+    EXPECT_EQ(pos_list, expected_pos_list);
+  }
+  table.shrink_to_fit();
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(5);
+    EXPECT_EQ(pos_list, expected_pos_list);
+  }
+}
+
+TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
+  auto table = PosHashTable<int>{JoinHashBuildMode::SinglePosition, 100};
+  for (auto i = 0; i < 100; ++i) {
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
+  }
+  const auto expected_pos_list = boost::container::small_vector<RowID, 1>{RowID{ChunkID{150}, ChunkOffset{250}}};
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(50);
+    EXPECT_EQ(pos_list, expected_pos_list);
+  }
+  table.shrink_to_fit();
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(50);
+    EXPECT_EQ(pos_list, expected_pos_list);
+  }
+}
 
 TEST_F(JoinHashStepsTest, MaterializeInput) {
   std::vector<std::vector<size_t>> histograms;

@@ -3,8 +3,8 @@
 #include <boost/algorithm/string.hpp>
 
 #include "benchmark_sql_executor.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -24,19 +24,33 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   std::cout << "- Loading expected result tables"
             << "\n";
 
-  for (const auto& entry : std::filesystem::recursive_directory_iterator(expected_results_directory_path)) {
-    if (std::filesystem::is_regular_file(entry) && is_tbl_file(entry.path())) {
-      const auto item_name = entry.path().stem().string();
+  for (const auto& entry : list_directory(expected_results_directory_path)) {
+    if (is_tbl_file(entry)) {
+      const auto item_name = entry.stem().string();
 
       const auto iter = std::find_if(items().cbegin(), items().cend(), [this, &item_name](const auto& item) {
         return this->item_name(item) == item_name;
       });
       if (iter != items().cend()) {
-        std::cout << "-  Loading result table " + entry.path().string() << "\n";
-        _dedicated_expected_results[*iter] = load_table(entry.path().string());
+        std::cout << "-  Loading result table " + entry.string() << "\n";
+        _dedicated_expected_results[*iter] = load_table(entry.string());
       }
     }
   }
+}
+
+bool AbstractBenchmarkItemRunner::has_item_without_dedicated_result() {
+  // `_dedicated_expected_results` is either empty if `load_dedicated_expected_results` was not called
+  // or a sparse vector with the same size as `items()`.
+  if (!items().empty() && _dedicated_expected_results.empty()) {
+    return true;
+  }
+  for (const auto& dedicated_result : _dedicated_expected_results) {
+    if (!dedicated_result) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}
@@ -50,7 +64,7 @@ std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRun
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix);
+  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
   return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }

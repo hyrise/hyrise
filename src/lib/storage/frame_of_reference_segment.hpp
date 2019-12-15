@@ -1,13 +1,12 @@
 #pragma once
 
+#include <array>
+#include <memory>
+#include <type_traits>
+
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
-
-#include <type_traits>
-
-#include <array>
-#include <memory>
 
 #include "base_encoded_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
@@ -27,6 +26,10 @@ class BaseCompressedVector;
  * compressed using vector compression (null suppression).
  * FOR encoding on its own without vector compression does not
  * add any benefit.
+ *
+ * Null values are stored in a separate vector. Note, for correct
+ * offset handling, the minimum of each frame is stored in the 
+ * offset_values vector at each position that is NULL.
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
@@ -54,9 +57,9 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     if (_null_values[chunk_offset]) {
       return std::nullopt;
@@ -66,7 +69,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
     return value;
   }
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 

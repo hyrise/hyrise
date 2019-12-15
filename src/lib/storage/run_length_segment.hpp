@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <memory>
@@ -23,7 +22,22 @@ class BaseCompressedVector;
  * makes randomly accessing elements much faster.
  *
  * As in value segments, null values are represented as an
- * additional boolean vector.
+ * additional boolean vector. Note, NULLs are also stored in
+ * runs. When a NULL run covers multiple value runs, the
+ * first value is kept as a place holder and the following
+ * values (which are also NULL) are merged into this value
+ * run.
+ *
+ * Example:
+ *  values:          1 1 1 2 2 2 3 3 3
+ *  nulls:           0 0 0 0 0 1 1 1 0
+ *  value runs:     |1    |2    |3    |
+ *  null runs:      |0        |1    |0|
+ *
+ * Actually stored data:
+ *  values:          1 2 2 3  (note, repeating values)
+ *  null values:     0 0 1 0
+ *  end positions:   2 4 6 8
  */
 template <typename T>
 class RunLengthSegment : public BaseEncodedSegment {
@@ -41,9 +55,9 @@ class RunLengthSegment : public BaseEncodedSegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
     const auto index = std::distance(_end_positions->cbegin(), end_position_it);
@@ -56,7 +70,7 @@ class RunLengthSegment : public BaseEncodedSegment {
     return (*_values)[index];
   }
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 

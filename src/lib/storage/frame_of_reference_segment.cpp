@@ -32,7 +32,7 @@ const BaseCompressedVector& FrameOfReferenceSegment<T, U>::offset_values() const
 }
 
 template <typename T, typename U>
-const AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
@@ -44,8 +44,8 @@ const AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset
 }
 
 template <typename T, typename U>
-size_t FrameOfReferenceSegment<T, U>::size() const {
-  return _offset_values->size();
+ChunkOffset FrameOfReferenceSegment<T, U>::size() const {
+  return static_cast<ChunkOffset>(_offset_values->size());
 }
 
 template <typename T, typename U>

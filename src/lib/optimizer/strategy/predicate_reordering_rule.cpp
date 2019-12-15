@@ -17,42 +17,67 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace {
+using namespace opossum;  // NOLINT
 
-std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
-
-void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
+// Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
+// chain.
+bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
+  if (node->type == LQPNodeType::Predicate) return true;
 
   // Validate can be seen as a Predicate on the MVCC column
-  if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+  if (node->type == LQPNodeType::Validate) return true;
 
-    // Gather adjacent PredicateNodes
-    auto current_node = node;
-    while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate) {
-      // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-      if (current_node->outputs().size() > 1) {
-        break;
-      }
-
-      predicate_nodes.emplace_back(current_node);
-      current_node = current_node->left_input();
-    }
-
-    /**
-     * A chain of predicates was found.
-     * Sort PredicateNodes in descending order with regards to the expected row_count
-     * Continue rule in deepest input
-     */
-    if (predicate_nodes.size() > 1) {
-      const auto input = predicate_nodes.back()->left_input();
-      _reorder_predicates(predicate_nodes);
-      apply_to(input);
+  // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
+  // might place the join below a validate node, but since it is not a "proper" join (i.e., one that returns columns
+  // from multiple tables), the validate will stil be able to operate on the semi join's output.
+  if (node->type == LQPNodeType::Join) {
+    const auto& join_node = static_cast<JoinNode&>(*node);
+    if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
+        join_node.join_mode == JoinMode::AntiNullAsFalse) {
+      return true;
     }
   }
 
-  _apply_to_inputs(node);
+  return false;
+}
+}  // namespace
+
+namespace opossum {
+
+void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
+  Assert(root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
+
+  visit_lqp(root, [&](const auto& node) {
+    if (is_predicate_style_node(node)) {
+      std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+
+      // Gather adjacent PredicateNodes
+      auto current_node = node;
+      while (is_predicate_style_node(current_node)) {
+        // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain can
+        // start here.
+        if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
+          break;
+        }
+
+        predicate_nodes.emplace_back(current_node);
+        current_node = current_node->left_input();
+      }
+
+      /**
+       * A chain of predicates was found.
+       * Sort PredicateNodes in descending order with regards to the expected row_count
+       * Continue rule in deepest input
+       */
+      if (predicate_nodes.size() > 1) {
+        _reorder_predicates(predicate_nodes);
+      }
+    }
+
+    return LQPVisitation::VisitInputs;
+  });
 }
 
 void PredicateReorderingRule::_reorder_predicates(
@@ -80,7 +105,7 @@ void PredicateReorderingRule::_reorder_predicates(
 
   // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
-    lqp_remove_node(predicate);
+    lqp_remove_node(predicate, AllowRightInput::Yes);
   }
 
   // Sort in descending order

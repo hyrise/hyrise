@@ -67,7 +67,10 @@ std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
 
 void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-const std::string UnionPositions::name() const { return "UnionPositions"; }
+const std::string& UnionPositions::name() const {
+  static const auto name = std::string{"UnionPositions"};
+  return name;
+}
 
 std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto early_result = _prepare_operator();
@@ -154,7 +157,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     /**
      * Begin derived from std::union()
      */
-    if (left_idx == num_rows_left) {
+    if (left_idx == num_rows_left) {  // NOLINT(bugprone-branch-clone)
       emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
       ++right_idx;
     } else if (right_idx == num_rows_right) {
@@ -335,7 +338,7 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 }
 
 bool UnionPositions::_compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
-                                                    const ReferenceMatrix& right_matrix, size_t right_row_idx) const {
+                                                    const ReferenceMatrix& right_matrix, size_t right_row_idx) {
   for (size_t column_idx = 0; column_idx < left_matrix.size(); ++column_idx) {
     if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) return true;
     if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) return false;

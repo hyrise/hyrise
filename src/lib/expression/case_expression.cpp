@@ -17,11 +17,11 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::then() const { return
 
 const std::shared_ptr<AbstractExpression>& CaseExpression::otherwise() const { return arguments[2]; }
 
-std::string CaseExpression::as_column_name() const {
+std::string CaseExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
-  stream << "CASE WHEN " << when()->as_column_name() << " THEN " << then()->as_column_name() << " ELSE "
-         << otherwise()->as_column_name() << " END";
+  stream << "CASE WHEN " << when()->description(mode) << " THEN " << then()->description(mode) << " ELSE "
+         << otherwise()->description(mode) << " END";
 
   return stream.str();
 }
@@ -34,8 +34,10 @@ std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
   return std::make_shared<CaseExpression>(when()->deep_copy(), then()->deep_copy(), otherwise()->deep_copy());
 }
 
-bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
-
-size_t CaseExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const CaseExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
+  return true;
+}
 
 }  // namespace opossum

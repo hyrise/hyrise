@@ -3,14 +3,14 @@
 #include "all_type_variant.hpp"
 #include "b_tree_index_impl.hpp"
 #include "storage/base_segment.hpp"
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class BTreeIndexTest;
 
-class BTreeIndex : public BaseIndex {
+class BTreeIndex : public AbstractIndex {
   friend BTreeIndexTest;
 
  public:
@@ -18,7 +18,7 @@ class BTreeIndex : public BaseIndex {
 
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See BaseIndex::estimate_memory_consumption()
+   * See AbstractIndex::estimate_memory_consumption()
    * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
    * in reducing the memory footprint of these indexes, this is probably the first place you should look.
    */
@@ -35,7 +35,7 @@ class BTreeIndex : public BaseIndex {
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
   size_t _memory_consumption() const override;
 
-  std::shared_ptr<const BaseSegment> _indexed_segments;
+  std::shared_ptr<const BaseSegment> _indexed_segment;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 

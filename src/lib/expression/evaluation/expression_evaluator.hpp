@@ -176,7 +176,7 @@ class ExpressionEvaluator final {
    * Either operand can be either empty (the operand is not nullable), contain one element (the operand is a literal
    * with null info) or can have n rows (the operand is a nullable series)
    */
-  pmr_vector<bool> _evaluate_default_null_logic(const pmr_vector<bool>& left, const pmr_vector<bool>& right) const;
+  static pmr_vector<bool> _evaluate_default_null_logic(const pmr_vector<bool>& left, const pmr_vector<bool>& right);
 
   void _materialize_segment_if_not_yet_materialized(const ColumnID column_id);
 
@@ -197,7 +197,13 @@ class ExpressionEvaluator final {
   // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized
   std::vector<std::shared_ptr<BaseExpressionResult>> _segment_materializations;
 
+  // Optionally, uncorrelated selects can be evaluated by the caller and passed in to the evaluator. This way, they
+  // do not have to be executed multiple times by different evaluators
   const std::shared_ptr<const UncorrelatedSubqueryResults> _uncorrelated_subquery_results;
+
+  // Some expressions can be reused, either in the same result column (SELECT (a+3)*(a+3)), or across columns
+  // (TPC-H Q1)
+  ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _cached_expression_results;
 };
 
 }  // namespace opossum

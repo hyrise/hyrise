@@ -5,6 +5,7 @@
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
@@ -20,8 +21,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -33,7 +32,6 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
 #include "utils/load_table.hpp"
 
@@ -385,11 +383,68 @@ TEST_F(CardinalityEstimatorTest, JoinOuter) {
   EXPECT_EQ(estimator.estimate_cardinality(left_join_lqp), inner_join_cardinality);
 }
 
-TEST_F(CardinalityEstimatorTest, JoinSemiAnti) {
-  // Test that semi and anti joins are estimated return the left input statistics (for now)
+TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
+  const auto left_join_column_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+      std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 6, 1});
+  const auto left_join_column_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  left_join_column_statistics->set_statistics_object(left_join_column_histogram);
 
-  const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, b_a), node_a, node_b);
-  EXPECT_EQ(estimator.estimate_statistics(semi_join_lqp), node_a->table_statistics());
+  const auto left_non_join_column_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 14}, std::vector<HistogramCountType>{20, 40, 30},
+      std::vector<HistogramCountType>{1, 1, 3});
+  const auto left_non_join_column_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  left_non_join_column_statistics->set_statistics_object(left_non_join_column_histogram);
+
+  const auto right_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{20, 30, 50, 70}, std::vector<int32_t>{29, 39, 69, 79},
+      std::vector<HistogramCountType>{10, 5, 10, 8}, std::vector<HistogramCountType>{7, 2, 6, 8});
+  const auto right_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  right_statistics->set_statistics_object(right_histogram);
+
+  const auto left_table_statistics =
+      TableStatistics{{left_join_column_statistics, left_non_join_column_statistics}, 90};
+  const auto right_table_statistics = TableStatistics{{right_statistics}, 33};
+
+  const auto join_estimation =
+      CardinalityEstimator::estimate_semi_join(ColumnID{0}, ColumnID{0}, left_table_statistics, right_table_statistics);
+
+  // Left Join Column Histogram:  |  Right Join Column Histogram:  |  Resulting Histogram
+  //                              |                                |
+  // Bin       Height  Distinct   |  Bin       Height  Distinct    |  Bin       Height  Distinct  Comment
+  // [ 0,  9]  10      1          |                                |
+  // [10, 19]  15      1          |                                |
+  // [20, 29]  10      3          |  [20, 29]  (10)    7           |  [20, 29]  10      3         100% as 3 <= 7
+  // [30, 39]  20      8          |  [30, 39]  (5)     2           |  [30, 39]  5       2         h: 20*(2/8)
+  // [40, 49]   5      1          |                                |
+  // [50, 59]  15      6          |  [50,                          |  [50, 59]  7.5     3         h: 15*((6/2)/6)
+  // [60, 69]   5      1          |       69]  (10)    6           |  [69, 69]  5       1         100% as 1 <= (6/2)
+  //                              |  [70, 79]  (8)     8           |
+  //                              |                                |
+  //                              |  (Height is ignored on right)  |      sum:  27.5
+
+  EXPECT_EQ(join_estimation->row_count, 27.5);
+  EXPECT_EQ(join_estimation->column_statistics.size(), 2);
+
+  const auto& first_column_histogram =
+      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[0]).histogram;
+  EXPECT_EQ(first_column_histogram.bin_count(), 4);
+  EXPECT_EQ(first_column_histogram.bin(0), HistogramBin<int32_t>(20, 29, 10, 3));
+  EXPECT_EQ(first_column_histogram.bin(1), HistogramBin<int32_t>(30, 39, 5, 2));
+  EXPECT_EQ(first_column_histogram.bin(2), HistogramBin<int32_t>(50, 59, 7.5, 3));
+  EXPECT_EQ(first_column_histogram.bin(3), HistogramBin<int32_t>(60, 69, 5, 1));
+
+  const auto& second_column_histogram =
+      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[1]).histogram;
+  EXPECT_EQ(second_column_histogram.bin_count(), 3);
+  const auto selectivity = 27.5f / 90;
+  EXPECT_EQ(second_column_histogram.bin(0), HistogramBin<int32_t>(0, 4, 20 * selectivity, 1));
+  EXPECT_EQ(second_column_histogram.bin(1), HistogramBin<int32_t>(5, 9, 40 * selectivity, 1));
+  EXPECT_EQ(second_column_histogram.bin(2), HistogramBin<int32_t>(10, 14, 30 * selectivity, 3));
+}
+
+TEST_F(CardinalityEstimatorTest, JoinAnti) {
+  // Test that anti joins are estimated return the left input statistics (for now)
 
   const auto anti_null_as_false_join_lqp = JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_statistics(anti_null_as_false_join_lqp), node_a->table_statistics());
@@ -521,6 +576,48 @@ TEST_F(CardinalityEstimatorTest, PredicateTwoOnTheSameColumn) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 25);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateAnd) {
+  // Same as PredicateTwoOnTheSameColumn, but the conditions are within one predicate
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(and_(greater_than_(a_a, 50), less_than_equals_(a_a, 75)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 25);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateOr) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_equals_(a_a, 10), greater_than_(a_a, 90)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateOrDoesNotIncreaseCardinality) {
+  // While we do not handle overlapping ranges yet, we at least want to make sure that tables don't become bigger.
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_equals_(a_a, 60), greater_than_(a_a, 20)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 100);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateIn) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, list_(10, 11, 12, 13)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 40);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
@@ -573,6 +670,19 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
   const auto lqp_e =
       PredicateNode::make(between_inclusive_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateMultipleWithCorrelatedParameter) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, 50),  // s=0.5
+    PredicateNode::make(less_than_equals_(a_b, correlated_parameter_(ParameterID{1}, a_a)),
+      node_a));
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 45.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 90.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
@@ -733,7 +843,7 @@ TEST_F(CardinalityEstimatorTest, Sort) {
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
-  StorageManager::get().add_table("t", load_table("resources/test_data/tbl/int.tbl"));
+  Hyrise::get().storage_manager.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
   EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
 }
 
@@ -777,11 +887,7 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
   // more to test here
 
-  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
-  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  EXPECT_EQ(estimator.estimate_cardinality(static_table_node), 0.0f);
-
-  const auto create_table_lqp = CreateTableNode::make("t", false, static_table_node);
+  const auto create_table_lqp = CreateTableNode::make("t", false, node_a);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0f);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(node_a, std::vector<ParameterID>{});
@@ -798,12 +904,6 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
 
   const auto insert_lqp = InsertNode::make("t", node_a);
   EXPECT_EQ(estimator.estimate_cardinality(insert_lqp), 0.0f);
-
-  const auto show_columns_lqp = ShowColumnsNode::make("t");
-  EXPECT_EQ(estimator.estimate_cardinality(show_columns_lqp), 0.0f);
-
-  const auto show_tables_lqp = ShowTablesNode::make();
-  EXPECT_EQ(estimator.estimate_cardinality(show_tables_lqp), 0.0f);
 
   EXPECT_EQ(estimator.estimate_cardinality(DeleteNode::make(node_a)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v", false)), 0.0f);

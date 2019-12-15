@@ -1,8 +1,5 @@
 #include "aggregate_hash.hpp"
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-
-#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <optional>
@@ -11,15 +8,16 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -58,7 +56,10 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
-const std::string AggregateHash::name() const { return "Aggregate"; }
+const std::string& AggregateHash::name() const {
+  static const auto name = std::string{"AggregateHash"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -111,7 +112,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
-    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID(chunk_id, chunk_offset));
+    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
 
     /**
     * If the value is NULL, the current aggregate value does not change.
@@ -228,8 +229,8 @@ void AggregateHash::_aggregate() {
         auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
         auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
-                                         std::equal_to<ColumnDataType>, decltype(allocator)>(allocator);
+        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
+                                         decltype(allocator)>(allocator);
         AggregateKeyEntry id_counter = 1u;
 
         const auto chunk_count = input_table->chunk_count();
@@ -268,7 +269,7 @@ void AggregateHash::_aggregate() {
     jobs.back()->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE
@@ -294,13 +295,14 @@ void AggregateHash::_aggregate() {
    */
   for (ColumnID column_id{0}; column_id < _aggregates.size(); ++column_id) {
     const auto& aggregate = _aggregates[column_id];
-    if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+    if (aggregate.column == INVALID_COLUMN_ID) {
+      Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
       _contexts_per_column[column_id] = context;
       continue;
     }
-    auto data_type = input_table->column_data_type(*aggregate.column);
+    auto data_type = input_table->column_data_type(aggregate.column);
     _contexts_per_column[column_id] = _create_aggregate_context<AggregateKey>(data_type, aggregate.function);
   }
 
@@ -358,7 +360,8 @@ void AggregateHash::_aggregate() {
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+        if (aggregate.column == INVALID_COLUMN_ID) {
+          Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
               _contexts_per_column[column_index]);
 
@@ -376,8 +379,8 @@ void AggregateHash::_aggregate() {
           continue;
         }
 
-        auto base_segment = chunk_in->get_segment(*aggregate.column);
-        auto data_type = input_table->column_data_type(*aggregate.column);
+        auto base_segment = chunk_in->get_segment(aggregate.column);
+        auto data_type = input_table->column_data_type(aggregate.column);
 
         /*
         Invoke correct aggregator for each segment
@@ -472,8 +475,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   for (const auto& aggregate : _aggregates) {
     const auto column = aggregate.column;
 
-    // Output column for COUNT(*). int is chosen arbitrarily.
-    const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
+    // Output column for COUNT(*).
+    const auto data_type = column == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column);
 
     resolve_data_type(
         data_type, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
@@ -699,7 +702,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(*aggregate.column);
+    aggregate_data_type = input_table_left()->column_data_type(aggregate.column);
   }
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
@@ -711,9 +714,10 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
     column_name_stream << aggregate.function << "(";
   }
 
-  if (aggregate.column) {
-    column_name_stream << input_table_left()->column_name(*aggregate.column);
+  if (aggregate.column != INVALID_COLUMN_ID) {
+    column_name_stream << input_table_left()->column_name(aggregate.column);
   } else {
+    Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
     column_name_stream << "*";
   }
   column_name_stream << ")";

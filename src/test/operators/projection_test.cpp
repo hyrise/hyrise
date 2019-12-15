@@ -9,12 +9,12 @@
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "operators/delete.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -54,6 +54,33 @@ TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
                             load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
 }
 
+TEST_F(OperatorsProjectionTest, PassThroughInvalidRowCount) {
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 123);
+  table_scan->execute();
+
+  const auto rows_to_delete = table_scan->get_output()->row_count();
+
+  auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+
+  transaction_context->commit();
+
+  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_a, a_b));
+
+  projection->execute();
+  const auto result_table = projection->get_output();
+
+  auto total_invalid_row_count = 0;
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
+    total_invalid_row_count += result_table->get_chunk(chunk_id)->invalid_row_count();
+  }
+
+  EXPECT_EQ(total_invalid_row_count, rows_to_delete);
+}
+
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   // The Projection will forward segments from its input if all expressions are segment references.
   // Why would you enforce something like this? E.g., Update relies on it.
@@ -66,7 +93,7 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
 
   EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
-  EXPECT_TRUE(projection->get_output()->has_mvcc() == UseMvcc::Yes);
+  EXPECT_TRUE(projection->get_output()->uses_mvcc() == UseMvcc::Yes);
   EXPECT_TRUE(projection->get_output()->get_chunk(ChunkID{0})->mvcc_data());
 }
 

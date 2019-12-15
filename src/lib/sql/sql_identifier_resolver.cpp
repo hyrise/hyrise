@@ -17,8 +17,10 @@ void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpres
 }
 
 void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<opossum::AbstractExpression>& expression) {
-  auto& entry = _find_expression_entry(expression);
-  entry.column_names.clear();
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
+                                 [&](const auto& entry) { return *entry.expression == *expression; });
+  if (entry_iter == _entries.end()) return;
+  entry_iter->column_names.clear();
 }
 
 void SQLIdentifierResolver::set_table_name(const std::shared_ptr<AbstractExpression>& expression,
@@ -47,7 +49,7 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
   return matching_expressions[0];
 }
 
-const std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
+std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
     const std::shared_ptr<AbstractExpression>& expression) const {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
@@ -73,14 +75,6 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierResolver::resolve_
 
 void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
-}
-
-SQLIdentifierContextEntry& SQLIdentifierResolver::_find_expression_entry(
-    const std::shared_ptr<AbstractExpression>& expression) {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto& entry) { return *entry.expression == *expression; });
-  Assert(entry_iter != _entries.end(), "The expression does not exist.");
-  return *entry_iter;
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(

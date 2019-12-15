@@ -1,31 +1,20 @@
+#include <chrono>
+#include <iostream>
+#include <string>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <random>
-#include <string>
-
-#include "SQLParser.h"
 #include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
-#include "json.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/pqp_visualizer.hpp"
+#include "utils/sqlite_add_indices.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -103,10 +92,10 @@ int main(int argc, char* argv[]) {
   }
 
   std::cout << "- Benchmarking Queries: [ ";
-  for (const auto& item_id : item_ids) {
-    std::cout << (item_id + 1) << ", ";
-  }
-  std::cout << "]" << std::endl;
+  auto printable_item_ids = std::vector<std::string>();
+  std::for_each(item_ids.begin(), item_ids.end(),
+                [&printable_item_ids](auto& id) { printable_item_ids.push_back(std::to_string(id + 1)); });
+  std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]" << std::endl;
 
   auto context = BenchmarkRunner::create_context(*config);
 
@@ -131,8 +120,15 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
-  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context)
-      .run();
+  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+      *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
+  Hyrise::get().benchmark_runner = benchmark_runner;
+
+  if (config->verify) {
+    add_indices_to_sqlite("resources/benchmark/tpch/schema.sql", "resources/benchmark/tpch/indices.sql",
+                          benchmark_runner->sqlite_wrapper);
+  }
+
+  benchmark_runner->run();
 }

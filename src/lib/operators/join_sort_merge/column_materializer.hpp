@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -74,7 +74,7 @@ class ColumnMaterializer {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input->get_chunk(chunk_id);
-      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto samples_to_write = std::min(samples_per_chunk, chunk->size());
       subsamples.push_back(Subsample<T>(samples_to_write));
@@ -84,7 +84,7 @@ class ColumnMaterializer {
       jobs.back()->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
     auto gathered_samples = std::vector<T>();
     gathered_samples.reserve(samples_per_chunk * chunk_count);

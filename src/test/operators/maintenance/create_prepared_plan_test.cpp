@@ -3,12 +3,12 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "storage/prepared_plan.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -26,9 +26,10 @@ class CreatePreparedPlanTest : public BaseTest {
 TEST_F(CreatePreparedPlanTest, OperatorName) { EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan"); }
 
 TEST_F(CreatePreparedPlanTest, OperatorDescription) {
-  EXPECT_EQ(create_prepared_plan->description(DescriptionMode::SingleLine), R"(CreatePreparedPlan 'prepared_plan_a' {
+  EXPECT_EQ(replace_addresses(create_prepared_plan->description(DescriptionMode::SingleLine)),
+            R"(CreatePreparedPlan 'prepared_plan_a' {
 ParameterIDs: []
-[0] [DummyTable]
+[0] [DummyTable] @ 0x00000000
 })");
 }
 
@@ -38,9 +39,9 @@ TEST_F(CreatePreparedPlanTest, DeepCopy) {
 }
 
 TEST_F(CreatePreparedPlanTest, Execute) {
-  EXPECT_FALSE(StorageManager::get().has_prepared_plan("prepared_plan_a"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan("prepared_plan_a"));
   create_prepared_plan->execute();
-  const auto& sm = StorageManager::get();
+  const auto& sm = Hyrise::get().storage_manager;
   EXPECT_TRUE(sm.has_prepared_plan("prepared_plan_a"));
   EXPECT_EQ(sm.get_prepared_plan("prepared_plan_a"), prepared_plan);
 

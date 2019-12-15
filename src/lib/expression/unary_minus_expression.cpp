@@ -17,16 +17,18 @@ std::shared_ptr<AbstractExpression> UnaryMinusExpression::deep_copy() const {
   return std::make_shared<UnaryMinusExpression>(argument());
 }
 
-std::string UnaryMinusExpression::as_column_name() const {
+std::string UnaryMinusExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "-" << _enclose_argument_as_column_name(*argument());
+  stream << "-" << _enclose_argument(*argument(), mode);
   return stream.str();
 }
 
 DataType UnaryMinusExpression::data_type() const { return argument()->data_type(); }
 
-bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
-
-size_t UnaryMinusExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const UnaryMinusExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
+  return true;
+}
 
 }  // namespace opossum

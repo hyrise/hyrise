@@ -4,15 +4,17 @@ extern "C" {
 #include <tpch_dbgen.h>
 }
 
-#include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/date_time/gregorian/gregorian.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <iomanip>
 #include <numeric>
 #include <random>
 #include <sstream>
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
@@ -69,27 +71,37 @@ bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
-  if (!_use_prepared_statements) return;
+  // Make sure that sort order, indexes, and constraints have made it all the way up to here
+  const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
+  const auto first_chunk = orders_table->get_chunk(ChunkID{0});
+  Assert(first_chunk->ordered_by(), "Ordering information was lost");
+  if (_config->indexes) {
+    const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
+    Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
+  }
+  Assert(!orders_table->get_soft_unique_constraints().empty(), "Constraints were lost");
 
-  std::cout << " - Preparing queries" << std::endl;
+  if (_use_prepared_statements) {
+    std::cout << " - Preparing queries" << std::endl;
 
-  std::stringstream sql;
-  for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
-    if (item_id + 1 == 15) {
-      // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
-      // to manually build this query once we start randomizing the parameters.
-      continue;
+    std::stringstream sql;
+    for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
+      if (item_id + 1 == 15) {
+        // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll
+        // have to manually build this query once we start randomizing the parameters.
+        continue;
+      }
+
+      auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
+
+      // Escape single quotes
+      boost::replace_all(query_template, "'", "''");
+
+      sql << "PREPARE TPCH" << (item_id + 1) << " FROM '" << query_template << "';\n";
     }
 
-    auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
-
-    // Escape single quotes
-    boost::replace_all(query_template, "'", "''");
-
-    sql << "PREPARE TPCH" << (item_id + 1) << " FROM '" << query_template << "';\n";
+    SQLPipelineBuilder{sql.str()}.create_pipeline().get_result_table();
   }
-
-  SQLPipelineBuilder{sql.str()}.create_pipeline().get_result_table();
 }
 
 std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {
@@ -196,8 +208,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
 
-      static std::uniform_real_distribution<> discount_dist{0.02f, 0.09f};
-      const auto discount = discount_dist(random_engine);
+      static std::uniform_int_distribution<> discount_dist{2, 9};
+      const auto discount = 0.01f * discount_dist(random_engine);
 
       std::uniform_int_distribution<> quantity_dist{24, 25};
       const auto quantity = quantity_dist(random_engine);
@@ -297,7 +309,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 14 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 47};
+      std::uniform_int_distribution<> date_diff_dist{0, 5 * 12};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 1);
@@ -474,7 +486,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22u, "item_id out of range");
-  return std::string("TPC-H ") + std::to_string(item_id + 1);
+  return std::string("TPC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
 }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,

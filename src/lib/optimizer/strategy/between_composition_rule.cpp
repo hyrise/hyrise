@@ -18,8 +18,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string BetweenCompositionRule::name() const { return "Between Composition Rule"; }
-
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode
  * as its input and returns a standardized ColumnBoundary. This function checks where the
@@ -29,8 +27,8 @@ std::string BetweenCompositionRule::name() const { return "Between Composition R
  * of the BinaryPredicateExpression
  *
  **/
-const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
-    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) const {
+BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
+    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) {
   auto type = ColumnBoundaryType::None;
   const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
   auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->right_operand());
@@ -112,8 +110,8 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
   };
 }
 
-const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
-    const std::shared_ptr<ColumnBoundary>& column_boundary) const {
+BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
+    const std::shared_ptr<ColumnBoundary>& column_boundary) {
   auto type = ColumnBoundaryType::None;
   switch (column_boundary->type) {
     case ColumnBoundaryType::UpperBoundaryInclusive:
@@ -160,7 +158,7 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
  * Furthermore BinaryPredicateExpressions which are obsolete after the substitution
  * are removed.
 **/
-void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
@@ -183,20 +181,9 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
       expressions.push_back(binary_predicate_expression);
     } else {
       const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
-      if (logical_expression && logical_expression->logical_operator == LogicalOperator::And) {
-        const auto flattened_expressions = flatten_logical_expressions(logical_expression, LogicalOperator::And);
-        for (const auto& flattened_expression : flattened_expressions) {
-          const auto flattened_binary_predicate_expression =
-              std::dynamic_pointer_cast<BinaryPredicateExpression>(flattened_expression);
-          if (flattened_binary_predicate_expression) {
-            expressions.push_back(flattened_binary_predicate_expression);
-          } else {
-            predicate_nodes.push_back(PredicateNode::make(flattened_expression));
-          }
-        }
-      } else {
-        predicate_nodes.push_back(predicate);
-      }
+      Assert(!logical_expression || logical_expression->logical_operator != LogicalOperator::And,
+             "Conjunctions should already have been split up");
+      predicate_nodes.push_back(predicate);
     }
 
     for (const auto& expression : expressions) {

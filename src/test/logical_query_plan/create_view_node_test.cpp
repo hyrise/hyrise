@@ -21,22 +21,23 @@ class CreateViewNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreateViewNodeTest, Description) {
-  EXPECT_EQ(_create_view_node->description(),
+  // Use short description mode as addresses are non-deterministic
+  EXPECT_EQ(replace_addresses(_create_view_node->description(AbstractLQPNode::DescriptionMode::Short)),
             "[CreateView] Name: some_view, Columns: a FROM (\n"
-            "[0] [MockNode 'Unnamed'] pruned: 0/1 columns\n"
+            "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000\n"
             ")");
 
   const auto _create_view_node_2 = CreateViewNode::make("some_view", _view, true);
-  EXPECT_EQ(_create_view_node_2->description(),
+  EXPECT_EQ(replace_addresses(_create_view_node_2->description(AbstractLQPNode::DescriptionMode::Short)),
             "[CreateView] IfNotExists Name: some_view, Columns: a FROM (\n"
-            "[0] [MockNode 'Unnamed'] pruned: 0/1 columns\n"
+            "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000\n"
             ")");
 }
 
-TEST_F(CreateViewNodeTest, Equals) {
+TEST_F(CreateViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_create_view_node, *_create_view_node);
+  EXPECT_EQ(*_create_view_node, *_create_view_node->deep_copy());
 
-  const auto same_create_view_node = CreateViewNode::make("some_view", _view, false);
   const auto different_create_view_node_a = CreateViewNode::make("some_view2", _view, false);
 
   const auto different_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
@@ -48,6 +49,10 @@ TEST_F(CreateViewNodeTest, Equals) {
   EXPECT_NE(*different_create_view_node_a, *_create_view_node);
   EXPECT_NE(*different_create_view_node_b, *_create_view_node);
   EXPECT_NE(*different_create_view_node_c, *_create_view_node);
+
+  EXPECT_NE(different_create_view_node_a->hash(), _create_view_node->hash());
+  EXPECT_NE(different_create_view_node_b->hash(), _create_view_node->hash());
+  EXPECT_NE(different_create_view_node_c->hash(), _create_view_node->hash());
 }
 
 TEST_F(CreateViewNodeTest, Copy) {

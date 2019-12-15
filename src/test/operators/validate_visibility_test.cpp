@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -22,7 +22,7 @@ class OperatorsValidateVisibilityTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
     t->append({123, 456});
 
-    StorageManager::get().add_table(table_name, t);
+    Hyrise::get().storage_manager.add_table(table_name, t);
 
     gt = std::make_shared<GetTable>(table_name);
     gt->execute();

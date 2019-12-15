@@ -22,9 +22,42 @@ struct MvccData {
   pmr_vector<CommitID> begin_cids;                  ///< commit id when record was added
   pmr_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
+  // This is used for optimizing the validation process. It is set during Chunk::finalize(). Consult
+  // Validate::_on_execute for further details.
+  std::optional<CommitID> max_begin_cid;
+
   // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
+
+  size_t size() const;
+
+  /**
+   * The thread sanitizer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
+   * unaware of their thread-safety being guaranteed by the update of the global last_cid. Furthermore, we exploit that
+   * writes up to eight bytes are atomic on x64, which C++ and tsan do not know about. These helper methods were added
+   * to .tsan-ignore.txt and can be used (carefully) to avoid those false positives.
+   */
+  CommitID get_begin_cid(const ChunkOffset offset) const;
+  void set_begin_cid(const ChunkOffset offset, const CommitID commit_id);
+
+  CommitID get_end_cid(const ChunkOffset offset) const;
+  void set_end_cid(const ChunkOffset offset, const CommitID commit_id);
+
+ private:
+  /**
+   * @brief Mutex used to manage access to MVCC data
+   *
+   * Exclusively locked in shrink()
+   * Locked for shared ownership when MVCC data of a Chunk are accessed
+   * via the get_scoped_mvcc_data_lock() getters
+   */
+  std::shared_mutex _mutex;
+
+  /**
+   * This does not need to be atomic, as appends to a chunk's MvccData are guarded by the table's append_mutex.
+   */
+  size_t _size{0};
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

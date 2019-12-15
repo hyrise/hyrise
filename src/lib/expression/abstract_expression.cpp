@@ -35,15 +35,17 @@ bool AbstractExpression::operator==(const AbstractExpression& other) const {
 bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
 
 size_t AbstractExpression::hash() const {
-  auto hash = boost::hash_value(static_cast<ExpressionType>(type));
+  auto hash = boost::hash_value(type);
   for (const auto& argument : arguments) {
     boost::hash_combine(hash, argument->hash());
   }
-  boost::hash_combine(hash, _on_hash());
+  boost::hash_combine(hash, _shallow_hash());
   return hash;
 }
 
-size_t AbstractExpression::_on_hash() const { return 0; }
+std::string AbstractExpression::as_column_name() const { return description(DescriptionMode::ColumnName); }
+
+size_t AbstractExpression::_shallow_hash() const { return 0; }
 
 bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   return std::any_of(arguments.begin(), arguments.end(),
@@ -52,15 +54,16 @@ bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) cons
 
 ExpressionPrecedence AbstractExpression::_precedence() const { return ExpressionPrecedence::Highest; }
 
-std::string AbstractExpression::_enclose_argument_as_column_name(const AbstractExpression& argument) const {
+std::string AbstractExpression::_enclose_argument(const AbstractExpression& argument,
+                                                  const DescriptionMode mode) const {
   // TODO(anybody) Using >= to make divisions ("(2/3)/4") and logical operations ("(a AND (b OR c))") unambiguous -
   //               Sadly this makes cases where the parentheses could be avoided look ugly ("(2+3)+4")
 
   if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >=
       static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
-    return "("s + argument.as_column_name() + ")";
+    return "("s + argument.description(mode) + ")";
   } else {
-    return argument.as_column_name();
+    return argument.description(mode);
   }
 }
 

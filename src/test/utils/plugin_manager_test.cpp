@@ -1,8 +1,6 @@
 #include "../base_test.hpp"
-#include "gtest/gtest.h"
 
-#include "storage/storage_manager.hpp"
-#include "utils/plugin_manager.hpp"
+#include "hyrise.hpp"
 
 #include "./plugin_test_utils.hpp"
 
@@ -11,20 +9,20 @@ namespace opossum {
 class PluginManagerTest : public BaseTest {
  protected:
   std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() {
-    auto& pm = PluginManager::get();
+    auto& pm = Hyrise::get().plugin_manager;
 
     return pm._plugins;
   }
 
   void call_clean_up() {
-    auto& pm = PluginManager::get();
+    auto& pm = Hyrise::get().plugin_manager;
     pm._clean_up();
   }
 };
 
 TEST_F(PluginManagerTest, LoadUnloadPlugin) {
-  auto& sm = StorageManager::get();
-  auto& pm = PluginManager::get();
+  auto& sm = Hyrise::get().storage_manager;
+  auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
@@ -47,8 +45,8 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
 
 // Plugins are unloaded when the PluginManager's destructor is called, this is simulated and tested here.
 TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
-  auto& sm = StorageManager::get();
-  auto& pm = PluginManager::get();
+  auto& sm = Hyrise::get().storage_manager;
+  auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
@@ -72,7 +70,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
 }
 
 TEST_F(PluginManagerTest, LoadingSameName) {
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
@@ -82,19 +80,19 @@ TEST_F(PluginManagerTest, LoadingSameName) {
 }
 
 TEST_F(PluginManagerTest, LoadingNotExistingLibrary) {
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
 
   EXPECT_THROW(pm.load_plugin(build_dylib_path("libNotExisting")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingNonInstantiableLibrary) {
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
 
   EXPECT_THROW(pm.load_plugin(build_dylib_path("libhyriseTestNonInstantiablePlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
@@ -103,7 +101,7 @@ TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
 }
 
 TEST_F(PluginManagerTest, UnloadNotLoadedPlugin) {
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);

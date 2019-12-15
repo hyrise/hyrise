@@ -4,14 +4,13 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/import_csv.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
-#include "scheduler/current_scheduler.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
-#include "scheduler/topology.hpp"
 
 namespace opossum {
 
@@ -91,7 +90,7 @@ TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
@@ -103,7 +102,7 @@ TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportCsvTest, EmptyStrings) {
@@ -121,8 +120,8 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
 }
 
 TEST_F(OperatorsImportCsvTest, Parallel) {
-  Topology::use_fake_numa_topology(8, 4);
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().topology.use_fake_numa_topology(8, 4);
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   auto importer = std::make_shared<OperatorTask>(
       std::make_shared<ImportCsv>("resources/test_data/csv/float_int_large.csv"), CleanupTemporaries::Yes);
   importer->schedule();
@@ -134,9 +133,9 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
     expected_table->append({458.7f, 12345});
   }
 
-  CurrentScheduler::get()->finish();
+  Hyrise::get().scheduler()->finish();
   EXPECT_TABLE_EQ_ORDERED(importer->get_operator()->get_output(), expected_table);
-  CurrentScheduler::set(nullptr);
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
@@ -238,7 +237,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringAsNull) {
   auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal.csv");
   importer->execute();
 
@@ -247,7 +246,27 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 
   expected_table->append({1, "Hello"});
   expected_table->append({NULL_VALUE, "World"});
-  expected_table->append({2, NULL_VALUE});
+  expected_table->append({3, NULL_VALUE});
+  expected_table->append({4, NULL_VALUE});
+  expected_table->append({5, NULL_VALUE});
+  expected_table->append({6, "!"});
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringAsValue) {
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal_as_string.csv");
+  importer->execute();
+
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+
+  expected_table->append({1, "Hello"});
+  expected_table->append({NULL_VALUE, "World"});
+  expected_table->append({3, "null"});
+  expected_table->append({4, "Null"});
+  expected_table->append({5, "NULL"});
+  expected_table->append({6, "!"});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }

@@ -1,21 +1,17 @@
-#include <boost/hana/at_key.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/pair.hpp>
-
 #include <bitset>
 #include <iostream>
 #include <memory>
+
+#include <boost/hana/pair.hpp>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
-#include "storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
 #include "types.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
@@ -72,7 +68,7 @@ auto formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
+INSTANTIATE_TEST_SUITE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
   const auto sequence = generate_sequence(420);

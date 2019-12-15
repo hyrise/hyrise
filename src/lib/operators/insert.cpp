@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -76,12 +76,13 @@ namespace opossum {
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
-const std::string Insert::name() const { return "Insert"; }
+const std::string& Insert::name() const {
+  static const auto name = std::string{"Insert"};
+  return name;
+}
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
-
-  _target_table = StorageManager::get().get_table(_target_table_name);
+  _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
 
   Assert(_target_table->max_chunk_size() > 0, "Expected max chunk size of target table to be greater than zero");
   for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
@@ -105,7 +106,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     if (_target_table->chunk_count() == 0) {
       _target_table->append_mutable_chunk();
     }
-
     while (remaining_rows > 0) {
       auto target_chunk_id = ChunkID{_target_table->chunk_count() - 1};
       auto target_chunk = _target_table->get_chunk(target_chunk_id);
@@ -223,7 +223,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->begin_cids[chunk_offset] = cid;
+      mvcc_data->set_begin_cid(chunk_offset, cid);
       mvcc_data->tids[chunk_offset] = 0u;
     }
   }
@@ -250,6 +250,9 @@ void Insert::_on_rollback_records() {
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->end_cids[chunk_offset] = 0u;
+
+      // Update chunk statistics
+      target_chunk->increase_invalid_row_count(1u);
     }
 
     // This fence guarantees that no other thread will ever observe `begin_cid = 0 && end_cid != 0` for rolled-back

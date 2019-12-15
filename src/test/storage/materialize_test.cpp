@@ -150,8 +150,7 @@ TEST_P(MaterializeTest, MaterializeNullsTwoSegments) {
 }
 
 INSTANTIATE_TEST_CASE_P(MaterializeTestInstances, MaterializeTest,
-                        ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                                            std::end(all_segment_encoding_specs)),
+                        ::testing::ValuesIn(all_segment_encoding_specs),
                         all_segment_encoding_specs_formatter);
 
 }  // namespace opossum

@@ -1,13 +1,9 @@
 #include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -24,20 +20,17 @@
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
+#include "utils/meta_table_manager.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;            // NOLINT
@@ -47,11 +40,11 @@ namespace opossum {
 class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
-    StorageManager::get().add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
-    StorageManager::get().add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
-    StorageManager::get().add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    Hyrise::get().storage_manager.add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
+    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
@@ -405,13 +398,14 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
   const auto actual_lqp = compile_query("SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
-  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+  const auto aggregate = count_star_(stored_table_node_int_float);
+  const auto aggregates = expression_vector(aggregate, aggregate, aggregate);
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(aggregates, aliases,
     ProjectionNode::make(aggregates,
-      AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+      AggregateNode::make(expression_vector(), expression_vector(aggregate),
         stored_table_node_int_float)));
   // clang-format on
 
@@ -445,7 +439,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
       compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
-  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+  const auto aggregate = count_star_(stored_table_node_int_float);
+  const auto aggregates = expression_vector(aggregate, aggregate, aggregate);
 
   // clang-format off
   // #1186: Redundant AliasNode due to the SQLTranslator architecture.
@@ -453,8 +448,67 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   AliasNode::make(aggregates, aliases,
     AliasNode::make(aggregates, aliases,
       ProjectionNode::make(aggregates,
-        AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate),
           stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregate) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*) FROM int_float");
+
+  const auto aggregate = count_star_(stored_table_node_int_float);
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregates) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*), SUM(a + b) FROM int_float");
+
+  const auto aggregate0 = count_star_(stored_table_node_int_float);
+  const auto aggregate1 = sum_(add_(int_float_a, int_float_b));
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate0, aggregate1),
+    ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b)),
+      stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregatesFromSubqueries) {
+  const auto actual_lqp = compile_query(
+      "SELECT * FROM ("
+      "  SELECT COUNT(*) AS cnt1"
+      "  FROM int_float"
+      ") AS s1, ("
+      "  SELECT COUNT(*) AS cnt2"
+      "  FROM int_float2"
+      ") AS s2");
+
+  const auto aliases = std::vector<std::string>({"cnt1", "cnt2"});
+  const auto aggregate0 = count_star_(stored_table_node_int_float);
+  const auto aggregate1 = count_star_(stored_table_node_int_float2);
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(aggregate0, aggregate1), aliases,
+    JoinNode::make(JoinMode::Cross,
+      AliasNode::make(expression_vector(aggregate0), std::vector<std::string>({"cnt1"}),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate0),
+          stored_table_node_int_float)),
+      AliasNode::make(expression_vector(aggregate1), std::vector<std::string>({"cnt2"}),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate1),
+          stored_table_node_int_float2))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -752,8 +806,8 @@ TEST_F(SQLTranslatorTest, WhereExists) {
 }
 
 TEST_F(SQLTranslatorTest, WhereNotExists) {
-  const auto actual_lqp =
-      compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
+  const auto actual_lqp = compile_query(
+      "SELECT * FROM int_float WHERE NOT EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
   const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
@@ -948,7 +1002,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_star = compile_query("SELECT b, COUNT(*) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_star =
-  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_(stored_table_node_int_float)),
     stored_table_node_int_float);
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_star, expected_lqp_star);
@@ -1038,6 +1092,23 @@ TEST_F(SQLTranslatorTest, AggregateForwarding) {
     AliasNode::make(expression_vector(min_(int_float_a)), std::vector<std::string>({"x"}),
       AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
         stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ProjectedAggregateForwarding) {
+  // Test that a referenced Aggregate does not result in redundant (and illegal!) AggregateNodes
+
+  const auto actual_lqp = compile_query("SELECT x + 3 FROM (SELECT MIN(a) - 1 as x FROM int_float) AS t;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(sub_(min_(int_float_a), 1), 3)),
+    AliasNode::make(expression_vector(sub_(min_(int_float_a), 1)), std::vector<std::string>({"x"}),
+      ProjectionNode::make(expression_vector(sub_(min_(int_float_a), 1)),
+        AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+          stored_table_node_int_float))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1425,6 +1496,21 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, FromColumnAliasingAggregation) {
+  const auto actual_lqp =
+      compile_query("SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(min_(int_float_b), 1)),
+    AggregateNode::make(expression_vector(int_float_a), expression_vector(min_(int_float_b)),
+      PredicateNode::make(greater_than_(int_float_a, 10),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
   // Tricky: Columns "switch names". a becomes b and b becomes a
 
@@ -1766,16 +1852,30 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto actual_lqp = compile_query("SHOW TABLES");
-  const auto expected_lqp = ShowTablesNode::make();
+
+  const auto expected_lqp = StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
-  const auto expected_lqp = ShowColumnsNode::make("int_float");
+
+  // clang-format off
+  const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
+  const auto table_name_column = stored_table_node->get_column("table_name");
+  const auto expected_lqp =
+      PredicateNode::make(equals_(table_name_column, "int_float"),
+        stored_table_node);
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DMLOnMetatables) {
+  EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
+  EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
+  EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, InsertValues) {
@@ -2181,7 +2281,7 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_plan = std::make_shared<PreparedPlan>(
       prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
 
-  StorageManager::get().add_prepared_plan("some_prepared_plan", prepared_plan);
+  Hyrise::get().storage_manager.add_prepared_plan("some_prepared_plan", prepared_plan);
 
   const auto actual_lqp = compile_query("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
@@ -2208,7 +2308,7 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
 
-  StorageManager::get().add_prepared_plan("another_prepared_plan", prepared_plan);
+  Hyrise::get().storage_manager.add_prepared_plan("another_prepared_plan", prepared_plan);
 
   const auto actual_lqp = compile_query("EXECUTE another_prepared_plan ()");
 
@@ -2357,7 +2457,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupByAlias) {
       AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_b),
         stored_table_node_int_int_int));
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
     AliasNode::make(select_list_expressions, aliases,
       PredicateNode::make(greater_than_(sum_b, value_(10)),
@@ -2438,7 +2538,8 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
         PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
           wq1_lqp)));
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
     AliasNode::make(expression_vector(int_int_int_b), alias_z,
       wq2_lqp);

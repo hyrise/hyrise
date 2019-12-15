@@ -1,6 +1,7 @@
 #include "stored_table_node.hpp"
 
 #include "expression/lqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -14,7 +15,7 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
 
 LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_id = table->column_id_by_name(name);
   return {shared_from_this(), column_id};
 }
@@ -37,8 +38,8 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
   // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
-  const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
-  Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
+  const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_name)->column_count();
+  Assert(pruned_column_ids.size() < static_cast<size_t>(stored_column_count), "Cannot exclude all columns from Table.");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -48,8 +49,8 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
 
-std::string StoredTableNode::description() const {
-  const auto stored_table = StorageManager::get().get_table(table_name);
+std::string StoredTableNode::description(const DescriptionMode mode) const {
+  const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
@@ -63,7 +64,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
   // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
   // that in the constructor and (b) because we don't have column pruning information in the constructor
   if (!_column_expressions) {
-    const auto table = StorageManager::get().get_table(table_name);
+    const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
     // Build `_expression` with respect to the `_pruned_column_ids`
     _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
@@ -87,38 +88,56 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   return table->column_is_nullable(column_id);
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
-  const auto table = StorageManager::get().get_table(table_name);
-  auto stored_indexes_statistics = table->indexes_statistics();
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  auto pruned_indexes_statistics = table->indexes_statistics();
 
   if (_pruned_column_ids.empty()) {
-    return stored_indexes_statistics;
+    return pruned_indexes_statistics;
   }
 
   const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
 
-  // update index statistics
-  for (auto stored_index_stats_iter = stored_indexes_statistics.begin();
-       stored_index_stats_iter != stored_indexes_statistics.end();) {
-    for (auto& original_column_id : (*stored_index_stats_iter).column_ids) {
-      const auto& updated_column_id = column_id_mapping[original_column_id];
-      if (!updated_column_id) {
-        // column was pruned, we cannot use the index anymore.
-        stored_indexes_statistics.erase(stored_index_stats_iter);
-        break;
-      } else {
-        original_column_id = *updated_column_id;
-        ++stored_index_stats_iter;
-      }
-    }
+  // Update index statistics
+  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
+  // when remove(iterator) invalidates the iterator.
+  // TODO(anyone): Theoretically, we could keep multi-column indexes where only the last column was pruned
+  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
+                                                 [&](auto& statistics) {
+                                                   for (auto& original_column_id : statistics.column_ids) {
+                                                     const auto& updated_column_id =
+                                                         column_id_mapping[original_column_id];
+                                                     if (!updated_column_id) {
+                                                       // Indexed column was pruned - remove index from statistics
+                                                       return true;
+                                                     } else {
+                                                       // Update column id
+                                                       original_column_id = *updated_column_id;
+                                                     }
+                                                   }
+                                                   return false;
+                                                 }),
+                                  pruned_indexes_statistics.end());
+
+  return pruned_indexes_statistics;
+}
+
+size_t StoredTableNode::_on_shallow_hash() const {
+  size_t hash{0};
+  boost::hash_combine(hash, table_name);
+  for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
+    boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
   }
-  return stored_indexes_statistics;
+  for (const auto& pruned_column_id : _pruned_column_ids) {
+    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+  }
+  return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

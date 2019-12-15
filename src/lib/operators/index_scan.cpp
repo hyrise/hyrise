@@ -4,11 +4,12 @@
 
 #include "expression/between_expression.hpp"
 
+#include "hyrise.hpp"
+
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
@@ -25,7 +26,10 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
       _right_values{right_values},
       _right_values2{right_values2} {}
 
-const std::string IndexScan::name() const { return "IndexScan"; }
+const std::string& IndexScan::name() const {
+  static const auto name = std::string{"IndexScan"};
+  return name;
+}
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = input_table_left();
@@ -42,7 +46,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     const auto chunk_count = _in_table->chunk_count();
     for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = _in_table->get_chunk(chunk_id);
-      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
@@ -55,7 +59,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     }
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return _out_table;
 }
@@ -76,6 +80,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     if (!chunk) return;
 
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+    if (matches_out->empty()) return;
 
     Segments segments;
 
@@ -109,8 +114,8 @@ void IndexScan::_validate_input() {
 PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  auto range_begin = BaseIndex::Iterator{};
-  auto range_end = BaseIndex::Iterator{};
+  auto range_begin = AbstractIndex::Iterator{};
+  auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};

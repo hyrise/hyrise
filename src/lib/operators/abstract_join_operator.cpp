@@ -37,7 +37,7 @@ const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predic
   return _secondary_predicates;
 }
 
-const std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
+std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
   const auto column_name = [](const auto& table, const auto column_id) {
     return table ? table->column_name(column_id) : "Column #"s + std::to_string(column_id);
   };
