@@ -16,7 +16,7 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::string ValueExpression::as_column_name() const {
+std::string ValueExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   if (value.type() == typeid(pmr_string)) {
@@ -37,6 +37,8 @@ std::string ValueExpression::as_column_name() const {
 DataType ValueExpression::data_type() const { return data_type_from_all_type_variant(value); }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ValueExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& value_expression = static_cast<const ValueExpression&>(expression);
 
   /**
@@ -47,7 +49,7 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
   return value == value_expression.value;
 }
 
-size_t ValueExpression::_on_hash() const { return std::hash<AllTypeVariant>{}(value); }
+size_t ValueExpression::_shallow_hash() const { return std::hash<AllTypeVariant>{}(value); }
 
 bool ValueExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   return value.type() == typeid(NullValue);

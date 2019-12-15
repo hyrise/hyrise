@@ -1,3 +1,3 @@
 a|STDDEV_SAMP(b)|AVG(c)
-int|double_null|double
+int|double_null|double_null
 12|null|10

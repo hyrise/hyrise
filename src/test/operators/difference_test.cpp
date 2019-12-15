@@ -11,7 +11,6 @@
 #include "operators/difference.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

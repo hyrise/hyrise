@@ -118,7 +118,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  _with_operator_for_dict_segment_scan(predicate_condition, [&](auto predicate_comparator) {
+  _with_operator_for_dict_segment_scan([&](auto predicate_comparator) {
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };
@@ -153,6 +153,12 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                                          boost::get<ColumnDataType>(value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          if (begin == end) return;
+
+          // General note: If the predicate is NotEquals, there might be two matching ranges. scan_sorted_segment
+          // combines these two ranges into a single one via boost::join(range_1, range_2).
+          // See sorted_segment_search.hpp for further details.
+
           size_t output_idx = matches.size();
 
           matches.resize(matches.size() + std::distance(begin, end));
@@ -166,14 +172,14 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
            */
           if (position_filter || predicate_condition == PredicateCondition::NotEquals) {
             for (; begin != end; ++begin) {
-              matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
+              matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
             }
           } else {
             const auto first_offset = begin->chunk_offset();
             const auto distance = std::distance(begin, end);
 
             for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+              matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
             }
           }
         });

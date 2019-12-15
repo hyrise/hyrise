@@ -12,13 +12,13 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
 
 void AbstractReadWriteOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");
-
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
-
   DebugAssert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
-
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
+
+  transaction_context()->register_read_write_operator(
+      std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   try {
     AbstractOperator::execute();
@@ -61,6 +61,27 @@ void AbstractReadWriteOperator::_mark_as_failed() {
   Assert(_state == ReadWriteOperatorState::Pending, "Operator can only be marked as failed if pending.");
 
   _state = ReadWriteOperatorState::Failed;
+}
+
+std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& phase) {
+  switch (phase) {
+    case ReadWriteOperatorState::Pending:
+      stream << "Pending";
+      break;
+    case ReadWriteOperatorState::Executed:
+      stream << "Executed";
+      break;
+    case ReadWriteOperatorState::Failed:
+      stream << "Failed";
+      break;
+    case ReadWriteOperatorState::RolledBack:
+      stream << "RolledBack";
+      break;
+    case ReadWriteOperatorState::Committed:
+      stream << "Committed";
+      break;
+  }
+  return stream;
 }
 
 }  // namespace opossum

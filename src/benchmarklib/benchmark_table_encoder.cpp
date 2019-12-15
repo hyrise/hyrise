@@ -34,7 +34,7 @@ SegmentEncodingSpec get_segment_encoding_spec(const BaseEncodedSegment& base_enc
         return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
     }
 
-    Fail("GCC thinks this is reachable");
+    Fail("Invalid enum value");
   } else {
     return {base_encoded_segment.encoding_type()};
   }
@@ -134,21 +134,21 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto encoding_performed = std::atomic<bool>{false};
   const auto column_data_types = table->column_data_types();
 
-  // Encode chunks in parallel, using `hardware_concurrency + 1` worker
+  // Encode chunks in parallel, using `hardware_concurrency + 1` workers
   // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
   auto next_chunk = std::atomic_uint{0};
+  const auto thread_count = std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
   auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
 
-  for (auto thread_id = 0u;
-       thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
-       ++thread_id) {
+  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_chunk = next_chunk++;
         if (my_chunk >= table->chunk_count()) return;
 
         const auto chunk = table->get_chunk(ChunkID{my_chunk});
-        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
         if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
           ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
           encoding_performed = true;

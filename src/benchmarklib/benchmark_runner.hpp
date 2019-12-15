@@ -1,6 +1,6 @@
 #pragma once
 
-#include <json.hpp>
+#include <tbb/concurrent_hash_map.h>
 
 #include <atomic>
 #include <chrono>
@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <nlohmann/json.hpp>
 #include "cxxopts.hpp"
-#include "tbb/concurrent_hash_map.h"
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"
@@ -19,7 +19,6 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk.hpp"
@@ -35,7 +34,7 @@ class SQLiteWrapper;
 // The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
 // (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
-class BenchmarkRunner {
+class BenchmarkRunner : Noncopyable {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);

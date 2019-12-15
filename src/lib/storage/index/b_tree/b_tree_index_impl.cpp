@@ -1,6 +1,6 @@
 #include "b_tree_index_impl.hpp"
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -8,9 +8,10 @@
 namespace opossum {
 
 template <typename DataType>
-BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index)
+BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index,
+                                         std::vector<ChunkOffset>& null_positions)
     : _heap_bytes_used{0} {
-  _bulk_insert(segments_to_index);
+  _bulk_insert(segments_to_index, null_positions);
 }
 
 template <typename DataType>
@@ -55,19 +56,30 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
 
 template <typename DataType>
 size_t BTreeIndexImpl<DataType>::memory_consumption() const {
-  return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.size() + _btree.bytes_used() +
+  return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.capacity() + _btree.bytes_used() +
          _heap_bytes_used;
 }
 
 template <typename DataType>
-void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegment>& segment) {
+void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegment>& segment,
+                                            std::vector<ChunkOffset>& null_positions) {
   std::vector<std::pair<ChunkOffset, DataType>> values;
+  null_positions.reserve(values.size());
 
   // Materialize
   segment_iterate<DataType>(*segment, [&](const auto& position) {
-    if (position.is_null()) return;
-    values.push_back(std::make_pair(position.chunk_offset(), position.value()));
+    if (position.is_null()) {
+      null_positions.emplace_back(position.chunk_offset());
+    } else {
+      values.push_back({position.chunk_offset(), position.value()});
+    }
   });
+
+  null_positions.shrink_to_fit();
+
+  if (values.empty()) {
+    return;
+  }
 
   // Sort
   std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second < b.second; });

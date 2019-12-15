@@ -112,7 +112,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   std::shared_ptr<Table> table_a = load_table("resources/test_data/tbl/int_float4.tbl", 2);
-  StorageManager::get().add_table("table_a", std::move(table_a));
+  Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
 
   auto stored_table_node = StoredTableNode::make("table_a");
 
@@ -196,7 +196,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   /**
-     * If a PredicateNode has multiple outputs, it should not be considered for reordering
+     * If a PredicateNode has multiple outputs, it should only be considered for reordering with lower predicates.
      */
   /**
      *      _____Union___
@@ -205,9 +205,13 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      *    \           /
      *     Predicate_b
      *         |
+     *     Predicate_c
+     *         |
      *       Table
      *
-     * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
+     * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, Predicate_a cannot
+     * be reordered since it does not belong to the predicate chain (Predicate_b and Predicate_c). However, Predicate_b
+     * and Predicate_c can be reordered inside their chain.
      */
 
   /**
@@ -219,18 +223,21 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
+  auto predicate_c_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 5));
 
   union_node->set_left_input(predicate_a_node);
   union_node->set_right_input(predicate_b_node);
   predicate_a_node->set_left_input(predicate_b_node);
-  predicate_b_node->set_left_input(table_node);
+  predicate_b_node->set_left_input(predicate_c_node);
+  predicate_c_node->set_left_input(table_node);
 
   const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
 
   EXPECT_EQ(reordered, union_node);
   EXPECT_EQ(reordered->left_input(), predicate_a_node);
-  EXPECT_EQ(reordered->right_input(), predicate_b_node);
-  EXPECT_EQ(predicate_a_node->left_input(), predicate_b_node);
+  EXPECT_EQ(reordered->right_input(), predicate_c_node);
+  EXPECT_EQ(predicate_a_node->left_input(), predicate_c_node);
+  EXPECT_EQ(predicate_c_node->left_input(), predicate_b_node);
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 

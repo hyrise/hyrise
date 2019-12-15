@@ -23,7 +23,7 @@ class Projection : public AbstractReadOnlyOperator {
   Projection(const std::shared_ptr<const AbstractOperator>& in,
              const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   /**
    * The dummy table is used for literal projections that have no input table.
@@ -36,7 +36,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   class DummyTable : public Table {
    public:
-    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int}}, TableType::Data) {
+    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int, false}}, TableType::Data) {
       append(std::vector<AllTypeVariant>{0});
     }
   };

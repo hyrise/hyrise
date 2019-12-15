@@ -1,5 +1,5 @@
 a|MAX(b)|STDDEV_SAMP(c)
-int|float|double_null
+int|float_null|double_null
 12345|457.7|9.19238
 123|458.7|null
 12|350.7|null

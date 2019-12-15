@@ -1,5 +1,5 @@
 {
-    "config": {"reject_null_strings": false},
+    "config": {"null_handling": "null_string_as_null"},
     "columns": [
         {"name": "id", 			"type": "int",		"nullable": false},
         {"name": "keyword", 		"type": "string",	"nullable": false},

@@ -12,7 +12,6 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -22,9 +21,9 @@ class OperatorsExportCsvTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
-    column_definitions.emplace_back("b", DataType::String);
-    column_definitions.emplace_back("c", DataType::Float);
+    column_definitions.emplace_back("a", DataType::Int, false);
+    column_definitions.emplace_back("b", DataType::String, false);
+    column_definitions.emplace_back("c", DataType::Float, false);
 
     table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
@@ -134,7 +133,7 @@ TEST_F(OperatorsExportCsvTest, FixedStringDictionarySegmentFixedSizeByteAligned)
   const auto meta_filename_string_table = filename_string_table + CsvMeta::META_FILE_EXTENSION;
 
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto string_table = std::make_shared<Table>(column_definitions, TableType::Data, 4);
   string_table->append({"a"});
@@ -191,11 +190,11 @@ TEST_F(OperatorsExportCsvTest, ReferenceSegment) {
 
 TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Int);
-  column_definitions.emplace_back("b", DataType::String);
-  column_definitions.emplace_back("c", DataType::Float);
-  column_definitions.emplace_back("d", DataType::Long);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::String, false);
+  column_definitions.emplace_back("c", DataType::Float, false);
+  column_definitions.emplace_back("d", DataType::Long, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});

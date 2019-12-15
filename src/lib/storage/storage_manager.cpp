@@ -5,14 +5,15 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    // We currently assume that all tables stored in the StorageManager are mutable and, as such, have MVCC data. This
+    // way, we do not need to check query plans if they try to update immutable tables. However, this is not a hard
+    // limitation and might be changed into more fine-grained assertions if the need arises.
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
@@ -34,13 +38,24 @@ void StorageManager::drop_table(const std::string& name) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
+  if (MetaTableManager::is_meta_table_name(name)) {
+    return Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
+  }
+
   const auto iter = _tables.find(name);
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
   return iter->second;
 }
 
-bool StorageManager::has_table(const std::string& name) const { return _tables.count(name); }
+bool StorageManager::has_table(const std::string& name) const {
+  if (MetaTableManager::is_meta_table_name(name)) {
+    const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
+    return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
+                              name.substr(MetaTableManager::META_PREFIX.size()));
+  }
+  return _tables.count(name);
+}
 
 std::vector<std::string> StorageManager::table_names() const {
   std::vector<std::string> table_names;
@@ -131,8 +146,6 @@ const std::map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prep
   return _prepared_plans;
 }
 
-void StorageManager::reset() { get() = StorageManager{}; }
-
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.reserve(_tables.size());
@@ -152,7 +165,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
     job_task->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->wait_for_tasks(tasks);
 }
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {

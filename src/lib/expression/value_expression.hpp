@@ -14,14 +14,14 @@ class ValueExpression : public AbstractExpression {
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
 
   const AllTypeVariant value;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
-  size_t _on_hash() const override;
+  size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 

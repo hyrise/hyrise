@@ -185,6 +185,9 @@ TEST(CachePolicyTest, GDFSCacheTest) {
   ASSERT_FALSE(cache.has(1));
   ASSERT_TRUE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
+
+  ASSERT_EQ(cache.frequency(3), 3);
+  ASSERT_EQ(cache.frequency(100), 0);
 }
 
 // Random Replacement Strategy
@@ -259,7 +262,7 @@ class CacheTest : public BaseTest {};
 // Here, all cache types are defined.
 using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
                                     RandomCache<int, int>>;
-TYPED_TEST_CASE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CacheTest, Size) {
   TypeParam cache(3);

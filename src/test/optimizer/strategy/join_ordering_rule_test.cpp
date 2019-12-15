@@ -30,10 +30,10 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
     // are just dummies.
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 50, 20, 10);
 
-    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}}, 10, {histogram});
-    node_b = create_mock_node_with_statistics({{DataType::Int, "b"}}, 10, {histogram});
-    node_c = create_mock_node_with_statistics({{DataType::Int, "c"}}, 10, {histogram});
-    node_d = create_mock_node_with_statistics({{DataType::Int, "d"}}, 10, {histogram});
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}}, 20, {histogram});
+    node_b = create_mock_node_with_statistics({{DataType::Int, "b"}}, 20, {histogram});
+    node_c = create_mock_node_with_statistics({{DataType::Int, "c"}}, 20, {histogram});
+    node_d = create_mock_node_with_statistics({{DataType::Int, "d"}}, 20, {histogram});
 
     a_a = node_a->get_column("a");
     b_b = node_b->get_column("b");
@@ -64,18 +64,18 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
               node_d,
               node_c))))));
 
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
   const auto expected_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
     JoinNode::make(JoinMode::Inner, equals_(a_a, b_b),
-      node_a,
       JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
         node_b,
         JoinNode::make(JoinMode::Inner, equals_(d_d, c_c),
           node_d,
-          node_c))));
+          node_c)),
+      node_a));
   // clang-format on
-
-  const auto actual_lqp = apply_rule(rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

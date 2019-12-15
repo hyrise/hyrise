@@ -1,7 +1,5 @@
 #include "import_binary.hpp"
 
-#include <boost/hana/for_each.hpp>
-
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -9,13 +7,12 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "constant_mappings.hpp"
-#include "import_export/binary.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "utils/assert.hpp"
 
@@ -24,7 +21,10 @@ namespace opossum {
 ImportBinary::ImportBinary(const std::string& filename, const std::optional<std::string>& tablename)
     : AbstractReadOnlyOperator(OperatorType::ImportBinary), _filename(filename), _tablename(tablename) {}
 
-const std::string ImportBinary::name() const { return "ImportBinary"; }
+const std::string& ImportBinary::name() const {
+  static const auto name = std::string{"ImportBinary"};
+  return name;
+}
 
 std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
   std::ifstream file;
@@ -34,9 +34,7 @@ std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
 
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-  std::shared_ptr<Table> table;
-  ChunkID chunk_count;
-  std::tie(table, chunk_count) = _read_header(file);
+  auto [table, chunk_count] = _read_header(file);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     _import_chunk(file, table);
   }
@@ -89,14 +87,14 @@ T ImportBinary::_read_value(std::ifstream& file) {
 }
 
 std::shared_ptr<const Table> ImportBinary::_on_execute() {
-  if (_tablename && StorageManager::get().has_table(*_tablename)) {
-    return StorageManager::get().get_table(*_tablename);
+  if (_tablename && Hyrise::get().storage_manager.has_table(*_tablename)) {
+    return Hyrise::get().storage_manager.get_table(*_tablename);
   }
 
   const auto table = read_binary(_filename);
 
   if (_tablename) {
-    StorageManager::get().add_table(*_tablename, table);
+    Hyrise::get().storage_manager.add_table(*_tablename, table);
   }
 
   return table;
@@ -157,15 +155,17 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
 template <typename ColumnDataType>
 std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            bool is_nullable) {
-  const auto column_type = _read_value<BinarySegmentType>(file);
+  const auto column_type = _read_value<EncodingType>(file);
 
   switch (column_type) {
-    case BinarySegmentType::value_segment:
+    case EncodingType::Unencoded:
       return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
-    case BinarySegmentType::dictionary_segment:
+    case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
+    case EncodingType::RunLength:
+      return _import_run_length_segment<ColumnDataType>(file, row_count);
     default:
-      // This case happens if the read column type is not a valid BinarySegmentType.
+      // This case happens if the read column type is not a valid EncodingType.
       Fail("Cannot import column: invalid column type");
   }
 }
@@ -187,16 +187,16 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 template <typename T>
 std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
-  // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
+  // TODO(unknown): Ideally _read_values would directly write into a pmr_concurrent_vector so that no conversion is
   // needed
   if (is_nullable) {
     const auto nullables = _read_values<bool>(file, row_count);
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
-                                             tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
+    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()},
+                                             pmr_concurrent_vector<bool>{nullables.begin(), nullables.end()});
   } else {
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()});
   }
 }
 
@@ -211,6 +211,17 @@ std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(s
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
+}
+
+template <typename T>
+std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(std::ifstream& file,
+                                                                              ChunkOffset row_count) {
+  const auto size = _read_value<uint32_t>(file);
+  const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
+  const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
+  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
+
+  return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
 }
 
 }  // namespace opossum

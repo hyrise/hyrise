@@ -41,13 +41,14 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
-#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)   \
-  {                                                                                                               \
-    if (const auto table_difference_message = check_table_equal(opossum_table, expected_table, order_sensitivity, \
-                                                                type_cmp_mode, float_comparison_mode)) {          \
-      FAIL() << *table_difference_message;                                                                        \
-    }                                                                                                             \
-  }                                                                                                               \
+#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
+  {                                                                                                                   \
+    if (const auto table_difference_message =                                                                         \
+            check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
+                              IgnoreNullable::No)) {                                                                  \
+      FAIL() << *table_difference_message;                                                                            \
+    }                                                                                                                 \
+  }                                                                                                                   \
   static_assert(true, "End call of macro with a semicolon")
 
 /**
@@ -70,7 +71,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 // clang-format off
 #define EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode) \
   EXPECT_TRUE(segment_to_test && expected_segment && check_segment_equal(                                             \
-              segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode));
+              segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode))
 // clang-format on
 
 /**

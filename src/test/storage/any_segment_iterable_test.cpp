@@ -30,12 +30,7 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   void SetUp() override {
-    const auto param = GetParam();
-
-    auto segment_encoding_spec = SegmentEncodingSpec{param.encoding_type};
-    if (param.vector_compression_type) {
-      segment_encoding_spec.vector_compression_type = *param.vector_compression_type;
-    }
+    const auto segment_encoding_spec = GetParam();
     const auto value_int_segment = std::make_shared<ValueSegment<int32_t>>(int_values);
     int_segment = ChunkEncoder::encode_segment(std::dynamic_pointer_cast<ValueSegment<int32_t>>(value_int_segment),
                                                DataType::Int, segment_encoding_spec);
@@ -74,12 +69,22 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-INSTANTIATE_TEST_CASE_P(
-    AnySegmentIterableTestInstances, AnySegmentIterableTest,
-    ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference}, SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4}), );  // NOLINT
+auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+  const auto spec = info.param;
 
+  auto stream = std::stringstream{};
+  stream << spec.encoding_type;
+  if (spec.vector_compression_type) {
+    stream << "-" << *spec.vector_compression_type;
+  }
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
+                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, true)),
+                         formatter);
 }  // namespace opossum

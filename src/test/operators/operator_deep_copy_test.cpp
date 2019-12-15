@@ -5,10 +5,10 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -17,7 +17,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
@@ -44,7 +43,7 @@ class OperatorDeepCopyTest : public BaseTest {
     _table_wrapper_d->execute();
 
     _test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    StorageManager::get().add_table("aNiceTestTable", _test_table);
+    Hyrise::get().storage_manager.add_table("aNiceTestTable", _test_table);
   }
 
   std::shared_ptr<Table> _test_table;
@@ -55,8 +54,8 @@ template <typename T>
 class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
-TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+TYPED_TEST_SUITE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   std::shared_ptr<Table> expected_result =
@@ -184,12 +183,13 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 
 TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
-  // this suite. The test is very confusing and error-prone with explicit operators as above.
+  // this suite. The test would be very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
-  StorageManager::get().add_table("table_3int", table);
+  Hyrise::get().storage_manager.add_table("table_3int", table);
 
   const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
-  const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+  const TableColumnDefinitions column_definitions = {
+      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
 
   auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline_statement();
   const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();
@@ -204,7 +204,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
 
   const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();
 

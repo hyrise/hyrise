@@ -1,12 +1,16 @@
-#include <boost/bimap.hpp>
+#pragma once
+
 #include <string>
 #include <unordered_map>
+
+#include <boost/bimap.hpp>
 
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -27,5 +31,6 @@ std::ostream& operator<<(std::ostream& stream, FunctionType function_type);
 std::ostream& operator<<(std::ostream& stream, DataType data_type);
 std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type);
 std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type);
+std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 }  // namespace opossum

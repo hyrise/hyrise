@@ -1,5 +1,5 @@
 a|b|d|MIN(c)
-int|float|int|int
+int|float|int|int_null
 12345|456.7|5|20
 12345|456.7|1|24
 12345|456.7|2|24

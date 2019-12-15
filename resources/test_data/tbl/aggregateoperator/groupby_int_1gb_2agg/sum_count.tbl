@@ -1,5 +1,5 @@
 a|SUM(b)|COUNT(c)
-int|double|long
+int|double_null|long
 12345|914.4|2
 123|458.7|1
 12|350.7|1

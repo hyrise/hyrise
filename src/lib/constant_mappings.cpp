@@ -1,18 +1,12 @@
 #include "constant_mappings.hpp"
 
+#include <unordered_map>
+
 #include <boost/bimap.hpp>
 #include <boost/hana/fold.hpp>
 
-#include <string>
-#include <unordered_map>
-
-#include "sql/Expr.h"
-#include "sql/SelectStatement.h"
-
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -71,6 +65,15 @@ std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
 
 std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
+  stream << spec.encoding_type;
+  if (spec.vector_compression_type) {
+    stream << "-" << *spec.vector_compression_type;
+  }
+
+  return stream;
 }
 
 }  // namespace opossum

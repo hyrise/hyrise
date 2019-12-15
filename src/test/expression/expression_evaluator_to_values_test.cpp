@@ -21,7 +21,6 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
@@ -236,6 +235,14 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsSeries) {
   // clang-format on
 }
 
+TEST_F(ExpressionEvaluatorToValuesTest, ExpressionReuse) {
+  // We can't really test that the reoccuring subexpressions are evaluated only once, but at least we have a test
+  // where reoccuring subexpressions are used.
+  // clang-format off
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(mul_(a, b), mul_(a, b)), {4, 12, 24, 40}));
+  // clang-format on
+}
+
 TEST_F(ExpressionEvaluatorToValuesTest, PredicatesLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_(5, 3.3), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_(5, 5.0), {0}));
@@ -363,6 +370,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, CaseSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(greater_than_(empty_a, 3), 1, 2), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(1, empty_a, empty_a), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(greater_than_(empty_a, 3), empty_a, empty_a), {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(equals_(add_(NullValue{}, 1), 0), 1, 2), {2}));
   // clang-format on
 }
 

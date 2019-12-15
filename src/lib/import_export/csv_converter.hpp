@@ -1,13 +1,13 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
-
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <boost/algorithm/string.hpp>
 
 #include "csv_meta.hpp"
 #include "storage/base_segment.hpp"
@@ -56,10 +56,10 @@ class CsvConverter : public BaseCsvConverter {
     }
 
     if (boost::to_lower_copy(value) == ParseConfig::NULL_STRING) {
-      Assert(!_config.reject_null_strings,
-             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null value, "
-             "or set 'reject_null_strings' to false in parse config.");
-      if (_is_nullable) {
+      Assert(_config.null_handling != NullHandling::RejectNullStrings,
+             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
+             "value, or set 'null_handling' to the appropriate strategy in parse config.");
+      if (_is_nullable && _config.null_handling == NullHandling::NullStringAsNull) {
         _null_values[position] = true;
         return;
       }
@@ -97,8 +97,8 @@ class CsvConverter : public BaseCsvConverter {
    * csv characters.
    */
   std::function<T(const std::string&)> _get_conversion_function();
-  tbb::concurrent_vector<T> _parsed_values;
-  tbb::concurrent_vector<bool> _null_values;
+  pmr_concurrent_vector<T> _parsed_values;
+  pmr_concurrent_vector<bool> _null_values;
   const bool _is_nullable;
   ParseConfig _config;
 };

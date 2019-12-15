@@ -1,6 +1,14 @@
 #!/bin/bash
 
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
+    BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.67-dev 2>/dev/null | grep "install ok installed")
+    if [ "" != "$BOOST_INSTALLED" ]; then
+         read -p 'libboost1.67-dev is installed but 1.70 is required. Ok to remove 1.67-dev? [y|n] ' -n 1 -r < /dev/tty
+        echo
+         if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
+             sudo apt-get remove libboost1.67-dev
+         fi
+    fi
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
     REPLY="y"
@@ -20,9 +28,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
             # python2.7 is preinstalled on macOS
-            # check, for each programme individually with brew, whether it is already installed
-            # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake tbb graphviz pkg-config readline ncurses sqlite3 parallel libpq autoconf; do
+            # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on MacOS after system upgrade
+            # NOTE: The Mac CI server does not execute the install.sh - formulas need to be installed manually.
+            for formula in autoconf boost cmake graphviz libpq ncurses parallel pkg-config postgresql readline sqlite3 tbb; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -50,8 +58,11 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 python-pexpect python-glob2 graphviz gcc-8 g++-8 llvm llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev autoconf &
+                # packages added here should also be added to the Dockerfile
+                sudo apt-get install --no-install-recommends -y software-properties-common
+                sudo add-apt-repository -y ppa:mhier/libboost-latest
+                sudo apt-get update
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libboost1.70-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev man parallel postgresql-server-dev-all python2.7 python-pexpect python-pip sudo systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
@@ -65,8 +76,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-8
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 70 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-7 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-7
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-9 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-9 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-9 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-9 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-9
             else
                 echo "Error during installation."
                 exit 1

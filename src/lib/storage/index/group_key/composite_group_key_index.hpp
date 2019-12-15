@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 #include "variable_length_key_store.hpp"
 
@@ -40,18 +40,17 @@ class BaseDictionarySegment;
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/Composite-GroupKey-Index
  */
-class CompositeGroupKeyIndex : public BaseIndex {
+class CompositeGroupKeyIndex : public AbstractIndex {
   friend class CompositeGroupKeyIndexTest;
 
  public:
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See BaseIndex::estimate_memory_consumption()
+   * See AbstractIndex::estimate_memory_consumption()
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
-  CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
   ~CompositeGroupKeyIndex() = default;
 
   explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);

@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "json.hpp"
-
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "storage/materialize.hpp"
@@ -20,7 +18,10 @@ namespace opossum {
 ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportCsv, in), _filename(filename) {}
 
-const std::string ExportCsv::name() const { return "ExportCSV"; }
+const std::string& ExportCsv::name() const {
+  static const auto name = std::string{"ExportCsv"};
+  return name;
+}
 
 std::shared_ptr<const Table> ExportCsv::_on_execute() {
   _generate_meta_info_file(_input_left->get_output(), _filename + CsvMeta::META_FILE_EXTENSION);
@@ -81,7 +82,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
       for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {

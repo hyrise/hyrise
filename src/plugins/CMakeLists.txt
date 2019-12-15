@@ -14,6 +14,8 @@ function(add_plugin)
 
     add_dependencies(${PARSED_ARGS_NAME} hyrise)
 
+    include_directories(${CMAKE_BINARY_DIR})  # For provider.hpp
+
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
     endforeach(dep)
@@ -26,6 +28,7 @@ function(add_plugin)
     endif()
 endfunction(add_plugin)
 
+add_plugin(NAME MvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 

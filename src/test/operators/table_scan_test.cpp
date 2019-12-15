@@ -89,7 +89,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
-    return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 10,
+    return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 4,
+                                 std::make_optional(std::make_pair(ColumnID(0), OrderByMode::Ascending)));
+  }
+
+  std::shared_ptr<TableWrapper> get_int_only_null_op() {
+    return load_and_encode_table("resources/test_data/tbl/int_only_null.tbl", 4,
                                  std::make_optional(std::make_pair(ColumnID(0), OrderByMode::Ascending)));
   }
 
@@ -103,8 +108,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_table_op_filtered() {
     TableColumnDefinitions table_column_definitions;
-    table_column_definitions.emplace_back("a", DataType::Int);
-    table_column_definitions.emplace_back("b", DataType::Int);
+    table_column_definitions.emplace_back("a", DataType::Int, false);
+    table_column_definitions.emplace_back("b", DataType::Int, false);
 
     std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References);
 
@@ -133,13 +138,15 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
     TableColumnDefinitions table_column_definitions;
-    table_column_definitions.emplace_back("a", DataType::Int);
+    table_column_definitions.emplace_back("a", DataType::Int, false);
 
     std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data);
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i});
     }
+
+    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->finalize();
 
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, {_encoding_type});
 
@@ -256,10 +263,10 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanTest,
-                        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
-                                          EncodingType::FrameOfReference),
-                        formatter);
+INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                                           EncodingType::FrameOfReference),
+                         formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
@@ -294,6 +301,24 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_sorted_filtered.tbl", 1);
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 2);
+  scan->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqualNull) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", 1);
+
+  auto scan = create_table_scan(get_int_only_null_op(), ColumnID{0}, PredicateCondition::Equals, 2);
+  scan->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllPredicateValueLarger) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", 1);
+
+  auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 6);
   scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);

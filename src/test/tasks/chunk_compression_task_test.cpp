@@ -6,11 +6,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
 namespace opossum {
@@ -19,20 +19,22 @@ class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   auto table = load_table("resources/test_data/tbl/compression_input.tbl", 12u);
-  StorageManager::get().add_table("table", table);
+  Hyrise::get().storage_manager.add_table("table", table);
 
   auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 3u);
-  StorageManager::get().add_table("table_dict", table_dict);
+  Hyrise::get().storage_manager.add_table("table_dict", table_dict);
 
-  auto compression_task1 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{0});
+  auto compression_task1 = std::make_shared<ChunkCompressionTask>("table_dict", ChunkID{0});
   compression_task1->set_done_callback([]() {
     auto compression_task2 =
-        std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{1}, ChunkID{2}});
-    compression_task2->execute();
+        std::make_shared<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{1}, ChunkID{2}});
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(
+        std::vector<std::shared_ptr<ChunkCompressionTask>>{compression_task2});
   });
-  compression_task1->execute();
-  auto compression_task3 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{3});
-  compression_task3->execute();
+  auto compression_task3 = std::make_shared<ChunkCompressionTask>("table_dict", ChunkID{3});
+
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(
+      std::vector<std::shared_ptr<ChunkCompressionTask>>{compression_task1, compression_task3});
 
   EXPECT_TABLE_EQ_UNORDERED(table, table_dict);
 
@@ -51,10 +53,11 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
 
 TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
-  StorageManager::get().add_table("table_dict", table_dict);
+  Hyrise::get().storage_manager.add_table("table_dict", table_dict);
 
-  auto compression = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
-  compression->execute();
+  auto compression = std::make_shared<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(
+      std::vector<std::shared_ptr<ChunkCompressionTask>>{compression});
 
   constexpr auto chunk_count = 2u;
 
@@ -77,22 +80,26 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 
 TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   auto table = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
-  StorageManager::get().add_table("table_insert", table);
+  Hyrise::get().storage_manager.add_table("table_insert", table);
 
   auto gt1 = std::make_shared<GetTable>("table_insert");
   gt1->execute();
 
   auto ins = std::make_shared<Insert>("table_insert", gt1);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->rollback();
 
   ASSERT_EQ(table->chunk_count(), 4u);
 
-  auto compression = std::make_unique<ChunkCompressionTask>(
+  table->get_chunk(ChunkID{2})->finalize();
+  table->get_chunk(ChunkID{3})->finalize();
+
+  auto compression = std::make_shared<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
-  compression->execute();
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(
+      std::vector<std::shared_ptr<ChunkCompressionTask>>{compression});
 
   for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
     auto dict_segment =
@@ -103,7 +110,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   auto gt2 = std::make_shared<GetTable>("table_insert");
   gt2->execute();
   auto validate = std::make_shared<Validate>(gt2);
-  context = TransactionManager::get().new_transaction_context();
+  context = Hyrise::get().transaction_manager.new_transaction_context();
   validate->set_transaction_context(context);
   validate->execute();
   EXPECT_EQ(validate->get_output()->row_count(), 12u);

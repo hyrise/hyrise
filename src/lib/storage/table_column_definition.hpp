@@ -8,9 +8,10 @@ namespace opossum {
 
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
-  TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable = false);
+  TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable);
 
   bool operator==(const TableColumnDefinition& rhs) const;
+  size_t hash() const;
 
   std::string name;
   DataType data_type{DataType::Int};

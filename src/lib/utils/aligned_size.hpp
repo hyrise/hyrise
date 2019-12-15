@@ -1,3 +1,5 @@
+#pragma once
+
 namespace opossum {
 
 // returns the actually used size by an object of type T
