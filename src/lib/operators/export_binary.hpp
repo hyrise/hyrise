@@ -238,7 +238,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
 
  private:
   template <typename T>
-  static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_segment);
+  static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_encoded_segment);
 
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
