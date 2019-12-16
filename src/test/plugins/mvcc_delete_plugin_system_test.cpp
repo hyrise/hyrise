@@ -245,7 +245,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       // To increase the global _last_commit_id, we need to execute a transaction with read-write operators
       // We perform some dummy updates so that the table is unmodified and the validation routine does not complain
       auto pipeline =
-          SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = 0"}}
+          SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = -1"}}
               .create_pipeline();
 
       // Execute and verify update transaction
