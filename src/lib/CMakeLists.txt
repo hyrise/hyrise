@@ -412,6 +412,8 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
+    storage/create_iterable_from_reference_segment.ipp
+    storage/create_iterable_from_segment.ipp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp
     storage/dictionary_segment/dictionary_encoder.hpp
