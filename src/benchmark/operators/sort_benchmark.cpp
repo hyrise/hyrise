@@ -26,8 +26,8 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
   }
 
  protected:
-  void SetUpWithOverriddenSize(const size_t row_count, const ChunkOffset chunk_size,
-                               const DataType data_type = DataType::Int) {
+  void GenerateCustomTable(const size_t row_count, const ChunkOffset chunk_size,
+                           const DataType data_type = DataType::Int) {
     const auto table_generator = std::make_shared<SyntheticTableGenerator>();
     const int num_columns = 1;
     const int max_different_value = 10'000;
