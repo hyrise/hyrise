@@ -212,23 +212,10 @@ void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment
          "Does only support fixed-size byte-aligned compressed attribute vectors.");
   export_value(ofstream, EncodingType::Dictionary);
 
-  const auto attribute_vector_width = [&]() {
-    Assert(dictionary_segment.compressed_vector_type(),
-           "Expected DictionarySegment to use vector compression for attribute vector");
-    switch (*dictionary_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-        return 4u;
-      case CompressedVectorType::FixedSize2ByteAligned:
-        return 2u;
-      case CompressedVectorType::FixedSize1ByteAligned:
-        return 1u;
-      default:
-        Fail("Any other type should have been caught before.");
-    }
-  }();
-
   // Write attribute vector width
+  const auto attribute_vector_width = _compressed_vector_width<T>(dictionary_segment);
   export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+
   // Write the dictionary size and dictionary
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
   export_values(ofstream, *dictionary_segment.dictionary());
@@ -258,7 +245,7 @@ void ExportBinary::_write_segment(const RunLengthSegment<T>& run_length_segment,
 template <typename T>
 void ExportBinary::_write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment,
                                   std::ofstream& ofstream) {
-  Fail("Frame of Reference Segments not implemented for data type");
+  Fail("FrameOfReferenceSegments not implemented for data type");
 }
 
 template <>
@@ -266,29 +253,15 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
-  const auto offset_value_vector_width = [&]() {
-    Assert(frame_of_reference_segment.compressed_vector_type(),
-           "Expected FrameOfReferenceSegment to use vector compression for offset value vector");
-    switch (*frame_of_reference_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-        return 4u;
-      case CompressedVectorType::FixedSize2ByteAligned:
-        return 2u;
-      case CompressedVectorType::FixedSize1ByteAligned:
-        return 1u;
-      default:
-        Fail("Any other type should have been caught before.");
-    }
-  }();
-
   // Write attribute vector width
+  const auto offset_value_vector_width = _compressed_vector_width<int32_t>(frame_of_reference_segment);
   export_value(ofstream, static_cast<AttributeVectorWidth>(offset_value_vector_width));
 
   // Write number of blocks and block minima
   export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.block_minima().size()));
   export_values(ofstream, frame_of_reference_segment.block_minima());
 
-  // Write NULL value and offset value size
+  // Write length of the NULL and offset value vectors (i.e., size of segment)
   export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.null_values().size()));
 
   // Write NULL values
@@ -305,7 +278,7 @@ template <typename T>
 void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
-  // Write num elements
+  // Write num elements (rows in segment)
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.size()));
 
   // Write number of blocks
@@ -315,16 +288,15 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
     // No blocks at all: write just last block size = 0
     export_value(ofstream, uint32_t{0});
   } else {
-    // if more than one block, write block size
+    // if more than one block, write decompressed block size
     if (lz4_segment.lz4_blocks().size() > 1) {
-      // Write block size
       export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
     }
-    // Write last block size
+    // Write last decompressed block size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
   }
 
-  // Write size for each LZ4 Block
+  // Write compressed size for each LZ4 Block
   for (const auto& lz4_block : lz4_segment.lz4_blocks()) {
     export_value(ofstream, static_cast<uint32_t>(lz4_block.size()));
   }
@@ -363,6 +335,28 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
     // Write string_offset size = 0
     export_value(ofstream, uint32_t{0});
   }
+}
+
+template <typename T>
+uint32_t ExportBinary::_compressed_vector_width(const BaseEncodedSegment& base_encoded_segment) {
+  uint32_t vector_width;
+  resolve_encoded_segment_type<T>(base_encoded_segment, [&vector_width](auto& typed_segment) {
+    Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
+    switch (*typed_segment.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize4ByteAligned:
+        vector_width = 4u;
+        break;
+      case CompressedVectorType::FixedSize2ByteAligned:
+        vector_width = 2u;
+        break;
+      case CompressedVectorType::FixedSize1ByteAligned:
+        vector_width = 1u;
+        break;
+      default:
+        Fail("Export of specified CompressedVectorType is not yet supported");
+    }
+  });
+  return vector_width;
 }
 
 void ExportBinary::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,

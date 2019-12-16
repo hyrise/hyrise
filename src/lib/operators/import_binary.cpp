@@ -279,11 +279,11 @@ std::shared_ptr<LZ4Segment<T>> ImportBinary::_import_lz4_segment(std::ifstream& 
 
   const size_t compressed_size = (block_count - 1) * block_size + last_block_size;
 
-  pmr_vector<uint32_t> sizes(_read_values<uint32_t>(file, block_count));
+  pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
 
   pmr_vector<pmr_vector<char>> lz4_blocks(block_count);
   for (uint32_t block_index = 0; block_index < block_count; ++block_index) {
-    lz4_blocks[block_index] = pmr_vector<char>(_read_values<char>(file, sizes[block_index]));
+    lz4_blocks[block_index] = pmr_vector<char>(_read_values<char>(file, lz4_block_sizes[block_index]));
   }
 
   const auto null_values_size = _read_value<uint32_t>(file);
@@ -302,7 +302,7 @@ std::shared_ptr<LZ4Segment<T>> ImportBinary::_import_lz4_segment(std::ifstream& 
   if (string_offsets_size > 0) {
     const auto string_offsets_data_size = _read_value<uint32_t>(file);
 
-    // so far, only SimdBp128 compression is supported... TODO write and read Compression type
+    // so far, only SimdBp128 compression is supported
     auto string_offsets =
         std::make_unique<SimdBp128Vector>(_read_values<uint128_t>(file, string_offsets_data_size), string_offsets_size);
 

@@ -116,7 +116,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Encoding Type         | EncodingType                          |   1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
@@ -137,7 +137,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Encoding Type         | EncodingType                          |   1
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
@@ -162,7 +162,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type            | ColumnType                            |   1
+   * Encoding Type          | EncodingType                          |   1
    * Run count              | uint32_t                              |   4
    * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
    * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
@@ -183,7 +183,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type            | ColumnType                            |   1
+   * Encoding Type          | EncodingType                          |   1
+   * Width of offset v.     | AttributeVectorWidth                  |   1
    * Number of Blocks       | uint32_t                              |   4
    * Block minima           | T                                     |   Number of Blocks * sizeof(T)
    * Size                   | uint32_t                              |   4
@@ -205,7 +206,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description             | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type             | ColumnType                            |   1
+   * Encoding Type           | EncodingType                          |   1
    * Number of Rows (in seg) | uint32_t                              |   4
    * Number of Blocks        | uint32_t                              |   4
    * Block size¹             | uint32_t                              |   4
@@ -236,6 +237,9 @@ class ExportBinary : public AbstractReadOnlyOperator {
   static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
 
  private:
+  template <typename T>
+  static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_segment);
+
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                         const BaseCompressedVector& compressed_vector);
