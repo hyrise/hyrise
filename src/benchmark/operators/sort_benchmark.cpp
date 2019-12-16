@@ -1,14 +1,14 @@
-#include <expression/expression_functional.hpp>
 #include <memory>
 
 #include "benchmark/benchmark.h"
 
 #include "../micro_benchmark_basic_fixture.hpp"
+#include "expression/expression_functional.hpp"
+#include "operators/join_hash.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "synthetic_table_generator.hpp"
-#include "operators/join_hash.hpp"
 
 namespace opossum {
 
@@ -144,7 +144,6 @@ class SortNullBenchmark : public SortBenchmark {
         _table_wrapper_a, _table_wrapper_b, JoinMode::Left,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-
 
     // TODO(sorting-group): Find a more reliable way to produce an exct number of NULL values. Right now this produces
     //  ~20% NULL Values of the bigger table
