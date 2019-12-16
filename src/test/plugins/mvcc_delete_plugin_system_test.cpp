@@ -175,7 +175,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
     }
     // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
+    ASSERT_GT(attempts_remaining, -1);
   }
 
   // (6) Verify the correctness of the logical delete operation.
@@ -212,7 +212,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     }
 
     // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
+    ASSERT_GT(attempts_remaining, -1);
   }
 
   // (9) Check after conditions
@@ -239,6 +239,16 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (11) Prepare clean-up of chunk 3
   {
+    // Wait for the previous updates to finish
+    {
+      auto attempts_remaining = max_attempts;
+      while (_counter < INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) {
+        std::this_thread::sleep_for(100);
+      }
+      // Check that we have not given up
+      ASSERT_GT(attempts_remaining, -1);
+    }
+
     // Kill a couple of commit IDs so that criterion 2 is fulfilled and chunk 3 is eligible for clean-up, too.
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
@@ -267,7 +277,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
     }
     // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
+    ASSERT_GT(attempts_remaining, -1);
   }
 
   // (13) Verify the correctness of the logical delete operation.
