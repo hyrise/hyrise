@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "import_export/binary.hpp"
-#include "storage/abstract_segment_visitor.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -73,7 +73,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the segments in the respective format (depending on the type
-   * of the segment, such as ReferenceSegment, DictionarySegment, ValueSegment).
+   * of the segment, such as ValueSegment, ReferenceSegment, DictionarySegment, RunLengthSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -82,17 +82,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   static void _write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
-  template <typename T>
-  class ExportBinaryVisitor;
+  [[noreturn]] static void _write_segment(const BaseSegment& base_segment, std::ofstream& ofstream);
 
-  struct ExportContext : SegmentVisitorContext {
-    explicit ExportContext(std::ofstream& ofstream) : ofstream(ofstream) {}
-    std::ofstream& ofstream;
-  };
-};
-
-template <typename T>
-class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   /**
    * Value Segments are dumped with the following layout:
    *
@@ -111,11 +102,12 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
-   * @param base_segment The segment to export
-   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   * @param value_segment The segment to export
+   * @param ofstream The output stream for exporting
    *
    */
-  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) final;
+  template <typename T>
+  static void _write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream);
 
   /**
    * Reference Segments are dumped with the following layout, which is similar to value segments:
@@ -133,11 +125,10 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
-   * @param base_segment The segment to export
+   * @param reference_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_segment(const ReferenceSegment& ref_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  static void _write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream);
 
   /**
    * Dictionary Segments are dumped with the following layout:
@@ -158,18 +149,38 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is written if the type of the column is NOT a string
    *
-   * @param base_segment The segment to export
-   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   * @param base_dictionary_segment The segment to export
+   * @param ofstream The output stream for exporting
    */
-  void handle_segment(const BaseDictionarySegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  template <typename T>
+  static void _write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream);
 
-  void handle_segment(const BaseEncodedSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  /**
+   * RunLength Segments are dumped with the following layout:
+   *
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column Type            | ColumnType                            |   1
+   * Run count              | uint32_t                              |   4
+   * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
+   * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
+   * End Positions          | ChunkOffset                           |   Run count * 4
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   *
+   * @param run_length_segment The segment to export
+   * @param ofstream The output stream for exporting
+   */
+  template <typename T>
+  static void _write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream);
 
- private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
   static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                        const BaseCompressedVector& attribute_vector);
+
+  template <typename T>
+  static size_t _size(const T& object);
 };
 }  // namespace opossum

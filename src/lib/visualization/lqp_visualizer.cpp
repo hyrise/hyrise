@@ -98,7 +98,12 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   if (from->left_input()) {
     try {
       float input_count = _cardinality_estimator.estimate_cardinality(from->left_input());
-      if (from->right_input()) {
+
+      // Include right side in cardinality estimation unless it is a semi/anti join
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(from);
+      if (from->right_input() &&
+          (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
+                          join_node->join_mode != JoinMode::AntiNullAsFalse))) {
         input_count *= _cardinality_estimator.estimate_cardinality(from->right_input());
       }
       row_percentage = 100 * row_count / input_count;

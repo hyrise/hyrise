@@ -13,13 +13,13 @@ class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNod
  public:
   CreatePreparedPlanNode(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   std::string name;
   std::shared_ptr<PreparedPlan> prepared_plan;
 
  protected:
-  size_t _shallow_hash() const override;
+  size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };

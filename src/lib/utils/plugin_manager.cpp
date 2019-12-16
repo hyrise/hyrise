@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
-  for (auto& [_, plugin_handle_wrapper] : _plugins) {
-    if (plugin_handle_wrapper.plugin == plugin) {
+bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const {
+  for (const auto& [_, plugin_handle_wrapper] : _plugins) {
+    if (typeid(plugin_handle_wrapper.plugin) == typeid(plugin)) {
       return true;
     }
   }
@@ -37,39 +37,42 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   using PluginGetter = AbstractPlugin* (*)();
   auto plugin_get = reinterpret_cast<PluginGetter>(factory);
 
-  auto plugin = plugin_get();
-  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, plugin};
+  auto plugin = std::unique_ptr<AbstractPlugin>(plugin_get());
+  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, std::move(plugin)};
+  plugin = nullptr;
+
   Assert(!_is_duplicate(plugin_handle_wrapper.plugin),
          "Loading plugin failed: There can only be one instance of every plugin.");
 
-  _plugins[name] = plugin_handle_wrapper;
-
-  plugin->start();
+  plugin_handle_wrapper.plugin->start();
+  _plugins[name] = std::move(plugin_handle_wrapper);
 }
 
 void PluginManager::unload_plugin(const PluginName& name) {
-  auto plugin = _plugins.find(name);
-  Assert(plugin != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
+  auto plugin_iter = _plugins.find(name);
+  Assert(plugin_iter != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
 
-  _unload_erase_plugin(plugin);
+  _unload_and_erase_plugin(plugin_iter);
 }
 
-std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
-    const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it) {
-  const PluginName name = it->first;
-  auto plugin_handle_wrapper = it->second;
+std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_and_erase_plugin(
+    const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter) {
+  const PluginName name = plugin_iter->first;
+  const auto& plugin_handle_wrapper = plugin_iter->second;
 
   plugin_handle_wrapper.plugin->stop();
-  dlclose(plugin_handle_wrapper.handle);
+  const auto handle = plugin_handle_wrapper.handle;
 
-  auto next = _plugins.erase(it);
+  auto next = _plugins.erase(plugin_iter);
+
+  dlclose(handle);
 
   return next;
 }
 
 void PluginManager::_clean_up() {
-  for (auto it = _plugins.begin(); it != _plugins.end();) {
-    it = _unload_erase_plugin(it);
+  for (auto plugin_iter = _plugins.begin(); plugin_iter != _plugins.end();) {
+    plugin_iter = _unload_and_erase_plugin(plugin_iter);
   }
 }
 

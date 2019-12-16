@@ -35,6 +35,19 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
 }
 
+TEST_F(OperatorsGetTableTest, OutputDoesNotChangeChunkSize) {
+  auto get_table = std::make_shared<GetTable>("int_int_float");
+  get_table->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+
+  const auto table = Hyrise::get().storage_manager.get_table("int_int_float");
+  table->append({1, 2, 10.0f});
+  EXPECT_GT(table->chunk_count(), get_table->get_output()->chunk_count());
+
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+}
+
 TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
   auto get_table = std::make_shared<GetTable>("anUglyTestTable");
 
@@ -100,8 +113,8 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
   auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto table = get_table->get_output();
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
-  EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
-  EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID(0), 0u), original_table->get_value<int32_t>(ColumnID(0), 1u));
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID(0), 1u), original_table->get_value<int32_t>(ColumnID(0), 3u));
   const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
   const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_0).size(), 1u);
@@ -118,7 +131,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
 
   auto table = get_table->get_output();
   EXPECT_EQ(table->column_count(), 2u);
-  EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 9);
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0u), 9);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 10.5f);
   const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
   const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
@@ -140,7 +153,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
 
   auto table = get_table->get_output();
   EXPECT_EQ(table->column_count(), 2u);
-  EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 10);
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0u), 10);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 0u), 10.5f);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 9.5f);
   const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};

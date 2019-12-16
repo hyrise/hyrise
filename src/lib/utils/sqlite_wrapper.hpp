@@ -16,7 +16,6 @@ namespace opossum {
 class SQLiteWrapper final {
  public:
   SQLiteWrapper();
-  ~SQLiteWrapper();
 
   /*
    * Recreates a table given another table to copy from.
@@ -31,33 +30,53 @@ class SQLiteWrapper final {
    * @param table      The table to load into sqlite
    * @param tablename  The desired table name
    */
-  void create_table(const Table& table, const std::string& table_name);
+  void create_sqlite_table(const Table& table, const std::string& table_name);
 
-  /*
-   * Executes a sql query in the sqlite database context and returns a Hyrise table.
-   *
-   * @param sql_query Query to be executed
-   * @returns An opossum Table containing the results of the executed query
-   */
-  std::shared_ptr<Table> execute_query(const std::string& sql);
+  class Connection final {
+   public:
+    explicit Connection(const std::string& uri);
+
+    Connection(const Connection&) = delete;
+    Connection(Connection&&) noexcept;
+    Connection& operator=(const Connection&) = delete;
+    Connection& operator=(Connection&&) = delete;
+    ~Connection();
+
+    sqlite3* db{nullptr};
+
+    /*
+     * Executes a SQL string with potentially multiple statements in the sqlite database context and returns a Hyrise
+     * table.
+     *
+     * @param sql SQL string to be executed
+     * @returns A Hyrise Table containing the results of the executed query (more specifically, of the last statement
+     *          within the passed SQL string)
+     */
+    std::shared_ptr<Table> execute_query(const std::string& sql) const;
+
+    /**
+     * Execute a SQL string on the wrapped sqlite db and ignores the result (i.e., does not convert the last
+     * statement's result into a Hyrise table)
+     */
+    void raw_execute_query(const std::string& sql, const bool allow_failure = false) const;
+  };
 
   /**
-   * Execute an SQL statement on the wrapped sqlite db without invoking any Hyrise parts
+   * Creates an additional connection to the same database. Connections can generally be used in parallel, but callers
+   * must ensure that no transaction conflicts occur.
    */
-  void raw_execute_query(const std::string& sql, const bool allow_failure = false) const;
+  Connection new_connection() const;
 
  protected:
-  /*
-   * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
-   */
-  std::shared_ptr<Table> _create_table(sqlite3_stmt* result_row, int column_count);
+  std::string _uri;
 
+ public:
   /*
-   * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
+   * Users can create their own connections with new_connection. Those connections can have their own transactions and
+   * may run in parallel. If only a single connection is used (for example when importing data), the main connection is
+   * used.
    */
-  void _copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
-
-  sqlite3* _db{nullptr};
+  Connection main_connection;
 };
 
 }  // namespace opossum

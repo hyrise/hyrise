@@ -39,6 +39,7 @@
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
 STRONG_TYPEDEF(uint16_t, ColumnID);
+STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
@@ -250,6 +251,8 @@ enum class HasNullTerminator : bool { Yes = true, No = false };
 
 enum class SendExecutionInfo : bool { Yes = true, No = false };
 
+enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
+
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.
@@ -279,6 +282,8 @@ std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
 std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
+
+using BoolAsByteType = uint8_t;
 
 }  // namespace opossum
 

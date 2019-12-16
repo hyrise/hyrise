@@ -27,136 +27,135 @@ class OperatorsInsertTest : public BaseTest {
 
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
-  auto t = load_table("resources/test_data/tbl/float_int.tbl");
+  auto table = load_table("resources/test_data/tbl/float_int.tbl");
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-  Hyrise::get().storage_manager.add_table(table_name, t);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto gt = std::make_shared<GetTable>(table_name);
-  gt->execute();
+  auto get_table = std::make_shared<GetTable>(table_name);
+  get_table->execute();
 
-  auto ins = std::make_shared<Insert>(table_name, gt);
+  auto insert = std::make_shared<Insert>(table_name, get_table);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->set_transaction_context(context);
+  insert->set_transaction_context(context);
 
-  ins->execute();
+  insert->execute();
 
   context->commit();
 
   // Check that row has been inserted.
-  EXPECT_EQ(t->row_count(), 6u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->size(), 3u);
-  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*t->get_chunk(ChunkID{1})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{1})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ(table->row_count(), 6u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 3u);
+  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
 
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->get_segment(ColumnID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->get_segment(ColumnID{1})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_segment(ColumnID{1})->size(), 3u);
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
-  auto t_name = "test1";
-  auto t_name2 = "test2";
+  auto table_name = "test1";
+  auto table_name2 = "test2";
 
   // 3 Rows, chunk_size = 4
-  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto table = load_table("resources/test_data/tbl/int.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
   // 10 Rows
-  auto t2 = load_table("resources/test_data/tbl/10_ints.tbl");
-  Hyrise::get().storage_manager.add_table(t_name2, t2);
+  auto table2 = load_table("resources/test_data/tbl/10_ints.tbl");
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
 
-  auto gt2 = std::make_shared<GetTable>(t_name2);
-  gt2->execute();
+  auto get_table2 = std::make_shared<GetTable>(table_name2);
+  get_table2->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto insert = std::make_shared<Insert>(table_name, get_table2);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 4u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{3})->size(), 2u);
-  EXPECT_EQ(t->row_count(), 13u);
+  EXPECT_EQ(table->chunk_count(), 4u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->size(), 2u);
+  EXPECT_EQ(table->row_count(), 13u);
 }
 
 TEST_F(OperatorsInsertTest, MultipleChunks) {
-  auto t_name = "test1";
-  auto t_name2 = "test2";
+  auto table_name = "test1";
+  auto table_name2 = "test2";
 
   // 3 Rows
-  auto t = load_table("resources/test_data/tbl/int.tbl", 2u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto table = load_table("resources/test_data/tbl/int.tbl", 2u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
   // 10 Rows
-  auto t2 = load_table("resources/test_data/tbl/10_ints.tbl", 3u);
-  Hyrise::get().storage_manager.add_table(t_name2, t2);
+  auto table2 = load_table("resources/test_data/tbl/10_ints.tbl", 3u);
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
 
-  auto gt2 = std::make_shared<GetTable>(t_name2);
-  gt2->execute();
+  auto get_table2 = std::make_shared<GetTable>(table_name2);
+  get_table2->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto insert = std::make_shared<Insert>(table_name, get_table2);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->size(), 1u);
-  EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 2u);
-  EXPECT_EQ(t->row_count(), 13u);
+  EXPECT_EQ(table->chunk_count(), 7u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
+  EXPECT_EQ(table->row_count(), 13u);
 }
 
 TEST_F(OperatorsInsertTest, CompressedChunks) {
-  auto t_name = "test1";
-  auto t_name2 = "test2";
+  auto table_name = "test1";
+  auto table_name2 = "test2";
 
   // 3 Rows
-  auto t = load_table("resources/test_data/tbl/int.tbl", 2u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
-  opossum::ChunkEncoder::encode_all_chunks(t);
+  auto table = load_table("resources/test_data/tbl/int.tbl", 2u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
+  opossum::ChunkEncoder::encode_all_chunks(table);
 
   // 10 Rows
-  auto t2 = load_table("resources/test_data/tbl/10_ints.tbl");
-  Hyrise::get().storage_manager.add_table(t_name2, t2);
+  auto table2 = load_table("resources/test_data/tbl/10_ints.tbl");
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
 
-  auto gt2 = std::make_shared<GetTable>(t_name2);
-  gt2->execute();
+  auto get_table2 = std::make_shared<GetTable>(table_name2);
+  get_table2->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto insert = std::make_shared<Insert>(table_name, get_table2);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 2u);
-  EXPECT_EQ(t->row_count(), 13u);
+  EXPECT_EQ(table->chunk_count(), 7u);
+  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
+  EXPECT_EQ(table->row_count(), 13u);
 }
 
 TEST_F(OperatorsInsertTest, Rollback) {
-  auto t_name = "test3";
+  auto table_name = "test3";
 
-  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto table = load_table("resources/test_data/tbl/int.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto gt1 = std::make_shared<GetTable>(t_name);
-  gt1->execute();
+  auto get_table1 = std::make_shared<GetTable>(table_name);
+  get_table1->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, gt1);
+  auto insert = std::make_shared<Insert>(table_name, get_table1);
   auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context1);
-  ins->execute();
+  insert->set_transaction_context(context1);
+  insert->execute();
   context1->rollback();
 
-  auto gt2 = std::make_shared<GetTable>(t_name);
-  gt2->execute();
-  auto validate = std::make_shared<Validate>(gt2);
+  auto get_table2 = std::make_shared<GetTable>(table_name);
+  get_table2->execute();
+  auto validate = std::make_shared<Validate>(get_table2);
   auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
   validate->set_transaction_context(context2);
   validate->execute();
@@ -164,86 +163,116 @@ TEST_F(OperatorsInsertTest, Rollback) {
   EXPECT_EQ(validate->get_output()->row_count(), 3u);
 }
 
-TEST_F(OperatorsInsertTest, InsertStringNullValue) {
+TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   auto t_name = "test1";
-  auto t_name2 = "test2";
 
-  auto t = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
+  // Set Up
+  auto t = load_table("resources/test_data/tbl/int.tbl", 10u);
   Hyrise::get().storage_manager.add_table(t_name, t);
+  auto row_count = t->row_count();
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(), 1);
 
-  auto t2 = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name2, t2);
-
-  auto gt2 = std::make_shared<GetTable>(t_name2);
-  gt2->execute();
-
-  auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
+  // Insert rows again
+  auto gt1 = std::make_shared<GetTable>(t_name);
+  gt1->execute();
+  auto ins = std::make_shared<Insert>(t_name, gt1);
+  auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
+  ins->set_transaction_context(context1);
   ins->execute();
+
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->row_count(), row_count * 2);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(),
+            2);  // load_table() has finalized first chunk
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{0});
+
+  // Rollback Insert - invalidate inserted rows
+  context1->rollback();
+
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{3});
+}
+
+TEST_F(OperatorsInsertTest, InsertStringNullValue) {
+  auto table_name = "test1";
+  auto table_name2 = "test2";
+
+  auto table = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
+
+  auto table2 = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
+
+  auto get_table2 = std::make_shared<GetTable>(table_name2);
+  get_table2->execute();
+
+  auto insert = std::make_shared<Insert>(table_name, get_table2);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 2u);
-  EXPECT_EQ(t->row_count(), 8u);
+  EXPECT_EQ(table->chunk_count(), 2u);
+  EXPECT_EQ(table->row_count(), 8u);
 
-  auto null_val = (*(t->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[2];
+  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[2];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
 TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
-  auto t_name = "test1";
-  auto t_name2 = "test2";
+  auto table_name = "test1";
+  auto table_name2 = "test2";
 
-  auto t = load_table("resources/test_data/tbl/int_float_with_null.tbl", 3u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto table = load_table("resources/test_data/tbl/int_float_with_null.tbl", 3u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name2, t2);
+  auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
 
-  auto gt2 = std::make_shared<GetTable>(t_name2);
-  gt2->execute();
+  auto get_table2 = std::make_shared<GetTable>(table_name2);
+  get_table2->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto insert = std::make_shared<Insert>(table_name, get_table2);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 4u);
-  EXPECT_EQ(t->row_count(), 8u);
+  EXPECT_EQ(table->chunk_count(), 4u);
+  EXPECT_EQ(table->row_count(), 8u);
 
-  auto null_val_int = (*(t->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[2];
+  auto null_val_int = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[2];
   EXPECT_TRUE(variant_is_null(null_val_int));
 
-  auto null_val_float = (*(t->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[1];
+  auto null_val_float = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[1];
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
 TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
-  auto t_name = "test1";
-  auto t_name2 = "test2";
+  auto table_name = "test1";
+  auto table_name2 = "test2";
 
-  auto t = load_table("resources/test_data/tbl/int_float.tbl", 3u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", 3u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name2, t2);
+  auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name2, table2);
 
-  auto gt2 = std::make_shared<GetTable>(t_name2);
-  gt2->execute();
+  auto get_table2 = std::make_shared<GetTable>(table_name2);
+  get_table2->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto insert = std::make_shared<Insert>(table_name, get_table2);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  EXPECT_THROW(ins->execute(), std::logic_error);
+  insert->set_transaction_context(context);
+  EXPECT_THROW(insert->execute(), std::logic_error);
   context->rollback();
 }
 
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
-  auto t_name = "test1";
+  auto table_name = "test1";
 
-  auto t = load_table("resources/test_data/tbl/float_with_null.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto table = load_table("resources/test_data/tbl/float_with_null.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(table_name, table);
 
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
   dummy_wrapper->execute();
@@ -252,16 +281,16 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto projection = std::make_shared<Projection>(dummy_wrapper, expression_vector(add_(0.0f, null_())));
   projection->execute();
 
-  auto ins = std::make_shared<Insert>(t_name, projection);
+  auto insert = std::make_shared<Insert>(table_name, projection);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
+  insert->set_transaction_context(context);
+  insert->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 2u);
-  EXPECT_EQ(t->row_count(), 5u);
+  EXPECT_EQ(table->chunk_count(), 2u);
+  EXPECT_EQ(table->row_count(), 5u);
 
-  auto null_val = (*(t->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[0];
+  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[0];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 

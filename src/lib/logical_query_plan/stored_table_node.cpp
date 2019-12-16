@@ -39,7 +39,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
   // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
   const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_name)->column_count();
-  Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
+  Assert(pruned_column_ids.size() < static_cast<size_t>(stored_column_count), "Cannot exclude all columns from Table.");
 
   _pruned_column_ids = pruned_column_ids;
 
@@ -49,7 +49,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
 
-std::string StoredTableNode::description() const {
+std::string StoredTableNode::description(const DescriptionMode mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
@@ -128,7 +128,7 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   return pruned_indexes_statistics;
 }
 
-size_t StoredTableNode::_shallow_hash() const {
+size_t StoredTableNode::_on_shallow_hash() const {
   size_t hash{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {

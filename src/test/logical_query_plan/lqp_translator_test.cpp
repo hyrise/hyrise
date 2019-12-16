@@ -27,6 +27,7 @@
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
@@ -399,6 +400,59 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(a, 42, 1337));
 }
 
+// Tests accessing the original LQP node after translation.
+TEST_F(LQPTranslatorTest, LqpNodeAccess) {
+  auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
+  auto validate_node = ValidateNode::make(predicate_node);
+  auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a), validate_node, int_float2_node);
+  auto aggregate_node = AggregateNode::make(expression_vector(int_float_a, int_float_b),
+                                            expression_vector(sum_(int_float_a), sum_(int_float_b)), join_node);
+  const auto op = LQPTranslator{}.translate_node(aggregate_node);
+
+  {
+    const auto lqp_node = op->lqp_node;
+    const auto recovered_node = std::dynamic_pointer_cast<const AggregateNode>(lqp_node);
+    EXPECT_EQ(recovered_node, aggregate_node);
+  }
+  {
+    const auto lqp_node = op->input_left()->lqp_node;
+    const auto recovered_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
+    EXPECT_EQ(recovered_node, join_node);
+  }
+  {
+    const auto lqp_node_left = op->input_left()->input_left()->lqp_node;
+    const auto recovered_node_left = std::dynamic_pointer_cast<const ValidateNode>(lqp_node_left);
+    EXPECT_EQ(recovered_node_left, validate_node);
+    const auto lqp_node_right = op->input_left()->input_right()->lqp_node;
+    const auto recovered_node_right = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node_right);
+    EXPECT_EQ(recovered_node_right, int_float2_node);
+  }
+  {
+    const auto lqp_node = op->input_left()->input_left()->input_left()->lqp_node;
+    const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
+    EXPECT_EQ(recovered_node, predicate_node);
+  }
+  {
+    const auto lqp_node = op->input_left()->input_left()->input_left()->input_left()->lqp_node;
+    const auto recovered_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node);
+    EXPECT_EQ(recovered_node, int_float_node);
+  }
+}
+
+// Check if the LQP that is referenced in the PQP is really cleaned up. This test is intended to check that no cyclic
+// references are accidentally introduced a later point in time.
+TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
+  std::weak_ptr<const AbstractLQPNode> lqp_node;
+  {
+    auto pipeline_statement =
+        SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
+    const auto pqp = pipeline_statement.get_physical_plan();
+    lqp_node = pqp->lqp_node;
+    EXPECT_FALSE(lqp_node.expired());
+  }
+  EXPECT_TRUE(lqp_node.expired());
+}
+
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Build LQP and translate to PQP
@@ -431,6 +485,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
+
+  // Check the setting of LQP nodes for index scans
+  EXPECT_EQ(union_op->lqp_node, predicate_node);
+  EXPECT_EQ(index_scan_op->lqp_node, predicate_node);
+  EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {

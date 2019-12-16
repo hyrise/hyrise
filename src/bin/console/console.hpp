@@ -108,6 +108,7 @@ class Console : public Singleton<Console> {
   // Command functions, registered to be called from the Console
   int _exit(const std::string& args);
   int _help(const std::string& args);
+  int _generate_tpcc(const std::string& args);
   int _generate_tpch(const std::string& args);
   int _save_segment_access_counter(const std::string& args);
   int _clear_segment_access_counter(const std::string& args);
