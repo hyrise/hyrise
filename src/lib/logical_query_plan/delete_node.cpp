@@ -11,13 +11,7 @@ namespace opossum {
 
 DeleteNode::DeleteNode() : AbstractLQPNode(LQPNodeType::Delete) {}
 
-std::string DeleteNode::description() const {
-  std::ostringstream desc;
-
-  desc << "[Delete]";
-
-  return desc.str();
-}
+std::string DeleteNode::description(const DescriptionMode mode) const { return "[Delete]"; }
 
 bool DeleteNode::is_column_nullable(const ColumnID column_id) const { Fail("Delete does not output any columns"); }
 

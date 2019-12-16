@@ -20,8 +20,8 @@ std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
   return std::make_shared<ListExpression>(expressions_deep_copy(arguments));
 }
 
-std::string ListExpression::as_column_name() const {
-  return std::string("(") + expression_column_names(arguments) + ")";
+std::string ListExpression::description(const DescriptionMode mode) const {
+  return std::string("(") + expression_descriptions(arguments, mode) + ")";
 }
 
 bool ListExpression::_shallow_equals(const AbstractExpression& expression) const {

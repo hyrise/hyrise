@@ -36,9 +36,9 @@ std::shared_ptr<AbstractExpression> ExtractExpression::deep_copy() const {
   return std::make_shared<ExtractExpression>(datetime_component, from()->deep_copy());
 }
 
-std::string ExtractExpression::as_column_name() const {
+std::string ExtractExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "EXTRACT(" << datetime_component << " FROM " << from()->as_column_name() << ")";
+  stream << "EXTRACT(" << datetime_component << " FROM " << from()->description(mode) << ")";
   return stream.str();
 }
 

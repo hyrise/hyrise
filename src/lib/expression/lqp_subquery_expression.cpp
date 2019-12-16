@@ -33,14 +33,14 @@ std::shared_ptr<AbstractExpression> LQPSubqueryExpression::deep_copy() const {
   return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
-std::string LQPSubqueryExpression::as_column_name() const {
+std::string LQPSubqueryExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "SUBQUERY (LQP, " << lqp.get();
 
   if (!arguments.empty()) {
     stream << ", Parameters: ";
     for (auto parameter_idx = size_t{0}; parameter_idx < arguments.size(); ++parameter_idx) {
-      stream << "[" << arguments[parameter_idx]->as_column_name() << ", id=" << parameter_ids[parameter_idx] << "]";
+      stream << "[" << arguments[parameter_idx]->description(mode) << ", id=" << parameter_ids[parameter_idx] << "]";
       if (parameter_idx + 1 < arguments.size()) stream << ", ";
     }
   }

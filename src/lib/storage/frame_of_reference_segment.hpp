@@ -27,6 +27,10 @@ class BaseCompressedVector;
  * FOR encoding on its own without vector compression does not
  * add any benefit.
  *
+ * Null values are stored in a separate vector. Note, for correct
+ * offset handling, the minimum of each frame is stored in the
+ * offset_values vector at each position that is NULL.
+ *
  * std::enable_if_t must be used here and cannot be replaced by a
  * static_assert in order to prevent instantiation of
  * FrameOfReferenceSegment<T> with T other than int32_t. Otherwise,
