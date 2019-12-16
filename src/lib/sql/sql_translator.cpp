@@ -186,7 +186,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_prepare(static_cast<const hsql::PrepareStatement&>(statement));
     case hsql::kStmtExecute:
       return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
-
+    case hsql::kStmtTransaction:
+      std::cout << "Transaction Statement detected!" << std::endl;
+      return std::make_shared<DummyTableNode>();
     default:
       FailInput("SQL statement type not supported");
   }
