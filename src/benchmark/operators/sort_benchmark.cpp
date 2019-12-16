@@ -23,7 +23,7 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
   }
 
  protected:
-  void SetUpWithOverriddenSize(const ChunkOffset& chunk_size, const size_t& row_count) {
+  void SetUpWithOverriddenSize(const size_t row_count, const ChunkOffset chunk_size) {
     const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
     // We only set _table_wrapper_a because this is the only table (currently) used in the Sort Benchmarks
