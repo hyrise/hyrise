@@ -128,7 +128,7 @@ TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
   t->append({4, "Hello,"});
 
   const auto c = t->get_chunk(ChunkID{0});
-  auto mvcc_data = c->get_scoped_mvcc_data_lock();
+  auto mvcc_data = c->mvcc_data();
   EXPECT_FALSE(mvcc_data->max_begin_cid);
   EXPECT_TRUE(c->is_mutable());
 

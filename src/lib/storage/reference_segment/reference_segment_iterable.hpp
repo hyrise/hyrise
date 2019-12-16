@@ -72,6 +72,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
             const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+
+            // TODO this assumes that references_single_chunk implies that the PosList contains no NULL values itself
             segment_iterable.with_iterators(pos_list, functor);
 
             functor_was_called = true;

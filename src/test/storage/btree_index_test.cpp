@@ -72,11 +72,6 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 // Short String Optimization (SSO) stores strings of a certain size in the pmr_string object itself.
 // Only strings exceeding this size (15 for libstdc++ and 22 for libc++) are stored on the heap.
 
-<<<<<<< HEAD
-TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
-  values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
-=======
 /*
   Test cases:
     MemoryConsumptionVeryShortStringNoNulls
@@ -103,9 +98,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
 
 // A2, B2, C1
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
-  values = {"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
+  values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   segment = std::make_shared<ValueSegment<pmr_string>>(values);
->>>>>>> origin/master
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
@@ -260,7 +254,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   values = pmr_vector<pmr_string>{"hotelhotelhotelhotelhotel", "deltadeltadeltadelta", "frankfrankfrankfrank",
                                   "deltadeltadeltadelta",      "appleappleappleapple", "charliecharliecharlie",
                                   "charliecharliecharlie",     "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
+  segment = std::make_shared<ValueSegment<pmr_string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.

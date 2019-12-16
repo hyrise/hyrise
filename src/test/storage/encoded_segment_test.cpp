@@ -306,7 +306,7 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
 // Testing the internal data structures of Run Length-encoded segments for monotonically increasing values
 TEST_F(EncodedSegmentTest, RunLengthEncodingMonotonicallyIncreasing) {
   constexpr auto row_count = int32_t{100};
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
 
   for (auto row_id = int32_t{0u}; row_id < row_count; ++row_id) {
     values[row_id] = row_id;
@@ -332,7 +332,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingVaryingRuns) {
   constexpr auto long_value_element_repititions = 10;
   constexpr auto single_value_runs_increasing =
       row_count - single_value_runs_decreasing - long_value_runs * long_value_element_repititions;
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
 
   // fill first ten values with decreasing values
   for (auto row_id = int32_t{0u}; row_id < single_value_runs_decreasing; ++row_id) {
@@ -392,8 +392,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   constexpr auto long_runs = 9;
   constexpr auto elements_per_long_run = 10;
   constexpr auto short_runs = 10;
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
-  auto null_values = pmr_concurrent_vector<bool>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
+  auto null_values = pmr_vector<bool>(row_count);
 
   // the next 9 values are repeated 10 times each (i.e., 90 values)
   auto row_id = 0;
@@ -456,8 +456,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
   constexpr auto row_count = int32_t{20};
   constexpr auto run_count = 2;
   constexpr auto value_repititions = 10;
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
-  auto null_values = pmr_concurrent_vector<bool>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
+  auto null_values = pmr_vector<bool>(row_count);
 
   // two value runs, 10 each
   auto row_id = size_t{0};
@@ -511,8 +511,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
 TEST_F(EncodedSegmentTest, FrameOfReference) {
   constexpr auto row_count = int32_t{17};
   constexpr auto minimum = int32_t{5};
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
-  auto null_values = pmr_concurrent_vector<bool>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
+  auto null_values = pmr_vector<bool>(row_count);
 
   for (auto row_id = int32_t{0u}; row_id < row_count; ++row_id) {
     values[row_id] = minimum + row_id;
