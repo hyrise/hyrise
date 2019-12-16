@@ -4,7 +4,6 @@
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
-#include "operators/join_hash.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
@@ -27,7 +26,8 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
 
  protected:
   void GenerateCustomTable(const size_t row_count, const ChunkOffset chunk_size,
-                           const DataType data_type = DataType::Int) {
+                           const DataType data_type = DataType::Int,
+                           const std::optional<float> null_ratio = std::nullopt) {
     const auto table_generator = std::make_shared<SyntheticTableGenerator>();
     const int num_columns = 1;
     const int max_different_value = 10'000;
@@ -37,7 +37,7 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
     _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(
         {num_columns, {ColumnDataDistribution::make_uniform_config(0.0, max_different_value)}}, column_data_types,
         row_count, chunk_size, std::vector<SegmentEncodingSpec>(num_columns, {EncodingType::Unencoded}), std::nullopt,
-        UseMvcc::No));
+        UseMvcc::No, null_ratio));
     _table_wrapper_a->execute();
   }
 
@@ -121,35 +121,7 @@ class SortStringLargeBenchmark : public SortBenchmark {
 class SortNullBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    const auto table_generator = std::make_shared<SyntheticTableGenerator>();
-    const int num_columns = 1;
-    const int max_different_value_a = 40'000;
-    const int max_different_value_b = 20'000;
-    const size_t chunk_size{2'000};
-    const std::vector<DataType> column_data_types = {num_columns, DataType::Int};
-
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(
-        {num_columns, {ColumnDataDistribution::make_uniform_config(0.0, max_different_value_a)}}, column_data_types,
-        ChunkOffset{max_different_value_a}, chunk_size,
-        std::vector<SegmentEncodingSpec>(num_columns, {EncodingType::Unencoded}), std::nullopt, UseMvcc::No));
-    _table_wrapper_a->execute();
-
-    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator->generate_table(
-        {num_columns, {ColumnDataDistribution::make_uniform_config(0.0, max_different_value_b)}}, column_data_types,
-        ChunkOffset{max_different_value_b}, chunk_size,
-        std::vector<SegmentEncodingSpec>(num_columns, {EncodingType::Unencoded}), std::nullopt, UseMvcc::No));
-    _table_wrapper_b->execute();
-
-    auto join = std::make_shared<JoinHash>(
-        _table_wrapper_a, _table_wrapper_b, JoinMode::Left,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-
-    // TODO(sorting-group): Find a more reliable way to produce an exct number of NULL values. Right now this produces
-    //  ~20% NULL Values of the bigger table
-
-    _table_wrapper_a = std::make_shared<TableWrapper>(join->get_output());
-    _table_wrapper_a->execute();
+    GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, std::optional<float>{0.2});
   }
 };
 
