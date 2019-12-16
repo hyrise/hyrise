@@ -71,7 +71,8 @@ class SQLPipelineBuilder final {
  private:
   const std::string _sql;
 
-  UseMvcc _use_mvcc{UseMvcc::Yes};
+  // changed by Markus Dreseler from Yes to No
+  UseMvcc _use_mvcc{UseMvcc::No};
   std::shared_ptr<TransactionContext> _transaction_context;
   std::shared_ptr<Optimizer> _optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
