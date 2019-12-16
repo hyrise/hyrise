@@ -1,12 +1,19 @@
+#include <SQLParser.h>
+#include <SQLParserResult.h>
+#include <logical_query_plan/stored_table_node.hpp>
 #include <memory>
 
 #include "benchmark/benchmark.h"
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/limit.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_translator.hpp"
 #include "synthetic_table_generator.hpp"
 
 namespace opossum {
@@ -24,20 +31,61 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
     }
   }
 
+  void BM_SortMultiColumn(benchmark::State& state) {
+    _clear_cache();
+
+    auto& storage_manager = Hyrise::get().storage_manager;
+    auto column_names = std::optional<std::vector<std::string>>(1);
+    column_names->push_back("col_1");
+    column_names->push_back("col_2");
+    storage_manager.add_table("table_a",
+                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
+
+    const std::string query = R"(
+        SELECT *
+        FROM table_a
+        ORDER BY col_1, col_2)";
+
+    for (auto _ : state) {
+      // auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+      hsql::SQLParserResult result;
+      hsql::SQLParser::parseSQLString(query, &result);
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      // result_node->set_left_input(stored_table_node);
+      const auto pqp = LQPTranslator{}.translate_node(result_node);
+      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    }
+  }
+
  protected:
-  void GenerateCustomTable(const size_t row_count, const ChunkOffset chunk_size,
-                           const DataType data_type = DataType::Int,
-                           const std::optional<float> null_ratio = std::nullopt) {
+  std::shared_ptr<Table> GenerateCustomTable(const size_t row_count, const ChunkOffset chunk_size,
+                                             const DataType data_type = DataType::Int,
+                                             const std::optional<std::vector<std::string>>& column_names = std::nullopt,
+                                             const std::optional<float> null_ratio = std::nullopt) {
     const auto table_generator = std::make_shared<SyntheticTableGenerator>();
-    const int num_columns = 1;
+
+    size_t num_columns = 1;
+    if (column_names.has_value()) {
+      num_columns = column_names.value().size();
+    }
+
     const int max_different_value = 10'000;
     const std::vector<DataType> column_data_types = {num_columns, data_type};
 
-    // We only set _table_wrapper_a because this is the only table (currently) used in the Sort Benchmarks
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->generate_table(
+    return table_generator->generate_table(
         {num_columns, {ColumnDataDistribution::make_uniform_config(0.0, max_different_value)}}, column_data_types,
-        row_count, chunk_size, std::vector<SegmentEncodingSpec>(num_columns, {EncodingType::Unencoded}), std::nullopt,
-        UseMvcc::No, null_ratio));
+        row_count, chunk_size, std::vector<SegmentEncodingSpec>(num_columns, {EncodingType::Unencoded}), column_names,
+        UseMvcc::Yes, null_ratio);
+  }
+
+  void InitializeCustomTableWrapper(const size_t row_count, const ChunkOffset chunk_size,
+                                    const DataType data_type = DataType::Int,
+                                    const std::optional<std::vector<std::string>>& column_names = std::nullopt,
+                                    const std::optional<float> null_ratio = std::nullopt) {
+    // We only set _table_wrapper_a because this is the only table (currently) used in the Sort Benchmarks
+    _table_wrapper_a =
+        std::make_shared<TableWrapper>(GenerateCustomTable(row_count, chunk_size, data_type, column_names, null_ratio));
     _table_wrapper_a->execute();
   }
 
@@ -52,17 +100,17 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
 
 class SortPicoBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { GenerateCustomTable(ChunkOffset{2'000}, size_t{2}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{2}); }
 };
 
 class SortSmallBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { GenerateCustomTable(ChunkOffset{2'000}, size_t{4'000}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{4'000}); }
 };
 
 class SortLargeBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { GenerateCustomTable(ChunkOffset{2'000}, size_t{400'000}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{400'000}); }
 };
 
 class SortReferencePicoBenchmark : public SortPicoBenchmark {
@@ -100,32 +148,35 @@ class SortReferenceLargeBenchmark : public SortLargeBenchmark {
 class SortStringSmallBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    GenerateCustomTable(ChunkOffset{2'000}, size_t{4'000}, DataType::String);
+    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{4'000}, DataType::String);
   }
 };
 
 class SortStringBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::String);
+    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{40'000}, DataType::String);
   }
 };
 
 class SortStringLargeBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    GenerateCustomTable(ChunkOffset{2'000}, size_t{400'000}, DataType::String);
+    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{400'000}, DataType::String);
   }
 };
 
 class SortNullBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, std::optional<float>{0.2});
+    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, std::nullopt,
+                                 std::optional<float>{0.2});
   }
 };
 
 BENCHMARK_F(SortBenchmark, BM_Sort)(benchmark::State& state) { BM_Sort(state); }
+
+BENCHMARK_F(SortBenchmark, BM_SortMultiColumn)(benchmark::State& state) { BM_SortMultiColumn(state); }
 
 BENCHMARK_F(SortPicoBenchmark, BM_SortPico)(benchmark::State& state) { BM_Sort(state); }
 
