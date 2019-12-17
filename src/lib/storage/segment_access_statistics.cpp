@@ -4,31 +4,60 @@ namespace opossum {
 
 std::chrono::time_point<std::chrono::steady_clock> AtomicTimedAccessStrategy::start_time = std::chrono::steady_clock::now();
 std::chrono::duration<double, std::milli> AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{1000};
+
+// -------------------------------------------------------------------------------------------------------------------
+SegmentAccessType SegmentAccessTypeTools::iterator_access_pattern(const std::shared_ptr<const PosList>& positions) {
+  const auto max_items_to_compare = std::min(positions->size(), 100ul);
+
+  auto state = State::Unknown;
+  for (auto i = 1ul; i < max_items_to_compare; ++i) {
+    const int64_t diff = static_cast<int64_t>(positions->operator[](i).chunk_offset) -
+                         static_cast<int64_t>(positions->operator[](i - 1).chunk_offset);
+
+    auto input = Input::Negative;
+    if (diff == 0) input = Input::Zero;
+    else if (diff == 1) input = Input::One;
+    else if (diff > 0) input = Input::Positive;
+    else if (diff == -1) input = Input::NegativeOne;
+
+    state = _transitions[static_cast<uint32_t>(state)][static_cast<uint32_t>(input)];
+  }
+
+  switch(state) {
+    case State::Unknown: case State::SeqInc: case State::SeqDec: return SegmentAccessType::IteratorSeqAccess;
+    case State::RndInc: case State::RndDec: return SegmentAccessType::IteratorIncreasingAccess;
+    case State::Rnd: return SegmentAccessType::IteratorRandomAccess;
+    case State::Count: Fail("Unknown state.");
+  }
+
+  Fail("This line should never be reached. It is required so the compiler won't complain.");
+}
+
 // -------------------------------------------------------------------------------------------------------------------
 uint64_t AtomicAccessStrategy::count(SegmentAccessType type) const {
-  return _count[type];
+  return _count[static_cast<uint32_t>(type)];
 }
 
 void AtomicAccessStrategy::reset() {
-  for (auto type = 0u, end = static_cast<uint32_t>(Count); type < end; ++type) {
-    _count[type] = 0;
+  for (auto type = 0u, end = static_cast<uint32_t>(SegmentAccessType::Count); type < end; ++type) {
+    _count[static_cast<uint32_t>(type)] = 0;
   }
 }
 
 void AtomicAccessStrategy::increase(SegmentAccessType type, uint64_t count) {
-  _count[type] += count;
+  _count[static_cast<uint32_t>(type)] += count;
 }
 
 std::string AtomicAccessStrategy::header() {
-  return "Other,IteratorCreate,IteratorAccess,AccessorCreate,AcessorAccess,DictionaryAccess";
+  return SegmentAccessTypeTools::headers;
 }
 
 std::vector<std::string> AtomicAccessStrategy::to_string() const {
   std::string str;
-  str.reserve(SegmentAccessType::Count * 4);
+  str.reserve(static_cast<uint32_t>(SegmentAccessType::Count) * 4);
   str.append(std::to_string(count(static_cast<SegmentAccessType>(0))));
 
-  for (uint8_t type = 1; type < Count; ++type) {
+  for (uint8_t type = 1; type < static_cast<uint32_t>(SegmentAccessType::Count); ++type) {
     str.append(",");
     str.append(std::to_string(count(static_cast<SegmentAccessType>(type))));
   }
@@ -37,60 +66,52 @@ std::vector<std::string> AtomicAccessStrategy::to_string() const {
 }
 
 // -------------------------------------------------------------------------------------------------------------------
-AtomicTimedAccessStrategy::AtomicTimedAccessStrategy() : _max_used_slot{0} {}
+AtomicTimedAccessStrategy::AtomicTimedAccessStrategy() {
+  _counters.reserve(5000);
+}
 
 uint64_t AtomicTimedAccessStrategy::count(SegmentAccessType type) const {
-  // not really supported
-  return _count[_max_used_slot][type];
+  Fail("Not supported for AtomicTimedAccessStrategy");
 }
 
 void AtomicTimedAccessStrategy::reset() {
-  for (auto time_slot = 0u; time_slot < _time_slots; ++time_slot) {
-    for (auto type = 0u, end = static_cast<uint32_t>(Count); type < end; ++type) {
-      _count[time_slot][type] = 0;
-    }
+  _counters.clear();
+}
+
+AtomicTimedAccessStrategy::Counter& AtomicTimedAccessStrategy::_counter() {
+  const uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count() /
+                        interval.count();
+
+  if (_counters.empty() || _counters.back().timestamp < timestamp) {
+    _counters.emplace_back(timestamp);
   }
-  _max_used_slot = 0;
+
+  return _counters.back();
 }
 
 void AtomicTimedAccessStrategy::increase(SegmentAccessType type, uint64_t count) {
-  const auto time_slot = _time_slot();
-  _count[time_slot][type] += count;
-}
-
-uint64_t AtomicTimedAccessStrategy::_time_slot() {
-  const uint64_t slot = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count() /
-         interval.count();
-  if (slot > _max_used_slot) {
-    _max_used_slot = slot;
-  }
-  return slot;
+  auto& counter = _counter();
+  counter.counter[static_cast<uint32_t>(type)] += count;
 }
 
 std::string AtomicTimedAccessStrategy::header() {
-  return "timestamp,Other,IteratorCreate,IteratorAccess,AccessorCreate,AcessorAccess,DictionaryAccess";
+  return "timestamp," + SegmentAccessTypeTools::headers;
 }
 
 std::vector<std::string> AtomicTimedAccessStrategy::to_string() const {
   std::string str;
-  str.reserve(SegmentAccessType::Count * 4);
+  str.reserve(static_cast<uint32_t>(SegmentAccessType::Count) * 4);
   std::vector<std::string> counters;
-  counters.reserve(_max_used_slot);
+  counters.reserve(_counters.size());
 
-  for (auto time_slot = 0u; time_slot <= _max_used_slot; ++time_slot) {
-    uint64_t sum = 0;
-    for (uint8_t type = 0; type < Count; ++type) {
-      sum += _count[time_slot][type];
+  for (const auto& counter : _counters) {
+    str.append(std::to_string(counter.timestamp));
+    for (uint8_t type = 0; type < counter.counter.size(); ++type) {
+      str.append(",");
+      str.append(std::to_string(counter.counter[type]));
     }
-    if (sum > 0) {
-      str.append(std::to_string(time_slot) + ',' + std::to_string(_count[time_slot][0]));
-      for (uint8_t type = 1; type < Count; ++type) {
-        str.append(",");
-        str.append(std::to_string(_count[time_slot][type]));
-      }
-      counters.push_back(str);
-      str.clear();
-    }
+    counters.push_back(str);
+    str.clear();
   }
 
   return counters;
@@ -99,7 +120,7 @@ std::vector<std::string> AtomicTimedAccessStrategy::to_string() const {
 // -------------------------------------------------------------------------------------------------------------------
 
 uint64_t NonLockingStrategy::count(SegmentAccessType type) const {
-  return _count[type];
+  return _count[static_cast<uint32_t>(type)];
 }
 
 void NonLockingStrategy::reset() {
@@ -107,19 +128,19 @@ void NonLockingStrategy::reset() {
 }
 
 void NonLockingStrategy::increase(SegmentAccessType type, uint64_t count) {
-  _count[type] += count;
+  _count[static_cast<uint32_t>(type)] += count;
 }
 
 std::string NonLockingStrategy::header() {
-  return "Other,IteratorCreate,IteratorAccess,AccessorCreate,AcessorAccess,DictionaryAccess";
+  return SegmentAccessTypeTools::headers;
 }
 
 std::vector<std::string> NonLockingStrategy::to_string() const {
   std::string str;
-  str.reserve(SegmentAccessType::Count * 4);
+  str.reserve(static_cast<uint32_t>(SegmentAccessType::Count) * 4);
   str.append(std::to_string(count(static_cast<SegmentAccessType>(0))));
 
-  for (uint8_t type = 1; type < Count; ++type) {
+  for (uint8_t type = 1; type < static_cast<uint32_t>(SegmentAccessType::Count); ++type) {
     str.append(",");
     str.append(std::to_string(count(static_cast<SegmentAccessType>(type))));
   }

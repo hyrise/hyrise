@@ -15,10 +15,13 @@
 namespace opossum {
 class Table;
 // -----------------------------------------------------------------------------------------------------------------
-enum SegmentAccessType {
+enum class SegmentAccessType {
   Other,
   IteratorCreate,
-  IteratorAccess,
+  IteratorSeqAccess,
+  IteratorIncreasingAccess,
+  IteratorRandomAccess,
+  IteratorDereference,
   AccessorCreate,
   AccessorAccess,
   DictionaryAccess,
@@ -37,6 +40,37 @@ enum SegmentType {
 };
 
 // -----------------------------------------------------------------------------------------------------------------
+
+class SegmentAccessTypeTools {
+ public:
+  inline static const std::string headers = "Other,IteratorCreate,IteratorSeqAccess,IteratorIncreasingAccess,"
+                                            "IteratorRandomAccess,IteratorDereference,AccessorCreate,AccessorAccess,"
+                                            "DictionaryAccess";
+
+  static SegmentAccessType iterator_access_pattern(const std::shared_ptr<const PosList>& positions);
+
+ private:
+  // There are five states:
+  // 0 (unknown), equivalent to IteratorSeqAccess
+  // 1 (sequentially increasing), difference between two neighboring elements is 0 or 1.
+  // 2 (increasing randomly)
+  // 3 (sequentially decreasing), difference between two neighboring elements is -1 or 0.
+  // 4 (decreasing randomly)
+  // 5 (random access)
+  enum class State {Unknown, SeqInc, RndInc, SeqDec, RndDec, Rnd, Count};
+
+  // There are five possible inputs
+  enum class Input {Zero, One, Positive, NegativeOne, Negative, Count};
+
+  constexpr static const std::array<std::array<State, static_cast<uint32_t>(Input::Count)>, static_cast<uint32_t>(State::Count)>
+    _transitions{{{State::Unknown, State::SeqInc, State::SeqInc, State::SeqDec, State::SeqDec},
+                  {State::SeqInc, State::SeqInc, State::RndInc, State::Rnd, State::Rnd},
+                  {State::RndInc, State::RndInc, State::RndInc, State::Rnd, State::Rnd},
+                  {State::SeqDec, State::Rnd, State::Rnd, State::SeqDec, State::RndDec},
+                  {State::RndDec, State::Rnd, State::Rnd, State::RndDec, State::RndDec},
+                  {State::Rnd, State::Rnd, State::Rnd, State::Rnd, State::Rnd}}};
+};
+// -----------------------------------------------------------------------------------------------------------------
 class AtomicAccessStrategy {
  public:
   uint64_t count(SegmentAccessType type) const;
@@ -50,7 +84,7 @@ class AtomicAccessStrategy {
   std::vector<std::string> to_string() const;
 
  private:
-  std::array<std::atomic_uint64_t, SegmentAccessType::Count> _count;
+  std::array<std::atomic_uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> _count;
 };
 
 // -----------------------------------------------------------------------------------------------------------------
@@ -70,15 +104,31 @@ class AtomicTimedAccessStrategy {
 
   static std::chrono::time_point<std::chrono::steady_clock> start_time;
   static std::chrono::duration<double, std::milli> interval;
-  static uint32_t time_slots;
 
  private:
-  std::atomic_uint64_t _max_used_slot;
-  // hold enough elements for 2 h if interval is 1000 ms.
-  static const uint32_t _time_slots = 7200;
-  std::array<std::array<std::atomic_uint64_t, SegmentAccessType::Count>, _time_slots> _count;
 
-  uint64_t _time_slot();
+  struct Counter {
+    uint64_t timestamp;
+    std::array<std::atomic_uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> counter;
+
+    Counter(uint64_t timestamp) : timestamp{timestamp}, counter{} {};
+    Counter() : Counter(0ul) {}
+    Counter(const Counter& other) {
+      timestamp = other.timestamp;
+      for (auto type = 0ul; type < counter.size(); ++type) {
+        counter[type] = other.counter[type].load();
+      }
+    }
+    Counter(Counter&& other) noexcept {
+      timestamp = other.timestamp;
+      for (auto type = 0ul; type < counter.size(); ++type) {
+        counter[type] = other.counter[type].load();
+      }
+    }
+  };
+
+  pmr_concurrent_vector<Counter> _counters;
+  Counter& _counter();
 };
 
 // -----------------------------------------------------------------------------------------------------------------
@@ -95,7 +145,7 @@ class NonLockingStrategy {
   std::vector<std::string> to_string() const;
 
  private:
-  std::array<uint64_t, SegmentAccessType::Count> _count;
+  std::array<uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> _count;
 };
 
 // -----------------------------------------------------------------------------------------------------------------
@@ -106,13 +156,14 @@ class BulkCountingStrategy {
     : _data_access_strategy {data_access_strategy} {}
 
   void on_iterator_create(uint64_t count) {
-    _data_access_strategy.increase(IteratorCreate, 1);
-    _data_access_strategy.increase(IteratorAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
+    _data_access_strategy.increase(SegmentAccessType::IteratorSeqAccess, count);
   }
 
   void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-    _data_access_strategy.increase(IteratorCreate, 1);
-    _data_access_strategy.increase(IteratorAccess, positions->size());
+    // hier muss geprüft werden, um was für einen Zugriff es sich handelt
+    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
+    _data_access_strategy.increase(SegmentAccessTypeTools::iterator_access_pattern(positions), positions->size());
   }
 
   void on_iterator_dereference(uint64_t count) {}
@@ -120,19 +171,19 @@ class BulkCountingStrategy {
   void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {}
 
   void on_accessor_create(uint64_t count) {
-    _data_access_strategy.increase(AccessorCreate, 1);
+    _data_access_strategy.increase(SegmentAccessType::AccessorCreate, 1);
   }
 
   void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(AccessorAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::AccessorAccess, count);
   }
 
   void on_dictionary_access(uint64_t count) {
-    _data_access_strategy.increase(DictionaryAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::DictionaryAccess, count);
   }
 
   void on_other_access(uint64_t count) {
-    _data_access_strategy.increase(Other, count);
+    _data_access_strategy.increase(SegmentAccessType::Other, count);
   }
 
  private:
@@ -147,35 +198,35 @@ class SingleAccessCountingStrategy {
     : _data_access_strategy{data_access_strategy} {}
 
   void on_iterator_create(uint64_t count) {
-    _data_access_strategy.increase(IteratorCreate, 1);
+    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
   }
 
   void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-    _data_access_strategy.increase(IteratorCreate, 1);
+    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
   }
 
   void on_iterator_dereference(uint64_t count) {
-    _data_access_strategy.increase(IteratorAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::IteratorDereference, count);
   }
 
   void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(IteratorAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::IteratorDereference, count);
   }
 
   void on_accessor_create(uint64_t count) {
-    _data_access_strategy.increase(AccessorCreate, 1);
+    _data_access_strategy.increase(SegmentAccessType::AccessorCreate, 1);
   }
 
   void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(AccessorAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::AccessorAccess, count);
   }
 
   void on_dictionary_access(uint64_t count) {
-    _data_access_strategy.increase(DictionaryAccess, count);
+    _data_access_strategy.increase(SegmentAccessType::DictionaryAccess, count);
   }
 
   void on_other_access(uint64_t count) {
-    _data_access_strategy.increase(Other, count);
+    _data_access_strategy.increase(SegmentAccessType::Other, count);
   }
 
  private:
@@ -232,10 +283,10 @@ class SegmentAccessStatistics {
 
   std::vector<std::string> to_string() const {
     std::string str;
-    str.reserve(SegmentAccessType::Count * 4);
+    str.reserve(static_cast<uint32_t>(SegmentAccessType::Count) * 4);
     str.append(std::to_string(count(static_cast<SegmentAccessType>(0))));
 
-    for (uint8_t type = 1; type < Count; ++type) {
+    for (uint8_t type = 1; type < static_cast<uint32_t>(SegmentAccessType::Count); ++type) {
       str.append(",");
       str.append(std::to_string(count(static_cast<SegmentAccessType>(type))));
     }
