@@ -243,7 +243,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     {
       auto attempts_remaining = max_attempts;
       while (_counter < INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) {
-        std::this_thread::sleep_for(100);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
       // Check that we have not given up
       ASSERT_GT(attempts_remaining, -1);
