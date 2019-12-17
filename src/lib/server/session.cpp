@@ -105,7 +105,7 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
+  const auto [execution_information, transaction_context] = QueryHandler::execute_pipeline(query, _send_execution_info, _transaction);
 
   if (!execution_information.error_message.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error_message);
@@ -123,6 +123,8 @@ void Session::_handle_simple_query() {
     }
     _postgres_protocol_handler->send_command_complete(
         ResultSerializer::build_command_complete_message(execution_information.root_operator, row_count));
+
+    _transaction = transaction_context;
   }
   _postgres_protocol_handler->send_ready_for_query();
 }

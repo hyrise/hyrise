@@ -54,6 +54,9 @@ class SQLPipelineStatement : public Noncopyable {
                        const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                        const CleanupTemporaries cleanup_temporaries);
 
+  // Set the transaction context.
+  void set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
+
   // Returns the raw SQL string.
   const std::string& get_sql_string();
 
@@ -86,6 +89,10 @@ class SQLPipelineStatement : public Noncopyable {
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
+
+  // Returns the AutoCommit Mode of the statement.
+  // If a transaction_context is provided, this indicates that it was created by the statement itself.
+  bool auto_commit() const;
 
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 

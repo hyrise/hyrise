@@ -80,10 +80,14 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
-                                                                     use_mvcc, transaction_context, optimizer,
-                                                                     pqp_cache, lqp_cache, cleanup_temporaries);
+    auto pipeline_statement =
+        std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc, nullptr,
+                                               optimizer, pqp_cache, lqp_cache, cleanup_temporaries);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
+  }
+
+  if (statement_count() > 0) {
+    _sql_pipeline_statements.front()->set_transaction_context(transaction_context);
   }
 
   // If we see at least one structure altering statement and we have more than one statement, we require execution of a
@@ -216,9 +220,18 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
     return {_pipeline_status, _result_tables};
   }
 
-  _result_tables.reserve(_sql_pipeline_statements.size());
+  const auto pipeline_size = _sql_pipeline_statements.size();
+
+  _result_tables.reserve(pipeline_size);
+
+  std::shared_ptr<TransactionContext> previous_statement_transaction_context = nullptr;
+
+  if (pipeline_size > 0) {
+    previous_statement_transaction_context = _sql_pipeline_statements.front()->transaction_context();
+  }
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
+    pipeline_statement->set_transaction_context(previous_statement_transaction_context);
     const auto& [statement_status, table] = pipeline_statement->get_result_table();
     if (statement_status == SQLPipelineStatus::RolledBack) {
       _failed_pipeline_statement = pipeline_statement;
@@ -235,9 +248,12 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
     DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
     _result_tables.emplace_back(table);
+
+    previous_statement_transaction_context = pipeline_statement->auto_commit() ? nullptr : pipeline_statement->transaction_context();
   }
 
   _pipeline_status = SQLPipelineStatus::Success;
+  _transaction_context = previous_statement_transaction_context;
   return {_pipeline_status, _result_tables};
 }
 

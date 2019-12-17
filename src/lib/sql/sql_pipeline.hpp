@@ -99,7 +99,7 @@ class SQLPipeline : public Noncopyable {
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
-  const std::shared_ptr<TransactionContext> _transaction_context;
+  std::shared_ptr<TransactionContext> _transaction_context;
   const std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results

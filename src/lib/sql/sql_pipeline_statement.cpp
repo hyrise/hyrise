@@ -50,6 +50,10 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
               "Transaction context without MVCC enabled makes no sense");
 }
 
+void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
+  _transaction_context = transaction_context;
+}
+
 const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; }
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
@@ -260,6 +264,8 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_context() const {
   return _transaction_context;
 }
+
+bool SQLPipelineStatement::auto_commit() const { return _auto_commit; }
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
