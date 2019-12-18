@@ -29,7 +29,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = Hyrise::get().storage_manager;
-    const auto scale_factor = 0.001f;
+    const auto scale_factor = 1.f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -46,9 +46,6 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     auto lineitem_table = sm.get_table("lineitem");
 
-    // Generate an index to benchmark the indexScan
-    std::vector<ColumnID> _indexColumnIDs = {6};
-    lineitem_table->create_index<BTreeIndex>(_indexColumnIDs);
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
@@ -130,8 +127,24 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 };
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan)(benchmark::State& state) {
+
+    auto& sm = Hyrise::get().storage_manager;
+    auto lineitem_table = sm.get_table("lineitem");
+
+    // Generate an index to benchmark the indexScan
+    std::vector<ColumnID> _indexColumnIDs = { ColumnID{10} };
+    lineitem_table->create_index<BTreeIndex>(_indexColumnIDs);
+    // Roughly after _tpchq6_shipdate_less_predicate
+  const std::vector<ColumnID> left_column_ids = { ColumnID{10}};
+  const std::vector<AllTypeVariant> right_values = { "1995-01-01" };
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+    const auto table_scan = std::make_shared<IndexScan>(
+            _table_wrapper_map.at("lineitem"),
+            SegmentIndexType::BTree,
+            left_column_ids,
+            PredicateCondition::Equals,
+            right_values
+            );
     table_scan->execute();
   }
 }
