@@ -84,8 +84,7 @@ INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
                          ::testing::Values(FileType::Csv, FileType::Binary), formatter);
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
-  auto table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
   table->append({1.1f});
   table->append({2.2f});
   table->append({3.3f});
@@ -103,8 +102,7 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
 }
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
-  auto table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
   table->append({1.1f});
   table->append({2.2f});
   table->append({3.3f});

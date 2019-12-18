@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-Import::Import(const std::string& filename, const std::optional<std::string>& tablename, const ChunkOffset chunk_size,
+Import::Import(const std::string& filename, const std::string& tablename, const ChunkOffset chunk_size,
                const FileType type, const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::Import),
       _filename(filename),
@@ -39,7 +39,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
     case FileType::Csv:
       table = CsvParser::parse(_filename, _chunk_size, _csv_meta);
       break;
-     case FileType::Tbl:
+    case FileType::Tbl:
       table = load_table(_filename, _chunk_size);
       break;
     case FileType::Binary:
@@ -49,11 +49,13 @@ std::shared_ptr<const Table> Import::_on_execute() {
       Fail("File type should have been determined previously.");
   }
 
-  if (_tablename) {
-    Hyrise::get().storage_manager.add_table(*_tablename, table);
+  if (Hyrise::get().storage_manager.has_table(_tablename)) {
+    Hyrise::get().storage_manager.drop_table(_tablename);
   }
 
-  //return table;
+  Hyrise::get().storage_manager.add_table(_tablename, table);
+
+  // must match ImportNode::column_expressions
   return nullptr;
 }
 

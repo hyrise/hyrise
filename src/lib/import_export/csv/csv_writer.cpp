@@ -47,7 +47,7 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
   ofstream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   ofstream.open(filename);
 
-    /**
+  /**
    * Multiple rows containing the values of each respective row are written.
    * Therefore we first iterate through the chunks, then through the rows
    * in the chunks and afterwards through the segments of the chunks.

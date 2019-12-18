@@ -22,7 +22,7 @@ FileType file_type_from_filename(const std::string& filename) {
   } else if (extension == ".bin") {
     return FileType::Binary;
   }
-  Fail("Unknown file extension");
+  Fail("Unknown file extension " + extension);
 }
 
 }  // namespace opossum

@@ -69,16 +69,7 @@ class CsvWriter {
    *        "nullable": false,
    *        "type": "float"
    *      }
-   *    ],
-   *    "config": {
-   *      "delimiter": "\n",
-   *      "delimiter_escape": "\\",
-   *      "escape": "\"",
-   *      "quote": "\"",
-   *      "reject_quoted_nonstrings": true,
-   *      "rfc_mode": true,
-   *      "separator": ","
-   *    }
+   *    ]
    *  }
    *
    *

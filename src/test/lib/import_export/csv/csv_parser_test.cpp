@@ -1,9 +1,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "import_export/csv/csv_parser.hpp"
 #include "storage/table.hpp"
-#include "hyrise.hpp"
 
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -266,6 +266,25 @@ TEST_F(CsvParserTest, EmptyTableFromMetaFile) {
 
   EXPECT_EQ(csv_meta_table->row_count(), 0);
   EXPECT_TABLE_EQ_UNORDERED(csv_meta_table, expected_table);
+}
+
+TEST_F(CsvParserTest, WithScheduler) {
+  Hyrise::get().topology.use_fake_numa_topology(8, 4);
+  auto scheduler = Hyrise::get().scheduler();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv");
+
+  TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
+
+  for (int i = 0; i < 100; ++i) {
+    expected_table->append({458.7f, 12345});
+  }
+
+  Hyrise::get().scheduler()->finish();
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+  Hyrise::get().set_scheduler(scheduler);
 }
 
 }  // namespace opossum

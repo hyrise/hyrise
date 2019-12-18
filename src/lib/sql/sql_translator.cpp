@@ -1210,7 +1210,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
-  return ImportNode::make(import_statement.tableName, import_statement.filePath, import_type_to_file_type(import_statement.type));
+  return ImportNode::make(import_statement.tableName, import_statement.filePath,
+                          import_type_to_file_type(import_statement.type));
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

@@ -61,7 +61,8 @@ class CsvParser {
    * @returns               The number of rows in the chunk
    */
   static size_t _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  Segments& segments, const CsvMeta& meta, const std::string& escaped_linebreak);
+                                  Segments& segments, const CsvMeta& meta, const std::string& escaped_linebreak,
+                                  std::mutex& append_chunk_mutex);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.

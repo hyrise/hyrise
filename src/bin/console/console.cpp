@@ -526,9 +526,7 @@ int Console::_load_table(const std::string& args) {
 
   out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
-  auto& storage_manager = Hyrise::get().storage_manager;
-  if (storage_manager.has_table(tablename)) {
-    storage_manager.drop_table(tablename);
+  if (Hyrise::get().storage_manager.has_table(tablename)) {
     out("Table " + tablename + " already existed. Replacing it.\n");
   }
 
