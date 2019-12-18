@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
