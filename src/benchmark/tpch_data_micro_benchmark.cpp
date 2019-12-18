@@ -15,6 +15,8 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "operators/index_scan.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -43,6 +45,10 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _table_wrapper_map = create_table_wrappers(sm);
 
     auto lineitem_table = sm.get_table("lineitem");
+
+    // Generate an index to benchmark the indexScan
+    std::vector<ColumnID> _indexColumnIDs = {6};
+    lineitem_table->create_index<BTreeIndex>(_indexColumnIDs);
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
@@ -122,6 +128,13 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
   LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan)(benchmark::State& state) {
+  for (auto _ : state) {
+    const auto table_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+    table_scan->execute();
+  }
+}
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {
