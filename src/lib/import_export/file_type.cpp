@@ -11,6 +11,7 @@ FileType import_type_to_file_type(const hsql::ImportType import_type) {
     case hsql::ImportType::kImportTbl:
       return FileType::Tbl;
   }
+  Fail("Unknown file type.");
 }
 
 FileType file_type_from_filename(const std::string& filename) {
