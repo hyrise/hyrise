@@ -27,10 +27,10 @@ using namespace opossum;
 constexpr auto TABLE_NAME_PREFIX = "ping";
 //constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 //constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
-constexpr auto TBL_FILE = "../../data/100000_pings.tbl";
+constexpr auto TBL_FILE = "../../data/100_pings.tbl";
 const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 //const auto CHUNK_SIZES = std::vector{size_t{10}};
-const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "timestamp", "captain_status"};
+const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 // TODO: evaluate Frame of Reference as well, fall back to dictionary for unsupported data types
 //const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength, EncodingType::FrameOfReference};
 const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength};
@@ -48,6 +48,8 @@ const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::
 const auto BM_VAL_CAPTAIN_ID = std::vector{4, 4115, 11787, 57069, 176022, 451746, 616628, 901080, 1156169, 1233112, 1414788};
 const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
 const auto BM_VAL_LATITUDE = std::vector{10.2191832, 25.0455204, 25.0699667, 25.0872227, 25.1030861, 25.1244186, 25.1724729, 25.1966912, 25.2164364, 25.2437205, 60.1671321};
+const auto BM_VAL_LONGITUDE = std::vector{-213.5243575, 55.1423584, 55.1549474, 55.1792718, 55.2072508, 55.2470842, 55.2692599, 55.2806365, 55.3156638, 55.3640991, 212.33914};
+
 //timestamp values string and unix timestamp
 //const auto BM_VAL_TIMESTAMP = std::vector{1541372479, 1541398637, 1541418563, 1541439501, 1542924244, 1545434420, 1545474895, 1545518017, 1548644767, 1548671748, 1548716462};
 const auto BM_VAL_TIMESTAMP = std::vector{"2018-11-05 00:01:19", "2018-11-05 07:17:17", "2018-11-05 12:49:23", "2018-11-05 18:38:21", "2018-11-22 23:04:04", "2018-12-22 00:20:20", "2018-12-22 11:34:55", "2018-12-22 23:33:37", "2019-01-28 04:06:07", "2019-01-28 11:35:48", "2019-01-29 00:01:02"};
@@ -234,8 +236,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)(benchmark::Stat
   // should by nicer dicer
   if (state.range(3) == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_ID[state.range(4)]));}
   if (state.range(3) == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LATITUDE[state.range(4)]));}
-  if (state.range(3) == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_TIMESTAMP[state.range(4)]));}
-  if (state.range(3) == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_STATUS[state.range(4)]));}
+  if (state.range(3) == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LONGITUDE[state.range(4)]));}
+  if (state.range(3) == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_TIMESTAMP[state.range(4)]));}
+  if (state.range(3) == 4) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_STATUS[state.range(4)]));}
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -275,8 +278,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEq
   // should by nicer dicer
   if (scan_column_index == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_CAPTAIN_ID[search_value_index]));}
   if (scan_column_index == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_LATITUDE[search_value_index]));}
-  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
-  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
+  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_LONGITUDE[search_value_index]));}
+  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
+  if (scan_column_index == 4) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -291,11 +295,11 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEq
     std::cout << "Warning: executed table scan did not yield any results." << std::endl;
   }
 
-  if (order_by_column == scan_column) {
-    const auto description = warm_up_table_scan->description(DescriptionMode::SingleLine);
-    Assert(description.find("scanned with binary search]") != std::string::npos, "Requested a sorted scan on colum " + scan_column + ", but impl description is:\n\t" + description);
-    Assert(description.find("ColumnVsValue") != std::string::npos, "Executed scan on colum " + scan_column + " was no ColumnVsValue scan.");
-  }
+  // if (order_by_column == scan_column) {
+  //   const auto description = warm_up_table_scan->description(DescriptionMode::SingleLine);
+  //   Assert(description.find("scanned with binary search]") != std::string::npos, "Requested a sorted scan on colum " + scan_column + ", but impl description is:\n\t" + description);
+  //   Assert(description.find("ColumnVsValue") != std::string::npos, "Executed scan on colum " + scan_column + " was no ColumnVsValue scan.");
+  // }
   
   const auto chunk_count = table->chunk_count();
   const auto column_count = table->column_count();
@@ -362,8 +366,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerform
   // should by nicer dicer
   if (scan_column_index == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_ID[search_value_index]));}
   if (scan_column_index == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LATITUDE[search_value_index]));}
-  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
-  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
+  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LONGITUDE[search_value_index]));}
+  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
+  if (scan_column_index == 4) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -379,9 +384,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerform
   }
 
   if (order_by_column == scan_column) {
-    const auto description = warm_up_table_scan->description(DescriptionMode::SingleLine);
-    Assert(description.find("scanned with binary search]") != std::string::npos, "Requested a sorted scan on colum " + scan_column + ", but impl description is:\n\t" + description);
-    Assert(description.find("ColumnVsValue") != std::string::npos, "Executed scan on colum " + scan_column + " was no ColumnVsValue scan.");
+   const auto description = warm_up_table_scan->description(DescriptionMode::SingleLine);
+   Assert(description.find("scanned with binary search]") != std::string::npos, "Requested a sorted scan on colum " + scan_column + ", but impl description is:\n\t" + description);
+   Assert(description.find("ColumnVsValue") != std::string::npos, "Executed scan on colum " + scan_column + " was no ColumnVsValue scan.");
   }
   
   const auto chunk_count = table->chunk_count();
@@ -453,8 +458,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark
   // should by nicer dicer
   if (scan_column_index == 0) { right_values = {BM_VAL_CAPTAIN_ID[search_value_index]}; }
   if (scan_column_index == 1) { right_values = {BM_VAL_LATITUDE[search_value_index]}; }
-  if (scan_column_index == 2) { right_values = {BM_VAL_TIMESTAMP[search_value_index]}; }
-  if (scan_column_index == 3) { right_values = {BM_VAL_CAPTAIN_STATUS[search_value_index]}; }
+  if (scan_column_index == 2) { right_values = {BM_VAL_LONGITUDE[search_value_index]}; }
+  if (scan_column_index == 3) { right_values = {BM_VAL_TIMESTAMP[search_value_index]}; }
+  if (scan_column_index == 4) { right_values = {BM_VAL_CAPTAIN_STATUS[search_value_index]}; }
 
   const std::vector<ColumnID> scan_column_ids = {scan_column_id};
   for (auto _ : state) {
@@ -477,10 +483,10 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)->Apply(CustomArguments);
 //BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
 //BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
