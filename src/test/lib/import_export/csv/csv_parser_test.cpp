@@ -3,10 +3,6 @@
 
 #include "import_export/csv/csv_parser.hpp"
 #include "storage/table.hpp"
-
-// #include <memory>
-// #include <string>
-
 #include "hyrise.hpp"
 
 #include "scheduler/immediate_execution_scheduler.hpp"

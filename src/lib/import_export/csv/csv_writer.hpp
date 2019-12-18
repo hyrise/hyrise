@@ -50,19 +50,42 @@ class CsvWriter {
    *  102,"Du sagtest:""Hi!""",4.0
    *  ,"Kekse",5.0
    *
-   *  example.csv.meta:
+   *  example.csv.json:
    *
-   *  "PropertyType","Key","Value"
-   *  "ChunkSize",,100
-   *  "ColumnType","a","int_null"
-   *  "ColumnType","b","string"
-   *  "ColumnType","c","float"
+   *  {
+   *    "columns": [
+   *      {
+   *        "name": "a",
+   *        "nullable": true,
+   *        "type": "int"
+   *      },
+   *      {
+   *        "name": "b",
+   *        "nullable": false,
+   *        "type": "string"
+   *      },
+   *      {
+   *        "name": "c",
+   *        "nullable": false,
+   *        "type": "float"
+   *      }
+   *    ],
+   *    "config": {
+   *      "delimiter": "\n",
+   *      "delimiter_escape": "\\",
+   *      "escape": "\"",
+   *      "quote": "\"",
+   *      "reject_quoted_nonstrings": true,
+   *      "rfc_mode": true,
+   *      "separator": ","
+   *    }
+   *  }
+   *
    *
    *  which resembles the following table of meta data:
    *
    *  PropertyType  | Key | Value
    *  ------------------------------
-   *  ChunkSize     |     | 100
    *  ColumnType    |  a  | int_null
    *  ColumnType    |  b  | string
    *  ColumnType    |  c  | float

@@ -29,7 +29,6 @@ void CsvWriter::_generate_meta_info_file(const Table& table, const std::string& 
 
   std::ofstream meta_file_stream(filename);
   meta_file_stream << std::setw(4) << meta_json << std::endl;
-  meta_file_stream.close();
 }
 
 void CsvWriter::_generate_content_file(const Table& table, const std::string& filename, const ParseConfig& config) {
@@ -44,8 +43,11 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
    */
 
   // Open file for writing
+  std::ofstream ofstream;
+  ofstream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  ofstream.open(filename);
 
-  /**
+    /**
    * Multiple rows containing the values of each respective row are written.
    * Therefore we first iterate through the chunks, then through the rows
    * in the chunks and afterwards through the segments of the chunks.
@@ -53,11 +55,6 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
    * This is a lot of iterating, but to convert a column-based table to
    * a row-based representation takes some effort.
    */
-
-  std::ofstream ofstream;
-  ofstream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  ofstream.open(filename);
-
   const auto chunk_count = table.chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
@@ -96,7 +93,7 @@ void CsvWriter::_write(const AllTypeVariant& value, std::ofstream& ofstream, con
 
 void CsvWriter::_write_string_value(const pmr_string& value, std::ofstream& ofstream, const ParseConfig& config) {
   /**
-   * We put an the quotechars around any string value by default
+   * We put the quotechars around any string value by default
    * as this is the only time when a comma (,) might be inside a value.
    * This might consume more space, however it speeds the program as it
    * does not require additional checks.

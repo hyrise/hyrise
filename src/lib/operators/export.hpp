@@ -30,9 +30,6 @@ class Export : public AbstractReadOnlyOperator {
   explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename,
                   const FileType& type = FileType::Auto);
 
-  /**
-   * Name of the operator is Export
-   */
   const std::string& name() const final;
 
  protected:
@@ -47,12 +44,10 @@ class Export : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  void _write_any_type();
-
  private:
   // Path of the binary file
   const std::string _filename;
-  const FileType _type;
+  FileType _type;
 };
 
 }  // namespace opossum

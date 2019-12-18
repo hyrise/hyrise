@@ -3,15 +3,14 @@
 #include "base_test.hpp"
 
 #include "expression/expression_utils.hpp"
+#include "import_export/file_type.hpp"
 #include "logical_query_plan/import_node.hpp"
-
-#include "SQLParser.h"
 
 namespace opossum {
 
 class ImportNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _import_node = ImportNode::make("tablename", "filename", hsql::ImportType::kImportCSV); }
+  void SetUp() override { _import_node = ImportNode::make("tablename", "filename", FileType::Csv); }
 
   std::shared_ptr<ImportNode> _import_node;
 };
@@ -19,7 +18,7 @@ class ImportNodeTest : public BaseTest {
 TEST_F(ImportNodeTest, Description) { EXPECT_EQ(_import_node->description(), "[Import] Name: 'tablename'"); }
 
 TEST_F(ImportNodeTest, HashingAndEqualityCheck) {
-  const auto another_import_node = ImportNode::make("tablename", "filename", hsql::ImportType::kImportCSV);
+  const auto another_import_node = ImportNode::make("tablename", "filename", FileType::Csv);
   EXPECT_EQ(*_import_node, *another_import_node);
 
   EXPECT_EQ(_import_node->hash(), another_import_node->hash());

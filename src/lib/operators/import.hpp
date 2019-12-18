@@ -14,7 +14,7 @@ namespace opossum {
 
 /*
  * This operator reads a file and creates a table from that input.
- * Supportes file types are .tbl, .csv and Opossum .bin files.
+ * Supported file types are .tbl, .csv and Opossum .bin files.
  * For .csv files, a CSV config is additionally required, which is commonly located in the <filename>.json file.
  * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
@@ -33,7 +33,6 @@ class Import : public AbstractReadOnlyOperator {
                   const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const FileType type = FileType::Auto,
                   const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
-  // Returns the name of the operator
   const std::string& name() const final;
 
  protected:
@@ -50,7 +49,7 @@ class Import : public AbstractReadOnlyOperator {
   // Name for adding the table to the StorageManager
   const std::optional<std::string> _tablename;
   const ChunkOffset _chunk_size;
-  const FileType _type;
+  FileType _type;
   const std::optional<CsvMeta> _csv_meta;
 
   std::shared_ptr<Table> _import();

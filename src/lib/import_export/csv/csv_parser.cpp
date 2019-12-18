@@ -81,14 +81,13 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
     table->append_chunk(segments, mvcc_data);
   }
-  csvfile.close();
 
   return table;
 }
 
 std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename,
                                                               const ChunkOffset chunk_size) {
-  auto meta = process_csv_meta_file(filename);
+  const auto meta = process_csv_meta_file(filename);
   return _create_table_from_meta(chunk_size, meta);
 }
 

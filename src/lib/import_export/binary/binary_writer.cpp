@@ -103,7 +103,6 @@ void BinaryWriter::write(const Table& table, const std::string& filename) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); chunk_id++) {
     _write_chunk(table, ofstream, chunk_id);
   }
-  ofstream.close();
 }
 
 void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {

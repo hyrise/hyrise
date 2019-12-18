@@ -8,7 +8,7 @@
 namespace opossum {
 
 ImportNode::ImportNode(const std::string& init_tablename, const std::string& init_filename,
-                       const hsql::ImportType init_filetype)
+                       const FileType init_filetype)
     : BaseNonQueryNode(LQPNodeType::Import),
       tablename(init_tablename),
       filename(init_filename),
@@ -28,7 +28,7 @@ size_t ImportNode::_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> ImportNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return ImportNode::make(tablename, filename, filetype, left_input());
+  return ImportNode::make(tablename, filename, filetype);
 }
 
 bool ImportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {

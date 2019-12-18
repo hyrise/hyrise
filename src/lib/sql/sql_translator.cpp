@@ -30,6 +30,7 @@
 #include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -1209,7 +1210,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
-  return ImportNode::make(import_statement.tableName, import_statement.filePath, import_statement.type);
+  return ImportNode::make(import_statement.tableName, import_statement.filePath, import_type_to_file_type(import_statement.type));
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

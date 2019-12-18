@@ -25,22 +25,36 @@ const std::string& Import::name() const {
 }
 
 std::shared_ptr<const Table> Import::_on_execute() {
-  if (_tablename && Hyrise::get().storage_manager.has_table(*_tablename)) {
-    return Hyrise::get().storage_manager.get_table(*_tablename);
-  }
-
   // Check if file exists before giving it to the parser
   std::ifstream file(_filename);
   Assert(file.is_open(), "Import: Could not find file " + _filename);
   file.close();
 
-  const auto table = _import();
+  std::shared_ptr<Table> table;
+
+  if (_type == FileType::Auto) {
+    _type = file_type_from_filename(_filename);
+  }
+  switch (_type) {
+    case FileType::Csv:
+      table = CsvParser::parse(_filename, _chunk_size, _csv_meta);
+      break;
+     case FileType::Tbl:
+      table = load_table(_filename, _chunk_size);
+      break;
+    case FileType::Binary:
+      table = BinaryParser::parse(_filename);
+      break;
+    case FileType::Auto:
+      Fail("File type should have been determined previously.");
+  }
 
   if (_tablename) {
     Hyrise::get().storage_manager.add_table(*_tablename, table);
   }
 
-  return table;
+  //return table;
+  return nullptr;
 }
 
 std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
@@ -50,33 +64,5 @@ std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-std::shared_ptr<Table> Import::_import() {
-  switch (_type) {
-    case FileType::Csv:
-      return CsvParser::parse(_filename, _chunk_size, _csv_meta);
-    case FileType::Tbl:
-      return load_table(_filename, _chunk_size);
-    case FileType::Binary:
-      return BinaryParser::parse(_filename);
-    case FileType::Auto:
-      return _import_any_type();
-    default:
-      Fail("Import: Cannot import file type.");
-  }
-}
-
-std::shared_ptr<Table> Import::_import_any_type() {
-  const auto extension = std::string{std::filesystem::path{_filename}.extension()};
-  if (extension == ".csv") {
-    return CsvParser::parse(_filename, _chunk_size, _csv_meta);
-  } else if (extension == ".tbl") {
-    return load_table(_filename, _chunk_size);
-  } else if (extension == ".bin") {
-    return BinaryParser::parse(_filename);
-  }
-
-  Fail("Import: Cannot import file type.");
-}
 
 }  // namespace opossum

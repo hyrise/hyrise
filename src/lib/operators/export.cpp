@@ -22,17 +22,19 @@ std::shared_ptr<const Table> Export::_on_execute() {
     Fail("Export: File name must not be empty.");
   }
 
+  if (_type == FileType::Auto) {
+    _type = file_type_from_filename(_filename);
+  }
+
   switch (_type) {
-    case FileType::Auto:
-      _write_any_type();
-      break;
     case FileType::Csv:
       CsvWriter::write(*input_table_left(), _filename);
       break;
     case FileType::Binary:
       BinaryWriter::write(*input_table_left(), _filename);
       break;
-    default:
+    case FileType::Auto:
+    case FileType::Tbl:
       Fail("Export: Exporting file type is not supported.");
   }
 
@@ -46,16 +48,5 @@ std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
 }
 
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-void Export::_write_any_type() {
-  const auto extension = std::string{std::filesystem::path{_filename}.extension()};
-  if (extension == ".csv") {
-    CsvWriter::write(*input_table_left(), _filename);
-  } else if (extension == ".bin") {
-    BinaryWriter::write(*input_table_left(), _filename);
-  } else {
-    Fail("Export: Exporting file type is not supported.");
-  }
-}
 
 }  // namespace opossum
