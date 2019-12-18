@@ -88,7 +88,6 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraint
       }
       return false;
     }();
-
     if(!discard_constraint) {
 
       const auto get_column_expression = [this](ColumnID column_id) {
@@ -99,7 +98,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraint
             return column_expr;
           }
         }
-        return nullptr;  // Continue here 13.12. 15:32 -- throws an error
+        return std::shared_ptr<LQPColumnExpression>(nullptr);
       };
 
       // Search for column expressions representing the constraint's ColumnIDs

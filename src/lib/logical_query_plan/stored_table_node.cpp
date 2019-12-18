@@ -122,7 +122,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_con
             return column_expr;
           }
         }
-        return nullptr;
+        return std::shared_ptr<LQPColumnExpression>(nullptr);
       };
 
       // Search for column expressions representing the constraint's ColumnIDs
