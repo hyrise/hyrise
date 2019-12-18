@@ -4,9 +4,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "storage/constraints/expressions_constraint_definition.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "enable_make_for_lqp_node.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -186,6 +186,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
+
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
   std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping& node_mapping) const;

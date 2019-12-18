@@ -106,5 +106,4 @@ TEST_F(ProjectionNodeTest, NoConstraints) {
 //  EXPECT_TRUE(_projection_node->get_constraints()->at(0).equals(unique_constraint_0));
 //}
 
-
 }  // namespace opossum

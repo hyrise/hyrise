@@ -19,12 +19,12 @@ struct TableConstraintDefinition final {
   }
 
   [[nodiscard]] bool equals(const TableConstraintDefinition& other_constraint) const {
-    if(is_primary_key != other_constraint.is_primary_key) return false;
-    if(columns.size() != other_constraint.columns.size()) return false;
+    if (is_primary_key != other_constraint.is_primary_key) return false;
+    if (columns.size() != other_constraint.columns.size()) return false;
 
     // Due to the enforced sorting, we can compare both vectors element-wise
-    for(ColumnID i{0}; i < columns.size(); i++) {
-      if(columns[i] != other_constraint.columns[i]) return false;
+    for (ColumnID i{0}; i < columns.size(); i++) {
+      if (columns[i] != other_constraint.columns[i]) return false;
     }
 
     return true;
