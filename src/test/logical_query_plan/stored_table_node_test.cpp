@@ -5,6 +5,7 @@
 
 #include "base_test.hpp"
 
+#include "../utils/constraint_test_utils.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -160,42 +161,7 @@ TEST_F(StoredTableNodeTest, GetConstraints) {
   EXPECT_EQ(lqp_constraints->size(), 2);
 
   // Check whether all table constraints are represented in StoredTableNode
-  for (const auto& table_constraint : table_constraints) {
-    const auto matching_lqp_constraint = std::find_if(
-        lqp_constraints->cbegin(), lqp_constraints->cend(),
-        [&table_constraint](const ExpressionsConstraintDefinition& lqp_constraint) {
-          // Basic comparison
-          if (table_constraint.is_primary_key != lqp_constraint.is_primary_key ||
-              table_constraint.columns.size() != lqp_constraint.column_expressions.size())
-            return false;
-
-          // In-depth comparison, verifying column ids
-          for (const auto& column_id : table_constraint.columns) {
-            // Try to find a column_expression that represents column_id
-            const auto matching_column_expr = std::find_if(
-                lqp_constraint.column_expressions.cbegin(), lqp_constraint.column_expressions.cend(),
-                [&column_id](const std::shared_ptr<AbstractExpression>& expression) {
-                  const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                  if (column_expression && column_expression->column_reference.original_column_id() == column_id) {
-                    return true;
-                  } else {
-                    return false;
-                  }
-                });
-
-            // Check whether a column expression has been found
-            if (matching_column_expr == lqp_constraint.column_expressions.cend()) {
-              // lqp_constraint does not match table_constraint
-              return false;
-            }
-          }
-
-          // lqp_constraint represents table_constraint since none of the checks have failed
-          return true;
-        });
-
-    EXPECT_FALSE(matching_lqp_constraint == lqp_constraints->cend());
-  }
+  check_table_constraint_representation(table_constraints, lqp_constraints);
 }
 
 TEST_F(StoredTableNodeTest, GetConstraintsPrunedColumns) {
@@ -223,6 +189,7 @@ TEST_F(StoredTableNodeTest, GetConstraintsPrunedColumns) {
   const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint.column_expressions.at(0));
   const auto column_ref = column_expr->column_reference;
   EXPECT_EQ(column_ref.original_column_id(), table_constraint.columns[0]);
+  EXPECT_EQ(column_ref.original_node(), _stored_table_node);
 }
 
 }  // namespace opossum

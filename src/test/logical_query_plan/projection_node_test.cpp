@@ -6,6 +6,7 @@
 
 #include "base_test.hpp"
 
+#include "../utils/constraint_test_utils.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -69,25 +70,27 @@ TEST_F(ProjectionNodeTest, NoConstraints) {
   EXPECT_TRUE(_projection_node->get_constraints()->empty());
 }
 
-//TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
-//  const auto pk_constraint_0_1 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-//  const auto unique_constraint_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
-//
-//  _mock_node = MockNode::make(
-//      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a", UniqueConstraintDefinitions{pk_constraint_0_1, unique_constraint_2});
-//
-//  // Reorder columns (0, 1, 2) -> (1, 2, 0)
-//  _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
-//  const auto projection_constraints = _projection_node->get_constraints();
-//
-//  const auto pk_constraint_1_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{1}, ColumnID{2}}, IsPrimaryKey::Yes};
-//  const auto unique_constraint_0 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}}, IsPrimaryKey::No};
-//
-//  EXPECT_EQ(projection_constraints->size(), 2);
-//  EXPECT_TRUE(projection_constraints->at(0).equals(pk_constraint_1_2));
-//  EXPECT_TRUE(projection_constraints->at(1).equals(unique_constraint_0));
-//}
-//
+TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
+  const auto table_constraint_1 =
+      TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+  const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
+
+  _mock_node =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
+                     "t_a", table_constraints);
+
+  // Create projection to reorder columns (0, 1, 2) -> (1, 2, 0)
+  _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
+
+  // Basic check
+  const auto lqp_constraints = _projection_node->get_constraints();
+  EXPECT_EQ(lqp_constraints->size(), 2);
+
+  // In-depth check
+  check_table_constraint_representation(table_constraints, lqp_constraints);
+}
+
 //TEST_F(ProjectionNodeTest, ConstraintsArithmetics) {
 //  const auto pk_constraint_0_1 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
 //  const auto unique_constraint_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
