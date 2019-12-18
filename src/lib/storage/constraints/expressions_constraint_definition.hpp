@@ -20,7 +20,7 @@ struct ExpressionsConstraintDefinition final {
     if(is_primary_key != other_constraint.is_primary_key) return false;
     if(column_expressions.size() != other_constraint.column_expressions.size()) return false;
 
-    // ToDo Implement element-by-element comparison
+    // TODO(Julian) Implement element-by-element comparison
 
     return true;
   }

@@ -198,21 +198,31 @@ TEST_F(StoredTableNodeTest, GetConstraints) {
   }
 }
 
-//TEST_F(StoredTableNodeTest, GetConstraintsPrunedColumns) {
-//  const auto table = Hyrise::get().storage_manager.get_table("t_a");
-//
-//  table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
-//  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
-//  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
-//  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-//
-//  const auto table_constraints = table->get_soft_unique_constraints();
-//  const auto lqp_constraints = _stored_table_node->get_constraints();
-//
-//  EXPECT_EQ(table_constraints.size(), 3);
-//  EXPECT_EQ(lqp_constraints->size(), 1);
-//
-//  EXPECT_TRUE(lqp_constraints->at(0).equals(table_constraints[2]));
-//}
+TEST_F(StoredTableNodeTest, GetConstraintsPrunedColumns) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+
+  table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
+  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  const auto table_constraints = table->get_soft_unique_constraints();
+  const auto lqp_constraints = _stored_table_node->get_constraints();
+
+  EXPECT_EQ(table_constraints.size(), 3);
+  EXPECT_EQ(lqp_constraints->size(), 1);
+
+  // Assumption – After column pruning, the third table_constraint should stay valid
+  // Check, whether we got the right table constraint object
+  const auto table_constraint = table_constraints[2];
+  EXPECT_TRUE(table_constraint.columns.size() == 1 && table_constraint.columns.at(0) == ColumnID{2});
+
+  // In-depth-comparison of lqp_constraint with table_constraint
+  const auto lqp_constraint = lqp_constraints->at(0);
+  EXPECT_EQ(lqp_constraint.column_expressions.size(), table_constraint.columns.size());
+  const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint.column_expressions.at(0));
+  const auto column_ref = column_expr->column_reference;
+  EXPECT_EQ(column_ref.original_column_id(), table_constraint.columns[0]);
+}
 
 }  // namespace opossum
