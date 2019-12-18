@@ -77,10 +77,10 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraint
   // Extract relevant constraints from table
   lqp_constraints->reserve(_table_constraints.size());
 
-  for (const TableConstraintDefinition& constraint : _table_constraints) {
+  for (const TableConstraintDefinition& table_constraint : _table_constraints) {
     // Discard constraints which involve pruned column(s)
     const auto discard_constraint = [&]() {
-      for(const auto& column_id : constraint.columns) {
+      for(const auto& column_id : table_constraint.columns) {
         //  Check whether constraint involves pruned column id(s).
         if(std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
           return true;
@@ -88,8 +88,8 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraint
       }
       return false;
     }();
-    if(!discard_constraint) {
 
+    if(!discard_constraint) {
       const auto get_column_expression = [this](ColumnID column_id) {
         for(auto expr : this->column_expressions()) {
           const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
@@ -101,16 +101,16 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::get_constraint
         return std::shared_ptr<LQPColumnExpression>(nullptr);
       };
 
-      // Search for column expressions representing the constraint's ColumnIDs
+      // Search for column expressions that represent the TableConstraintDefinitions's ColumnIDs
       auto constraint_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-      for(const auto& column_id : constraint.columns) {
+      for(const auto& column_id : table_constraint.columns) {
         const auto column_expr = get_column_expression(column_id);
-        Assert(column_expr, "Did not find column expression in LQPNode");
+        Assert(column_expr, "Did not find column expression for ColumnID in LQPNode");
         constraint_column_expressions.push_back(column_expr);
       }
 
       // Create ExpressionsConstraintDefinition
-      lqp_constraints->push_back(ExpressionsConstraintDefinition{constraint_column_expressions, constraint.is_primary_key});
+      lqp_constraints->push_back(ExpressionsConstraintDefinition{constraint_column_expressions, table_constraint.is_primary_key});
     }
   }
 
