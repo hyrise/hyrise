@@ -17,13 +17,8 @@ namespace opossum {
 class MockNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
-
-    const auto a_b_pk_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-    const auto c_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
-
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
-        {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}},
-                                  std::optional<std::string>{}, TableConstraintDefinitions{a_b_pk_constraint, c_constraint});
+        {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
 
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
@@ -84,18 +79,44 @@ TEST_F(MockNodeTest, Copy) {
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 
-//TEST_F(MockNodeTest, Constraints) {
-//  const auto mock_a_constraints = _mock_node_a->get_constraints();
-//  EXPECT_EQ(mock_a_constraints->size(), 2);
-//
-//  const auto a_b_pk_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-//  const auto c_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
-//
-//  EXPECT_TRUE(mock_a_constraints->at(0).equals(a_b_pk_constraint));
-//  EXPECT_TRUE(mock_a_constraints->at(1).equals(c_constraint));
-//
-//  const auto mock_b_constraints = _mock_node_b->get_constraints();
-//  EXPECT_TRUE(mock_b_constraints->empty());
-//}
+TEST_F(MockNodeTest, Constraints) {
+  const auto a_b_pk_constraint =
+      TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto c_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+  // Constraints can not be added afterwards, so we simply recreate _mock_node_a
+  _mock_node_a = MockNode::make(
+      MockNode::ColumnDefinitions{
+          {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}},
+      std::optional<std::string>{}, TableConstraintDefinitions{a_b_pk_constraint, c_constraint});
+
+  // Basic checks
+  const auto mock_a_constraints = _mock_node_a->get_constraints();
+  EXPECT_EQ(mock_a_constraints->size(), 2);
+  const auto mock_b_constraints = _mock_node_b->get_constraints();
+  EXPECT_TRUE(mock_b_constraints->empty());
+
+  // In-depth verification
+  const auto lqp_constraint0 = mock_a_constraints->at(0);
+  EXPECT_TRUE(lqp_constraint0.column_expressions.size() == 2 && lqp_constraint0.is_primary_key == IsPrimaryKey::Yes);
+  const auto lqp_constraint0_column_expr0 =
+      dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint0.column_expressions[0]);
+  const auto lqp_constraint0_column_expr1 =
+      dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint0.column_expressions[1]);
+  EXPECT_TRUE(lqp_constraint0_column_expr0 && lqp_constraint0_column_expr1);
+  EXPECT_TRUE(lqp_constraint0_column_expr0->column_reference.original_column_id() == ColumnID{0} &&
+              lqp_constraint0_column_expr0->column_reference.original_node() == _mock_node_a);
+  EXPECT_TRUE(lqp_constraint0_column_expr1->column_reference.original_column_id() == ColumnID{1} &&
+              lqp_constraint0_column_expr0->column_reference.original_node() == _mock_node_a);
+
+  const auto lqp_constraint1 = mock_a_constraints->at(1);
+  EXPECT_TRUE(lqp_constraint1.column_expressions.size() == 1 && lqp_constraint1.is_primary_key == IsPrimaryKey::No);
+  const auto lqp_constraint1_column_expr0 =
+      dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint1.column_expressions[0]);
+  EXPECT_TRUE(lqp_constraint1_column_expr0);
+  EXPECT_TRUE(lqp_constraint1_column_expr0->column_reference.original_column_id() == ColumnID{2} &&
+              lqp_constraint1_column_expr0->column_reference.original_node() == _mock_node_a);
+}
+
+//TEST_F(MockNodeTest, ConstraintsPrunedColumns) {}
 
 }  // namespace opossum
