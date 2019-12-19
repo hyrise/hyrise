@@ -46,8 +46,8 @@ class SegmentsUsingAllocatorsTest : public ::testing::TestWithParam<std::tuple<D
 
       original_segment = std::make_shared<ValueSegment<ColumnDataType>>(false, 300);
       empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(false, 0);
-      // original_segment contains the numbers from 0 to 99, then 100x100, then the numbers from 200 to 299. This way, we
-      // can check if, e.g., run-length encoding properly handles the duplicate values
+      // original_segment contains the numbers from 0 to 99, then 100x100, then the numbers from 200 to 299.
+      // This way, we can check if, e.g., run-length encoding properly handles the duplicate values
       for (auto i = 0; i <= 99; ++i) original_segment->append(convert_value(i));
       for (auto i = 0; i < 100; ++i) original_segment->append(convert_value(100));
       for (auto i = 200; i <= 299; ++i) original_segment->append(convert_value(i));
