@@ -124,7 +124,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     }
 
-    return std::allocate_shared<LZ4Segment<T>>(allocator, std::move(lz4_blocks), std::move(optional_null_values),
+    return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(optional_null_values),
                                                std::move(dictionary), _block_size, last_block_size,
                                                total_compressed_size, values.size());
   }
@@ -218,7 +218,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     if (num_chars == 0) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{allocator};
       auto empty_dictionary = pmr_vector<char>{};
-      return std::allocate_shared<LZ4Segment<pmr_string>>(allocator, std::move(empty_blocks),
+      return std::make_shared<LZ4Segment<pmr_string>>(std::move(empty_blocks),
                                                           std::move(optional_null_values), std::move(empty_dictionary),
                                                           nullptr, _block_size, 0u, 0u, null_values.size());
     }
@@ -255,8 +255,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       total_compressed_size += compressed_block.size();
     }
 
-    return std::allocate_shared<LZ4Segment<pmr_string>>(
-        allocator, std::move(lz4_blocks), std::move(optional_null_values), std::move(dictionary),
+    return std::make_shared<LZ4Segment<pmr_string>>(
+        std::move(lz4_blocks), std::move(optional_null_values), std::move(dictionary),
         std::move(compressed_offsets), _block_size, last_block_size, total_compressed_size, null_values.size());
   }
 

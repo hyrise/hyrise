@@ -39,6 +39,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
 
     if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
+      // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
+      // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
+      // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
+      // PosList has no NULL values. However, once we have a `has_null_values` flag in a smarter PosList, we should
+      // use it here.
+
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
 
       bool functor_was_called = false;
@@ -73,7 +79,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
             const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
 
-            // TODO this assumes that references_single_chunk implies that the PosList contains no NULL values itself
             segment_iterable.with_iterators(pos_list, functor);
 
             functor_was_called = true;

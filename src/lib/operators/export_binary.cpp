@@ -20,7 +20,7 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-// // Writes the content of the vector to the ofstream
+// Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
 void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
 

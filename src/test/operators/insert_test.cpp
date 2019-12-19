@@ -161,6 +161,7 @@ TEST_F(OperatorsInsertTest, Rollback) {
     validate->execute();
     EXPECT_EQ(validate->get_output()->row_count(), 3u);
   };
+  check();
 
   context1->rollback();
   check();
