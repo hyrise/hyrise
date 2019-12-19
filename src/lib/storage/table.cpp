@@ -31,6 +31,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _max_chunk_size(type == TableType::Data ? max_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
       _append_mutex(std::make_unique<std::mutex>()) {
   // _max_chunk_size has no meaning if the table is a reference table.
+  DebugAssert(max_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
   DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }

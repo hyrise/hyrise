@@ -1,8 +1,9 @@
 #pragma once
 
+#include <memory>
+
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
-#include <memory>
 
 #include "gtest/gtest.h"
 

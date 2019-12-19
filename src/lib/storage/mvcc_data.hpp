@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * Stores visibility information for multiversion concurrency control
+ * Stores visibility information for multiversion concurrency control.
  */
 struct MvccData {
   friend class Chunk;
@@ -18,6 +18,8 @@ struct MvccData {
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
+  // Note that these vectors may be longer than the chunk this MvccData struct belongs to (see the note in the
+  // constructor)
   pmr_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
   pmr_vector<CommitID> begin_cids;                  ///< commit id when record was added
   pmr_vector<CommitID> end_cids;                    ///< commit id when record was deleted
@@ -28,9 +30,9 @@ struct MvccData {
 
   // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
+  // For the same reason, we do not use reserve + resize, as we would have to rule out two transactions calling resize
+  // concurrently.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
-
-  size_t size() const;
 
   /**
    * The thread sanitizer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
@@ -53,11 +55,6 @@ struct MvccData {
    * via the get_scoped_mvcc_data_lock() getters
    */
   std::shared_mutex _mutex;
-
-  /**
-   * This does not need to be atomic, as appends to a chunk's MvccData are guarded by the table's append_mutex.
-   */
-  size_t _size{0};
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

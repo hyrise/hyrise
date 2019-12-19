@@ -39,7 +39,6 @@ using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatisti
 class Chunk : private Noncopyable {
  public:
   // The last chunk offset is reserved for NULL as used in ReferenceSegments.
-  // TODO get rid of this?
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
   // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,

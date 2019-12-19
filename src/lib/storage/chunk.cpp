@@ -99,7 +99,7 @@ void Chunk::finalize() {
   if (has_mvcc_data()) {
     Assert(!_mvcc_data->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
 
-    _mvcc_data->max_begin_cid = *(std::max_element(_mvcc_data->begin_cids.begin(), _mvcc_data->begin_cids.end()));
+    _mvcc_data->max_begin_cid = *(std::max_element(_mvcc_data->begin_cids.begin(), _mvcc_data->begin_cids.begin() + size()));
     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
            "finalized before all transactions committed/rolled back.");
