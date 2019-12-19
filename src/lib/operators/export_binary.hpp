@@ -6,6 +6,8 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -114,7 +116,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Encoding Type         | EncodingType                          |   1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
@@ -135,7 +137,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Encoding Type         | EncodingType                          |   1
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
@@ -160,7 +162,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type            | ColumnType                            |   1
+   * Encoding Type          | EncodingType                          |   1
    * Run count              | uint32_t                              |   4
    * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
    * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
@@ -176,9 +178,71 @@ class ExportBinary : public AbstractReadOnlyOperator {
   template <typename T>
   static void _write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream);
 
-  // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
-  static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                       const BaseCompressedVector& attribute_vector);
+  /**
+   * FrameOfReference Segments are dumped with the following layout:
+   *
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Encoding Type          | EncodingType                          |   1
+   * Width of offset v.     | AttributeVectorWidth                  |   1
+   * Number of Blocks       | uint32_t                              |   4
+   * Block minima           | T                                     |   Number of Blocks * sizeof(T)
+   * Size                   | uint32_t                              |   4
+   * NULL values            | vector<bool> (BoolAsByteType)         |   size * 1
+   * Offset values          | uint32_t                              |   size * 4
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   *
+   * @param frame_of_reference_segment The segment to export
+   * @param ofstream The output stream for exporting
+   */
+  template <typename T>
+  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, std::ofstream& ofstream);
+
+  /**
+   * LZ4 Segments are dumped with the following layout:
+   *
+   * Description             | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Encoding Type           | EncodingType                          |   1
+   * Number of Rows (in seg) | uint32_t                              |   4
+   * Number of Blocks        | uint32_t                              |   4
+   * Block size¹             | uint32_t                              |   4
+   * Last Block size         | uint32_t                              |   4
+   * lz4 Block sizes         | vector<uint32_t>                      |   number of blocks * 4
+   * lz4 Blocks              | vector<vector<char>>                  |   sum(lz4 block sizes)
+   * NULL values size        | uint32_t                              |   4
+   * NULL values²            | vector<bool> (BoolAsByteType)         |   size * 1
+   * Dictionary size         | uint32_t                              |   4
+   * Dictionary              | vector<char>                          |   dictionary size * 1
+   * string offset size      | uint32_t                              |   4
+   * string offset data size³| uint32_t                              |   4
+   * string offset³          | uint32_t                              |   size * 4
+
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   * ¹: This field is written if the number of blocks is greater than 1. Otherwise "Last Block Size" contains the
+   *    size of the single block or 0 if there are no blocks
+   * ²: This field is only written if NULL value size is not 0
+   * ³: These fields are only written if string offset size is not 0
+   *
+   * @param lz4_segment The segment to export
+   * @param ofstream The output stream for exporting
+   */
+  template <typename T>
+  static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
+
+ private:
+  template <typename T>
+  static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_encoded_segment);
+
+  // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
+  static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
+                                        const BaseCompressedVector& compressed_vector);
 
   template <typename T>
   static size_t _size(const T& object);
