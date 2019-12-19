@@ -80,16 +80,15 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     // The dictionary size is incremented here to create the value ID for possible null values.
     const auto max_value_id = dictionary->size() + 1u;
 
-    const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(
-        compress_vector(uncompressed_attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
-                        allocator, {max_value_id}));
+    const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(compress_vector(
+        uncompressed_attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
+        allocator, {max_value_id}));
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto fixed_string_dictionary =
           std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length);
-      return std::make_shared<FixedStringDictionarySegment<T>>(fixed_string_dictionary,
-                                                                   compressed_attribute_vector);
+      return std::make_shared<FixedStringDictionarySegment<T>>(fixed_string_dictionary, compressed_attribute_vector);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
       return std::make_shared<DictionarySegment<T>>(dictionary, compressed_attribute_vector);

@@ -107,7 +107,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     auto compressed_offset_values = compress_vector(offset_values, vector_compression_type(), allocator, {max_offset});
 
     return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::move(null_values),
-                                                            std::move(compressed_offset_values));
+                                                        std::move(compressed_offset_values));
   }
 };
 

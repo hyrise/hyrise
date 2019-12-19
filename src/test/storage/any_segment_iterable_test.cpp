@@ -69,5 +69,6 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
 }
 
 INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
-                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, true)), all_segment_encoding_specs_formatter);
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, true)),
+                         all_segment_encoding_specs_formatter);
 }  // namespace opossum

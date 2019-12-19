@@ -125,8 +125,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(optional_null_values),
-                                               std::move(dictionary), _block_size, last_block_size,
-                                               total_compressed_size, values.size());
+                                           std::move(dictionary), _block_size, last_block_size, total_compressed_size,
+                                           values.size());
   }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
@@ -218,9 +218,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     if (num_chars == 0) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{allocator};
       auto empty_dictionary = pmr_vector<char>{};
-      return std::make_shared<LZ4Segment<pmr_string>>(std::move(empty_blocks),
-                                                          std::move(optional_null_values), std::move(empty_dictionary),
-                                                          nullptr, _block_size, 0u, 0u, null_values.size());
+      return std::make_shared<LZ4Segment<pmr_string>>(std::move(empty_blocks), std::move(optional_null_values),
+                                                      std::move(empty_dictionary), nullptr, _block_size, 0u, 0u,
+                                                      null_values.size());
     }
 
     // Compress the offsets with SimdBp128 vector compression to reduce the memory footprint of the LZ4 segment.
@@ -255,9 +255,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       total_compressed_size += compressed_block.size();
     }
 
-    return std::make_shared<LZ4Segment<pmr_string>>(
-        std::move(lz4_blocks), std::move(optional_null_values), std::move(dictionary),
-        std::move(compressed_offsets), _block_size, last_block_size, total_compressed_size, null_values.size());
+    return std::make_shared<LZ4Segment<pmr_string>>(std::move(lz4_blocks), std::move(optional_null_values),
+                                                    std::move(dictionary), std::move(compressed_offsets), _block_size,
+                                                    last_block_size, total_compressed_size, null_values.size());
   }
 
  private:
