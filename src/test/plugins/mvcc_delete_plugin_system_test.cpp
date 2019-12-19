@@ -62,7 +62,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * Updates a single row to make it invalid in its chunk. Data modification is not involved, so the row gets reinserted
    * at the end of the table.
    * - Updates start at position 220 (INITIAL_UPDATE_OFFSET), so the first chunk stays untouched.
-   * - Updates stop just before the end of Chunk 3, so that it is "fresh" and not cleaned up.
+   * - Updates stop just before the end of Chunk 3 (at position 598), so that it is "fresh" and not cleaned up.
    */
   void update_next_row() {
     if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) return;  // -> if (_counter == 598)...
@@ -267,7 +267,6 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   {
     auto attempts_remaining = max_attempts;
     while (attempts_remaining--) {
-      std::cout << "attempts_remaining: " << attempts_remaining << std::endl;
       // Chunk 3 should have been logically deleted by now
       const auto chunk3 = _table->get_chunk(ChunkID{2});
       EXPECT_TRUE(chunk3);
