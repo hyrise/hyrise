@@ -130,8 +130,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
-                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, false)),
-                         formatter);
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, false)), formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});

@@ -66,5 +66,4 @@ inline std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(c
   return segment_encodings;
 }
 
-
 }  // namespace opossum

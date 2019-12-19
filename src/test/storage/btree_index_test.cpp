@@ -251,9 +251,9 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   ASSERT_LE(pmr_string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
-  auto local_values = pmr_vector<pmr_string>{"hotelhotelhotelhotelhotel", "deltadeltadeltadelta", "frankfrankfrankfrank",
-                                  "deltadeltadeltadelta",      "appleappleappleapple", "charliecharliecharlie",
-                                  "charliecharliecharlie",     "inboxinboxinboxinbox"};
+  auto local_values = pmr_vector<pmr_string>{
+      "hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
+      "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
   segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 

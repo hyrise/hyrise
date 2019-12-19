@@ -64,8 +64,8 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
 }
 
 INSTANTIATE_TEST_SUITE_P(SegmentsUsingAllocatorsTestInstances, SegmentsUsingAllocatorsTest,
-                        ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                                            std::end(all_segment_encoding_specs)),
-                        all_segment_encoding_specs_formatter);
+                         ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
+                                             std::end(all_segment_encoding_specs)),
+                         all_segment_encoding_specs_formatter);
 
 }  // namespace opossum
