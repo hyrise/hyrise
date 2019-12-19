@@ -85,7 +85,7 @@ TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
   chunk->finalize();
 
-  auto mvcc_data_chunk = chunk->get_scoped_mvcc_data_lock();
+  auto mvcc_data_chunk = chunk->mvcc_data();
   EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
 }
 

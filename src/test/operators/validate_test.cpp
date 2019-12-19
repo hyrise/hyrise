@@ -70,16 +70,11 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
   }
 }
 
-<<<<<<< HEAD
-void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, CommitID end_cid) {
-  table.get_chunk(row.chunk_id)->mvcc_data()->end_cids[row.chunk_offset] = end_cid;
-=======
 void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID end_cid) {
   auto chunk = table.get_chunk(row.chunk_id);
 
-  chunk->get_scoped_mvcc_data_lock()->end_cids[row.chunk_offset] = end_cid;
+  chunk->mvcc_data()->end_cids[row.chunk_offset] = end_cid;
   chunk->increase_invalid_row_count(1);
->>>>>>> origin/master
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {

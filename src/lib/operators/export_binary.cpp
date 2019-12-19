@@ -21,8 +21,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // // Writes the content of the vector to the ofstream
-// template <typename T>
-// void export_values(std::ofstream& ofstream, const pmr_vector<T>& values);
+template <typename T, typename Alloc>
+void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the strings are
  * written without any gaps between them.
@@ -41,7 +41,7 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
     total_length += values[i].size();
   }
 
-  // export_values(ofstream, string_lengths);
+  export_values(ofstream, string_lengths);
 
   // We do not have to iterate over values if all strings are empty.
   if (total_length == 0) return;
@@ -54,26 +54,26 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
     start += str.size();
   }
 
-  // export_values(ofstream, buffer);
+  export_values(ofstream, buffer);
 }
 
-// template <typename T, typename Alloc>
-// void export_values(std::ofstream& ofstream, const std::vector<T>& values) {
-//   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
-// }
+template <typename T, typename Alloc>
+void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
+  ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
+}
 
 // specialized implementation for string values
-// template <>
-// void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values) {
-//   export_string_values(ofstream, values);
-// }
+template <>
+void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values) {
+  export_string_values(ofstream, values);
+}
 
 // specialized implementation for bool values
 template <typename Alloc>
 void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& values) {
   // Cast to fixed-size format used in binary file
   const auto writable_bools = pmr_vector<BoolAsByteType>(values.begin(), values.end());
-  // export_values(ofstream, writable_bools);
+  export_values(ofstream, writable_bools);
 }
 
 // Writes a shallow copy of the given value to the ofstream
@@ -134,7 +134,7 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
     column_names[column_id] = table.column_name(column_id);
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
   }
-  // export_values(ofstream, column_types);
+  export_values(ofstream, column_types);
   export_values(ofstream, columns_are_nullable);
   export_string_values(ofstream, column_names);
 }
@@ -164,7 +164,7 @@ void ExportBinary::_write_segment(const ValueSegment<T>& value_segment, std::ofs
     export_values(ofstream, value_segment.null_values());
   }
 
-  // export_values(ofstream, value_segment.values());
+  export_values(ofstream, value_segment.values());
 }
 
 void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream) {
@@ -186,7 +186,7 @@ void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std
         values << value.value();
       });
 
-      // export_values(ofstream, string_lengths);
+      export_values(ofstream, string_lengths);
       ofstream << values.rdbuf();
 
     } else {
@@ -211,7 +211,7 @@ void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment
 
   // Write the dictionary size and dictionary
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
-  // export_values(ofstream, *dictionary_segment.dictionary());
+  export_values(ofstream, *dictionary_segment.dictionary());
 
   // Write attribute vector
   Assert(dictionary_segment.compressed_vector_type(),
@@ -226,13 +226,13 @@ void ExportBinary::_write_segment(const RunLengthSegment<T>& run_length_segment,
 
   // Write size and values
   export_value(ofstream, static_cast<uint32_t>(run_length_segment.values()->size()));
-  // export_values(ofstream, *run_length_segment.values());
+  export_values(ofstream, *run_length_segment.values());
 
   // Write NULL values
   export_values(ofstream, *run_length_segment.null_values());
 
   // Write end positions
-  // export_values(ofstream, *run_length_segment.end_positions());
+  export_values(ofstream, *run_length_segment.end_positions());
 }
 
 template <typename T>

@@ -78,15 +78,4 @@ inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        E
                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
                                                EncodingType::RunLength,        EncodingType::LZ4};
 
-inline constexpr std::array all_segment_encoding_specs{
-    SegmentEncodingSpec{EncodingType::Unencoded},
-    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-    SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-    SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-    SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
-    SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-    SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
-    SegmentEncodingSpec{EncodingType::RunLength}};
-
 }  // namespace opossum

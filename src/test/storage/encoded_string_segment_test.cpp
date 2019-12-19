@@ -5,7 +5,7 @@
 #include <sstream>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "storage/encoding_test.hpp"
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -128,7 +128,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
-                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::String, false)),
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::String, false)),
                          formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {

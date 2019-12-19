@@ -63,7 +63,7 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   EXPECT_EQ(resource.allocated, estimated_usage);
 }
 
-INSTANTIATE_TEST_CASE_P(SegmentsUsingAllocatorsTestInstances, SegmentsUsingAllocatorsTest,
+INSTANTIATE_TEST_SUITE_P(SegmentsUsingAllocatorsTestInstances, SegmentsUsingAllocatorsTest,
                         ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
                                             std::end(all_segment_encoding_specs)),
                         all_segment_encoding_specs_formatter);

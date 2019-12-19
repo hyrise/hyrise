@@ -98,8 +98,8 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 
 // A2, B2, C1
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
-  values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
+  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
@@ -251,10 +251,10 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   ASSERT_LE(pmr_string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
-  values = pmr_vector<pmr_string>{"hotelhotelhotelhotelhotel", "deltadeltadeltadelta", "frankfrankfrankfrank",
+  auto local_values = pmr_vector<pmr_string>{"hotelhotelhotelhotelhotel", "deltadeltadeltadelta", "frankfrankfrankfrank",
                                   "deltadeltadeltadelta",      "appleappleappleapple", "charliecharliecharlie",
                                   "charliecharliecharlie",     "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.

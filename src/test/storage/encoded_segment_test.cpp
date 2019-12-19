@@ -8,6 +8,7 @@
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/encoding_test.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -129,7 +130,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
-                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, false)),
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, false)),
                          formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {

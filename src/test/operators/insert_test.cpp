@@ -147,41 +147,22 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto get_table1 = std::make_shared<GetTable>(table_name);
   get_table1->execute();
 
-<<<<<<< HEAD
-  auto ins = std::make_shared<Insert>(t_name, gt1);
-  auto context1 = TransactionManager::get().new_transaction_context();
-  ins->set_transaction_context(context1);
-  ins->execute();
-
-  const auto check = [&]() {
-    auto gt2 = std::make_shared<GetTable>(t_name);
-    gt2->execute();
-    auto validate = std::make_shared<Validate>(gt2);
-    auto context2 = TransactionManager::get().new_transaction_context();
-    validate->set_transaction_context(context2);
-    validate->execute();
-
-    EXPECT_EQ(validate->get_output()->row_count(), 3u);
-  };
-
-  check();
-
-  context1->rollback();
-=======
   auto insert = std::make_shared<Insert>(table_name, get_table1);
   auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
   insert->set_transaction_context(context1);
   insert->execute();
+
+  const auto check = [&]() {
+    auto get_table2 = std::make_shared<GetTable>(table_name);
+    get_table2->execute();
+    auto validate = std::make_shared<Validate>(get_table2);
+    auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
+    validate->set_transaction_context(context2);
+    validate->execute();
+    EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  };
+
   context1->rollback();
-
-  auto get_table2 = std::make_shared<GetTable>(table_name);
-  get_table2->execute();
-  auto validate = std::make_shared<Validate>(get_table2);
-  auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
-  validate->set_transaction_context(context2);
-  validate->execute();
->>>>>>> origin/master
-
   check();
 }
 
