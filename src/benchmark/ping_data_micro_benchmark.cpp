@@ -164,15 +164,15 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
               }
             }
 
-            // create index 
-            if (order_by_column == ORDER_COLUMNS[0] && encoding == EncodingType::Dictionary) {
-              const auto column_count = sorted_table->column_count();
-              std::cout << "Creating indexes: ";
-              for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-                sorted_table->create_index<GroupKeyIndex>({column_id});
-              }
-              std::cout << " done." << std::endl;
-            }
+            // // create index 
+            // if (order_by_column == ORDER_COLUMNS[0] && encoding == EncodingType::Dictionary) {
+            //   const auto column_count = sorted_table->column_count();
+            //   std::cout << "Creating indexes: ";
+            //   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+            //     sorted_table->create_index<GroupKeyIndex>({column_id});
+            //   }
+            //   std::cout << " done." << std::endl;
+            // }
           }
         }
       }
