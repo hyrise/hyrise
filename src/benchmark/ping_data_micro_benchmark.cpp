@@ -32,8 +32,8 @@ const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 //const auto CHUNK_SIZES = std::vector{size_t{10}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 // TODO: evaluate Frame of Reference as well, fall back to dictionary for unsupported data types
-//const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength, EncodingType::FrameOfReference};
-const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded, SegmentEncodingSpec{EncodingType::Dictionary, SegmentEncodingSpec{EncodingType::LZ4, SegmentEncodingSpec{EncodingType::RunLength, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128};
+const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
 
 // single value benchmark values (median, min, max)
 // determined by column stats python script
@@ -141,14 +141,14 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
         auto loaded_table = load_table(TBL_FILE, chunk_size);
 
         for (const auto order_by_column : ORDER_COLUMNS) {
-          for (const auto encoding : CHUNK_ENCODINGS) {
+          for (const opossum::SegmentEncodingSpec & encoding : CHUNK_ENCODINGS) {
 
             // Maybe there is a better way to do this
-            const auto encoding_type = encoding_type_to_string.left.at(encoding);
+            const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
             const auto sorted_table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
             auto table_wrapper = std::make_shared<TableWrapper>(loaded_table);
             table_wrapper->execute();
-            const auto chunk_encoding_spec = ChunkEncodingSpec(table_wrapper->get_output()->column_count(), {SegmentEncodingSpec{encoding}});
+            const auto chunk_encoding_spec = ChunkEncodingSpec(table_wrapper->get_output()->column_count(), {encoding});
 
             auto sorted_table = sort_table_chunk_wise(loaded_table, order_by_column, chunk_size, chunk_encoding_spec);
             storage_manager.add_table(sorted_table_name, sorted_table);
@@ -224,7 +224,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)(benchmark::Stat
   const auto sort_column = ORDER_COLUMNS[state.range(3)];
 
 
-  const auto encoding_type = encoding_type_to_string.left.at(encoding);
+  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
   const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
@@ -264,7 +264,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEq
   const auto search_value_index = state.range(4);
 
 
-  const auto encoding_type = encoding_type_to_string.left.at(encoding);
+  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
   const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
@@ -312,10 +312,10 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEq
 
           const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
           if (unencoded_segment) {
-            Assert(encoding == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
+            Assert(encoding.encoding_type == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
           } else {
             const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-            Assert(encoded_segment && encoded_segment->encoding_type() == encoding, "Encoding type not as requested for " + scan_column + ".");
+            Assert(encoded_segment && encoded_segment->encoding_type() == encoding.encoding_type, "Encoding type not as requested for " + scan_column + ".");
           }
 
           if (column_id == order_by_column_id) {
@@ -352,7 +352,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerform
   const auto search_value_index = state.range(4);
 
 
-  const auto encoding_type = encoding_type_to_string.left.at(encoding);
+  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
   const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
@@ -400,10 +400,10 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerform
 
           const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
           if (unencoded_segment) {
-            Assert(encoding == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
+            Assert(encoding.encoding_type == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
           } else {
             const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-            Assert(encoded_segment && encoded_segment->encoding_type() == encoding, "Encoding type not as requested for " + scan_column + ".");
+            Assert(encoded_segment && encoded_segment->encoding_type() == encoding.encoding_type, "Encoding type not as requested for " + scan_column + ".");
           }
 
           if (column_id == order_by_column_id) {
@@ -440,9 +440,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark
   const auto search_value_index = state.range(4);
 
   if (order_by_column != ORDER_COLUMNS[0]) state.SkipWithError("Running only for a single random sorted column (should not matter for index scans). Skipping others.");
-  if (encoding != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
+  if (encoding.encoding_type != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
 
-  const auto encoding_type = encoding_type_to_string.left.at(encoding);
+  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
   const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
