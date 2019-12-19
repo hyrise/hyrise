@@ -50,7 +50,8 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
   if (has_mvcc_data()) {
-    // Make the row visible
+    // Make the row visible - mvcc_data has been pre-allocated
+    DebugAssert(mvcc_data()->tids.size() > size(), "MvccData capacity exhausted");
     mvcc_data()->begin_cids[size()] = CommitID{0};
   }
 
@@ -99,6 +100,7 @@ void Chunk::finalize() {
   if (has_mvcc_data()) {
     Assert(!_mvcc_data->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
 
+    // Do not use begin_cids.end() because that vector is pre-allocated and might be larger than the chunk
     _mvcc_data->max_begin_cid = *(std::max_element(_mvcc_data->begin_cids.begin(), _mvcc_data->begin_cids.begin() + size()));
     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "

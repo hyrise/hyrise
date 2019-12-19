@@ -63,7 +63,7 @@ std::shared_ptr<BaseSegment> FixedStringDictionarySegment<T>::copy_using_allocat
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary);
-  return std::make_shared<FixedStringDictionarySegment<T>>(new_dictionary, new_attribute_vector);
+  return std::make_shared<FixedStringDictionarySegment<T>>(new_dictionary, std::move(new_attribute_vector));
 }
 
 template <typename T>

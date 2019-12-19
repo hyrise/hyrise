@@ -500,7 +500,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});

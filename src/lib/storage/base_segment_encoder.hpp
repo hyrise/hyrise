@@ -136,7 +136,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
 
-    // For now, we allocate without a specifically set node.
+    // For now, we allocate without a specific memory source.
     return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
   }
   /**@}*/
