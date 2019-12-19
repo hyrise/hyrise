@@ -25,15 +25,16 @@ using namespace opossum;
 // benchmark seetings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "ping";
-//constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
+constexpr auto SEGMENT_META_DATA_FILE = "../../out/segment_meta_data_int_no_index.csv";
+constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 //constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
-constexpr auto TBL_FILE = "../../data/100_pings.tbl";
+//constexpr auto TBL_FILE = "../../data/100_pings_int.tbl";
 const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 //const auto CHUNK_SIZES = std::vector{size_t{10}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 // TODO: evaluate Frame of Reference as well, fall back to dictionary for unsupported data types
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded, SegmentEncodingSpec{EncodingType::Dictionary, SegmentEncodingSpec{EncodingType::LZ4, SegmentEncodingSpec{EncodingType::RunLength, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128};
-const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
+const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
 
 // single value benchmark values (median, min, max)
 // determined by column stats python script
@@ -47,12 +48,15 @@ const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unenc
 // determined by column stats python script calculated with pandas, settings nearest 
 const auto BM_VAL_CAPTAIN_ID = std::vector{4, 4115, 11787, 57069, 176022, 451746, 616628, 901080, 1156169, 1233112, 1414788};
 const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
-const auto BM_VAL_LATITUDE = std::vector{10.2191832, 25.0455204, 25.0699667, 25.0872227, 25.1030861, 25.1244186, 25.1724729, 25.1966912, 25.2164364, 25.2437205, 60.1671321};
-const auto BM_VAL_LONGITUDE = std::vector{-213.5243575, 55.1423584, 55.1549474, 55.1792718, 55.2072508, 55.2470842, 55.2692599, 55.2806365, 55.3156638, 55.3640991, 212.33914};
+//const auto BM_VAL_LATITUDE = std::vector{10.2191832, 25.0455204, 25.0699667, 25.0872227, 25.1030861, 25.1244186, 25.1724729, 25.1966912, 25.2164364, 25.2437205, 60.1671321};
+//const auto BM_VAL_LONGITUDE = std::vector{-213.5243575, 55.1423584, 55.1549474, 55.1792718, 55.2072508, 55.2470842, 55.2692599, 55.2806365, 55.3156638, 55.3640991, 212.33914};
 
 //timestamp values string and unix timestamp
-//const auto BM_VAL_TIMESTAMP = std::vector{1541372479, 1541398637, 1541418563, 1541439501, 1542924244, 1545434420, 1545474895, 1545518017, 1548644767, 1548671748, 1548716462};
-const auto BM_VAL_TIMESTAMP = std::vector{"2018-11-05 00:01:19", "2018-11-05 07:17:17", "2018-11-05 12:49:23", "2018-11-05 18:38:21", "2018-11-22 23:04:04", "2018-12-22 00:20:20", "2018-12-22 11:34:55", "2018-12-22 23:33:37", "2019-01-28 04:06:07", "2019-01-28 11:35:48", "2019-01-29 00:01:02"};
+const auto BM_VAL_LATITUDE = std::vector{102191832, 250455204, 250699667, 250872227, 251030861, 251244186, 251724729, 251966912, 252164364, 252437205, 601671321};
+const auto BM_VAL_LONGITUDE = std::vector{-2135243575, 551423584, 551549474, 551792718, 552072508, 552470842, 552692599, 552806365, 553156638, 553640991, 2123391400};
+const auto BM_VAL_TIMESTAMP = std::vector{1541372479, 1541398637, 1541418563, 1541439501, 1542924244, 1545434420, 1545474895, 1545518017, 1548644767, 1548671748, 1548716462};
+
+//const auto BM_VAL_TIMESTAMP = std::vector{"2018-11-05 00:01:19", "2018-11-05 07:17:17", "2018-11-05 12:49:23", "2018-11-05 18:38:21", "2018-11-22 23:04:04", "2018-12-22 00:20:20", "2018-12-22 11:34:55", "2018-12-22 23:33:37", "2019-01-28 04:06:07", "2019-01-28 11:35:48", "2019-01-29 00:01:02"};
 const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
 
 ///////////////////////////////
@@ -131,7 +135,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     if (!_data_generated) {
 
       // file for table stats
-      std::ofstream segment_meta_data_csv_file("../../out/segment_meta_data.csv");
+      std::ofstream segment_meta_data_csv_file(SEGMENT_META_DATA_FILE);
       segment_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,CHUNK_SIZE,ROW_COUNT,SIZE_IN_BYTES\n";
       
       // Sort table and add sorted tables to the storage manager
