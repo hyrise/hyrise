@@ -48,11 +48,16 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    _segment.access_statistics().on_accessor_access(1, offset);
+    ++_accesses;
     return _segment.get_typed_value(offset);
   }
 
+  ~SegmentAccessor() {
+    _segment.access_statistics().on_accessor_access(_accesses, 0);
+  }
+
  protected:
+  mutable uint64_t _accesses;
   const SegmentType& _segment;
 };
 
@@ -106,12 +111,17 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    _segment.access_statistics().on_accessor_access(1, offset);
+    ++_accesses;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
   }
 
+  ~SingleChunkReferenceSegmentAccessor() {
+    _segment.access_statistics().on_accessor_access(_accesses, 0);
+  }
+
  protected:
+  mutable uint64_t _accesses;
   const PosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
