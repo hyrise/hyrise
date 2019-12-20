@@ -28,7 +28,7 @@ std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() c
   return copy;
 }
 
-std::string CorrelatedParameterExpression::as_column_name() const {
+std::string CorrelatedParameterExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "Parameter[";
   stream << "name=" << _referenced_expression_info.column_name << ";";

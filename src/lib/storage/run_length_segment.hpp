@@ -22,7 +22,22 @@ class BaseCompressedVector;
  * makes randomly accessing elements much faster.
  *
  * As in value segments, null values are represented as an
- * additional boolean vector.
+ * additional boolean vector. Note, NULLs are also stored in
+ * runs. When a NULL run covers multiple value runs, the
+ * first value is kept as a place holder and the following
+ * values (which are also NULL) are merged into this value
+ * run.
+ *
+ * Example:
+ *  values:          1 1 1 2 2 2 3 3 3
+ *  nulls:           0 0 0 0 0 1 1 1 0
+ *  value runs:     |1    |2    |3    |
+ *  null runs:      |0        |1    |0|
+ *
+ * Actually stored data:
+ *  values:          1 2 2 3  (note, repeating values)
+ *  null values:     0 0 1 0
+ *  end positions:   2 4 6 8
  */
 template <typename T>
 class RunLengthSegment : public BaseEncodedSegment {

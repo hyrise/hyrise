@@ -303,6 +303,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp
     optimizer/strategy/predicate_split_up_rule.hpp
+    optimizer/strategy/semi_join_reduction_rule.cpp
+    optimizer/strategy/semi_join_reduction_rule.hpp
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
@@ -409,6 +411,8 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
+    storage/create_iterable_from_reference_segment.ipp
+    storage/create_iterable_from_segment.ipp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp
     storage/dictionary_segment/dictionary_encoder.hpp

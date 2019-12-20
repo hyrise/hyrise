@@ -20,15 +20,17 @@ namespace opossum {
 PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractLQPNode(LQPNodeType::Predicate, {predicate}) {}
 
-std::string PredicateNode::description() const {
+std::string PredicateNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
+
   std::stringstream stream;
-  stream << "[Predicate] " << predicate()->as_column_name();
+  stream << "[Predicate] " << predicate()->description(expression_mode);
   return stream.str();
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
 
-size_t PredicateNode::_shallow_hash() const { return boost::hash_value(scan_type); }
+size_t PredicateNode::_on_shallow_hash() const { return boost::hash_value(scan_type); }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping));

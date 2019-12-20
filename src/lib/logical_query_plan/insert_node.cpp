@@ -12,7 +12,7 @@ namespace opossum {
 
 InsertNode::InsertNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Insert), table_name(table_name) {}
 
-std::string InsertNode::description() const {
+std::string InsertNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Insert] Into table '" << table_name << "'";
@@ -27,7 +27,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& InsertNode::column_expre
   return empty_vector;
 }
 
-size_t InsertNode::_shallow_hash() const { return boost::hash_value(table_name); }
+size_t InsertNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return InsertNode::make(table_name);

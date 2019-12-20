@@ -17,7 +17,7 @@ std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
   return std::make_shared<PlaceholderExpression>(parameter_id);
 }
 
-std::string PlaceholderExpression::as_column_name() const {
+std::string PlaceholderExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "Placeholder[id=" << std::to_string(parameter_id) << "]";
   return stream.str();

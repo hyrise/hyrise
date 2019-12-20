@@ -608,6 +608,16 @@ TEST_F(CardinalityEstimatorTest, PredicateOrDoesNotIncreaseCardinality) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 100);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateIn) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, list_(10, 11, 12, 13)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 40);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
