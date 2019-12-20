@@ -70,8 +70,7 @@ size_t DictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode mode)
 
 template <>
 size_t DictionarySegment<pmr_string>::memory_usage(const MemoryUsageCalculationMode mode) const {
-  return sizeof(*this) + estimate_string_vector_memory_usage(*_dictionary, mode) +
-         _attribute_vector->data_size();
+  return sizeof(*this) + estimate_string_vector_memory_usage(*_dictionary, mode) + _attribute_vector->data_size();
 }
 
 template <typename T>

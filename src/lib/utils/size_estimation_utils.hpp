@@ -27,16 +27,15 @@ size_t memory_usage_of_string_objects(const T& string_vector) {
 }
 
 template <typename T>
-size_t estimate_string_vector_memory_usage(const T& string_vector,
-                                           const MemoryUsageCalculationMode mode) {
+size_t estimate_string_vector_memory_usage(const T& string_vector, const MemoryUsageCalculationMode mode) {
   // std::cout << "BBBBBBB" << std::endl;
   const auto base_size = sizeof(T);
 
   if (string_vector.empty()) return base_size;
 
   if (mode == MemoryUsageCalculationMode::Full) {
-  	// Simple (but expensive case): the whole vector's string sizes are aggregated.
-  	// std::cout << "estimating fully" << std::endl;
+    // Simple (but expensive case): the whole vector's string sizes are aggregated.
+    // std::cout << "estimating fully" << std::endl;
     return base_size + memory_usage_of_string_objects(string_vector);
   }
 
@@ -51,8 +50,8 @@ size_t estimate_string_vector_memory_usage(const T& string_vector,
   pmr_vector<pmr_string> samples;
   samples.reserve(samples_to_draw);
 
-  std::sample(string_vector.begin(), string_vector.end(), std::back_inserter(samples),
-              samples_to_draw, std::random_device{});
+  std::sample(string_vector.begin(), string_vector.end(), std::back_inserter(samples), samples_to_draw,
+              std::random_device{});
   const auto sample_vector_memory_usage = memory_usage_of_string_objects(samples);
 
   // std::cout << "estimating " << samples_to_draw << " samples of " << string_vector.size() << std::endl;

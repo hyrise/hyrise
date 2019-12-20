@@ -2,6 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
+#include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -19,7 +20,7 @@ int32_t get_distinct_value_count(const std::shared_ptr<BaseSegment> segment) {
     std::unordered_set<ColumnDataType> distinct_values;
 
     auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-    iterable.with_iterators([&](auto it, auto end) {      
+    iterable.with_iterators([&](auto it, auto end) {
       for (auto current_position = size_t{0}; it != end; ++it, ++current_position) {
         const auto segment_item = *it;
         if (!segment_item.is_null()) {
@@ -30,7 +31,7 @@ int32_t get_distinct_value_count(const std::shared_ptr<BaseSegment> segment) {
     distinct_value_count = static_cast<int32_t>(distinct_values.size());
   });
   return distinct_value_count;
-};
+}
 
 auto gather_segment_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
@@ -49,26 +50,26 @@ auto gather_segment_data(const std::shared_ptr<Table>& meta_table, const MemoryU
           if (encoded_segment->compressed_vector_type()) {
             std::stringstream ss;
             ss << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string{ss.str()}; 
+            vector_compression = pmr_string{ss.str()};
           }
         }
 
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_value_count = get_distinct_value_count(segment);
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                                pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
-                                vector_compression, static_cast<int32_t>(estimated_size)});
+                              pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
+                              vector_compression, static_cast<int32_t>(estimated_size)});
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                                pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
-                                static_cast<int32_t>(estimated_size)});
+                              pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
+                              static_cast<int32_t>(estimated_size)});
         }
       }
     }
   }
-};
+}
 
-} // anonymous namespace
+}  // anonymous namespace
 
 namespace opossum {
 
@@ -169,15 +170,12 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
 
 std::shared_ptr<Table> MetaTableManager::generate_accurate_segments_table() {
   PerformanceWarning("Accurate segment information are expensive to gather. Use with caution.");
-  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
-                                              {"chunk_id", DataType::Int, false},
-                                              {"column_id", DataType::Int, false},
-                                              {"column_name", DataType::String, false},
-                                              {"column_data_type", DataType::String, false},
-                                              {"distinct_value_count", DataType::Int, false},
-                                              {"encoding_type", DataType::String, true},
-                                              {"vector_compression_type", DataType::String, true},
-                                              {"size_in_bytes", DataType::Int, false}};
+  const auto columns = TableColumnDefinitions{
+      {"table_name", DataType::String, false},       {"chunk_id", DataType::Int, false},
+      {"column_id", DataType::Int, false},           {"column_name", DataType::String, false},
+      {"column_data_type", DataType::String, false}, {"distinct_value_count", DataType::Int, false},
+      {"encoding_type", DataType::String, true},     {"vector_compression_type", DataType::String, true},
+      {"size_in_bytes", DataType::Int, false}};
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
   gather_segment_data(output_table, MemoryUsageCalculationMode::Full);

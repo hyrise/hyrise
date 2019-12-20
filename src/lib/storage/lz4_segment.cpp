@@ -451,7 +451,8 @@ size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode) const {
   if (_null_values) {
     bool_size = _null_values->size() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    bool_size = sizeof(_null_values) + (_null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT);
+    bool_size =
+        sizeof(_null_values) + (_null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT);
   }
 
   // The overhead of storing each block in a separate vector.

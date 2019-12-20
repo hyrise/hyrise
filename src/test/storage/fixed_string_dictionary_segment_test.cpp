@@ -161,8 +161,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   static constexpr auto size_of_dictionary = 3u;
 
   // We have to substract 1 since the empty FixedStringSegment actually contains one null terminator
-  EXPECT_EQ(dictionary_segment->memory_usage(),
-            empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
+  EXPECT_EQ(dictionary_segment->memory_usage(), empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 
 }  // namespace opossum

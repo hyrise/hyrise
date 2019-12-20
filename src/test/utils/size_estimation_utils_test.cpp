@@ -1,7 +1,7 @@
 #include "../base_test.hpp"
 
-#include "utils/size_estimation_utils.hpp"
 #include "types.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -38,13 +38,15 @@ TEST(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   // For the sampled method, we do not know wheter the SSO-exceeding elements will be in the taken sample. Hence, we
   // only run a sanity check, assuming all values fit within the SSO capacity.
   const auto expected_size_sample = sizeof(pmr_vector<pmr_string>) + vector_length * sizeof(pmr_string);
-  EXPECT_LE(expected_size_sample, estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Sampled));
+  EXPECT_LE(expected_size_sample,
+            estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Sampled));
 
   // For the full estimation, we should expect an accurate measurement. Four strings should reside in separate heap
   // allocations (+ 1 for the added \0 termination).
   const auto expected_size_full = expected_size_sample + 4 * (large_string_length + 1);
   EXPECT_EQ(expected_size_full, estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full));
-  EXPECT_GT(expected_size_full * 1.05, estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full));
+  EXPECT_GT(expected_size_full * 1.05,
+            estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full));
 }
 
 }  // namespace opossum
