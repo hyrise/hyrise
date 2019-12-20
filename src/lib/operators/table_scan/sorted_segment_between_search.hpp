@@ -1,6 +1,8 @@
 #pragma once
 
 #include <type_traits>
+#include <thread>
+#include <functional>
 
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
@@ -27,6 +29,47 @@ class SortedSegmentBetweenSearch {
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
+
+
+  void _exponential_search_for_nulls(IteratorType it_first, IteratorType it_last) {
+
+
+    if (it_first == it_last) return;
+    // If no null values are present
+    if (_is_nulls_first && !(*(it_first)).is_null()) {
+      return;
+    }
+
+
+    using difference_type = typename std::iterator_traits<IteratorType>::difference_type;
+    difference_type size = std::distance(it_first, it_last), bound = 1;
+
+    if (!_is_nulls_first && !((*(it_first + (size - 1))).is_null())){
+      return;
+    }
+
+
+    if (_is_nulls_first) {
+      while (bound < size && (*(it_first + bound)).is_null()) {
+        bound *= 2;
+      }
+
+      auto end = it_first + std::min(bound, size);
+      _begin = std::lower_bound(it_first + (bound / 2), end, false,
+                              [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+    } else {
+        bound = 1;
+      while (bound < size && (*(it_first + (size - bound))).is_null()) {
+        bound *= 2;
+      }
+
+      auto start = it_first + (size - std::min(bound, size));
+      _end = std::lower_bound(start, it_first + (size - bound / 2), true,
+                              [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+    }
+  }
+
+
   /**
    * _get_first_bound and _get_last_bound are used to retrieve the lower and upper bound in a sorted segment but are
    * independent of its sort order. _get_first_bound will always return the bound with the smaller offset and
@@ -36,11 +79,12 @@ class SortedSegmentBetweenSearch {
    * first offset will always point to an entry matching the search value, whereas last offset points to the entry
    * behind the last matching one.
    */
-  IteratorType _get_first_bound(const SearchValueType& search_value) const {
+  IteratorType _get_first_bound(const SearchValueType& search_value) {
     if (_is_ascending) {
-      return std::lower_bound(_begin, _end, search_value, [](const auto& segment_position, const auto& value) {
+      auto result = std::lower_bound(_begin, _end, search_value, [](const auto& segment_position, const auto& value) {
         return segment_position.value() < value;
       });
+      return result;
     } else {
       return std::lower_bound(_begin, _end, search_value, [](const auto& segment_position, const auto& value) {
         return segment_position.value() > value;
@@ -48,11 +92,12 @@ class SortedSegmentBetweenSearch {
     }
   }
 
-  IteratorType _get_last_bound(const SearchValueType& search_value) const {
+  IteratorType _get_last_bound(const SearchValueType& search_value) {
     if (_is_ascending) {
-      return std::upper_bound(_begin, _end, search_value, [](const auto& value, const auto& segment_position) {
+      auto result = std::upper_bound(_begin, _end, search_value, [](const auto& value, const auto& segment_position) {
         return segment_position.value() > value;
       });
+      return result;
     } else {
       return std::upper_bound(_begin, _end, search_value, [](const auto& value, const auto& segment_position) {
         return segment_position.value() < value;
@@ -107,17 +152,11 @@ class SortedSegmentBetweenSearch {
     }
   }
 
- public:
+public:
   template <typename ResultConsumer>
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
     // decrease the effective sort range by excluding null values based on their ordering
-    if (_is_nulls_first) {
-      _begin = std::lower_bound(_begin, _end, false,
-                                [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
-    } else {
-      _end = std::lower_bound(_begin, _end, true,
-                              [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
-    }
+    _exponential_search_for_nulls(_begin, _end);
     _set_begin_and_end();
     result_consumer(_begin, _end);
   }
