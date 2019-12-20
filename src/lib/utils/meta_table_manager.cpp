@@ -55,18 +55,10 @@ auto gather_segment_data(const std::shared_ptr<Table>& meta_table, const MemoryU
 
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_value_count = get_distinct_value_count(segment);
-          // std::cout << "accurate column count " << meta_table->column_count() << std::endl;
-          // std::cout << "appending" << table_name << static_cast<int32_t>(chunk_id) << static_cast<int32_t>(column_id) <<
-          //                       pmr_string{table->column_name(column_id)} << data_type << distinct_value_count << encoding << vector_compression <<
-          //                       static_cast<int32_t>(estimated_size) << std::endl;
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                                 pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
                                 vector_compression, static_cast<int32_t>(estimated_size)});
         } else {
-          // std::cout << "estimated column count " << meta_table->column_count() << std::endl;
-          // std::cout << "appending" << table_name << static_cast<int32_t>(chunk_id) << static_cast<int32_t>(column_id) <<
-          //                       pmr_string{table->column_name(column_id)} << data_type << encoding << vector_compression <<
-          //                       static_cast<int32_t>(estimated_size) << std::endl;
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                                 pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
                                 static_cast<int32_t>(estimated_size)});

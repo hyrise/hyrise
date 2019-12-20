@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "types.hpp"
-
 namespace opossum {
 
 // Removes whitespaces from the front and back. Also reduces multiple whitespaces between words to a single one.

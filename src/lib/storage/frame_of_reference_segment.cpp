@@ -62,10 +62,8 @@ std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator
 template <typename T, typename U>
 size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode) const {
   // MemoryUsageCalculationMode ignored since full calculation is efficient.
-  static const auto bits_per_byte = 8u;
-
   return sizeof(*this) + sizeof(T) * _block_minima.size() + _offset_values->data_size() +
-         _null_values.size() / bits_per_byte;
+         _null_values.size() / CHAR_BIT;
 }
 
 template <typename T, typename U>
