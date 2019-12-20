@@ -58,7 +58,6 @@ class SortedSegmentBetweenSearch {
       _begin = std::lower_bound(it_first + (bound / 2), end, false,
                               [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
     } else {
-        bound = 1;
       while (bound < size && (*(it_first + (size - bound))).is_null()) {
         bound *= 2;
       }
@@ -110,20 +109,40 @@ class SortedSegmentBetweenSearch {
     if (_is_ascending) {
       switch (_predicate_condition) {
         case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(_left_value);
-          _end = _get_last_bound(_right_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_first_bound(_left_value);
+            });
+            _end = _get_last_bound(_right_value);
+            get_lower_bound_thread.join();
+          }
           return;
         case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_last_bound(_left_value);
-          _end = _get_last_bound(_right_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_last_bound(_left_value);
+            });
+            _end = _get_last_bound(_right_value);
+            get_lower_bound_thread.join();
+          }
           return;
         case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_first_bound(_left_value);
-          _end = _get_first_bound(_right_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_first_bound(_left_value);
+            });
+            _end = _get_first_bound(_right_value);
+            get_lower_bound_thread.join();
+          }
           return;
         case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(_left_value);
-          _end = _get_first_bound(_right_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_last_bound(_left_value);
+            });
+            _end = _get_first_bound(_right_value);
+            get_lower_bound_thread.join();
+          }
           return;
         default:
           Fail("Unsupported predicate condition encountered");
@@ -131,20 +150,40 @@ class SortedSegmentBetweenSearch {
     } else {
       switch (_predicate_condition) {
         case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(_right_value);
-          _end = _get_last_bound(_left_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_first_bound(_right_value);
+            });
+            _end = _get_last_bound(_left_value);
+            get_lower_bound_thread.join();
+          }
           return;
         case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_first_bound(_right_value);
-          _end = _get_first_bound(_left_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_first_bound(_right_value);
+            });
+            _end = _get_first_bound(_left_value);
+            get_lower_bound_thread.join();
+          }
           return;
         case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_last_bound(_right_value);
-          _end = _get_last_bound(_left_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_last_bound(_right_value);
+            });
+            _end = _get_last_bound(_left_value);
+            get_lower_bound_thread.join();
+          }
           return;
         case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(_right_value);
-          _end = _get_first_bound(_left_value);
+          {
+            std::thread get_lower_bound_thread ([this](){
+              _begin = _get_last_bound(_right_value);
+            });
+            _end = _get_first_bound(_left_value);
+            get_lower_bound_thread.join();
+          }
           return;
         default:
           Fail("Unsupported predicate condition encountered");
