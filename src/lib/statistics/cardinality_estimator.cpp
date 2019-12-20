@@ -782,8 +782,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_co
   GenericHistogramBuilder<T> builder;
 
   for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
-    const auto left_min = left_histogram.bin_minimum(left_idx);
-    const auto right_min = right_histogram.bin_minimum(right_idx);
+    const auto& left_min = left_histogram.bin_minimum(left_idx);
+    const auto& right_min = right_histogram.bin_minimum(right_idx);
 
     if (left_min < right_min) {
       ++left_idx;
@@ -1034,8 +1034,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
 
   // Iterate over both unified histograms and find overlapping bins
   for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
-    const auto left_min = unified_left_histogram->bin_minimum(left_idx);
-    const auto right_min = unified_right_histogram->bin_minimum(right_idx);
+    const auto& left_min = unified_left_histogram->bin_minimum(left_idx);
+    const auto& right_min = unified_right_histogram->bin_minimum(right_idx);
 
     if (left_min < right_min) {
       ++left_idx;
