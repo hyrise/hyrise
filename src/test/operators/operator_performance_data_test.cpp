@@ -48,15 +48,15 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
       table_wrapper, greater_than_(BaseTest::get_column_expression(table_wrapper, ColumnID{0}), 1));
   table_scan->execute();
 
-  auto& performance_data = table_scan->performance_data();
-  EXPECT_GT(performance_data.walltime.count(), 0ul);
+  auto& performance_data = table_scan->performance_data;
+  EXPECT_GT(performance_data->walltime.count(), 0ul);
 
-  EXPECT_TRUE(performance_data.input_row_count_left);
-  EXPECT_EQ(3, *(performance_data.input_row_count_left));
+  EXPECT_TRUE(performance_data->input_row_count_left);
+  EXPECT_EQ(3, *(performance_data->input_row_count_left));
 
-  EXPECT_FALSE(performance_data.input_row_count_right);
+  EXPECT_FALSE(performance_data->input_row_count_right);
 
-  EXPECT_EQ(2, performance_data.output_row_count);
+  EXPECT_EQ(2, *(performance_data->output_row_count));
 }
 
 TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
@@ -65,7 +65,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
-  auto& perf = static_cast<const StagedOperatorPerformanceData&>(join->performance_data());
+  auto& perf = static_cast<const StagedOperatorPerformanceData&>(*join->performance_data);
 
   for (const auto stage : magic_enum::enum_values<JoinHash::OperatorStages>()) {
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(stage)).count() > 0);
@@ -84,11 +84,14 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
         table_wrapper, table_wrapper, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    auto& perf = static_cast<const StagedOperatorPerformanceData&>(join->performance_data());
+    auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count() == 0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() > 0);
+    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() >
+                0);
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count() > 0);
+    EXPECT_EQ(perf.chunks_scanned_with_index, 0);
+    EXPECT_EQ(perf.chunks_scanned_without_index, 2);
   }
 
   // Add group-key index (required dictionary encoding) to table
@@ -100,25 +103,31 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
         table_wrapper, table_wrapper, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    auto& perf = static_cast<const StagedOperatorPerformanceData&>(join->performance_data());
+    auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count() > 0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() == 0);
+    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() ==
+                0);
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count() > 0);
+    EXPECT_EQ(perf.chunks_scanned_with_index, 2);
+    EXPECT_EQ(perf.chunks_scanned_without_index, 0);
   }
   {
     // insert should create unencoded (unindexed) chunk
     table->append({17, 17});
-   
-   auto join = std::make_shared<JoinIndex>(
+
+    auto join = std::make_shared<JoinIndex>(
         table_wrapper, table_wrapper, JoinMode::Inner,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
-    auto& perf = static_cast<const StagedOperatorPerformanceData&>(join->performance_data());
+    auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count() > 0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() > 0);
+    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() >
+                0);
     EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count() > 0);
+    EXPECT_EQ(perf.chunks_scanned_with_index, 2);
+    EXPECT_EQ(perf.chunks_scanned_without_index, 1);
   }
 }
 
@@ -128,7 +137,7 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
       std::initializer_list<ColumnID>{ColumnID{1}});
   aggregate->execute();
 
-  auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(aggregate->performance_data());
+  auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(*aggregate->performance_data);
 
   for (const auto stage : magic_enum::enum_values<AggregateHash::OperatorStages>()) {
     EXPECT_TRUE(staged_performance_data.get_stage_runtime(*magic_enum::enum_index(stage)).count() > 0);

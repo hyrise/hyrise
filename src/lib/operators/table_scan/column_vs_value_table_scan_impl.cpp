@@ -115,6 +115,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   }
 
   if (_value_matches_none(segment, search_value_id)) {
+    ++chunk_scans_skipped;
     return;
   }
 
@@ -141,6 +142,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                                       PosList& matches,
                                                       const std::shared_ptr<const PosList>& position_filter,
                                                       const OrderByMode order_by_mode) const {
+  ++chunk_scans_sorted;
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 

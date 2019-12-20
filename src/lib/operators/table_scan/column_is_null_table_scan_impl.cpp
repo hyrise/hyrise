@@ -63,6 +63,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
   }
 
   if (_matches_none(segment)) {
+    ++chunk_scans_skipped;
     return;
   }
 

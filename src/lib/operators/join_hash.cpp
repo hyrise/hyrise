@@ -58,18 +58,6 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
   
-  if (description_mode == DescriptionMode::MultiLine) {
-    stream << " \nStage Runtimes ";
-    auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*_performance_data);
-    const auto stage_count = magic_enum::enum_count<OperatorStages>();
-    stream << "[";
-    for (auto stage = size_t{0}; stage < stage_count; ++stage) {
-      stream << format_duration(staged_performance_data.stage_runtimes[stage]);
-      if (stage < stage_count - 1) stream << "|";
-    } 
-    stream << "]";
-  }
-  
   return stream.str();
 }
 
@@ -189,7 +177,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
   }
 
-  auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*_performance_data);
+  auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*performance_data);
 
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
