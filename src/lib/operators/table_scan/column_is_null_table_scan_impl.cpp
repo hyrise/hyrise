@@ -63,7 +63,7 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
 
   DebugAssert(segment.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
 
-  auto iterable = NullValueVectorIterable{segment};
+  auto iterable = NullValueVectorIterable{segment.null_values()};
 
   const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
