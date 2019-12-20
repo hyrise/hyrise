@@ -188,7 +188,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
               
               for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
                 for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-                  const auto& index = sorted_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>({column_id});
+                  const auto& index = sorted_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
                   index_meta_data_csv_file << sorted_table_name << "," << sorted_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << index->memory_consumption() << "\n";
                 }
               }
