@@ -23,7 +23,6 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
