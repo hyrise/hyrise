@@ -31,7 +31,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10);
     const auto string_histogram = GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 10);
 
-    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -40,21 +40,22 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     a_b_expression = to_expression(a_b);
     a_c_expression = to_expression(a_c);
 
-    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 10, {histogram, histogram});
+    node_b =
+        create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram, histogram});
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     c_a = node_c->get_column("a");
 
-    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     d_a = node_d->get_column("a");
     d_b = node_d->get_column("b");
     d_c = node_d->get_column("c");
 
-    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     e_a = node_e->get_column("a");
     e_b = node_e->get_column("b");
@@ -942,91 +943,6 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
     node_a,
     ProjectionNode::make(expression_vector(b_a_plus_2, b_b),
       node_b));
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsSemiJoinWithoutReduction) {
-  // SELECT * FROM larger WHERE EXISTS (SELECT * FROM smaller WHERE larger.b = smaller.a)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, large_node_a);
-
-  // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(small_node_a, parameter),
-    small_node);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, large_node_a));
-
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery),
-    large_node);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(large_node_a, small_node_a),
-    large_node,
-    small_node);
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToSemiJoinWithReduction) {
-  // SELECT * FROM smaller WHERE EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
-
-  // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(large_node_a, parameter),
-    large_node);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, small_node_a));
-
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery),
-    small_node);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
-    small_node,
-    JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
-      large_node,
-      small_node));
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedNotExistsToSemiJoinWithReduction) {
-  // SELECT * FROM smaller WHERE NOT EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
-
-  // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(large_node_a, parameter),
-    large_node);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, small_node_a));
-
-  const auto input_lqp =
-  PredicateNode::make(not_exists_(subquery),
-    small_node);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::AntiNullAsFalse, equals_(small_node_a, large_node_a),
-    small_node,
-    JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
-      large_node,
-      small_node));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

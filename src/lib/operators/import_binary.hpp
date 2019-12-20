@@ -11,6 +11,8 @@
 #include "storage/base_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
 
@@ -140,10 +142,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 
-  // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
-  static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
-                                                                        AttributeVectorWidth attribute_vector_width);
-
   /*
    * Imports a serialized RunLengthSegment from the given file.
    * The file must contain data in the following format:
@@ -161,6 +159,20 @@ class ImportBinary : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
+
+  template <typename T>
+  static std::shared_ptr<FrameOfReferenceSegment<T>> _import_frame_of_reference_segment(std::ifstream& file,
+                                                                                        ChunkOffset row_count);
+
+  template <typename T>
+  static std::shared_ptr<LZ4Segment<T>> _import_lz4_segment(std::ifstream& file, ChunkOffset row_count);
+
+  // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
+  static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
+                                                                        AttributeVectorWidth attribute_vector_width);
+
+  static std::unique_ptr<const BaseCompressedVector> _import_offset_value_vector(
+      std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width);
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>
