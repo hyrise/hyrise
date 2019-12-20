@@ -66,6 +66,25 @@ std::vector<std::string> AtomicAccessStrategy::to_string() const {
 }
 
 // -------------------------------------------------------------------------------------------------------------------
+uint64_t NoAccessStrategy::count(SegmentAccessType type) const {
+  return 0;
+}
+
+void NoAccessStrategy::reset() {
+}
+
+void NoAccessStrategy::increase(SegmentAccessType type, uint64_t count) {
+}
+
+std::string NoAccessStrategy::header() {
+  return SegmentAccessTypeTools::headers;
+}
+
+std::vector<std::string> NoAccessStrategy::to_string() const {
+  return {""};
+}
+
+// -------------------------------------------------------------------------------------------------------------------
 AtomicTimedAccessStrategy::AtomicTimedAccessStrategy() {
   _counters.reserve(5000);
 }

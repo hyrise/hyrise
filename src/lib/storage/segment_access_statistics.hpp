@@ -88,6 +88,20 @@ class AtomicAccessStrategy {
 };
 
 // -----------------------------------------------------------------------------------------------------------------
+class NoAccessStrategy {
+ public:
+  uint64_t count(SegmentAccessType type) const;
+
+  void reset();
+
+  void increase(SegmentAccessType type, uint64_t count);
+
+  static std::string header();
+
+  std::vector<std::string> to_string() const;
+};
+
+// -----------------------------------------------------------------------------------------------------------------
 class AtomicTimedAccessStrategy {
  public:
   explicit AtomicTimedAccessStrategy();
@@ -126,6 +140,14 @@ class AtomicTimedAccessStrategy {
       }
     }
   };
+
+//  struct Counter {
+//    uint64_t timestamp;
+//    std::array<uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> counter;
+//
+//    Counter(uint64_t timestamp) : timestamp{timestamp}, counter{} {};
+//    Counter() : Counter(0ul) {}
+//  };
 
   pmr_concurrent_vector<Counter> _counters;
   Counter& _counter();
@@ -353,4 +375,5 @@ class SegmentAccessStatistics {
 };
 
   using SegmentAccessStatistics_T = SegmentAccessStatistics<AtomicTimedAccessStrategy, BulkCountingStrategy<AtomicTimedAccessStrategy>>;
+  // using SegmentAccessStatistics_T = SegmentAccessStatistics<NonLockingStrategy, BulkCountingStrategy<NonLockingStrategy>>;
 }  // namespace opossum
