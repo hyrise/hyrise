@@ -5,7 +5,6 @@
 
 #include "base_test.hpp"
 
-#include "../utils/constraint_test_utils.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -15,6 +14,7 @@
 #include "storage/constraints/table_constraint_definition.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "utils/constraint_test_utils.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
