@@ -80,6 +80,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     }
     const auto value_segment = std::make_shared<ValueSegment<Type>>(value_vector);
     table->append_chunk({value_segment});
+    table->last_chunk()->finalize();
   }
 
   if (encoding_type != EncodingType::Unencoded) {
