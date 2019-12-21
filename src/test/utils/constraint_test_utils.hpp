@@ -3,6 +3,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../src/lib/storage/constraints/table_constraint_definition.hpp"
+
 namespace opossum {
 
 /**
