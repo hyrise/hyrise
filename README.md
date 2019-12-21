@@ -153,4 +153,7 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
+-   Justin    Trautmann
+-   Hendrik   Tjabben
+-   Carl      Gödecken
 
