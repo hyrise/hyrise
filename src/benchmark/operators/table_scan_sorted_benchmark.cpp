@@ -119,8 +119,6 @@ void BM_TableScanSorted(
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
-  auto lower_search_value = AllTypeVariant{};
-  auto search_value = AllTypeVariant{};
 
   const auto table_wrapper = table_creator(encoding_type, mode);
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
@@ -129,29 +127,38 @@ void BM_TableScanSorted(
 
   const auto column_definition = table_column_definitions.at(column_index);
 
+  std::shared_ptr<AbstractPredicateExpression> predicate;
+  const auto column_expression =
+          pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
+
   resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-    const double raw_value = table_size * selectivity;
-    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-      lower_search_value = pad_string(std::to_string(0.0), STRING_SIZE);
-      search_value = pad_string(std::to_string(raw_value), STRING_SIZE);
+    if (is_between_scan) {
+      auto left_search_value = AllTypeVariant{};
+      auto right_search_value = AllTypeVariant{};
+      const double left_raw_value = table_size * (0.5 - selectivity / 2);
+      const double right_raw_value = table_size * (0.5 + selectivity / 2);
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        left_search_value = pad_string(std::to_string(left_raw_value), STRING_SIZE);
+        right_search_value = pad_string(std::to_string(right_raw_value), STRING_SIZE);
+      } else {
+        left_search_value = static_cast<ColumnDataType>(left_raw_value);
+        right_search_value = static_cast<ColumnDataType>(right_raw_value);
+      }
+      predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
+                                                      value_(left_search_value), value_(right_search_value));
     } else {
-      lower_search_value = static_cast<ColumnDataType>(0.0);
-      search_value = static_cast<ColumnDataType>(raw_value);
+      auto search_value = AllTypeVariant{};
+      const double raw_value = table_size * selectivity;
+      if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        search_value = pad_string(std::to_string(raw_value), STRING_SIZE);
+      } else {
+        search_value = static_cast<ColumnDataType>(raw_value);
+      }
+      predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, column_expression,
+                                                              value_(search_value));
     }
   });
-
-  const auto column_expression =
-      pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
-
-  std::shared_ptr<AbstractPredicateExpression> predicate;
-  if (is_between_scan) {
-    predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
-                                                            value_(lower_search_value), value_(search_value));
-  } else {
-    predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, column_expression,
-                                                               value_(search_value));
-  }
 
   auto warm_up = std::make_shared<TableScan>(table_wrapper, predicate);
   warm_up->execute();
