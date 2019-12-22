@@ -4,6 +4,7 @@
 #include <expression/expression_functional.hpp>
 #include <logical_query_plan/lqp_translator.hpp>
 #include <fstream>
+#include <cost_calibration/table_generator.h>
 
 #include "hyrise.hpp"
 #include "scheduler/operator_task.hpp"
@@ -19,62 +20,25 @@
 #include "types.hpp"
 
 using namespace opossum;  // NOLINT
-using namespace opossum::expression_functional;
+
 
 int main() {
-    constexpr auto row_count = size_t{1000000};
-    constexpr auto chunk_size = size_t{1000};
 
-    constexpr auto DELIMITER = ";";
-    constexpr auto NEW_LINE = "\n";
+    auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
+        {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String},
+        {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
+        {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)}
+    });
 
-    auto table_generator = std::make_shared<SyntheticTableGenerator>();
-    auto uniform_distribution_0_1 = ColumnDataDistribution::make_uniform_config(0.0, 10000.0);
+    auto table_generator = TableGenerator(table_config);
 
-    auto table = table_generator->generate_table(
-            {uniform_distribution_0_1, uniform_distribution_0_1, uniform_distribution_0_1},
-            {DataType::Double, DataType::Double, DataType::String},
-            row_count,
-            chunk_size,
-            {{EncodingType::Dictionary, EncodingType::Dictionary, EncodingType::Dictionary}},
-            {{"_a", "_b", "_c"}},
-            UseMvcc::Yes    // MVCC = Multiversion concurrency control
-                                      // this must be true because only MVCC tables can be added to storage manager
-    );
+    auto row_counts = {100, 1000, 10000, 100000, 1000000};
+    auto chunk_sizes = {100000};
 
-    Hyrise::get().storage_manager.add_table("t_a", table);
-    //const auto _t_a_a = Hyrise::get().storage_manager.get_table("t_a");
-
-    const auto _t_a = StoredTableNode::make("t_a");
-    //const auto _t_a_a = StaticTableNode::make(table);
-
-    const auto _a = _t_a->get_column("_a");
-    const auto _b = _t_a->get_column("_b");
-
-    std::ofstream output_performance_data_file;
-    output_performance_data_file.open ("/Users/lukas/Documents/git/hyrise/measurements/output_performance_data.csv");
-
-    for (int i = 0; i <= int(row_count); i+=  row_count / 1000 ){
-        const auto _projection_node_a =
-                ProjectionNode::make(expression_vector(_a),
-                                     PredicateNode::make(greater_than_(_b, i), _t_a));
-
-        const auto pqp = LQPTranslator{}.translate_node(_projection_node_a);
-        const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-        Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-
-        auto next = pqp->input_left();
-        while (next != nullptr) {
-
-            output_performance_data_file << next->name() << DELIMITER;
-            output_performance_data_file << i << DELIMITER;
-            output_performance_data_file << next->performance_data().walltime.count() << NEW_LINE;
-
-            next = next->input_left();
+    for (int row_count : row_counts) {
+        for (int chunk_size : chunk_sizes){
+            auto table = table_generator.generateTable(row_count, ChunkOffset(chunk_size));
+            Hyrise::get().storage_manager.add_table(std::to_string(row_count) + std::to_string(chunk_size), table);
         }
     }
-    //pqp->input_left()->performance_data().output_to_stream(output_performance_data_file);
-    output_performance_data_file.close();
 }
-
-
