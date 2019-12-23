@@ -49,6 +49,22 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     }
   }
 
+  // Test meta table for chunk sort orders
+  {
+    const auto int_int = load_table("resources/test_data/tbl/int_int.tbl", 100);
+    storage_manager.add_table("int_int_sort", int_int);
+
+    const auto meta_table = storage_manager.get_table(prefix + "chunk_sort_orders");
+    EXPECT_EQ(meta_table->row_count(), 0ul);
+
+    storage_manager.get_table("int_int_sort")->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{1}, OrderByMode::Ascending});
+    const auto meta_table_updated = storage_manager.get_table(prefix + "chunk_sort_orders");
+    EXPECT_EQ(meta_table_updated->row_count(), 1ul);
+    EXPECT_EQ(meta_table_updated->get_value<int32_t>("chunk_id", 0), 0);
+    EXPECT_EQ(meta_table_updated->get_value<pmr_string>("sorted_by_column_name", 0), "b");
+    EXPECT_EQ(meta_table_updated->get_value<pmr_string>("sort_order_mode", 0), pmr_string{"AscendingNullsFirst"});
+  }
+
   {
     // TEST SQL features on meta tables
     const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM meta_tables WHERE table_name = 'int_int'"}

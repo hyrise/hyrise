@@ -77,6 +77,7 @@ MetaTableManager::MetaTableManager() {
   _methods["tables"] = &MetaTableManager::generate_tables_table;
   _methods["columns"] = &MetaTableManager::generate_columns_table;
   _methods["chunks"] = &MetaTableManager::generate_chunks_table;
+  _methods["chunk_sort_orders"] = &MetaTableManager::generate_chunk_sort_orders_table;
   _methods["segments"] = &MetaTableManager::generate_segments_table;
   _methods["segments_accurate"] = &MetaTableManager::generate_accurate_segments_table;
 
@@ -146,6 +147,29 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
                                          : NULL_VALUE;
       output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int64_t>(chunk->size()),
                             static_cast<int64_t>(chunk->invalid_row_count()), cleanup_commit_id});
+    }
+  }
+
+  return output_table;
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
+                                              {"chunk_id", DataType::Int, false},
+                                              {"sorted_by_column_name", DataType::String, false},
+                                              {"sort_order_mode", DataType::String, false}};
+  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      const auto ordered_by = chunk->ordered_by();
+      if (ordered_by) {
+        std::stringstream order_by_mode_steam;
+        order_by_mode_steam << ordered_by->second;
+        output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), pmr_string{table->column_name(ordered_by->first)},
+                            pmr_string{order_by_mode_steam.str()}});
+      }
     }
   }
 
