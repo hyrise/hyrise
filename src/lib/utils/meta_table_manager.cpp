@@ -156,6 +156,25 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
 std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
+                                              {"column_id", DataType::Int, false},
+                                              {"order_mode", DataType::String, false}};
+  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      const auto ordered_by = chunk->ordered_by();
+      if (ordered_by) {
+        std::stringstream order_by_mode_steam;
+        order_by_mode_steam << ordered_by->second;
+        output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(ordered_by->first),
+                            pmr_string{order_by_mode_steam.str()}});
+      }
+    }
+  }
+
+  return output_table;
+}
                                               {"sorted_by_column_name", DataType::String, false},
                                               {"sort_order_mode", DataType::String, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);

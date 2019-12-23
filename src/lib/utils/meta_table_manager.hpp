@@ -23,6 +23,7 @@ class MetaTableManager : public Noncopyable {
   static std::shared_ptr<Table> generate_tables_table();
   static std::shared_ptr<Table> generate_columns_table();
   static std::shared_ptr<Table> generate_chunks_table();
+  static std::shared_ptr<Table> generate_chunk_sort_orders_table();
   static std::shared_ptr<Table> generate_indexes_table();
   static std::shared_ptr<Table> generate_segments_table();
   static std::shared_ptr<Table> generate_accurate_segments_table();
