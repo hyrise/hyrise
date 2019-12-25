@@ -25,20 +25,13 @@ using namespace opossum;  // NOLINT
 int main() {
 
     auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
-        {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String},
+        {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String, DataType::Null},
         {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
-        {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)}
+        {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)},
+        {100000},
+        {100, 1000, 10000, 100000, 1000000}
     });
 
     auto table_generator = TableGenerator(table_config);
-
-    auto row_counts = {100, 1000, 10000, 100000, 1000000};
-    auto chunk_sizes = {100000};
-
-    for (int row_count : row_counts) {
-        for (int chunk_size : chunk_sizes){
-            auto table = table_generator.generateTable(row_count, ChunkOffset(chunk_size));
-            Hyrise::get().storage_manager.add_table(std::to_string(row_count) + std::to_string(chunk_size), table);
-        }
-    }
+    auto tables = table_generator.generate();
 }
