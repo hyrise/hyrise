@@ -21,17 +21,21 @@ namespace opossum {
         std::set<DataType> data_types;
         std::set<EncodingType> encoding_types;
         std::vector<ColumnDataDistribution> column_data_distribution;
+        std::set<int> chunk_offsets;
+        std::set<int> row_counts;
     };
 
     class TableGenerator {
         public:
             TableGenerator(std::shared_ptr<TableGeneratorConfig> config);
-            std::shared_ptr<Table> generateTable(const size_t row_count, const ChunkOffset chunk_size);
+            std::vector<std::shared_ptr<Table>> generate() const;
 
         private:
             std::vector<DataType> data_types_collection;
             std::vector<SegmentEncodingSpec> segment_encoding_spec_collection;
             std::vector<ColumnDataDistribution> column_data_distribution_collection;
+            std::vector<int> chunk_offsets;
+            std::vector<int> row_counts;
             std::vector<std::string> column_names;
         };
 
