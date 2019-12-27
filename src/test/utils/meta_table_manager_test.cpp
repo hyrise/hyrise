@@ -61,7 +61,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     const auto meta_table_updated = storage_manager.get_table(prefix + "chunk_sort_orders");
     EXPECT_EQ(meta_table_updated->row_count(), 1ul);
     EXPECT_EQ(meta_table_updated->get_value<int32_t>("chunk_id", 0), 0);
-    EXPECT_EQ(meta_table_updated->get_value<pmr_string>("column_id", 0), 2);
+    EXPECT_EQ(meta_table_updated->get_value<int32_t>("column_id", 0), 1);
     EXPECT_EQ(meta_table_updated->get_value<pmr_string>("order_mode", 0), pmr_string{"AscendingNullsFirst"});
   }
 
