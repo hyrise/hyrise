@@ -4,13 +4,6 @@
 #include <all_type_variant.hpp>
 #include <storage/encoding_type.hpp>
 #include <synthetic_table_generator.hpp>
-
-/*
-#include <boost/fusion/adapted/struct.hpp>
-#include <boost/fusion/include/for_each.hpp>
-#include <boost/phoenix/phoenix.hpp>
-*/
-
 #include "types.hpp"
 
 class Table;
@@ -40,11 +33,3 @@ namespace opossum {
         };
 
 }
-
-/*
-BOOST_FUSION_ADAPT_STRUCT(opossum::TableGeneratorConfig,
-        (std::shared_ptr<std::set<DataType>>, data_types)
-        (std::shared_ptr<std::set<DataType>>, encoding_types)
-        (std::shared_ptr<std::set<ColumnDataDistribution>>, column_data_distribution)
-    )
-*/
