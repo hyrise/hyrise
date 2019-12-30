@@ -5,6 +5,7 @@
 #include <logical_query_plan/lqp_translator.hpp>
 #include <fstream>
 #include <cost_calibration/table_generator.h>
+#include <cost_calibration/lqp_generator/table_scan.hpp>
 
 #include "hyrise.hpp"
 #include "scheduler/operator_task.hpp"
@@ -34,4 +35,6 @@ int main() {
 
     auto table_generator = TableGenerator(table_config);
     auto tables = table_generator.generate();
+
+    auto lqp_generator = TableScanLQPGenerator();
 }

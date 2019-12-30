@@ -1,6 +1,0 @@
-
-namespace opossum{
-    class TableScanLQPGenerator {
-
-    };
-}

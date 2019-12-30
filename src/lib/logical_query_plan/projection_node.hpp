@@ -9,7 +9,7 @@ namespace opossum {
 
 class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public AbstractLQPNode {
  public:
-  explicit ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+  explicit ProjectionNode(std::shared_ptr<ProjectionNode> expressions);
 
   std::string description() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
