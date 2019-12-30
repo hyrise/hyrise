@@ -87,13 +87,17 @@ std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_dat
     stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
     switch (column_data_distribution.distribution_type){
         case DataDistributionType::Uniform:
-            stream << column_data_distribution.min_value << "_" << column_data_distribution.max_value;
+            stream << column_data_distribution.min_value << "_"
+                   << column_data_distribution.max_value;
             break;
         case DataDistributionType::NormalSkewed:
-            stream << column_data_distribution.skew_location << "_" << column_data_distribution.skew_scale << "_" << column_data_distribution.skew_shape;
+            stream << column_data_distribution.skew_location << "_"
+                   << column_data_distribution.skew_scale << "_"
+                   << column_data_distribution.skew_shape;
             break;
         case DataDistributionType::Pareto:
-            stream << column_data_distribution.pareto_scale << "_" << column_data_distribution.pareto_shape;
+            stream << column_data_distribution.pareto_scale << "_"
+                   << column_data_distribution.pareto_shape;
             break;
     }
     return stream;
