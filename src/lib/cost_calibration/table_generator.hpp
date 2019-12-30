@@ -6,6 +6,7 @@
 #include <all_type_variant.hpp>
 #include <storage/encoding_type.hpp>
 #include <synthetic_table_generator.hpp>
+#include "calibration_table_wrapper.hpp"
 
 class Table;
 
@@ -22,7 +23,7 @@ struct TableGeneratorConfig{
 class TableGenerator {
  public:
   explicit TableGenerator(std::shared_ptr<TableGeneratorConfig> config);
-  std::vector<std::shared_ptr<Table>> generate() const;
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> generate() const;
 
  private:
   std::vector<DataType> data_types_collection;

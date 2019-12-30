@@ -20,10 +20,13 @@ namespace opossum {
 
               std::stringstream column_name_str;
 
-              column_name_str << data_type << "_" << encoding_type << "_" << column_data_distribution;
+              column_name_str << data_type << "_"
+                              << encoding_type << "_"
+                              << column_data_distribution;
+
               column_names.emplace_back(column_name_str.str());
           }
-        }
+        }  // if encoding is supported
       }
     }
 
@@ -31,8 +34,10 @@ namespace opossum {
     row_counts.assign(config->row_counts.begin(), config->row_counts.end());
   }
 
-  std::vector<std::shared_ptr<Table>> TableGenerator::generate() const {
-    auto tables = std::vector<std::shared_ptr<Table>>();
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> TableGenerator::generate() const {
+    auto table_wrapper = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
+    table_wrapper.reserve(chunk_offsets.size() * row_counts.size());
+
     auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
     for (int chunk_size : chunk_offsets) {
@@ -45,9 +50,13 @@ namespace opossum {
                   {segment_encoding_spec_collection},
                   {column_names},
                   UseMvcc::Yes);    // MVCC = Multiversion concurrency control
-        tables.emplace_back(table);
+
+        const auto calibration_table_wrapper = std::make_shared<const CalibrationTableWrapper>(CalibrationTableWrapper(
+                table,
+                column_data_distribution_collection));
+        table_wrapper.emplace_back(calibration_table_wrapper);
       }
     }
-    return tables;
+    return table_wrapper;
   }
 }  // namespace opossum
