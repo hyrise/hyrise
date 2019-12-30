@@ -25,7 +25,7 @@ set(
     constant_mappings.cpp
     constant_mappings.hpp
     cost_calibration/table_generator.cpp
-    cost_calibration/table_generator.h
+    cost_calibration/table_generator.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
