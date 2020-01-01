@@ -7,10 +7,10 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -28,7 +28,8 @@ size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
     if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
       distinct_value_count = dictionary_segment->dictionary()->size();
       return;
-    } else if (const auto fs_dictionary_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
+    } else if (const auto fs_dictionary_segment =
+                   std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
       distinct_value_count = fs_dictionary_segment->dictionary()->size();
       return;
     }
@@ -183,8 +184,8 @@ std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
       if (ordered_by) {
         std::stringstream order_by_mode_steam;
         order_by_mode_steam << ordered_by->second;
-        output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(ordered_by->first),
-                            pmr_string{order_by_mode_steam.str()}});
+        output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id),
+                              static_cast<int32_t>(ordered_by->first), pmr_string{order_by_mode_steam.str()}});
       }
     }
   }
@@ -228,7 +229,7 @@ std::shared_ptr<Table> MetaTableManager::generate_single_column_indexes_table() 
           }
 
           output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(index_id),
-                               static_cast<int32_t>(column_id), pmr_string{index_type_name.str()}});
+                                static_cast<int32_t>(column_id), pmr_string{index_type_name.str()}});
 
           ++index_id;
         }

@@ -165,7 +165,8 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
     null_value_vector_size = _null_values->size() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
     null_value_vector_size =
-        sizeof(_null_values) + (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
+        sizeof(_null_values) +
+        (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
   }
 
   return sizeof(*this) + _values.size() * sizeof(T) + null_value_vector_size;
@@ -178,7 +179,8 @@ size_t ValueSegment<pmr_string>::memory_usage(const MemoryUsageCalculationMode m
     null_value_vector_size = _null_values->size() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
     null_value_vector_size =
-        sizeof(_null_values) + (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
+        sizeof(_null_values) +
+        (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
   }
 
   return sizeof(*this) + estimate_string_vector_memory_usage(_values, mode) + null_value_vector_size;
