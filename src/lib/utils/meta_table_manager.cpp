@@ -210,7 +210,7 @@ std::shared_ptr<Table> MetaTableManager::generate_single_column_indexes_table() 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        const auto& indexes = chunk->get_indexes({column_id});
+        const auto& indexes = chunk->get_indexes(std::initializer_list<ColumnID>{column_id});
         auto index_id = int32_t{0};
         for (const auto& index : indexes) {
           std::stringstream index_type_name;
