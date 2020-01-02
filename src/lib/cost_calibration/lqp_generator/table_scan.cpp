@@ -24,4 +24,8 @@ namespace opossum {
 //                                     )
 //        );
     }
+
+    TableScanLQPGenerator::TableScanLQPGenerator() {
+
+    }
 }

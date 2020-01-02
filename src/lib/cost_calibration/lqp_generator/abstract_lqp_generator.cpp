@@ -4,6 +4,7 @@
 #include "table_scan.hpp"
 #include "hyrise.hpp"
 
+
 namespace opossum {
     void AbstractLQPGenerator::execute() {
       for (const std::shared_ptr<AbstractLQPNode>& lqp : _lqps) {
@@ -15,6 +16,10 @@ namespace opossum {
     }
 
     void AbstractLQPGenerator::get() {
-      // TODO check with CSV generation on prefferred return format
+      // TODO check with CSV generation on preferred return format
+    }
+
+    AbstractLQPGenerator::AbstractLQPGenerator() {
+      _lqps = std::vector<std::shared_ptr<AbstractLQPNode>>();
     }
 }

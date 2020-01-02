@@ -7,7 +7,7 @@ namespace opossum {
     public:
       AbstractLQPGenerator();
 
-      void generate();
+      virtual void generate() = 0;
       void execute();
       void get();
 

@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-ProjectionNode::ProjectionNode(std::shared_ptr<ProjectionNode> expressions)
+ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractLQPNode(LQPNodeType::Projection, expressions) {}
 
 std::string ProjectionNode::description() const {
