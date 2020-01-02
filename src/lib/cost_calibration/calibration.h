@@ -1,5 +1,0 @@
-namespace opossum{
-    class calibration {
-
-    };
-}

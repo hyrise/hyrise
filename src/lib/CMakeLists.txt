@@ -24,6 +24,8 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    cost_calibration/calibration_table_wrapper.cpp
+    cost_calibration/calibration_table_wrapper.hpp
     cost_calibration/table_generator.cpp
     cost_calibration/table_generator.h
     cost_calibration/lqp_generator/abstract_lqp_generator.cpp
@@ -31,6 +33,7 @@ set(
 
     cost_calibration/lqp_generator/table_scan.cpp
     cost_calibration/lqp_generator/table_scan.hpp
+    cost_calibration/table_generator.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
