@@ -17,11 +17,11 @@ namespace opossum {
         const auto _a = _t_a->get_column("_a");
         const auto _b = _t_a->get_column("_b");
 
-        _lqps.push_back(
-                std::make_shared<ProjectionNode>(
-                ProjectionNode::make(expression_functional::expression_vector(_a),
-                                     PredicateNode::make(boost::iterator_range_detail::greater_than(_b, 10), _t_a))
-                                     )
-        )
+//        _lqps.push_back(
+//                std::make_shared<ProjectionNode>(
+//                ProjectionNode::make(expression_functional::expression_vector(_a),
+//                                     PredicateNode::make(boost::iterator_range_detail::greater_than(_b, 10), _t_a))
+//                                     )
+//        );
     }
 }
