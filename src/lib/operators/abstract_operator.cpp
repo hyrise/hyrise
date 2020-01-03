@@ -7,6 +7,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "logical_query_plan/base_non_query_node.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
@@ -54,6 +55,28 @@ void AbstractOperator::execute() {
   _on_cleanup();
 
   _performance_data->walltime = performance_timer.lap();
+
+  if constexpr (HYRISE_DEBUG) {
+    if (lqp_node) {
+      [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
+      if (!_output) {
+        DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
+      } else if (std::dynamic_pointer_cast<const BaseNonQueryNode>(lqp_node)) {
+        // BaseNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return 'OK'
+        // for better compatibility with the console and the server. Do not assert anything here.
+      } else {
+        // Check that LQP expressions and PQP columns match.
+        DebugAssert(_output->column_count() == lqp_expressions.size(), std::string{"Mismatching number of output columns for "} + name());
+        // for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+        //   if (_type != OperatorType::Alias) {
+        //     const auto lqp_name = lqp_expressions[column_id]->as_column_name();
+        //     const auto pqp_name = _output->column_name(column_id);
+        //     DebugAssert(pqp_name == lqp_name, std::string{"Mismatching output column name in "} + name() + ": LQP '" + lqp_name + "' vs. PQP '" + pqp_name + "'");
+        //   }
+        // }
+      }
+    }
+  }
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,

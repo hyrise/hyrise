@@ -91,8 +91,6 @@ class SQLPipelineStatementTest : public BaseTest {
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
 
-  const std::vector<std::string> _join_column_names{"a", "b", "bb"};
-
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
 
