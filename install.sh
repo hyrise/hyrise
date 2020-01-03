@@ -18,11 +18,6 @@ echo
 if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     unamestr=$(uname)
     if [[ "$unamestr" == 'Darwin' ]]; then
-        if [ ! -d "/Applications/Xcode.app/" ]; then
-            echo "You need to install Xcode from the App Store before proceeding"
-            exit 1
-        fi
-
         brew --version 2>/dev/null || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
         echo "Installing dependencies (this may take a while)..."
