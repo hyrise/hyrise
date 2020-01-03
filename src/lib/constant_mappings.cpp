@@ -4,6 +4,7 @@
 
 #include <boost/bimap.hpp>
 #include <boost/hana/fold.hpp>
+#include <operators/abstract_operator.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
@@ -32,19 +33,57 @@ const boost::bimap<DataType, std::string> data_type_to_string =
       return map;
     });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
-    {EncodingType::Dictionary, "Dictionary"},
-    {EncodingType::RunLength, "RunLength"},
-    {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
-    {EncodingType::FrameOfReference, "FrameOfReference"},
-    {EncodingType::LZ4, "LZ4"},
-    {EncodingType::Unencoded, "Unencoded"},
-});
+const boost::bimap<EncodingType, std::string> encoding_type_to_string =
+    make_bimap<EncodingType, std::string>({
+        {EncodingType::Dictionary, "Dictionary"},
+        {EncodingType::RunLength, "RunLength"},
+        {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
+        {EncodingType::FrameOfReference, "FrameOfReference"},
+        {EncodingType::LZ4, "LZ4"},
+        {EncodingType::Unencoded, "Unencoded"},
+    });
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+    });
+
+const boost::bimap<OperatorType, std::string> operator_type_to_string =
+    make_bimap<OperatorType, std::string>({
+        {OperatorType::Aggregate, "Aggregate" },
+        {OperatorType::Alias, "Alias" },
+        {OperatorType::Delete, "Delete" },
+        {OperatorType::Difference, "Difference" },
+        {OperatorType::ExportBinary, "ExportBinary" },
+        {OperatorType::ExportCsv, "ExportCSV" },
+        {OperatorType::GetTable, "GetTable" },
+        {OperatorType::ImportBinary, "ImportBinary" },
+        {OperatorType::ImportCsv, "ImportCSV" },
+        {OperatorType::IndexScan, "IndexScan" },
+        {OperatorType::Insert, "Insert" },
+        {OperatorType::JoinHash, "JoinHash" },
+        {OperatorType::JoinIndex, "JoinIndex" },
+        {OperatorType::JoinNestedLoop, "JoinNestedLoop" },
+        {OperatorType::JoinSortMerge, "JoinSortMerge" },
+        {OperatorType::JoinVerification, "JoinVerification" },
+        {OperatorType::Limit, "Limit" },
+        {OperatorType::Print, "Print" },
+        {OperatorType::Product, "Product" },
+        {OperatorType::Projection, "Projection" },
+        {OperatorType::Sort, "Sort" },
+        {OperatorType::TableScan, "TableScan" },
+        {OperatorType::TableWrapper, "TableWrapper" },
+        {OperatorType::UnionAll, "UnionAll" },
+        {OperatorType::UnionPositions, "UnionPositions" },
+        {OperatorType::Update, "Update" },
+        {OperatorType::Validate, "Validate" },
+        {OperatorType::CreateTable, "CreateTable" },
+        {OperatorType::CreatePreparedPlan, "CreatePreparedPlan" },
+        {OperatorType::CreateView, "CreateView" },
+        {OperatorType::DropTable, "DropTable" },
+        {OperatorType::DropView, "DropView" },
+        {OperatorType::Mock, "Mock" },
     });
 
 std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
@@ -65,6 +104,10 @@ std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
 
 std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, OperatorType operator_type) {
+  return stream << operator_type_to_string.left.at(operator_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
