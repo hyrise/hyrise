@@ -28,6 +28,7 @@ namespace opossum {
           }
         }  // if encoding is supported
       }
+
     }
 
     chunk_offsets.assign(config->chunk_offsets.begin(), config->chunk_offsets.end());
