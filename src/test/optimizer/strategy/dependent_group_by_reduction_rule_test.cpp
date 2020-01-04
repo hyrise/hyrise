@@ -89,6 +89,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     auto lqp =
     PredicateNode::make(equals_(column_a_0, 17), stored_table_node_a);
 
+    lqp = lqp->deep_copy();
     const auto unmodified_lqp = apply_rule(rule, lqp);
     EXPECT_EQ(lqp, unmodified_lqp);
   }
@@ -98,6 +99,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     auto lqp =
     PredicateNode::make(equals_(column_d_0, 17), stored_table_node_d);
 
+    lqp = lqp->deep_copy();
     const auto unmodified_lqp = apply_rule(rule, lqp);
     EXPECT_EQ(lqp, unmodified_lqp);
   }
@@ -136,6 +138,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
                                         sum_(column_b_2)),
                       stored_table_node_b);
 
+  lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
@@ -157,6 +160,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
                                         sum_(column_b_2)),
                       stored_table_node_b);
 
+  lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
@@ -223,6 +227,7 @@ TEST_F(DependentGroupByReductionRuleTest, AggregteButNoChanges) {
                       expression_vector(sum_(column_a_0)),
                       stored_table_node_a);
 
+  lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
@@ -290,6 +295,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
                    stored_table_node_a,
                    stored_table_node_b));
 
+  lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
@@ -303,7 +309,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Check that we reduce using the shortest (in term of number of columns) constraints.s
+// Check that we reduce using the shortest (in terms of number of columns) constraints.
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
   auto lqp =
