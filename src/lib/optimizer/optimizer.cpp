@@ -20,6 +20,7 @@
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 
 /**
@@ -42,6 +43,10 @@
  *
  * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assigns the optimized LQPs back
  *                                          to the SubqueryExpressions referencing them.
+ *
+ * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
+ * earlier rule. In the future, it might make sense to bring back iterative groups of rules, but we should keep
+ * optimization costs reasonable.
  */
 
 namespace {
@@ -104,18 +109,22 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
-  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
-  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
-  // which does not like semi joins (see above).
-  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
-
-  // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
-  // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
+
+  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
+  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
+  // which does not like semi joins (see above).
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+
+  // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
+  // SemiJoinReductionRule are properly placed, too.
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 

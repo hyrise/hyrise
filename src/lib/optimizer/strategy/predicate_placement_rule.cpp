@@ -24,7 +24,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
   estimator->guarantee_bottom_up_construction();
 
-  std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
+  std::vector<std::shared_ptr<AbstractLQPNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
@@ -32,7 +32,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
                                                   const LQPInputSide input_side,
-                                                  std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes,
+                                                  std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
   if (!input_node) return;  // Allow calling without checks
@@ -42,11 +42,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     _insert_nodes(current_node, input_side, push_down_nodes);
 
     if (input_node->left_input()) {
-      auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes, estimator);
     }
     if (input_node->right_input()) {
-      auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
     }
   };
@@ -57,23 +57,29 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;
   }
 
+  // Removes a node from the current LQP and continues to run _push_down_traversal on the node's inputs. It is the
+  // caller's responsibility to put the node back into the LQP at some new position.
+  const auto untie_and_recurse = [&](const std::shared_ptr<AbstractLQPNode>& node) {
+    push_down_nodes.emplace_back(node);
+
+    // As node might be the input to multiple nodes, remember those nodes before we untie node
+    const auto output_relations = node->output_relations();
+
+    lqp_remove_node(node, AllowRightInput::Yes);
+    _push_down_traversal(current_node, input_side, push_down_nodes, estimator);
+
+    // Restore the output relationships
+    for (const auto& [output_node, output_side] : output_relations) {
+      output_node->set_input(output_side, current_node->input(input_side));
+    }
+  };
+
   switch (input_node->type) {
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(input_node);
 
       if (!_is_expensive_predicate(predicate_node->predicate())) {
-        push_down_nodes.emplace_back(predicate_node);
-
-        // As predicate_node might be the input to multiple nodes, remember those nodes before we untie predicate_node
-        const auto output_relations = predicate_node->output_relations();
-
-        lqp_remove_node(predicate_node);
-        _push_down_traversal(current_node, input_side, push_down_nodes, estimator);
-
-        // Restore the output relationships
-        for (const auto& [output_node, output_side] : output_relations) {
-          output_node->set_input(output_side, current_node->input(input_side));
-        }
+        untie_and_recurse(input_node);
       } else {
         _push_down_traversal(input_node, input_side, push_down_nodes, estimator);
       }
@@ -82,21 +88,35 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(input_node);
 
-      // Left empty for non-push-past joins
-      auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-      auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      // We pick up semi and anti joins on the way and treat them as if they were predicates
+      if (join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
+          join_node->join_mode == JoinMode::AntiNullAsFalse) {
+        // First, we need to recurse into the right side to make sure that it's optimized as well
+        auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
 
-      // It is safe to move predicates down past Inner, Cross, Semi, AntiNullAsTrue and AntiNullAsFalse Joins
+        untie_and_recurse(input_node);
+        break;
+      }
+
+      // Not a semi / anti join. We need to check if we can push the nodes in push_down_nodes past the join or if they
+      // need to be inserted here before proceeding.
+
+      // Left empty for non-push-past joins
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+
+      // It is safe to move predicates down past the named joins as doing so does not affect the presence of NULLs
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
           join_node->join_mode == JoinMode::AntiNullAsFalse) {
         for (const auto& push_down_node : push_down_nodes) {
-          const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->left_input());
-          const auto move_to_right =
-              expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->right_input());
+          const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->left_input());
+          const auto move_to_right = _is_evaluable_on_lqp(push_down_node, join_node->right_input());
 
           if (!move_to_left && !move_to_right) {
-            if (join_node->join_mode == JoinMode::Inner) {
+            const auto push_down_predicate_node = std::dynamic_pointer_cast<PredicateNode>(push_down_node);
+            if (join_node->join_mode == JoinMode::Inner && push_down_predicate_node) {
               // Pre-Join Predicates:
               // The current predicate could not be pushed down to either side. If we cannot push it down, we might be
               // able to create additional predicates that perform some pre-selection before the tuples reach the join.
@@ -143,7 +163,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               auto aborted_right_side = false;
 
               const auto outer_disjunction =
-                  flatten_logical_expressions(push_down_node->predicate(), LogicalOperator::Or);
+                  flatten_logical_expressions(push_down_predicate_node->predicate(), LogicalOperator::Or);
               for (const auto& expression_in_disjunction : outer_disjunction) {
                 // For the current expression_in_disjunction, these hold the PredicateExpressions that need to be true
                 // on the left/right side
@@ -224,7 +244,6 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             if (move_to_right) right_push_down_nodes.emplace_back(push_down_node);
           }
         }
-
       } else {
         // We do not push past non-inner/cross joins, place all predicates here
         _insert_nodes(current_node, input_side, push_down_nodes);
@@ -241,6 +260,19 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       _push_down_traversal(input_node, LQPInputSide::Left, push_down_nodes, estimator);
     } break;
 
+    case LQPNodeType::Aggregate: {
+      // We can push predicates below the aggregate if they do not depend on an aggregate expression
+      auto aggregate_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      for (const auto& push_down_node : push_down_nodes) {
+        if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
+          aggregate_push_down_nodes.emplace_back(push_down_node);
+        } else {
+          _insert_nodes(current_node, input_side, {push_down_node});
+        }
+      }
+      _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes, estimator);
+    } break;
+
     default: {
       // All not explicitly handled node types are barriers and we do not push predicates past them.
       handle_barrier();
@@ -248,7 +280,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   }
 }
 
-std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_traversal(
+std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_traversal(
     const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
   if (!current_node) return {};
   const auto input_node = current_node->input(input_side);
@@ -293,11 +325,11 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       return candidate_nodes;
 
     case LQPNodeType::Projection: {
-      auto pull_up_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-      auto blocked_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      auto pull_up_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      auto blocked_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
       for (const auto& candidate_node : candidate_nodes) {
-        if (expression_evaluable_on_lqp(candidate_node->predicate(), *current_node)) {
+        if (_is_evaluable_on_lqp(candidate_node, current_node)) {
           pull_up_nodes.emplace_back(candidate_node);
         } else {
           blocked_nodes.emplace_back(candidate_node);
@@ -314,11 +346,11 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       return {};
   }
 
-  Fail("Invalid enum value");
+  Fail("GCC thinks this is reachable");
 }
 
 void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide input_side,
-                                           const std::vector<std::shared_ptr<PredicateNode>>& predicate_nodes) {
+                                           const std::vector<std::shared_ptr<AbstractLQPNode>>& predicate_nodes) {
   // First node gets inserted on the @param input_side, all others on the left side of their output.
   auto current_node = node;
   auto current_input_side = input_side;
@@ -350,6 +382,40 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
     }
   });
   return predicate_contains_correlated_subquery;
+}
+
+bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                  const std::shared_ptr<AbstractLQPNode>& lqp) {
+  switch (node->type) {
+    case LQPNodeType::Predicate: {
+      const auto& predicate_node = static_cast<PredicateNode&>(*node);
+      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) return false;
+
+      auto has_uncomputed_aggregate = false;
+      const auto predicate = predicate_node.predicate();
+      visit_expression(predicate, [&](const auto& expression) {
+        if (expression->type == ExpressionType::Aggregate && !lqp->find_column_id(*expression)) {
+          has_uncomputed_aggregate = true;
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+      return !has_uncomputed_aggregate;
+    }
+    case LQPNodeType::Join: {
+      const auto& join_node = static_cast<JoinNode&>(*node);
+      for (const auto& join_predicate : join_node.join_predicates()) {
+        for (const auto& argument : join_predicate->arguments) {
+          if (!lqp->find_column_id(*argument) && !join_node.right_input()->find_column_id(*argument)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+    default:
+      Fail("Unexpected node type");
+  }
 }
 
 }  // namespace opossum
