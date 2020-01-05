@@ -1,7 +1,4 @@
-//
-// Created by Lukas Böhme on 30.12.19.
-//
-
+#pragma once
 #include "storage/table.hpp"
 
 namespace opossum {
