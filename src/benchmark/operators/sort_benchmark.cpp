@@ -31,52 +31,21 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   void BM_SortSingleColumnSQL(benchmark::State& state) {
-    _clear_cache();
-
-    auto& storage_manager = Hyrise::get().storage_manager;
-    auto column_names = std::optional<std::vector<std::string>>(1);
-    column_names->push_back("col_1");
-    storage_manager.add_table("table_a",
-                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
-
     const std::string query = R"(
         SELECT *
         FROM table_a
         ORDER BY col_1)";
 
-    for (auto _ : state) {
-      hsql::SQLParserResult result;
-      hsql::SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
-      const auto pqp = LQPTranslator{}.translate_node(result_node);
-      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-    }
+    RunSQLBasedBenchmark(state, query);
   }
 
   void BM_SortMultiColumnSQL(benchmark::State& state) {
-    _clear_cache();
-
-    auto& storage_manager = Hyrise::get().storage_manager;
-    auto column_names = std::optional<std::vector<std::string>>(1);
-    column_names->push_back("col_1");
-    column_names->push_back("col_2");
-    storage_manager.add_table("table_a",
-                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
-
     const std::string query = R"(
         SELECT *
         FROM table_a
         ORDER BY col_1, col_2)";
 
-    for (auto _ : state) {
-      hsql::SQLParserResult result;
-      hsql::SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
-      const auto pqp = LQPTranslator{}.translate_node(result_node);
-      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-    }
+    RunSQLBasedBenchmark(state, query);
   }
 
  protected:
@@ -116,6 +85,26 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
     limit->execute();
     _table_wrapper_a = std::make_shared<TableWrapper>(limit->get_output());
     _table_wrapper_a->execute();
+  }
+
+  void RunSQLBasedBenchmark(benchmark::State& state, const std::string& query) {
+    _clear_cache();
+
+    auto& storage_manager = Hyrise::get().storage_manager;
+    auto column_names = std::optional<std::vector<std::string>>(1);
+    column_names->push_back("col_1");
+    column_names->push_back("col_2");
+    storage_manager.add_table("table_a",
+                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
+
+    for (auto _ : state) {
+      hsql::SQLParserResult result;
+      hsql::SQLParser::parseSQLString(query, &result);
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      const auto pqp = LQPTranslator{}.translate_node(result_node);
+      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    }
   }
 };
 
