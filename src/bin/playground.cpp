@@ -42,7 +42,6 @@ std::vector<std::shared_ptr<opossum::Table>> generate() {
 // END FIX
 
 int main() {
-
   auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
           {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String, DataType::Null},
           {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
@@ -55,5 +54,5 @@ int main() {
 
   const auto lqp_gen = TableScanLQPGenerator(table);
   lqp_gen.execute();
-//  lqp_gen.get();
+  // lqp_gen.get();
 }
