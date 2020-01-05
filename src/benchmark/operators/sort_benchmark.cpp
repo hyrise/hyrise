@@ -47,11 +47,9 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
         ORDER BY col_1, col_2)";
 
     for (auto _ : state) {
-      // auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
       hsql::SQLParserResult result;
       hsql::SQLParser::parseSQLString(query, &result);
       auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
-      // result_node->set_left_input(stored_table_node);
       const auto pqp = LQPTranslator{}.translate_node(result_node);
       const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
