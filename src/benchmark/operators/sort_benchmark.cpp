@@ -31,7 +31,31 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
     }
   }
 
-  void BM_SortMultiColumn(benchmark::State& state) {
+  void BM_SortSingleColumnSQL(benchmark::State& state) {
+    _clear_cache();
+
+    auto& storage_manager = Hyrise::get().storage_manager;
+    auto column_names = std::optional<std::vector<std::string>>(1);
+    column_names->push_back("col_1");
+    storage_manager.add_table("table_a",
+                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
+
+    const std::string query = R"(
+        SELECT *
+        FROM table_a
+        ORDER BY col_1)";
+
+    for (auto _ : state) {
+      hsql::SQLParserResult result;
+      hsql::SQLParser::parseSQLString(query, &result);
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      const auto pqp = LQPTranslator{}.translate_node(result_node);
+      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+    }
+  }
+
+  void BM_SortMultiColumnSQL(benchmark::State& state) {
     _clear_cache();
 
     auto& storage_manager = Hyrise::get().storage_manager;
@@ -174,7 +198,9 @@ class SortNullBenchmark : public SortBenchmark {
 
 BENCHMARK_F(SortBenchmark, BM_Sort)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortBenchmark, BM_SortMultiColumn)(benchmark::State& state) { BM_SortMultiColumn(state); }
+BENCHMARK_F(SortBenchmark, BM_SortSingleColumnSQL)(benchmark::State& state) { BM_SortSingleColumnSQL(state); }
+
+BENCHMARK_F(SortBenchmark, BM_SortMultiColumnSQL)(benchmark::State& state) { BM_SortMultiColumnSQL(state); }
 
 BENCHMARK_F(SortPicoBenchmark, BM_SortPico)(benchmark::State& state) { BM_Sort(state); }
 
