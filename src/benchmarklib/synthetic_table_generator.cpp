@@ -152,6 +152,10 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
           std::vector<bool> null_values;
 
+          /**
+           * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
+           * constructor in a regular interval based on the null_ratio with true.
+           */
           if (null_ratio.has_value()) {
             null_values = std::vector<bool>(chunk_size, false);
 
