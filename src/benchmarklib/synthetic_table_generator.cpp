@@ -153,13 +153,13 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           std::vector<bool> null_values;
 
           if (null_ratio.has_value()) {
-            const int amount_of_null_values = static_cast<const int>((chunk_size)*null_ratio.value());
-
             null_values = std::vector<bool>(chunk_size, false);
 
-            const int step_size = chunk_size / amount_of_null_values;
-            for (auto row_offset = size_t{0}; row_offset < chunk_size; row_offset += step_size) {
-              null_values[row_offset] = true;
+            const double step_size = 1.0 / null_ratio.value();
+            double current_row_offset = 0.0;
+            while (current_row_offset < chunk_size) {
+              null_values[static_cast<const int>(current_row_offset)] = true;
+              current_row_offset += step_size;
             }
           }
 
