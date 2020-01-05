@@ -1,11 +1,10 @@
-#include <SQLParser.h>
-#include <SQLParserResult.h>
-#include <logical_query_plan/stored_table_node.hpp>
 #include <memory>
 
 #include "benchmark/benchmark.h"
 
 #include "../micro_benchmark_basic_fixture.hpp"
+#include "SQLParser.h"
+#include "SQLParserResult.h"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
