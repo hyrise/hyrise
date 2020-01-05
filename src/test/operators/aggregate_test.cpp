@@ -184,7 +184,7 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
 
 // The ANY aggregation is a special case which is used to obtain "any value" of a group of which we know that each
 // value in this group is the same (for most cases, the group will have a size of one). This can be the case, when
-// the aggragated column is functionally dependent on the group-by columns.
+// the aggregated column is functionally dependent on the group-by columns.
 TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
   auto filtered = std::make_shared<TableScan>(
       this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
