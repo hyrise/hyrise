@@ -72,7 +72,7 @@ TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
 
 TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
 
-  // Recreate MockNode with two constraints
+  // Recreate MockNode to incorporate two constraints
   const auto table_constraint_1 =
       TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
@@ -82,6 +82,9 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
                      "t_a", table_constraints);
   EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
+  _a = _mock_node->get_column("a");
+  _b = _mock_node->get_column("b");
+  _c = _mock_node->get_column("c");
 
   // Create projection node reordering the columns: (0, 1, 2) -> (1, 2, 0)
   _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);

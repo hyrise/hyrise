@@ -43,9 +43,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> ProjectionNode::get_cons
 
          const auto matching_prj_column_expr = std::find_if(node_expressions.cbegin(), node_expressions.cend(),
                                                             [&](const std::shared_ptr<AbstractExpression>& node_expr) {
-
-                                                              // TODO(Julian) Very basic equality test. May be extended to also match expressions like "column + 1"
-                                                              if (node_expr.get() == constraint_column_expr.get())
+                                                              if (*node_expr == *constraint_column_expr)
                                                                 return true;
                                                               return false;
                                                             });
@@ -54,8 +52,13 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> ProjectionNode::get_cons
 
     if(found_all_column_expressions) {
       projection_lqp_constraints->push_back(constraint);
-    }
+    } // else { save constraint for the next block - derived constraints }
   }
+
+  // TODO(anyone) Very basic equality check here. In the future, we might want to look for derived expressions,
+  //  like 'column + 1', that preserve uniqueness.
+  //  However, we can't pass constraints then, we have to create derived constraints.
+  // { ... }
 
   return projection_lqp_constraints;
 }
