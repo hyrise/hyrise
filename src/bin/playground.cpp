@@ -52,7 +52,8 @@ int main() {
   auto table_generator = TableGenerator(table_config);
   const auto table = (table_generator.generate().at(0));
 
-  const auto lqp_gen = TableScanLQPGenerator(table);
+  auto lqp_gen = TableScanLQPGenerator(table);
+  lqp_gen.generate();
   lqp_gen.execute();
-  // lqp_gen.get();
+  std::cout << "Finished";
 }

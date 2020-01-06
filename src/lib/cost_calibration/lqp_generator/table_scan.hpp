@@ -5,6 +5,6 @@ namespace opossum {
     class TableScanLQPGenerator : public AbstractLQPGenerator {
     public:
         using AbstractLQPGenerator::AbstractLQPGenerator;
-        void generate() override;
+        void generate();
     };
 }

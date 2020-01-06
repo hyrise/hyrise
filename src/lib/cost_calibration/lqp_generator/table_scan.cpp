@@ -22,7 +22,7 @@ namespace opossum {
 
       for (int j = 0; j < column_count; ++j) {
 
-        auto distribution = _table->get_column_data_distribution(static_cast<ColumnID>(j));
+        auto distribution = _table->get_column_data_distribution(ColumnID(static_cast<const uint16_t>(j)));
 
         auto column = _t_a->get_column(column_names.at(j));
 

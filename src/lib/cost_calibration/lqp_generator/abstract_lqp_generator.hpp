@@ -8,7 +8,7 @@ namespace opossum {
       // TODO check if const etc is correct
       explicit AbstractLQPGenerator(const std::shared_ptr<const CalibrationTableWrapper> &table);
 
-      virtual void generate() = 0;
+      void generate();
       void execute() const;
       [[nodiscard]] std::vector<std::shared_ptr<AbstractLQPNode>> get() const;
 
