@@ -285,7 +285,7 @@ void AggregateHash::_aggregate() {
                 }
               } else {
                 auto inserted = id_map.try_emplace(position.value(), id_counter);
-                
+
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
                 } else {
