@@ -111,6 +111,8 @@ def main():
 
     # TODO: what kind of output is expected? Also: Error as attribute of the CostModel class?
 
+    # TBD mode, parameter: scale data? Use regularization?
+
 
 if __name__ == '__main__':
     main()
