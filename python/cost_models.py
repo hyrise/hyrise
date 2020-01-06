@@ -1,5 +1,7 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import numpy
 import sys
 
 
@@ -40,12 +42,18 @@ def import_train_data():
     pass
 
 
-def train_model(train_data):
+def preprocess_data(data):
     # linear regression for now, try other models later
     # one-hot encoding
-    ohe_data = train_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
+    ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
     ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'IS_NULLABLE',
                                                  'ENCODING', 'COMPRESSION'])
+
+    return ohe_data
+
+
+def train_model(train_data):
+    ohe_data = preprocess_data(train_data)
 
     y = ohe_data[['RUNTIME_NS']]
     X = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
@@ -54,8 +62,16 @@ def train_model(train_data):
     return model
 
 
-def predict_cost(model, test_data):
-    pass
+def calculate_error(model, test_data):
+    # predict runtime for test queries in the test data
+    ohe_data = preprocess_data(test_data)
+    y_true = ohe_data[['RUNTIME_NS']]
+    ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
+    y_pred = model.predict(ohe_data)
+
+    # calculate error (ME) for the model
+    mse = mean_squared_error(y_true, y_pred, squared=False)
+    return mse
 
 
 def main():
@@ -69,17 +85,31 @@ def main():
 
     # make models for different scan operators and combinations of encodings/compressions
     cost_models = []
+    test_data_splitted = []
     for scan_type in train_data['SCAN_TYPE'].unique():
         for encoding in train_data['ENCODING'].unique():
             for compression in train_data['COMPRESSION'].unique():
-                model = train_model(train_data.loc[(train_data['SCAN_TYPE'] == scan_type) & (train_data['ENCODING'] == encoding)
-                                           & (train_data['COMPRESSION'] == compression)])
+                model_train_data = train_data.loc[(train_data['SCAN_TYPE'] == scan_type) & (train_data['ENCODING'] == encoding)
+                                           & (train_data['COMPRESSION'] == compression)]
+                model = train_model(model_train_data)
+
                 cost_models.append(CostModel(model, scan_type, encoding, compression))
 
-    #testing
-    print(cost_models[0].model.coef_)
+                model_test_data = test_data.loc[(test_data['SCAN_TYPE'] == scan_type) & (test_data['ENCODING'] == encoding)
+                                           & (test_data['COMPRESSION'] == compression)]
+                test_data_splitted.append(model_test_data)
+                # drop those lines in test_data?
 
-    #pred = predict_cost(cost_model, test_data)
+                # predict the runtime for the queries of the test_data that correspond to this model and calculate the
+                # error (SSE)
+                model_mse = calculate_error(model, model_test_data)
+
+                # testing:
+                print(model_mse)
+
+    # TODO: catch the queries that don't correspond to any model and use the 'universal model' for runtime prediction of those
+
+    # TODO: what kind of output is expected? Also: Error as attribute of the CostModel class?
 
 
 if __name__ == '__main__':
