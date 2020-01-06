@@ -150,7 +150,12 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       std::sort(constraints_position_and_size.begin(), constraints_position_and_size.end(),
                 [](const auto& left, const auto& right) { return left.second < right.second; });
 
-      // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint.
+      // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
+      // constraints (e.g., a primary key and a unique column constraint) might result in different group-by lists
+      // (depending on the number of columns of the constraint), but we stop as soon as one constraint successfully
+      // reduced the group-by list. The reason is that there is no advantage in a second reduction if the first
+      // reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
+      // place, we can ignore the remaining constraints.
       for (const auto& [position, size] : constraints_position_and_size) {
         const auto& table_constraint = table_constraints[position];
         group_by_list_changed |= reduce_group_by_columns_for_constraint(table_constraint, group_by_columns,
