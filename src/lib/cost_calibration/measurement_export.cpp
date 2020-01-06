@@ -2,14 +2,18 @@
 // Created by Lukas Böhme on 03.01.20.
 //
 
+#include <cost_calibration/operator_measurements/abstract_operator_measurements.hpp>
 #include "measurement_export.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
-    void MeasurementSave::export_to_csv(std::shared_ptr<const AbstractOperator> op) const {
+    void MeasurementExport::export_to_csv(std::shared_ptr<const AbstractOperator> op) const {
       if (op != nullptr){
-        export_specific_operator(op);
+        //Export current operator
+        export_typed_operator(op);
 
+        // Recursion on left & right operator
         while (op->input_left() != nullptr && op->input_right() != nullptr){
           export_to_csv(op->input_left());
           export_to_csv(op->input_right());
@@ -17,7 +21,7 @@ namespace opossum {
       }
     }
 
-    void MeasurementSave::export_specific_operator(std::shared_ptr<const AbstractOperator> op) const {
+    void MeasurementExport::export_typed_operator(std::shared_ptr<const AbstractOperator> op) const {
       switch(op->type()){
         case OperatorType::Aggregate:
           break;
@@ -61,8 +65,11 @@ namespace opossum {
           break;
         case OperatorType::Sort:
           break;
-        case OperatorType::TableScan:
+        case OperatorType::TableScan: {
+          auto op_measurements = AbstractOperatorMeasurements(op); //TODO Change to TableScanOperatorMeasurements as soon as we get the info from martin
+          op_measurements.export_to_csv(path_to_dir + "/table_scan.csv");
           break;
+        }
         case OperatorType::TableWrapper:
           break;
         case OperatorType::UnionAll:
@@ -86,5 +93,16 @@ namespace opossum {
         case OperatorType::Mock:
           break;
       }
+    }
+
+    MeasurementExport::MeasurementExport(std::string path_to_dir) : path_to_dir(path_to_dir){
+
+    }
+
+    //TODO Construct path before starting export-> save it in map
+    std::string MeasurementExport::get_path_by_type(OperatorType operator_type) {
+      std::stringstream path;
+      path << path_to_dir << operator_type << ".csv";
+      return path.str();
     }
 }  // namespace opossum

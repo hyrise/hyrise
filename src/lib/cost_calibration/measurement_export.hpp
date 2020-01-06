@@ -6,15 +6,16 @@
 #include <string>
 
 namespace opossum {
-class MeasurementSave {
+class MeasurementExport {
  public:
-  MeasurementSave(std::string path_to_dir): path_to_dir(path_to_dir);
+  MeasurementExport(std::string path_to_dir);
 
   void export_to_csv(std::shared_ptr<const AbstractOperator> op) const;
 
  private:
-
-    void export_specific_operator(std::shared_ptr<const AbstractOperator> op) const;
     const std::string path_to_dir;
+    void export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
+
+    std::string get_path_by_type(OperatorType operator_type);
 };
 }  // namespace opossum
