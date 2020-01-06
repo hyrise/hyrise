@@ -14,7 +14,7 @@ TEST(SizeEstimationUtilsTest, EmptyVector) {
   EXPECT_EQ(expected_size, estimate_string_vector_memory_usage(empty_vector, MemoryUsageCalculationMode::Full));
 }
 
-// Check correct sampling for shorter vectors than samples being taken
+// Check that sampling works as expected when the input vector is shorter than the minimal sample size.
 TEST(SizeEstimationUtilsTest, SizeSmallerThanSampleSize) {
   // Small vector with strings that are stored within the initial string object (SSO)
   pmr_vector<pmr_string> small_vector{"a", "b", "c"};
@@ -45,8 +45,6 @@ TEST(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   // allocations (+ 1 for the added \0 termination).
   const auto expected_size_full = expected_size_sample + 4 * (large_string_length + 1);
   EXPECT_EQ(expected_size_full, estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full));
-  EXPECT_GT(expected_size_full * 1.05,
-            estimate_string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full));
 }
 
 }  // namespace opossum

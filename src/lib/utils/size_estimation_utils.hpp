@@ -14,10 +14,10 @@ namespace opossum {
   */
 template <typename T>
 size_t memory_usage_of_string_objects(const T& string_vector) {
-  // https://stackoverflow.com/questions/2037209/what-is-a-null-terminated-string
+  // Get the default capacity of SSO strings.
   const auto sso_string_capacity = std::string("").capacity();
 
-  // Add up sizes for vector object and the pre-initialized strings.
+  // Add size for pre-initialized strings. For compilers using SSO, sizeof(pmr_string) also includes the char buffer.
   auto bytes = string_vector.capacity() * sizeof(pmr_string);
 
   for (const auto& single_string : string_vector) {
@@ -53,7 +53,7 @@ size_t estimate_string_vector_memory_usage(const T& string_vector, const MemoryU
   pmr_vector<pmr_string> samples;
   samples.reserve(samples_to_draw);
 
-  std::sample(string_vector.begin(), string_vector.end(), std::back_inserter(samples), samples_to_draw,
+  std::sample(string_vector.cbegin(), string_vector.cend(), std::back_inserter(samples), samples_to_draw,
               std::random_device{});
   const auto sample_vector_memory_usage = memory_usage_of_string_objects(samples);
 
