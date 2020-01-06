@@ -12,9 +12,10 @@ namespace opossum {
         void export_to_csv(const std::string& path_to_csv) const;
 
     private:
-        const std::shared_ptr<const AbstractOperator> op; //TODO Remove const from shared_ptr
+        const std::shared_ptr<const AbstractOperator> _op; //TODO Remove const from shared_ptr
 
-        void vector_to_csv(std::vector<const std::string> vector, const std::string& path_to_csv, const std::string& delimiter = ",") const;
+        //TODO change vector to shared_ptr of an vector
+        void vector_to_csv(std::vector<const std::string> vector, const std::string& path_to_csv, const std::string& delimiter) const;
 
         std::string get_input_rows_left() const;
         std::string get_input_rows_right() const;

@@ -6,11 +6,12 @@ namespace opossum {
   class AbstractLQPGenerator {
     public:
       // TODO check if const etc is correct
-      explicit AbstractLQPGenerator(const std::shared_ptr<const CalibrationTableWrapper> &table);
+      explicit AbstractLQPGenerator(std::shared_ptr<const CalibrationTableWrapper> table);
 
       void generate();
       void execute() const;
-      [[nodiscard]] std::vector<std::shared_ptr<AbstractLQPNode>> get() const;
+
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& get_lqps() const;
 
   protected:
       std::shared_ptr<const CalibrationTableWrapper> _table;

@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-    AbstractOperatorMeasurements::AbstractOperatorMeasurements(std::shared_ptr<const AbstractOperator> op) : op(op) {};
+    AbstractOperatorMeasurements::AbstractOperatorMeasurements(std::shared_ptr<const AbstractOperator> op) : _op(op) {};
 
     std::vector<const std::string> AbstractOperatorMeasurements::as_vector() const {
       std::vector<const std::string> values;
@@ -35,14 +35,15 @@ namespace opossum {
     }
 
     void AbstractOperatorMeasurements::export_to_csv(const std::string& path_to_csv) const {
-      vector_to_csv(as_vector(), path_to_csv);
+      vector_to_csv(as_vector(), path_to_csv, ","); //TODO change delimiter
     }
 
-    void AbstractOperatorMeasurements::vector_to_csv(std::vector<const std::string> vector, const std::string& path_to_csv, const std::string& delimiter = ",") const {
+    void AbstractOperatorMeasurements::vector_to_csv(std::vector<const std::string> vector, const std::string& path_to_csv, const std::string& delimiter) const {
       //Open file
       std::ofstream outfile;
       outfile.open(path_to_csv , std::ofstream::out | std::ofstream::app);
 
+      std::cout << outfile.is_open();
       //Add all with delimiter
       int columns_with_delimiter= int(vector.size() - 1);  // Is this correct?
       for (int i = 0; i < columns_with_delimiter; ++i){
@@ -51,26 +52,24 @@ namespace opossum {
 
       //Add last column without delimiter
       outfile << vector[columns_with_delimiter] << "\n";
-      outfile.close();
-
-      //Close file
+      outfile.flush();
       outfile.close();
     }
 
     std::string AbstractOperatorMeasurements::get_input_rows_left() const {
-      return std::to_string(op->input_table_left() != nullptr ? op->input_table_left()->row_count() : 0);
+      return std::to_string(_op->input_table_left() != nullptr ? _op->input_table_left()->row_count() : 0);
     }
 
     std::string AbstractOperatorMeasurements::get_input_rows_right() const {
       return "0"; //TODO Input Table does not work?!
-      //return std::to_string(op->input_table_right() != nullptr ? op->input_table_right()->row_count() : 0);
+      //return std::to_string(_op->input_table_right() != nullptr ? _op->input_table_right()->row_count() : 0);
     }
 
     std::string AbstractOperatorMeasurements::get_output_rows() const {
-      return std::to_string(op->get_output() != nullptr ? op->get_output()->row_count() : 0);
+      return std::to_string(_op->get_output() != nullptr ? _op->get_output()->row_count() : 0);
     }
 
     std::string AbstractOperatorMeasurements::get_runtime_ns() const {
-      return std::to_string(op->performance_data().walltime.count());
+      return std::to_string(_op->performance_data().walltime.count());
     }
 }

@@ -111,9 +111,9 @@ std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
 
 std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
-std::ostream& operator<<(std::ostream& stream, OperatorType operator_type) {
 }
 
+std::ostream& operator<<(std::ostream& stream, OperatorType operator_type) {
   return stream << operator_type_to_string.left.at(operator_type);
 }
 

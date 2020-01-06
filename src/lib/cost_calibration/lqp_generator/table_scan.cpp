@@ -30,9 +30,7 @@ namespace opossum {
             case DataType::Null:
               break;
             case DataType::String:
-              // TODO remove Projection Node
-              _lqps.push_back(ProjectionNode::make(expression_vector(column),
-                                         PredicateNode::make(greater_than_(column, "yo"), _t_a)));
+              _lqps.emplace_back(PredicateNode::make(greater_than_(column, "yo"), _t_a));
               break;
             case DataType::Int:
             case DataType::Long:
@@ -42,13 +40,10 @@ namespace opossum {
                 // change selecticitc programatically
 //                auto step = distribution.min_value + (distribution.max_value - distribution.min_value);
                 for (int i = 0; i < selectivity_steps; i++) {
-
-                _lqps.push_back(ProjectionNode::make(expression_vector(column),
-                                           PredicateNode::make(greater_than_(column, 10), _t_a)));
+                _lqps.emplace_back(PredicateNode::make(greater_than_(column, 10), _t_a));
                 }
               } else {
-                _lqps.push_back(ProjectionNode::make(expression_vector(column),
-                                           PredicateNode::make(greater_than_(column, 10), _t_a)));
+                _lqps.emplace_back(PredicateNode::make(greater_than_(column, 10), _t_a));
               }
               break;
 
