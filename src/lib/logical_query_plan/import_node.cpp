@@ -14,13 +14,13 @@ ImportNode::ImportNode(const std::string& init_tablename, const std::string& ini
       filename(init_filename),
       filetype(init_filetype) {}
 
-std::string ImportNode::description() const {
+std::string ImportNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
   stream << "[Import] Name: '" << tablename << "'";
   return stream.str();
 }
 
-size_t ImportNode::_shallow_hash() const {
+size_t ImportNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(tablename);
   boost::hash_combine(hash, filename);
   boost::hash_combine(hash, filetype);

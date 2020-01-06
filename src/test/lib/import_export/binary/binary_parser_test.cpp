@@ -1,3 +1,4 @@
+<<<<<<< HEAD:src/test/lib/import_export/binary/binary_parser_test.cpp
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,7 +33,8 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryParserMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                                           EncodingType::LZ4),
                          formatter);
 
 TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
@@ -251,6 +253,28 @@ TEST_P(BinaryParserMultiEncodingTest, RunNullValues) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
+TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20000);
+
+  for (int index = 0; index < 5000; ++index) {
+    expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+    expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+    expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+    expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  }
+
+  auto table = BinaryParser::parse(_reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
 TEST_F(DISABLED_BinaryParserTest, FixedStringDictionarySingleChunk) {  // #1367
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -283,6 +307,48 @@ TEST_F(DISABLED_BinaryParserTest, FixedStringDictionaryMultipleChunks) {  // #13
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
+TEST_F(BinaryParserTest, NullValuesFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  expected_table->append({1});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({2});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({5});
+
+  auto table = BinaryParser::parse(_reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({opossum::NULL_VALUE});
+
+  auto table = BinaryParser::parse(_reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(BinaryParserTest, InvalidColumnType) {
+  auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_THROW(BinaryParser::parse(filename), std::exception);
+}
+
+TEST_F(BinaryParserTest, InvalidAttributeVectorWidth) {
+  auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_THROW(BinaryParser::parse(filename), std::exception);
+}
+
 TEST_F(BinaryParserTest, FileDoesNotExist) { EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception); }
 
 TEST_F(BinaryParserTest, TwoColumnsNoValues) {
@@ -296,16 +362,6 @@ TEST_F(BinaryParserTest, TwoColumnsNoValues) {
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
-}
-
-TEST_F(BinaryParserTest, InvalidColumnType) {
-  auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  EXPECT_THROW(BinaryParser::parse(filename), std::exception);
-}
-
-TEST_F(BinaryParserTest, InvalidAttributeVectorWidth) {
-  auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  EXPECT_THROW(BinaryParser::parse(filename), std::exception);
 }
 
 }  // namespace opossum
