@@ -46,8 +46,8 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
 
-  Hyrise::get().topology.use_numa_topology();
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  // Hyrise::get().topology.use_numa_topology();
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 }
 
 void SQLiteTestRunner::SetUp() {
@@ -157,6 +157,15 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
+  // Mark Tables modified by the query as dirty. Do this before the tables actually change so that they are reloaded
+  // for the next SQL statement if the current one fails.
+  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
+    for (const auto& table_name : lqp_find_modified_tables(plan)) {
+      // mark table cache entry as dirty, when table has been modified
+      _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
+    }
+  }
+
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -182,14 +191,6 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   if (table_comparison_msg) {
     FAIL() << "Query failed: " << *table_comparison_msg << std::endl;
-  }
-
-  // Mark Tables modified by the query as dirty
-  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
-    for (const auto& table_name : lqp_find_modified_tables(plan)) {
-      // mark table cache entry as dirty, when table has been modified
-      _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
-    }
   }
 
   // Delete newly created views in sqlite
