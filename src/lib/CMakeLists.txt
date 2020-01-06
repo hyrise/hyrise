@@ -28,6 +28,8 @@ set(
     cost_calibration/measurement_export.hpp
     cost_calibration/operator_measurements/abstract_operator_measurements.cpp
     cost_calibration/operator_measurements/abstract_operator_measurements.hpp
+    cost_calibration/operator_measurements/table_scan_measurements.cpp
+    cost_calibration/operator_measurements/table_scan_measurements.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
