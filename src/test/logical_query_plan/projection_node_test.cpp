@@ -80,6 +80,8 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
                      "t_a", table_constraints);
 
+  EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
+
   // Create projection to reorder columns (0, 1, 2) -> (1, 2, 0)
   _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 

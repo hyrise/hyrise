@@ -30,52 +30,33 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> ProjectionNode::get_constraints() const {
-
   auto input_lqp_constraints = *left_input()->get_constraints();
-
   auto projection_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
-//  projection_lqp_constraints->reserve(node_expressions.size());
-//
-//  // Adopt single column unique constraints
-//  for(const auto& constraint : input_lqp_constraints) {
-//    if(constraint.is_primary_key == IsPrimaryKey::No && constraint.columns.size() == 1) {
-//      const auto constraint_column_expr = left_input()->column_expressions().at(constraint.columns[0]);
-//
-//      // Check applicability of constraint for every node_expressions
-//      for(ColumnID projection_c_id{0}; projection_c_id < node_expressions.size(); projection_c_id++) {
-//        const auto projection_expr = node_expressions[projection_c_id];
-//
-//        switch (projection_expr->type) {
-//        case ExpressionType::LQPColumn:
-//          const auto column_reference = std::dynamic_pointer_cast<LQPColumnExpression>(projection_expr)->column_reference;
-//          if(constraint.columns[0] ==  column_reference.original_column_id()) {
-//            projection_lqp_constraints->push_back(UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{projection_c_id}}, IsPrimaryKey::No});
-//          }
-//          break;
-//        case ExpressionType::Arithmetic:
-//          break;
-//        default:
-//          break;
-////          Aggregate,
-////          Cast,
-////          Case,
-////          CorrelatedParameter,
-////          PQPColumn,
-////          Exists,
-////          Extract,
-////          Function,
-////          List,
-////          Logical,
-////          Placeholder,
-////          Predicate,
-////          PQPSubquery,
-////          LQPSubquery,
-////          UnaryMinus,
-////          Value
-//        }
-//      }
-//    }
-//  }
+  projection_lqp_constraints->reserve(node_expressions.size());
+
+  // Check each input constraint for applicability in this projection node
+  for(const auto& constraint : input_lqp_constraints) {
+
+    // Check whether column expressions have been filtered out with this node.
+    bool found_all_column_expressions = std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
+       [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
+
+         const auto matching_prj_column_expr = std::find_if(node_expressions.cbegin(), node_expressions.cend(),
+                                                            [&](const std::shared_ptr<AbstractExpression>& node_expr) {
+
+                                                              // TODO(Julian) Very basic equality test. May be extended to also match expressions like "column + 1"
+                                                              if (node_expr == constraint_column_expr) // continue here, does not work!
+                                                                return true;
+                                                              return false;
+                                                            });
+         return matching_prj_column_expr != node_expressions.cend();
+    });
+
+    if(found_all_column_expressions) {
+      projection_lqp_constraints->push_back(constraint);
+    }
+  }
+
   return projection_lqp_constraints;
 }
 
