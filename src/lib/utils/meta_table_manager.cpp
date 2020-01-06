@@ -4,16 +4,21 @@
 #include "hyrise.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  _methods["tables"] = &MetaTableManager::generate_tables_table;
-  _methods["columns"] = &MetaTableManager::generate_columns_table;
   _methods["chunks"] = &MetaTableManager::generate_chunks_table;
+  _methods["columns"] = &MetaTableManager::generate_columns_table;
+  _methods["indexes"] = &MetaTableManager::generate_indexes_table;
   _methods["segments"] = &MetaTableManager::generate_segments_table;
+  _methods["tables"] = &MetaTableManager::generate_tables_table;
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
@@ -81,6 +86,53 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
                                          : NULL_VALUE;
       output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int64_t>(chunk->size()),
                             static_cast<int64_t>(chunk->invalid_row_count()), cleanup_commit_id});
+    }
+  }
+
+  return output_table;
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_indexes_table() {
+  // Each index has an artificial ID (not used within Hyrise) that is required to identify multi-column indexes
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
+                                              {"chunk_id", DataType::Int, false},
+                                              {"index_id", DataType::Int, false},
+                                              {"column_id", DataType::Int, false},
+                                              {"index_type", DataType::String, false}};
+  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+
+  // TODO(anyone): we should store the indexes that are available within each chunk. We have IndexStatistics for
+  //     tables, but that would mean we can only handle the indexes that have been created for the whole table.
+  //     As soon as we expect tables to grow over time, the current way of handling indexes needs to be adapted.
+  //     Comment that shall not be merged: Martin votes for moving all IndexStatistics information to the chunks.
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    const auto column_count = table->column_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto& indexes = chunk->get_indexes(std::initializer_list<ColumnID>{column_id});
+        auto index_id = int32_t{0};
+        for (const auto& index : indexes) {
+          std::stringstream index_type_name;
+          // TODO(anyone): use some form of index_type_name << index->type();
+          if (std::dynamic_pointer_cast<const GroupKeyIndex>(index)) {
+            index_type_name << "GroupKeyIndex";
+          } else if (std::dynamic_pointer_cast<const CompositeGroupKeyIndex>(index)) {
+            index_type_name << "CompositeGroupKeyIndex";
+          } else if (std::dynamic_pointer_cast<const AdaptiveRadixTreeIndex>(index)) {
+            index_type_name << "AdaptiveRadixTreeIndex";
+          } else if (std::dynamic_pointer_cast<const BTreeIndex>(index)) {
+            index_type_name << "BTreeIndex";
+          } else {
+            index_type_name << "Unknown";
+          }
+
+          output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(index_id),
+                                static_cast<int32_t>(column_id), pmr_string{index_type_name.str()}});
+
+          ++index_id;
+        }
+      }
     }
   }
 
