@@ -20,6 +20,7 @@ namespace opossum {
 class ProjectionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
+    _table_constraints = {};
     _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
@@ -31,6 +32,32 @@ class ProjectionNodeTest : public BaseTest {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
   }
 
+  void recreate_mock_node_with_constraints(TableConstraintDefinitions table_constraints_in = {}) {
+
+    if(table_constraints_in.empty()) {
+      // Primary Key: a, b
+      const auto table_constraint_1 =
+          TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+      // Unique: b
+      const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+
+      _table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
+    } else {
+      _table_constraints = table_constraints_in;
+    }
+
+    _mock_node =
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
+                       "t_a", _table_constraints);
+
+    _a = _mock_node->get_column("a");
+    _b = _mock_node->get_column("b");
+    _c = _mock_node->get_column("c");
+
+    _projection_node = nullptr;
+  }
+
+  TableConstraintDefinitions _table_constraints;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
   LQPColumnReference _a, _b, _c;
@@ -70,31 +97,69 @@ TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(_projection_node->get_constraints()->empty());
 }
 
-TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
+TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
 
   // Recreate MockNode to incorporate two constraints
-  const auto table_constraint_1 =
-      TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-  const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
-  const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
-
-  _mock_node =
-      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
-                     "t_a", table_constraints);
+  recreate_mock_node_with_constraints();
   EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
-  _a = _mock_node->get_column("a");
-  _b = _mock_node->get_column("b");
-  _c = _mock_node->get_column("c");
 
-  // Create projection node reordering the columns: (0, 1, 2) -> (1, 2, 0)
-  _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
+  { // Reorder columns: (a, b, c) -> (c, a, b)
+    _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
-  // Basic constraints check
-  const auto lqp_constraints = _projection_node->get_constraints();
-  EXPECT_EQ(lqp_constraints->size(), 2);
+    // Basic check
+    const auto lqp_constraints = _projection_node->get_constraints();
+    EXPECT_EQ(lqp_constraints->size(), 2);
+    // In-depth check
+    check_table_constraint_representation(_table_constraints, lqp_constraints);
+  }
 
-  // In-depth check
-  check_table_constraint_representation(table_constraints, lqp_constraints);
+  { // Reorder columns: (a, b, c) -> (b, c, a)
+    _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
+
+    // Basic check
+    const auto lqp_constraints = _projection_node->get_constraints();
+    EXPECT_EQ(lqp_constraints->size(), 2);
+    // In-depth check
+    check_table_constraint_representation(_table_constraints, lqp_constraints);
+  }
+}
+
+TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
+
+  // Recreate MockNode to incorporate two constraints
+  recreate_mock_node_with_constraints();
+  EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
+
+  { // Test (a, b, c) -> (a, c) - no more constraints valid
+    _projection_node = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
+    EXPECT_TRUE(_projection_node->get_constraints()->empty());
+  }
+
+  { // Test (a, b, c) -> (c) - no more constraints valid
+    _projection_node = ProjectionNode::make(expression_vector(_c), _mock_node);
+    EXPECT_TRUE(_projection_node->get_constraints()->empty());
+  }
+
+  { // Test (a, b, c) -> (a, b) - all constraints remain valid
+    _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
+
+    // Basic check
+    const auto lqp_constraints = _projection_node->get_constraints();
+    EXPECT_EQ(lqp_constraints->size(), 2);
+    // In-depth check
+    check_table_constraint_representation(_table_constraints, lqp_constraints);
+  }
+
+  { // Test (a, b, c) -> (b) - unique constraint for b remains valid
+    _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
+
+    // Basic check
+    const auto lqp_constraints = _projection_node->get_constraints();
+    EXPECT_EQ(lqp_constraints->size(), 1);
+    // In-depth check
+    check_table_constraint_representation({_table_constraints.at(1)}, lqp_constraints);
+  }
+
 }
 
 //TEST_F(ProjectionNodeTest, ConstraintsArithmetics) {

@@ -55,9 +55,9 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> ProjectionNode::get_cons
     } // else { save constraint for the next block - derived constraints }
   }
 
-  // TODO(anyone) Very basic equality check here. In the future, we might want to look for derived expressions,
-  //  like 'column + 1', that preserve uniqueness.
-  //  However, we can't pass constraints then, we have to create derived constraints.
+  // TODO(anyone) Very basic equality check above. In the future, we also might want to look for
+  //  derived column expressions, like 'column + 1', that preserve uniqueness.
+  //  However, in case of derived column expressions we also have to create new, derived constraints.
   // { ... }
 
   return projection_lqp_constraints;
