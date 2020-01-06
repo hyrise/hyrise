@@ -90,9 +90,9 @@ class SQLPipelineStatement : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
 
-  // Returns the AutoCommit Mode of the statement.
+  // Returns whether the transaction context was created by the Statement or is shared across Statements.
   // If a transaction_context is provided, this indicates that it was created by the statement itself.
-  bool auto_commit() const;
+  bool shared_transaction_context() const;
 
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
@@ -113,6 +113,9 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
+
+  // This indicates whether the transaction context was created by the Statement or is shared across Statements.
+  const bool _shared_transaction_context;
 
   const std::shared_ptr<Optimizer> _optimizer;
 

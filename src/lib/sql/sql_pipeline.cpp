@@ -249,7 +249,9 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
 
     _result_tables.emplace_back(table);
 
-    previous_statement_transaction_context = pipeline_statement->auto_commit() ? nullptr : pipeline_statement->transaction_context();
+    // We only want to set the previous statement context if it is shared across statements and not auto generated
+    previous_statement_transaction_context =
+        pipeline_statement->shared_transaction_context() ? pipeline_statement->transaction_context() : nullptr;
   }
 
   _pipeline_status = SQLPipelineStatus::Success;

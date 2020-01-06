@@ -105,7 +105,8 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto [execution_information, transaction_context] = QueryHandler::execute_pipeline(query, _send_execution_info, _transaction);
+  const auto [execution_information, transaction_context] =
+      QueryHandler::execute_pipeline(query, _send_execution_info, _transaction);
 
   if (!execution_information.error_message.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error_message);
