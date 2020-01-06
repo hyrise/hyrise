@@ -9,9 +9,10 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/encoding_type.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/lz4_segment/lz4_segment_iterable.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
@@ -105,11 +106,34 @@ class IterablesTest : public BaseTest {
   std::shared_ptr<PosList> position_filter;
 };
 
-class ParamIterablesTest : public IterablesTest, public ::testing::WithParamInterface<EncodingType> {};
+class EncodedSegmentIterablesTest : public IterablesTest,
+                                    public ::testing::WithParamInterface<std::tuple<SegmentEncodingSpec, bool, bool>> {
+ public:
+  uint32_t expected_sum(bool nullable, bool with_position_filter) {
+    if (nullable && with_position_filter) {
+      return 12480u;
+    } else if (nullable && !with_position_filter) {
+      return 24825u;
+    } else if (!nullable && with_position_filter) {
+      return 13579u;
+    } else {
+      return 13702u;
+    }
+  }
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+  std::vector<ChunkOffset> expected_offsets(bool with_position_filter) {
+    if (with_position_filter) {
+      return std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}};
+    } else {
+      return std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}};
+    }
+  }
+};
+
+auto formatter = [](const ::testing::TestParamInfo<std::tuple<SegmentEncodingSpec, bool, bool>> info) {
   auto stream = std::stringstream{};
-  stream << info.param;
+  stream << std::get<0>(info.param) << (std::get<1>(info.param) ? "WithNulls" : "")
+         << (std::get<2>(info.param) ? "WithFilter" : "");
 
   auto string = stream.str();
   string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
@@ -117,168 +141,114 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(SegmentTypes, ParamIterablesTest,
-                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4),
+INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedSegmentIterablesTest,
+                         ::testing::Combine(::testing::ValuesIn(all_segment_encoding_specs),
+                                            ::testing::Bool(),   // nullable
+                                            ::testing::Bool()),  // position filter
                          formatter);
 
-TEST_P(ParamIterablesTest, IteratorWithIterators) {
-  ChunkEncoder::encode_all_chunks(table, GetParam());
-  const auto chunk = table->get_chunk(ChunkID{0u});
+TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
+  auto encoding_spec = std::get<0>(GetParam());
+  auto nullable = std::get<1>(GetParam());
+  auto with_position_filter = std::get<2>(GetParam());
+  std::shared_ptr<Table> test_table = (nullable ? table : table_with_null);
 
+  auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
+  for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
+    if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
+      chunk_encoding_spec[column_id] = encoding_spec;
+    }
+  }
+  ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
+
+  auto chunk = test_table->get_chunk(ChunkID{0u});
   auto base_segment = chunk->get_segment(ColumnID{0u});
 
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
+  resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    using SegmentType = std::decay_t<decltype(segment)>;
 
-  switch (GetParam()) {
-    case EncodingType::Unencoded: {
-      auto segment = std::dynamic_pointer_cast<const ValueSegment<int>>(base_segment);
-      auto iterable = ValueSegmentIterable<int>{*segment};
-      iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
-      break;
+    if constexpr (!std::is_same_v<pmr_string, ColumnDataType>) {
+      auto sum = uint32_t{0};
+      auto accessed_offsets = std::vector<ChunkOffset>{};
+      auto functor = SumUpWithIterator{sum, accessed_offsets};
+
+      const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+      if (with_position_filter) {
+        if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+          iterable.with_iterators(position_filter, functor);
+        }
+      } else {
+        iterable.with_iterators(functor);
+      }
+
+      EXPECT_EQ(sum, expected_sum(nullable, with_position_filter));
+      EXPECT_EQ(accessed_offsets, expected_offsets(with_position_filter));
     }
-    case EncodingType::Dictionary: {
-      auto segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(base_segment);
-      auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*segment};
-      iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
-      break;
+  });
+}
+
+class EncodedStringSegmentIterablesTest : public IterablesTest,
+                                          public ::testing::WithParamInterface<std::tuple<SegmentEncodingSpec, bool>> {
+ public:
+  pmr_string expected_concatenation(bool with_position_filter) {
+    if (with_position_filter) {
+      return "xxxyyyuuu";
+    } else {
+      return "xxxwwwyyyuuutttzzz";
     }
-    /*case EncodingType::FixedStringDictionary: {
-      auto segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(base_segment);
-      auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*segment};
-      iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
-      break;
-    }*/
-    case EncodingType::LZ4: {
-      auto segment = std::dynamic_pointer_cast<const LZ4Segment<int>>(base_segment);
-      auto iterable = LZ4SegmentIterable<int>{*segment};
-      iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
-      break;
-    }
-    default:
-      Fail("Unsupported Encoding type");
   }
+};
 
-  EXPECT_EQ(sum, 24825u);
-  EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
-}
+auto formatter_string = [](const ::testing::TestParamInfo<std::tuple<SegmentEncodingSpec, bool>> info) {
+  auto stream = std::stringstream{};
+  stream << std::get<0>(info.param) << "String" << (std::get<1>(info.param) ? "WithFilter" : "");
 
-TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
-  const auto chunk = table->get_chunk(ChunkID{0u});
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
 
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
+  return string;
+};
 
-  auto iterable = ValueSegmentIterable<int>{*int_segment};
+INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedStringSegmentIterablesTest,
+                         ::testing::Combine(::testing::ValuesIn(all_segment_encoding_specs),
+                                            ::testing::Bool()),  // position filter
+                         formatter_string);
 
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
+TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
+  std::shared_ptr<Table> test_table = table_strings;
+  auto encoding_spec = std::get<0>(GetParam());
+  auto with_position_filter = std::get<1>(GetParam());
 
-  EXPECT_EQ(sum, 12'480u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
-}
+  auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
+  for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
+    if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
+      chunk_encoding_spec[column_id] = encoding_spec;
+    }
+  }
+  ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
-TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
-  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  auto chunk = test_table->get_chunk(ChunkID{0u});
+  auto base_segment = chunk->get_segment(ColumnID{0u});
 
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
+  resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    using SegmentType = std::decay_t<decltype(segment)>;
 
-  auto iterable = ValueSegmentIterable<int>{*int_segment};
+    auto concatenate = pmr_string();
+    auto functor = AppendWithIterator{concatenate};
 
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+    const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+    if (with_position_filter) {
+      if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+        iterable.with_iterators(position_filter, functor);
+      }
+    } else {
+      iterable.with_iterators(functor);
+    }
 
-  EXPECT_EQ(sum, 13'702u);
-  EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
-}
-
-TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
-  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
-
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
-
-  auto iterable = ValueSegmentIterable<int>{*int_segment};
-
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
-
-  EXPECT_EQ(sum, 13'579u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
-}
-
-TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
-  ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
-
-  const auto chunk = table->get_chunk(ChunkID{0u});
-
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
-
-  auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
-
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
-
-  EXPECT_EQ(sum, 12'480u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
-}
-
-TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
-  ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
-
-  const auto chunk = table_strings->get_chunk(ChunkID{0u});
-
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
-
-  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
-
-  auto concatenate = pmr_string();
-  iterable.with_iterators(AppendWithIterator{concatenate});
-
-  EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
-}
-
-TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterators) {
-  ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
-
-  const auto chunk = table_strings->get_chunk(ChunkID{0u});
-
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
-
-  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
-
-  auto concatenate = pmr_string();
-  iterable.with_iterators(position_filter, AppendWithIterator{concatenate});
-
-  EXPECT_EQ(concatenate, "xxxyyyuuu");
-}
-
-TEST_F(IterablesTest, LZ4SegmentReferencedIteratorWithIterators) {
-  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
-
-  const auto chunk = table->get_chunk(ChunkID{0u});
-
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto lz4_segment = std::dynamic_pointer_cast<const LZ4Segment<int>>(segment);
-
-  auto iterable = LZ4SegmentIterable<int>{*lz4_segment};
-
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
-
-  EXPECT_EQ(sum, 12'480u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
+    EXPECT_EQ(concatenate, expected_concatenation(with_position_filter));
+  });
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
@@ -294,7 +264,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto accessed_offsets = std::vector<ChunkOffset>{};
   iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
-  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(sum, 24825u);
   EXPECT_EQ(accessed_offsets,
             (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}, ChunkOffset{4}}));
 }
@@ -344,7 +314,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   auto sum = uint32_t{0};
   iterable.for_each(SumUp{sum});
 
-  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(sum, 24825u);
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
@@ -358,7 +328,7 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   auto sum = uint32_t{0};
   iterable.for_each(SumUp{sum});
 
-  EXPECT_EQ(sum, 13'702u);
+  EXPECT_EQ(sum, 13702u);
 }
 
 }  // namespace opossum
