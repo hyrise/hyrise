@@ -65,12 +65,14 @@ TEST_F(ProjectionNodeTest, NodeExpressions) {
   EXPECT_EQ(*_projection_node->node_expressions.at(4), *add_(_a, _c));
 }
 
-TEST_F(ProjectionNodeTest, NoConstraints) {
+TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(_mock_node->get_constraints()->empty());
   EXPECT_TRUE(_projection_node->get_constraints()->empty());
 }
 
 TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
+
+  // Recreate MockNode with two constraints
   const auto table_constraint_1 =
       TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
@@ -79,13 +81,12 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderColumns) {
   _mock_node =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
                      "t_a", table_constraints);
-
   EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
 
-  // Create projection to reorder columns (0, 1, 2) -> (1, 2, 0)
+  // Create projection node reordering the columns: (0, 1, 2) -> (1, 2, 0)
   _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
-  // Basic check
+  // Basic constraints check
   const auto lqp_constraints = _projection_node->get_constraints();
   EXPECT_EQ(lqp_constraints->size(), 2);
 

@@ -45,7 +45,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> ProjectionNode::get_cons
                                                             [&](const std::shared_ptr<AbstractExpression>& node_expr) {
 
                                                               // TODO(Julian) Very basic equality test. May be extended to also match expressions like "column + 1"
-                                                              if (node_expr == constraint_column_expr) // continue here, does not work!
+                                                              if (node_expr.get() == constraint_column_expr.get())
                                                                 return true;
                                                               return false;
                                                             });
