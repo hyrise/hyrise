@@ -17,8 +17,10 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace {
 using namespace opossum;  // NOLINT
 
-bool reduce_for_constraint(const TableConstraintDefinition& table_constraint, const std::set<ColumnID>& group_by_columns,
-    const std::shared_ptr<const StoredTableNode>& stored_table_node, AggregateNode& aggregate_node) {
+bool reduce_for_constraint(const TableConstraintDefinition& table_constraint,
+                           const std::set<ColumnID>& group_by_columns,
+                           const std::shared_ptr<const StoredTableNode>& stored_table_node,
+                           AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
   const auto& constraint_columns = table_constraint.columns;
 
@@ -71,7 +73,7 @@ bool reduce_for_constraint(const TableConstraintDefinition& table_constraint, co
 
   return group_by_list_changed;
 }
-} // namespace
+}  // namespace
 
 namespace opossum {
 
@@ -138,9 +140,8 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
         constraints_position_and_size.emplace_back(constraint_id, table_constraint.columns.size());
         ++constraint_id;
       }
-      std::sort(
-          constraints_position_and_size.begin(), constraints_position_and_size.end(),
-          [](const auto& left, const auto& right) { return left.second < right.second; });
+      std::sort(constraints_position_and_size.begin(), constraints_position_and_size.end(),
+                [](const auto& left, const auto& right) { return left.second < right.second; });
 
       // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. As soon as
       // one reduction took place, we can ignore the remaining constraints.
