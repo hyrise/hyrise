@@ -1,3 +1,5 @@
+#pragma once
+
 #include "storage/table.hpp"
 
 namespace opossum {
