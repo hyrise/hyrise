@@ -222,17 +222,17 @@ void AggregateHash::_aggregate() {
 
         if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
           // For values with a type than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry. We
-          // cannot do this for types with the same size as AggregateKeyEntry as we need tohave a special NULL value.
+          // cannot do this for types with the same size as AggregateKeyEntry as we need to have a special NULL value.
           // By using the value itself, we can save us the effort of building the id_map.
           for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
             const auto chunk_in = input_table->get_chunk(chunk_id);
             const auto base_segment = chunk_in->get_segment(column_id);
             ChunkOffset chunk_offset{0};
             segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
-              const auto normalize = [](const int32_t value) {
+              const auto to_uint = [](const int32_t value) {
                 // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
                 // about preserving the value, just its uniqueness.
-                const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::lowest();
+                const auto shifted_value = static_cast<int64_t>(value) + std::numeric_limits<int32_t>::min();
                 DebugAssert(shifted_value > 0, "Type conversion failed");
                 return static_cast<uint64_t>(shifted_value);
               };
@@ -241,13 +241,13 @@ void AggregateHash::_aggregate() {
                 if (position.is_null()) {
                   keys_per_chunk[chunk_id][chunk_offset] = 0;
                 } else {
-                  keys_per_chunk[chunk_id][chunk_offset] = normalize(position.value()) + 1;
+                  keys_per_chunk[chunk_id][chunk_offset] = to_uint(position.value()) + 1;
                 }
               } else {
                 if (position.is_null()) {
                   keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
                 } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = normalize(position.value()) + 1;
+                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = to_uint(position.value()) + 1;
                 }
               }
               ++chunk_offset;
@@ -284,7 +284,7 @@ void AggregateHash::_aggregate() {
                 }
               } else {
                 auto inserted = id_map.try_emplace(position.value(), id_counter);
-                // store either the current id_counter or the existing ID of the value
+                
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
                 } else {
