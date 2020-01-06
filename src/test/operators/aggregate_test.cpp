@@ -28,6 +28,14 @@ template <typename T>
 class OperatorsAggregateTest : public BaseTest {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
+    _table_wrapper_1_0 = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input.tbl", 2));
+    _table_wrapper_1_0->execute();
+
+    _table_wrapper_1_0_null = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 2));
+    _table_wrapper_1_0_null->execute();
+
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
@@ -131,11 +139,12 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_1_large,
-      _table_wrapper_join_1, _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
-      _table_wrapper_2_0_null, _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict,
-      _table_wrapper_2_0_a, _table_wrapper_2_o_b, _table_wrapper_int_int;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_0, _table_wrapper_1_0_null, _table_wrapper_1_1,
+      _table_wrapper_1_1_null, _table_wrapper_1_1_large, _table_wrapper_join_1, _table_wrapper_join_2,
+      _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_3_1,
+      _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
+      _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a, _table_wrapper_2_o_b,
+      _table_wrapper_int_int;
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
@@ -502,7 +511,7 @@ TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateCount) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregate) {
-  this->test_output(this->_table_wrapper_1_1, {}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_0, {}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result.tbl", 1);
 }
 
@@ -557,13 +566,18 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateCountWithNull) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_0_null, {}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStar) {
+  this->test_output(this->_table_wrapper_1_1, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl", 1, false);
+}
+
+TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStarWithNull) {
   this->test_output(this->_table_wrapper_1_1_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
-                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyCountStar) {
