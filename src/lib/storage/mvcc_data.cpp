@@ -59,8 +59,10 @@ std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   return stream;
 }
 
+CommitID MvccData::get_begin_cid(const ChunkOffset offset) const { return begin_cids[offset]; }
 void MvccData::set_begin_cid(const ChunkOffset offset, const CommitID commit_id) { begin_cids[offset] = commit_id; }
 
+CommitID MvccData::get_end_cid(const ChunkOffset offset) const { return end_cids[offset]; }
 void MvccData::set_end_cid(const ChunkOffset offset, const CommitID commit_id) { end_cids[offset] = commit_id; }
 
 }  // namespace opossum
