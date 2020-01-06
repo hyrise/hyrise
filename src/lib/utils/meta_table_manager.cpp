@@ -7,10 +7,6 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -94,7 +90,6 @@ MetaTableManager::MetaTableManager() {
   _methods["columns"] = &MetaTableManager::generate_columns_table;
   _methods["chunks"] = &MetaTableManager::generate_chunks_table;
   _methods["chunk_sort_orders"] = &MetaTableManager::generate_chunk_sort_orders_table;
-  _methods["single_column_indexes"] = &MetaTableManager::generate_single_column_indexes_table;
   _methods["segments"] = &MetaTableManager::generate_segments_table;
   _methods["segments_accurate"] = &MetaTableManager::generate_accurate_segments_table;
 
