@@ -5,11 +5,10 @@
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
+#include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-class AbstractExpression;
 
 enum class LQPNodeType {
   Aggregate,
@@ -55,7 +54,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return a string describing this node, but nothing about its inputs.
    */
-  virtual std::string description() const = 0;
+  enum class DescriptionMode { Short, Detailed };
+  virtual std::string description(const DescriptionMode mode = DescriptionMode::Short) const = 0;
 
   /**
    * @defgroup Access the outputs/inputs
@@ -175,9 +175,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * Override to hash data fields in derived types. No override needed if derived expression has no
    * data members.
    */
-  virtual size_t _shallow_hash() const;
+  virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
+
+  /*
+   * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
+   */
+  static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
 
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;

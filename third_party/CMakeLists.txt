@@ -176,6 +176,13 @@ else()
     set(JEMALLOC_LIB_PATH ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.so)
 endif()
 
+if(CMAKE_CURRENT_SOURCE_DIR MATCHES "[ \t\r\n]" OR CMAKE_CURRENT_BINARY_DIR MATCHES "[ \t\r\n]")
+  # It looks like `--prefix=<...>` does not work too well if the prefix has a whitespace. We did not spend too long
+  # trying to get this to work as (1) this is easy to fix by the user, (2) it has only come up once in a long time, and
+  # (3) Makefiles are notoriously bad with spaces: http://savannah.gnu.org/bugs/?712
+  message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
+endif()
+
 include(ExternalProject)
 if(APPLE)
     set(MAC_INCLUDES "SDKROOT=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk\" CPATH=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include\"")
