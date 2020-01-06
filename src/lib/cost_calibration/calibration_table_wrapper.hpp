@@ -1,9 +1,14 @@
 #pragma once
+
 #include "storage/table.hpp"
 
 namespace opossum {
 
 class CalibrationTableWrapper {
+ /*
+ * Wraps a table and holds in addition the information about the data distribution
+ * Intended for communication from the TableGenerator to the LQPGenerator.
+ */
  public:
   CalibrationTableWrapper(
     std::shared_ptr<Table> table,
