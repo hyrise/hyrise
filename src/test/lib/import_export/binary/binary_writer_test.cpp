@@ -68,7 +68,8 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength, EncodingType::LZ4),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                                           EncodingType::LZ4),
                          formatter);
 
 TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
@@ -243,7 +244,6 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
-
 
 // TEST_P for all supported encoding types
 

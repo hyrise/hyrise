@@ -269,7 +269,8 @@ TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
     expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
   }
 
-  auto table = BinaryParser::parse(_reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
@@ -317,7 +318,8 @@ TEST_F(BinaryParserTest, NullValuesFrameOfReferenceSegment) {
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({5});
 
-  auto table = BinaryParser::parse(_reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
@@ -333,7 +335,8 @@ TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({opossum::NULL_VALUE});
 
-  auto table = BinaryParser::parse(_reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }

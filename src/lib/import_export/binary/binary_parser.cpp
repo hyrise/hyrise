@@ -189,7 +189,6 @@ std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(st
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
 }
 
-
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                              ChunkOffset row_count) {
