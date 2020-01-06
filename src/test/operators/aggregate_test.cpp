@@ -185,27 +185,33 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
 // The ANY aggregation is a special case which is used to obtain "any value" of a group of which we know that each
 // value in this group is the same (for most cases, the group will have a size of one). This can be the case, when
 // the aggregated column is functionally dependent on the group-by columns.
-TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
+TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
   auto filtered = std::make_shared<TableScan>(
       this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
-  {
-    auto aggregate = std::make_shared<TypeParam>(
-        filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
-        std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
-    aggregate->execute();
+  auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  aggregate->execute();
 
-    EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
-  }
+  // Column 2 stores the value 20 twice for the remaining group.
+  EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
+}
 
-  // For debug builds, we DebugAssert that all values are the same within their group.
-  if (HYRISE_DEBUG) {
-    auto aggregate = std::make_shared<TypeParam>(
-        filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
-        std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
-    EXPECT_THROW(aggregate->execute(), std::logic_error);
-  }
+// For debug builds, we DebugAssert that all values are the same within a group.
+TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+  filtered->execute();
+
+  // Column 3 stores different values for the tuples of the remaining group.
+  auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 // Use ANY() on a column with NULL values.

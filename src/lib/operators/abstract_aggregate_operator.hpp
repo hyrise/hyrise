@@ -146,7 +146,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
               std::vector<AggregateType>& current_secondary_aggregates) {
-      // ANY() is expected to be only executed on groups whose size is either 1 or whose values are all equal
+      // ANY() is expected to be only executed on groups whose values are all equal.
       DebugAssert(!current_primary_aggregate || *current_primary_aggregate == new_value,
                   "ANY() expects all values in the group to be equal.");
       current_primary_aggregate = new_value;
