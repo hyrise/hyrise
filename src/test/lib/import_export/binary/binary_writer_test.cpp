@@ -1,4 +1,3 @@
-<<<<<<< HEAD:src/test/lib/import_export/binary/binary_writer_test.cpp
 #include <cstdio>
 #include <fstream>
 #include <memory>

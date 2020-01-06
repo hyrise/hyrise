@@ -1,4 +1,3 @@
-<<<<<<< HEAD:src/test/lib/import_export/binary/binary_parser_test.cpp
 #include <memory>
 #include <string>
 #include <vector>
