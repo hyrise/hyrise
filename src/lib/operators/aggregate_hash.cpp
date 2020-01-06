@@ -231,9 +231,10 @@ void AggregateHash::_aggregate() {
             segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
               const auto to_uint = [](const int32_t value) {
                 // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
-                // about preserving the value, just its uniqueness.
-                const auto shifted_value = static_cast<int64_t>(value) + std::numeric_limits<int32_t>::min();
-                DebugAssert(shifted_value > 0, "Type conversion failed");
+                // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
+                // negative itself) to get a positive number.
+                const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
+                DebugAssert(shifted_value >= 0, "Type conversion failed");
                 return static_cast<uint64_t>(shifted_value);
               };
 
