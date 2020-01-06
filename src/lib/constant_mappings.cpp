@@ -47,6 +47,13 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
 
+const boost::bimap<DataDistributionType, std::string> data_distribution_type_to_string =
+    make_bimap<DataDistributionType, std::string>({
+    {DataDistributionType::Uniform, "Uniform"},
+    {DataDistributionType::NormalSkewed, "NormalSkewed"},
+    {DataDistributionType::Pareto, "Pareto"},
+    });
+
 std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
 }
@@ -75,5 +82,27 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) 
 
   return stream;
 }
+
+std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_data_distribution) {
+    stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
+    switch (column_data_distribution.distribution_type){
+        case DataDistributionType::Uniform:
+            stream << column_data_distribution.min_value << "_"
+                   << column_data_distribution.max_value;
+            break;
+        case DataDistributionType::NormalSkewed:
+            stream << column_data_distribution.skew_location << "_"
+                   << column_data_distribution.skew_scale << "_"
+                   << column_data_distribution.skew_shape;
+            break;
+        case DataDistributionType::Pareto:
+            stream << column_data_distribution.pareto_scale << "_"
+                   << column_data_distribution.pareto_shape;
+            break;
+    }
+    return stream;
+}
+
+
 
 }  // namespace opossum
