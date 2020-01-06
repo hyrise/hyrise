@@ -1,5 +1,6 @@
 #include "file_type.hpp"
 
+#include "boost/algorithm/string/case_conv.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -15,7 +16,8 @@ FileType import_type_to_file_type(const hsql::ImportType import_type) {
 }
 
 FileType file_type_from_filename(const std::string& filename) {
-  const auto extension = std::string{std::filesystem::path{filename}.extension()};
+  auto extension = std::string{std::filesystem::path{filename}.extension()};
+  boost::algorithm::to_lower(extension);
   if (extension == ".csv") {
     return FileType::Csv;
   } else if (extension == ".tbl") {
