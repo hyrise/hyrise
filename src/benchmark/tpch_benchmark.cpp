@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
                           benchmark_runner->sqlite_wrapper);
   }
 
-  AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{1};
+  AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{10000};
 //  SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
   benchmark_runner->run();
 //  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), "access_statistics_tpch_10s_meta.csv",
