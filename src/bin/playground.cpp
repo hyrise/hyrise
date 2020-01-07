@@ -2,10 +2,10 @@
 #include <logical_query_plan/mock_node.hpp>
 #include <synthetic_table_generator.hpp>
 #include <cost_calibration/table_generator.hpp>
-#include <cost_calibration/lqp_generator/table_scan.hpp>
 #include <cost_calibration/measurement_export.hpp>
 #include <logical_query_plan/lqp_translator.hpp>
 #include <scheduler/operator_task.hpp>
+#include <cost_calibration/lqp_generator.hpp>
 #include "types.hpp"
 #include "hyrise.hpp"
 
@@ -23,13 +23,12 @@ int main() {
   const auto tables = table_generator.generate();
 
   auto measurement_export = MeasurementExport(".");
+  auto lqp_generator = LQPGenerator();
 
   for (const auto &table : tables){
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
 
-    auto lqp_generator = TableScanLQPGenerator(table);
-    lqp_generator.generate();
-    const auto lqps = lqp_generator.get_lqps();
+    const auto lqps = lqp_generator.generate(OperatorType::TableScan, table);
 
     //Execution of lpqs; In the future a good scheduler as replacement for following code would be awesome.
     for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
