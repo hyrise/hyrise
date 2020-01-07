@@ -10,4 +10,4 @@ enum class HasNullTerminator : bool { Yes = true, No = false };
 
 enum class SendExecutionInfo : bool { Yes = true, No = false };
 
-}
+}  // namespace opossum

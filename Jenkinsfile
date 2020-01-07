@@ -61,10 +61,13 @@ try {
           cmake = 'cmake -DCI_BUILD=ON'
           ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
           unity = '-DCMAKE_UNITY_BUILD=ON'
+
           clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+
           debug = '-DCMAKE_BUILD_TYPE=Debug'
           release = '-DCMAKE_BUILD_TYPE=Release'
+          relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
           // GCC produces non-deterministics files when precompiled headers are built: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92717
           // Disable ASLR for the gcc build process (not for the resulting executable) to stop this from happening:
@@ -75,16 +78,16 @@ try {
 
           // Configure the rest in parallel
           // Most builds don't use unity builds as this would break the ccache use across different PRs. For clang-tidy, ccache does not have an effect, so we use unity there.
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                             ${cmake}           ${debug}   ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                       ${cmake}           ${debug}   ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                     ${cmake} ${ccache} ${debug}   ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&                 ${cmake} ${ccache} ${release} ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release &&                                                       ${cmake} ${ccache} ${release} ${clang}          .. &\
-          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && ${cmake} ${ccache} ${release} ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer &&                     ${cmake} ${ccache} ${release} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa &&     ${cmake} ${ccache} ${release} ${clang}          -DENABLE_THREAD_SANITIZATION=ON  -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir gcc-debug && cd gcc-debug &&                                                               ${cmake} ${ccache} ${debug}   ${gcc}            .. &\
-          mkdir gcc-release && cd gcc-release &&                                                           ${cmake} ${ccache} ${release} ${gcc}            .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                                         ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                                   ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                                 ${cmake} ${ccache} ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&                             ${cmake} ${ccache} ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release &&                                                                   ${cmake} ${ccache} ${release}        ${clang}          .. &\
+          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa &&             ${cmake} ${ccache} ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&                   ${cmake} ${ccache} ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir clang-relwithdebinfo-thread-sanitizer-no-numa && cd clang-relwithdebinfo-thread-sanitizer-no-numa &&   ${cmake} ${ccache} ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON  -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir gcc-debug && cd gcc-debug &&                                                                           ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
+          mkdir gcc-release && cd gcc-release &&                                                                       ${cmake} ${ccache} ${release}        ${gcc}            .. &\
           wait"
         }
 
@@ -216,25 +219,25 @@ try {
               Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
             }
           }
-        }, clangReleaseThreadSanitizer: {
-          stage("clang-release:thread-sanitizer") {
+        }, clangRelWithDebInfoThreadSanitizer: {
+          stage("clang-relwithdebinfo:thread-sanitizer") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
-              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
-              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-thread-sanitizer"
-              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
             } else {
-              Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
+              Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
             }
           }
-        }, clangReleaseThreadSanitizerNoNuma: {
-          stage("clang-release:thread-sanitizer w/o NUMA") {
+        }, clangRelWithDebInfoThreadSanitizerNoNuma: {
+          stage("clang-relwithdebinfo:thread-sanitizer w/o NUMA") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
-              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
-              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-thread-sanitizer-no-numa"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-relwithdebinfo-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseTest clang-relwithdebinfo-thread-sanitizer-no-numa"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer-no-numa"
             } else {
-              Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
+              Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizerNoNuma")
             }
           }
         }, clangDebugCoverage: {
