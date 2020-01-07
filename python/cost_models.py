@@ -1,18 +1,20 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-import numpy
+import numpy as np
 import sys
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 # store model and metadata about the model in one object (there might be better ways, tbd)
 class CostModel:
 
-    def __init__(self, model, scan_type, encoding, compression):
+    def __init__(self, model, scan_type, encoding):
         self.model = model
         self.scan_type = scan_type
         self.encoding = encoding
-        self.compression = compression
+        #self.compression = compression
 
 
 def import_test_data(tpch):
@@ -37,9 +39,24 @@ def import_test_data(tpch):
     return joined_data
 
 
-def import_train_data():
-    # use the test_data for now as we assume the same structure
-    pass
+def import_train_data(input_data):
+    table_scan_data = pd.read_csv(input_data[0])
+    columns_data = pd.read_csv(input_data[1])
+    table_data = pd.read_csv(input_data[2])
+
+    joined_data = table_scan_data.merge(table_data, on=["TABLE_NAME", "COLUMN_NAME"], how="left")
+
+    # extract encoding_type from column_name
+    # encodings = [[encoding.split('_')[1]] for encoding in columns_data[['COLUMN_NAME']]]
+    # columns_data['ENCODING'] = encodings
+
+    joined_data = joined_data.merge(columns_data, on="TABLE_NAME", how="left")
+    joined_data = joined_data.rename(columns={"INPUT_ROWS_LEFT": "INPUT_ROWS", "CHUNK_SIZE": "MAX_CHUNK_SIZE",
+                                              "COLUMN_DATA_TYPE": "DATA_TYPE", "ENCODING_TYPE": "ENCODING",
+                                              "TABLE_NAME_x": "TABLE_NAME", "COLUMN_NAME_y": "COLUMN_NAME",
+                                              "COLUMN_DATA_TYPE": "DATA_TYPE", "COLUMN_TYPE": "SCAN_TYPE"})
+
+    return joined_data
 
 
 def preprocess_data(data):
@@ -53,7 +70,11 @@ def preprocess_data(data):
 
 
 def train_model(train_data):
-    ohe_data = preprocess_data(train_data)
+    # not for now, since there are no compression types in the data
+    #ohe_data = preprocess_data(train_data)
+
+    ohe_data = train_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
+    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
 
     y = ohe_data[['RUNTIME_NS']]
     X = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
@@ -62,50 +83,92 @@ def train_model(train_data):
     return model
 
 
-def calculate_error(model, test_data):
+def generate_output(costmodel, test_data, out):
     # predict runtime for test queries in the test data
-    ohe_data = preprocess_data(test_data)
+    #ohe_data = preprocess_data(test_data)
+    # for now, since we don't have the data in our trainings measurements
+    ohe_data = test_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME', 'COMPRESSION', 'SIZE_IN_BYTES',
+                                      'DISTINCT_VALUE_COUNT', 'IS_NULLABLE'], axis=1)
+    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
+    # hacky solution
+    ohe_data['DATA_TYPE_long'] = 0
+    ohe_data['DATA_TYPE_string'] = 0
+    ohe_data['DATA_TYPE_double'] = 0
+
     y_true = ohe_data[['RUNTIME_NS']]
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
-    y_pred = model.predict(ohe_data)
+    y_pred = costmodel.model.predict(ohe_data)
+    error = abs(y_true.to_numpy()-y_pred)
+    mse = calculate_error(y_true, y_pred)
 
+    # print and put the plots in the output folder
+    fig = plt.figure()
+    plt.boxplot(error)
+    output_path = '{}error_model_{}_{}'.format(out,costmodel.scan_type, costmodel.encoding)
+    fig.savefig(output_path, bbox_inches='tight')
+    return mse
+
+
+def calculate_error(y_true, y_pred):
     # calculate error (ME) for the model
     mse = mean_squared_error(y_true, y_pred, squared=False)
     return mse
 
 
+def plot_predictions(data_true, data_pred, out):
+    # plot the true values against the predicted values to visualize the model's accuracies
+    fig = plt.figure()
+    # plot here
+
+    return fig
+
+
 def main():
     tpch = [arg for arg in sys.argv[1:5]]
     test_data = import_test_data(tpch)
-    train_data = test_data
-    #train_data = import_train_data()
+    train_data = import_train_data([arg for arg in sys.argv[5:8]])
+    # TODO: maybe order the test and trainings data in the same way (does it influence the regression?)
+    output_folder = sys.argv[8]
+    cost_models = []
 
     # also keep one 'universal' model in case some thing comes up, that we don't have a specific model for?
     u_cost_model = train_model(train_data)
-
+    cost_models.append(CostModel(u_cost_model, scan_type='None', encoding='None'))
     # make models for different scan operators and combinations of encodings/compressions
-    cost_models = []
     test_data_splitted = []
+    leftover_test_data = []
     for scan_type in train_data['SCAN_TYPE'].unique():
         for encoding in train_data['ENCODING'].unique():
-            for compression in train_data['COMPRESSION'].unique():
-                model_train_data = train_data.loc[(train_data['SCAN_TYPE'] == scan_type) & (train_data['ENCODING'] == encoding)
-                                           & (train_data['COMPRESSION'] == compression)]
+            #for compression in train_data['COMPRESSION'].unique():
+
+            model_train_data = train_data.loc[(train_data['SCAN_TYPE'] == scan_type) & (train_data['ENCODING'] == encoding)]
+            model_test_data = test_data.loc[(test_data['SCAN_TYPE'] == scan_type) & (test_data['ENCODING'] == encoding)]
+            # if we have train data for this combination, train a model
+
+            if not model_train_data.empty:
                 model = train_model(model_train_data)
 
-                cost_models.append(CostModel(model, scan_type, encoding, compression))
+                cost_model = CostModel(model, scan_type, encoding)
+                cost_models.append(cost_model)
 
-                model_test_data = test_data.loc[(test_data['SCAN_TYPE'] == scan_type) & (test_data['ENCODING'] == encoding)
-                                           & (test_data['COMPRESSION'] == compression)]
+                # if there is no test_data for this combination, continue
+                if model_test_data.empty:
+                    continue
                 test_data_splitted.append(model_test_data)
-                # drop those lines in test_data?
 
                 # predict the runtime for the queries of the test_data that correspond to this model and calculate the
                 # error (SSE)
-                model_mse = calculate_error(model, model_test_data)
+                model_mse = generate_output(cost_model, model_test_data, output_folder)
 
-                # testing:
-                print(model_mse)
+            # if we don't have a model for this combination but test_data, add the test_data to test on the universal model
+            if not model_test_data.empty:
+                leftover_test_data.append(model_test_data)
+
+            # testing:
+            print(model_mse)
+
+
+    # umodel_mse = generate_output(u_cost_model, leftover_test_data, output_folder)
 
     # TODO: catch the queries that don't correspond to any model and use the 'universal model' for runtime prediction of those
 
@@ -116,6 +179,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
