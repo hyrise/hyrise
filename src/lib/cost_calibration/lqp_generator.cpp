@@ -11,72 +11,39 @@ namespace opossum {
     std::vector<std::shared_ptr<AbstractLQPNode>>
     LQPGenerator::generate(OperatorType operator_type, std::shared_ptr<const CalibrationTableWrapper> table) const {
       switch (operator_type) {
-        case OperatorType::Aggregate:
-          break;
-        case OperatorType::Alias:
-          break;
-        case OperatorType::Delete:
-          break;
-        case OperatorType::Difference:
-          break;
-        case OperatorType::ExportBinary:
-          break;
-        case OperatorType::ExportCsv:
-          break;
-        case OperatorType::GetTable:
-          break;
-        case OperatorType::ImportBinary:
-          break;
-        case OperatorType::ImportCsv:
-          break;
-        case OperatorType::IndexScan:
-          break;
-        case OperatorType::Insert:
-          break;
-        case OperatorType::JoinHash:
-          break;
-        case OperatorType::JoinIndex:
-          break;
-        case OperatorType::JoinNestedLoop:
-          break;
-        case OperatorType::JoinSortMerge:
-          break;
-        case OperatorType::JoinVerification:
-          break;
-        case OperatorType::Limit:
-          break;
-        case OperatorType::Print:
-          break;
-        case OperatorType::Product:
-          break;
-        case OperatorType::Projection:
-          break;
-        case OperatorType::Sort:
-          break;
-        case OperatorType::TableScan:
-          return _generate_table_scans(table);
-        case OperatorType::TableWrapper:
-          break;
-        case OperatorType::UnionAll:
-          break;
-        case OperatorType::UnionPositions:
-          break;
-        case OperatorType::Update:
-          break;
-        case OperatorType::Validate:
-          break;
-        case OperatorType::CreateTable:
-          break;
-        case OperatorType::CreatePreparedPlan:
-          break;
-        case OperatorType::CreateView:
-          break;
-        case OperatorType::DropTable:
-          break;
-        case OperatorType::DropView:
-          break;
-        case OperatorType::Mock:
-          break;
+        case OperatorType::Aggregate:           break;
+        case OperatorType::Alias:               break;
+        case OperatorType::Delete:              break;
+        case OperatorType::Difference:          break;
+        case OperatorType::ExportBinary:        break;
+        case OperatorType::ExportCsv:           break;
+        case OperatorType::GetTable:            break;
+        case OperatorType::ImportBinary:        break;
+        case OperatorType::ImportCsv:           break;
+        case OperatorType::IndexScan:           break;
+        case OperatorType::Insert:              break;
+        case OperatorType::JoinHash:            break;
+        case OperatorType::JoinIndex:           break;
+        case OperatorType::JoinNestedLoop:      break;
+        case OperatorType::JoinSortMerge:       break;
+        case OperatorType::JoinVerification:    break;
+        case OperatorType::Limit:               break;
+        case OperatorType::Print:               break;
+        case OperatorType::Product:             break;
+        case OperatorType::Projection:          break;
+        case OperatorType::Sort:                break;
+        case OperatorType::TableScan:           return _generate_table_scans(table);
+        case OperatorType::TableWrapper:        break;
+        case OperatorType::UnionAll:            break;
+        case OperatorType::UnionPositions:      break;
+        case OperatorType::Update:              break;
+        case OperatorType::Validate:            break;
+        case OperatorType::CreateTable:         break;
+        case OperatorType::CreatePreparedPlan:  break;
+        case OperatorType::CreateView:          break;
+        case OperatorType::DropTable:           break;
+        case OperatorType::DropView:            break;
+        case OperatorType::Mock:                break;
       }
       return std::vector<std::shared_ptr<AbstractLQPNode>>(); //TODO How to avoid this? (This line is never reached)
     }
