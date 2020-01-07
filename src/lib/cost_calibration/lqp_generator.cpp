@@ -1,5 +1,6 @@
 
 #include <expression/expression_functional.hpp>
+#include <utility>
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "lqp_generator.hpp"
@@ -49,40 +50,41 @@ namespace opossum {
     }
 
     std::vector<std::shared_ptr<AbstractLQPNode>>
-    LQPGenerator::_generate_table_scans(std::shared_ptr<const CalibrationTableWrapper> table) const {
-      int selectivity_steps = 10;
+    LQPGenerator::_generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper>& table) const {
+      // TODO implement Scan on Reference Segments
+      int selectivity_resolution = 10;
       std::vector<std::shared_ptr<AbstractLQPNode>> generated_lpqs;
 
-      const auto _t_a = StoredTableNode::make(table->get_name());
+      const auto _stored_table_node = StoredTableNode::make(table->get_name());
 
       int column_count = table->get_table()->column_count();
       std::vector<std::string> column_names = table->get_table()->column_names();
       auto column_data_types = table->get_table()->column_data_types();
 
-      for (int j = 0; j < column_count; ++j) {
+      for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        auto distribution = table->get_column_data_distribution(column_id);
+        auto column = _stored_table_node->get_column(column_names.at(column_id));
 
-        auto distribution = table->get_column_data_distribution(ColumnID(static_cast<const uint16_t>(j)));
-
-        auto column = _t_a->get_column(column_names.at(j));
-
-        switch (column_data_types.at(j)) {
+        switch (column_data_types.at(column_id)) {
           case DataType::Null:
             break;
           case DataType::String:
-            generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, "yo"), _t_a));
+            generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, "yo"), _stored_table_node));
             break;
           case DataType::Int:
           case DataType::Long:
           case DataType::Double:
           case DataType::Float:
             if (distribution.distribution_type == DataDistributionType::Uniform) {
-              // change selecticitc programatically
-//                auto step = distribution.min_value + (distribution.max_value - distribution.min_value);
-              for (int i = 0; i < selectivity_steps; i++) {
-                generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, 10), _t_a));
+              // change selectivity in steps
+              double step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
+              for (int selectivity_step = 0; selectivity_step < selectivity_resolution + 1; selectivity_step++) {
+                double lower_bound = distribution.min_value + step_size * selectivity_step;
+                generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, lower_bound), _stored_table_node));
               }
             } else {
-              generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, 10), _t_a));
+              // for non uniform distributions: 100% selectivity
+              generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, distribution.min_value), _stored_table_node));
             }
             break;
         }
