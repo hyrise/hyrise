@@ -187,6 +187,7 @@ void AggregateHash::_aggregate() {
     It is gradually built by visitors, one for each group segment.
     */
 
+    const auto chunk_count = input_table->chunk_count();
 
     {
       // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
@@ -195,7 +196,7 @@ void AggregateHash::_aggregate() {
       size_t needed_size_per_aggregate_key =
           aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
       size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
-                           input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
+                           chunk_count * aligned_size<AggregateKeys<AggregateKey>>() +
                            input_table->row_count() * needed_size_per_aggregate_key;
       needed_size = static_cast<size_t>(needed_size * 1.1);  // Give it a little bit more, just in case
 
@@ -206,8 +207,7 @@ void AggregateHash::_aggregate() {
 
       // Create the actual data structure
       keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
-      keys_per_chunk.reserve(input_table->chunk_count());
-      const auto chunk_count = input_table->chunk_count();
+      keys_per_chunk.reserve(chunk_count);
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = input_table->get_chunk(chunk_id);
         if (!chunk) continue;
@@ -234,40 +234,48 @@ void AggregateHash::_aggregate() {
     jobs.reserve(_groupby_column_ids.size());
 
     for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
-      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, this]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count, this]() {
         const auto column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(column_id);
-
-        const auto chunk_count = input_table->chunk_count();
 
         resolve_data_type(data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          if constexpr (std::is_same_v<ColumnDataType, int32_t>) {  // TODO fix negative, add test
-            // For values smaller than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry. We cannot
-            // do this for values with the same size as we need have a special NULL value.
+          if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
+            // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry.
+            // We cannot do this for types with the same size as AggregateKeyEntry as we need to have a special NULL
+            // value. By using the value itself, we can save us the effort of building the id_map.
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto base_segment = chunk_in->get_segment(column_id);
               ChunkOffset chunk_offset{0};
               segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+                const auto to_uint = [](const int32_t value) {
+                  // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
+                  // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
+                  // negative itself) to get a positive number.
+                  const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
+                  DebugAssert(shifted_value >= 0, "Type conversion failed");
+                  return static_cast<uint64_t>(shifted_value);
+                };
+
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   if (position.is_null()) {
                     keys_per_chunk[chunk_id][chunk_offset] = 0;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset] = position.value() + 1;
+                    keys_per_chunk[chunk_id][chunk_offset] = to_uint(position.value()) + 1;
                   }
                 } else {
                   if (position.is_null()) {
                     keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = position.value() + 1;
+                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = to_uint(position.value()) + 1;
                   }
                 }
                 ++chunk_offset;
               });
             }
-          } else {
+
             /*
             Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
             The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
@@ -298,7 +306,6 @@ void AggregateHash::_aggregate() {
                   }
                 } else {
                   auto inserted = id_map.try_emplace(position.value(), id_counter);
-                  // store either the current id_counter or the existing ID of the value
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                     keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
                   } else {

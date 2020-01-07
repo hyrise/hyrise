@@ -3,6 +3,7 @@
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 
 namespace opossum {
 
