@@ -89,7 +89,8 @@ int main() {
   column_meta.open("./column_meta.csv", std::ofstream::out | std::ofstream::app);
   column_meta << "TABLE_NAME,";
   column_meta << "COLUMN_NAME,";
-  column_meta << "COLUMN_DATA_TYPE\n";
+  column_meta << "COLUMN_DATA_TYPE,";
+  column_meta << "ENCODING_TYPE\n";
 
   for (const auto &table : tables){
     std::cout << table_meta.is_open();

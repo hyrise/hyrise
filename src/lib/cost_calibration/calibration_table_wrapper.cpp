@@ -3,6 +3,7 @@
 //
 
 #include <operators/export_csv.hpp>
+#include <storage/base_encoded_segment.hpp>
 #include "calibration_table_wrapper.hpp"
 
 namespace opossum {
@@ -32,11 +33,16 @@ namespace opossum {
     int column_count = _table->column_count();
     const auto column_names = _table->column_names();
 
-    for (ColumnID column_id = ColumnID(0); column_id < column_count; ++column_id) {
+    for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       ss << _name << _separator;
       ss << _table->column_name(column_id) << _separator;
-      ss << _table->column_data_type(column_id) << "\n";
-      //ss << _table->get_chunk(ChunkID(0))->get_segment(column_id); //TODO How to get segment
+      ss << _table->column_data_type(column_id) << _separator;
+
+      auto const segment =  _table->get_chunk(ChunkID {0})->get_segment(column_id);
+      auto const encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment);
+
+      auto const encoded_type_string = encoded_segment != nullptr ? encoded_segment->encoding_type() : EncodingType::Unencoded;
+      ss << encoded_type_string << "\n";
     }
 
     return ss.str();
