@@ -88,7 +88,8 @@ namespace opossum {
       std::stringstream ss;
 
       // INPUT_ROWS_LEFT TODO this does not extract anything
-      ss << std::to_string(op->input_table_left() != nullptr ? op->input_table_left()->row_count() : -1) << _delimiter;
+      //ss << std::to_string(op->input_table_left() != nullptr ? op->input_table_left()->row_count() : -1) << _delimiter;
+      ss << "0,";
 
       // OUTPUT_ROWS
       ss << std::to_string(op->get_output() != nullptr ? op->get_output()->row_count() : 0) << _delimiter;
