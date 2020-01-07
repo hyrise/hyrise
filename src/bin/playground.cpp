@@ -50,7 +50,7 @@ int main() {
           {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
           {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)},
           {1000},
-          {100, 1000, 10000, 100000, 1000000}
+          {100, 1000, 10000, 100000}
   });
   auto table_generator = TableGenerator(table_config);
   const auto tables = table_generator.generate();

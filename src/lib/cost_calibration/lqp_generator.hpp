@@ -8,6 +8,6 @@ class LQPGenerator {
   std::vector<std::shared_ptr<AbstractLQPNode>> generate(OperatorType operator_type, std::shared_ptr<const CalibrationTableWrapper> table) const;
 
  private:
-  std::vector<std::shared_ptr<AbstractLQPNode>> _generate_table_scans(std::shared_ptr<const CalibrationTableWrapper> table) const;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper>& table) const;
 };
 }
