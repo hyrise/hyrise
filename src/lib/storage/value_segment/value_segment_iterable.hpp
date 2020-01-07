@@ -94,7 +94,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     std::ptrdiff_t distance_to(const NonNullIterator& other) const { return other._value_it - _value_it; }
 
     NonNullSegmentPosition<T> dereference() const {
-      _segment->access_statistics().on_iterator_dereference(1);
+//      _segment->access_statistics().on_iterator_dereference(1);
       return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
     }
 
@@ -145,7 +145,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._value_it - _value_it; }
 
     SegmentPosition<T> dereference() const {
-      _segment->access_statistics().on_iterator_dereference(1);
+//      _segment->access_statistics().on_iterator_dereference(1);
       return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset};
     }
 
@@ -177,7 +177,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
+//      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk), false,
                                 chunk_offsets.offset_in_poslist};
     }
@@ -209,7 +209,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
+//      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 *(_null_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 chunk_offsets.offset_in_poslist};

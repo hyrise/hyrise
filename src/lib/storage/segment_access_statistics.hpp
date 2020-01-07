@@ -178,14 +178,14 @@ class BulkCountingStrategy {
     : _data_access_strategy {data_access_strategy} {}
 
   void on_iterator_create(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
-    _data_access_strategy.increase(SegmentAccessType::IteratorSeqAccess, count);
+    // _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
+    // _data_access_strategy.increase(SegmentAccessType::IteratorSeqAccess, count);
   }
 
   void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
     // hier muss geprüft werden, um was für einen Zugriff es sich handelt
-    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
-    _data_access_strategy.increase(SegmentAccessTypeTools::iterator_access_pattern(positions), positions->size());
+//    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
+//    _data_access_strategy.increase(SegmentAccessTypeTools::iterator_access_pattern(positions), positions->size());
   }
 
   void on_iterator_dereference(uint64_t count) {}
@@ -193,19 +193,19 @@ class BulkCountingStrategy {
   void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {}
 
   void on_accessor_create(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::AccessorCreate, 1);
+//    _data_access_strategy.increase(SegmentAccessType::AccessorCreate, 1);
   }
 
   void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(SegmentAccessType::AccessorAccess, count);
+//    _data_access_strategy.increase(SegmentAccessType::AccessorAccess, count);
   }
 
   void on_dictionary_access(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::DictionaryAccess, count);
+//    _data_access_strategy.increase(SegmentAccessType::DictionaryAccess, count);
   }
 
   void on_other_access(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::Other, count);
+//    _data_access_strategy.increase(SegmentAccessType::Other, count);
   }
 
  private:
@@ -374,6 +374,6 @@ class SegmentAccessStatistics {
   CountingStrategyType _counting_strategy;
 };
 
-  using SegmentAccessStatistics_T = SegmentAccessStatistics<AtomicTimedAccessStrategy, BulkCountingStrategy<AtomicTimedAccessStrategy>>;
+  using SegmentAccessStatistics_T = SegmentAccessStatistics<NoAccessStrategy, BulkCountingStrategy<NoAccessStrategy>>;
   // using SegmentAccessStatistics_T = SegmentAccessStatistics<NonLockingStrategy, BulkCountingStrategy<NonLockingStrategy>>;
 }  // namespace opossum

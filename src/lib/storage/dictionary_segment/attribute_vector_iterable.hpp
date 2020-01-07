@@ -89,7 +89,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     SegmentPosition<ValueID> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
-      _segment->access_statistics().on_iterator_dereference(1);
+//      _segment->access_statistics().on_iterator_dereference(1);
       return {value_id, is_null, _chunk_offset};
     }
 
@@ -123,7 +123,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       const auto value_id =
         static_cast<ValueID>(_attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
-      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
+//      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
