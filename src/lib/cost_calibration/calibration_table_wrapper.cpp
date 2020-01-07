@@ -6,16 +6,23 @@
 
 namespace opossum {
   CalibrationTableWrapper::CalibrationTableWrapper(const std::shared_ptr<Table> table,
+                                                   const std::string& table_name,
                                                    const std::vector<ColumnDataDistribution> column_data_distribution_collection)
-                                                   : table(std::move(table)), column_data_distribution_collection(std::move(column_data_distribution_collection)){
+                                                   : _table(table),
+                                                   _table_name(table_name),
+                                                   _column_data_distribution_collection(column_data_distribution_collection){
     assert(table->column_count() == column_data_distribution_collection.size());
   }
 
-  ColumnDataDistribution CalibrationTableWrapper::get_column_data_distribution(ColumnID id) const {
-    return column_data_distribution_collection[id];
+  const std::shared_ptr<Table> CalibrationTableWrapper::getTable() const {
+    return _table;
   }
 
-  std::shared_ptr<Table> CalibrationTableWrapper::getTable() const {
-    return table;
+  const std::string &CalibrationTableWrapper::getTableName() const {
+    return _table_name;
+  }
+
+  const ColumnDataDistribution CalibrationTableWrapper::get_column_data_distribution(ColumnID id) const {
+    return _column_data_distribution_collection[id];
   }
 }

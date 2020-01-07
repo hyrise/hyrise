@@ -28,7 +28,6 @@ namespace opossum {
           }
         }  // if encoding is supported
       }
-
     }
 
     _chunk_offsets.assign(config->chunk_offsets.begin(), config->chunk_offsets.end());
@@ -52,8 +51,11 @@ namespace opossum {
                 {_column_names},
                 UseMvcc::Yes);    // MVCC = Multiversion concurrency control
 
+        const std::string table_name = "_cmc_" + std::to_string(chunk_size) + "_" + std::to_string(row_count);
+
         const auto calibration_table_wrapper = std::make_shared<const CalibrationTableWrapper>(CalibrationTableWrapper(
                 table,
+                table_name,
                 _column_data_distribution_collection));
         table_wrapper.emplace_back(calibration_table_wrapper);
       }

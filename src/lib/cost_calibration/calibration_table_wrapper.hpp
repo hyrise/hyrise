@@ -11,15 +11,19 @@ class CalibrationTableWrapper {
  */
  public:
   CalibrationTableWrapper(
-    std::shared_ptr<Table> table,
-    std::vector<ColumnDataDistribution> column_data_distribution_collection);
+    const std::shared_ptr<Table> table,
+    const std::string& table_name,
+    const std::vector<ColumnDataDistribution> column_data_distribution_collection);
 
-  [[nodiscard]] ColumnDataDistribution get_column_data_distribution(ColumnID id) const;
+  const ColumnDataDistribution get_column_data_distribution(ColumnID id) const;
 
-  [[nodiscard]] std::shared_ptr<Table> getTable() const;
+  const std::shared_ptr<Table> getTable() const;
 
- private:
-  const std::shared_ptr<Table> table;
-  const std::vector<ColumnDataDistribution> column_data_distribution_collection;
+  const std::string &getTableName() const;
+
+private:
+  const std::shared_ptr<Table> _table;
+  const std::string _table_name;
+  const std::vector<ColumnDataDistribution> _column_data_distribution_collection;
 };
 }  // namespace opossum
