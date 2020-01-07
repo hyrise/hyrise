@@ -113,33 +113,39 @@ class AbstractVisualizer {
   };
 
   template <typename T>
-  static std::string escape_dot_string(const T& obj) {
+  static std::string escape_pqp_node_string(const T& obj) {
     using namespace boost::xpressive;
     static sregex valid_unquoted_id = (((alpha | '_') >> *_w) | (!as_xpr('-') >> (('.' >> *_d) | (+_d >> !('.' >> *_d)))));
     std::string s(boost::lexical_cast<std::string>(obj));
     if (regex_match(s, valid_unquoted_id)) {
       return s;
     } else {
+      // Escape HTML characters as we use the "HTML-like" output of graphviz. Otherise, descriptions such as
+      // `shipdate <= 1990-11-17` are parsed as HTML tags.
       boost::algorithm::replace_all(s, "<", "&lt;");
       boost::algorithm::replace_all(s, ">", "&gt;");
       boost::algorithm::replace_all(s, "&", "&amp;");
       boost::algorithm::replace_all(s, "\"", "&quot;");
       boost::algorithm::replace_all(s, "'", "&apos;");
       
+      // Change \n to html tag for line break
       boost::algorithm::replace_all(s, "\n", "<BR/>");
       boost::algorithm::replace_all(s, "\\n", "<BR/>");
-      boost::algorithm::replace_all(s, "≥", ">");
-      boost::algorithm::replace_all(s, "≤", "<");
-      
+
+      // Rewrite markup-like notation to HTML-like for graphviz
+      boost::algorithm::replace_all(s, "=TITLE=", "<FONT POINT-SIZE=\"17\">");
+      boost::algorithm::replace_all(s, "=/TITLE=", "</FONT>");
+      boost::algorithm::replace_all(s, "=DESC=", "<FONT POINT-SIZE=\"10\">");
+      boost::algorithm::replace_all(s, "=/DESC=", "</FONT>");
+
       return "<" + s + ">";
-      // return "\"" + s + "\"";
     }
   }
 
-  class dynamic_vertex_properties_writer2
+  class pqp_properties_writer
   {
   public:
-    dynamic_vertex_properties_writer2(const boost::dynamic_properties& dp,
+    pqp_properties_writer(const boost::dynamic_properties& dp,
                                      const std::string& node_id)
       : dp(&dp), node_id(&node_id) { }
 
@@ -155,7 +161,7 @@ class AbstractVisualizer {
           else out << ", ";
           first = false;
 
-          out << i->first << "=" << escape_dot_string(i->second->get_string(key));
+          out << i->first << "=" << escape_pqp_node_string(i->second->get_string(key));
         }
       }
 
@@ -234,12 +240,8 @@ class AbstractVisualizer {
     normalize_penwidths(boost::vertices(_graph));
     normalize_penwidths(boost::edges(_graph));
 
-    // _properties.property("label", boost::make_transform_value_property_map<std::string>(enable_to_style(), get(&VizVertexInfo::label, _graph)));
-
-    // boost::write_graphviz_dp(file, _graph, _properties);
-
     boost::write_graphviz(file, _graph,
-       /*vertex_writer=*/dynamic_vertex_properties_writer2(_properties, "node_id"),
+       /*vertex_writer=*/pqp_properties_writer(_properties, "node_id"),
        /*edge_writer=*/boost::dynamic_properties_writer(_properties),
        /*graph_writer=*/boost::dynamic_graph_properties_writer<Graph>(_properties, _graph));
 

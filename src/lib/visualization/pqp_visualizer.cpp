@@ -119,22 +119,25 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   auto split_with_first_linebreak = [](const std::string& text) {
     const auto first_linebreak_position = text.find("\n");
     if (first_linebreak_position != std::string::npos) {
-      return std::pair<std::string, std::string>{text.substr(0, first_linebreak_position),
+      return std::pair<std::string, std::optional<std::string>>{text.substr(0, first_linebreak_position),
                                                  text.substr(first_linebreak_position)};
     }
-
-    return std::pair<std::string, std::string>{text, ""};
+    return std::pair<std::string, std::optional<std::string>>{text, std::nullopt};
   };
 
-  const auto first_linebreak_position = label.find("\n");
-  if (first_linebreak_position != std::string::npos) {
-    const auto first_line = label.substr(0, first_linebreak_position);
-    label = "=TITLE=" + first_line + "=/TITLE=" + label.substr(first_linebreak_position);
+  auto splitted_label = split_with_first_linebreak(label);
+  if (splitted_label.second) {
+    label = "=TITLE=" + splitted_label.first + "=/TITLE=" + *splitted_label.second;
   }
+
+  // const auto first_linebreak_position = label.find("\n");
+  // if (first_linebreak_position != std::string::npos) {
+  //   const auto first_line = label.substr(0, first_linebreak_position);
+  //   label = "=TITLE=" + first_line + "=/TITLE=" + label.substr(first_linebreak_position);
+  // }
 
   if (op->get_output()) {
     auto total = op->performance_data->walltime;
-    label += "\n\n=DESC=";
 
     std::stringstream ss;
     if (dynamic_cast<StagedOperatorPerformanceData*>(op->performance_data.get())) {
@@ -146,8 +149,13 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     } else {
       ss << *op->performance_data;
     }
-    label += ss.str();
-    label += "=/DESC=";
+
+    auto description_label = "\n\n" + ss.str();
+    auto splitted_description_label = split_with_first_linebreak(description_label);
+    if (splitted_description_label.second) {
+      description_label = splitted_description_label.first + "=DESC=" + *splitted_description_label.second + "=/DESC=";
+    }
+    label += description_label;
 
     info.pen_width = total.count();
   }
