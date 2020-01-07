@@ -1,10 +1,8 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-import numpy as np
 import sys
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 
 
 # store model and metadata about the model in one object (there might be better ways, tbd)
