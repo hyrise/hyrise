@@ -9,7 +9,6 @@ namespace opossum {
       explicit AbstractLQPGenerator(std::shared_ptr<const CalibrationTableWrapper> table);
 
       void generate();
-      void execute() const;
 
       const std::vector<std::shared_ptr<AbstractLQPNode>>& get_lqps() const;
 
