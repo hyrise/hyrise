@@ -35,8 +35,8 @@ namespace opossum {
   }
 
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> TableGenerator::generate() const {
-    auto table_wrapper = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
-    table_wrapper.reserve(_chunk_offsets.size() * _row_counts.size());
+    auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
+    table_wrappers.reserve(_chunk_offsets.size() * _row_counts.size());
 
     auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
@@ -57,9 +57,9 @@ namespace opossum {
                 table,
                 table_name,
                 _column_data_distribution_collection));
-        table_wrapper.emplace_back(calibration_table_wrapper);
+        table_wrappers.emplace_back(calibration_table_wrapper);
       }
     }
-    return table_wrapper;
+    return table_wrappers;
   }
 }  // namespace opossum
