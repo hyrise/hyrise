@@ -4,6 +4,7 @@
 
 #include <boost/bimap.hpp>
 #include <boost/hana/fold.hpp>
+#include <operators/abstract_operator.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
@@ -32,19 +33,64 @@ const boost::bimap<DataType, std::string> data_type_to_string =
       return map;
     });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
-    {EncodingType::Dictionary, "Dictionary"},
-    {EncodingType::RunLength, "RunLength"},
-    {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
-    {EncodingType::FrameOfReference, "FrameOfReference"},
-    {EncodingType::LZ4, "LZ4"},
-    {EncodingType::Unencoded, "Unencoded"},
-});
+const boost::bimap<EncodingType, std::string> encoding_type_to_string =
+    make_bimap<EncodingType, std::string>({
+        {EncodingType::Dictionary, "Dictionary"},
+        {EncodingType::RunLength, "RunLength"},
+        {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
+        {EncodingType::FrameOfReference, "FrameOfReference"},
+        {EncodingType::LZ4, "LZ4"},
+        {EncodingType::Unencoded, "Unencoded"},
+    });
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+    });
+
+const boost::bimap<DataDistributionType, std::string> data_distribution_type_to_string =
+    make_bimap<DataDistributionType, std::string>({
+    {DataDistributionType::Uniform, "Uniform"},
+    {DataDistributionType::NormalSkewed, "NormalSkewed"},
+    {DataDistributionType::Pareto, "Pareto"},
+    });
+
+const boost::bimap<OperatorType, std::string> operator_type_to_string =
+    make_bimap<OperatorType, std::string>({
+        {OperatorType::Aggregate, "Aggregate" },
+        {OperatorType::Alias, "Alias" },
+        {OperatorType::Delete, "Delete" },
+        {OperatorType::Difference, "Difference" },
+        {OperatorType::ExportBinary, "ExportBinary" },
+        {OperatorType::ExportCsv, "ExportCSV" },
+        {OperatorType::GetTable, "GetTable" },
+        {OperatorType::ImportBinary, "ImportBinary" },
+        {OperatorType::ImportCsv, "ImportCSV" },
+        {OperatorType::IndexScan, "IndexScan" },
+        {OperatorType::Insert, "Insert" },
+        {OperatorType::JoinHash, "JoinHash" },
+        {OperatorType::JoinIndex, "JoinIndex" },
+        {OperatorType::JoinNestedLoop, "JoinNestedLoop" },
+        {OperatorType::JoinSortMerge, "JoinSortMerge" },
+        {OperatorType::JoinVerification, "JoinVerification" },
+        {OperatorType::Limit, "Limit" },
+        {OperatorType::Print, "Print" },
+        {OperatorType::Product, "Product" },
+        {OperatorType::Projection, "Projection" },
+        {OperatorType::Sort, "Sort" },
+        {OperatorType::TableScan, "TableScan" },
+        {OperatorType::TableWrapper, "TableWrapper" },
+        {OperatorType::UnionAll, "UnionAll" },
+        {OperatorType::UnionPositions, "UnionPositions" },
+        {OperatorType::Update, "Update" },
+        {OperatorType::Validate, "Validate" },
+        {OperatorType::CreateTable, "CreateTable" },
+        {OperatorType::CreatePreparedPlan, "CreatePreparedPlan" },
+        {OperatorType::CreateView, "CreateView" },
+        {OperatorType::DropTable, "DropTable" },
+        {OperatorType::DropView, "DropView" },
+        {OperatorType::Mock, "Mock" },
     });
 
 std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
@@ -67,6 +113,10 @@ std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_comp
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
 }
 
+std::ostream& operator<<(std::ostream& stream, OperatorType operator_type) {
+  return stream << operator_type_to_string.left.at(operator_type);
+}
+
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
   stream << spec.encoding_type;
   if (spec.vector_compression_type) {
@@ -75,5 +125,27 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) 
 
   return stream;
 }
+
+std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_data_distribution) {
+    stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
+    switch (column_data_distribution.distribution_type){
+        case DataDistributionType::Uniform:
+            stream << column_data_distribution.min_value << "_"
+                   << column_data_distribution.max_value;
+            break;
+        case DataDistributionType::NormalSkewed:
+            stream << column_data_distribution.skew_location << "_"
+                   << column_data_distribution.skew_scale << "_"
+                   << column_data_distribution.skew_shape;
+            break;
+        case DataDistributionType::Pareto:
+            stream << column_data_distribution.pareto_scale << "_"
+                   << column_data_distribution.pareto_shape;
+            break;
+    }
+    return stream;
+}
+
+
 
 }  // namespace opossum

@@ -24,6 +24,14 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    cost_calibration/calibration_table_wrapper.cpp
+    cost_calibration/calibration_table_wrapper.hpp
+    cost_calibration/lqp_generator.cpp
+    cost_calibration/lqp_generator.hpp
+    cost_calibration/measurement_export.cpp
+    cost_calibration/measurement_export.hpp
+    cost_calibration/table_generator.cpp
+    cost_calibration/table_generator.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
