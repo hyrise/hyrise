@@ -155,6 +155,9 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
           value_count++;
           if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
             unique_values.insert(new_value);
+          } else if constexpr (function == AggregateFunction::Any) {  // NOLINT
+            // Gathering the group's first value for ANY() is sufficient
+            return;
           }
         }
         value_count_with_null++;
@@ -556,6 +559,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
+        case AggregateFunction::Any: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Any>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
+          break;
+        }
       }
     });
 
@@ -607,6 +616,9 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
       break;
     case AggregateFunction::StandardDeviationSample:
       create_aggregate_column_definitions<ColumnType, AggregateFunction::StandardDeviationSample>(column_index);
+      break;
+    case AggregateFunction::Any:
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Any>(column_index);
       break;
   }
 }
