@@ -14,8 +14,7 @@
 namespace opossum {
 
     MeasurementExport::MeasurementExport(std::string path_to_dir) : _path_to_dir(path_to_dir){
-      //TODO Uncomment this if MeasurementExport is correctly placed
-      //_create_file_table_scan();
+      _create_file_table_scan();
     }
 
     void MeasurementExport::export_to_csv(std::shared_ptr<const AbstractOperator> op) const {
