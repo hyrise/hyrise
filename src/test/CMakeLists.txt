@@ -116,6 +116,7 @@ set(
     optimizer/strategy/chunk_pruning_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
+    optimizer/strategy/dependent_group_by_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/in_expression_rewrite_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp

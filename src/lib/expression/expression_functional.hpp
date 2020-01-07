@@ -122,6 +122,7 @@ inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg_;
 inline detail::unary<AggregateFunction::Count, AggregateExpression> count_;
 inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct_;
 inline detail::unary<AggregateFunction::StandardDeviationSample, AggregateExpression> standard_deviation_sample_;
+inline detail::unary<AggregateFunction::Any, AggregateExpression> any_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;
@@ -230,7 +231,7 @@ std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const Param
   return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
-std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode> lqp_node);
+std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode>& lqp_node);
 
 template <typename Argument>
 std::shared_ptr<UnaryMinusExpression> unary_minus_(const Argument& argument) {
