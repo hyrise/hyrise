@@ -16,38 +16,6 @@ namespace opossum {
     assert(table->column_count() == column_data_distribution_collection.size());
   }
 
-  std::string CalibrationTableWrapper::export_table_meta_data() const {
-    std::stringstream ss;
-    const auto _separator = ",";
-
-    ss << _name << _separator;
-    ss << _table->row_count() << _separator;
-    ss << _table->max_chunk_size() << "\n";
-
-    return ss.str();
-  }
-
-  std::string CalibrationTableWrapper::export_column_meta_data() const {
-    std::stringstream ss;
-    const auto _separator = ",";
-    int column_count = _table->column_count();
-    const auto column_names = _table->column_names();
-
-    for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      ss << _name << _separator;
-      ss << _table->column_name(column_id) << _separator;
-      ss << _table->column_data_type(column_id) << _separator;
-
-      auto const segment =  _table->get_chunk(ChunkID {0})->get_segment(column_id);
-      auto const encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment);
-
-      auto const encoded_type_string = encoded_segment != nullptr ? encoded_segment->encoding_type() : EncodingType::Unencoded;
-      ss << encoded_type_string << "\n";
-    }
-
-    return ss.str();
-  }
-
   const std::shared_ptr<Table> CalibrationTableWrapper::get_table() const {
     return _table;
   }

@@ -7,6 +7,7 @@
 #include <scheduler/operator_task.hpp>
 #include <cost_calibration/lqp_generator.hpp>
 #include <fstream>
+#include <cost_calibration/table_export.hpp>
 #include "types.hpp"
 #include "hyrise.hpp"
 
@@ -56,9 +57,11 @@ int main() {
   auto table_generator = TableGenerator(table_config);
   const auto tables = table_generator.generate();
 
+  const auto lqp_generator = LQPGenerator();
+
   auto const path = ".";
-  auto measurement_export = MeasurementExport(path);
-  auto lqp_generator = LQPGenerator();
+  const auto measurement_export = MeasurementExport(path);
+  const auto table_export = TableExport(path);
 
   for (const auto &table : tables){
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
@@ -74,30 +77,7 @@ int main() {
       //Execute LQP directly after generation
       measurement_export.export_to_csv(pqp);
     }
+    table_export.export_table(table);
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
-
-  // Export table information
-  // Extract this in a new class
-  std::fstream table_meta;
-  table_meta.open("./table_meta.csv", std::ofstream::out | std::ofstream::app);
-  table_meta << "TABLE_NAME,";
-  table_meta << "ROW_COUNT,";
-  table_meta << "CHUNK_SIZE\n";
-
-  std::fstream column_meta;
-  column_meta.open("./column_meta.csv", std::ofstream::out | std::ofstream::app);
-  column_meta << "TABLE_NAME,";
-  column_meta << "COLUMN_NAME,";
-  column_meta << "COLUMN_DATA_TYPE,";
-  column_meta << "ENCODING_TYPE\n";
-
-  for (const auto &table : tables){
-    std::cout << table_meta.is_open();
-    table_meta << table->export_table_meta_data();
-    column_meta << table->export_column_meta_data();
-  }
-
-  table_meta.close();
-  column_meta.close();
 }

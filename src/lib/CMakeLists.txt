@@ -30,6 +30,8 @@ set(
     cost_calibration/lqp_generator.hpp
     cost_calibration/measurement_export.cpp
     cost_calibration/measurement_export.hpp
+    cost_calibration/table_export.cpp
+    cost_calibration/table_export.hpp
     cost_calibration/table_generator.cpp
     cost_calibration/table_generator.hpp
     cost_estimation/abstract_cost_estimator.cpp
