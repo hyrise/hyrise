@@ -141,6 +141,13 @@ class AggregateHash : public AbstractAggregateOperator {
 
 namespace std {
 template <>
+struct hash<std::vector<opossum::EmptyAggregateKey>> {
+  size_t operator()(const std::vector<opossum::EmptyAggregateKey>& key) const {
+    return 0;
+  }
+};
+
+template <>
 struct hash<std::vector<opossum::AggregateKeyEntry>> {
   size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
     return boost::hash_range(key.begin(), key.end());
