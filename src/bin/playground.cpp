@@ -6,6 +6,7 @@
 #include <cost_calibration/measurement_export.hpp>
 
 #include "types.hpp"
+#include "hyrise.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -22,9 +23,13 @@ int main() {
   const auto tables = table_generator.generate();
 
   for (const auto &table : tables){
+    Hyrise::get().storage_manager.add_table(table->getTableName(), table->getTable());
+
     auto lqp_generator = TableScanLQPGenerator(table);
     lqp_generator.generate();
     lqp_generator.execute();
+
+    Hyrise::get().storage_manager.drop_table(table->getTableName());
   }
 
 }

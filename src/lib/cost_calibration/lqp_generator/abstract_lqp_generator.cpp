@@ -24,8 +24,6 @@ namespace opossum {
 
         measurement_export.export_to_csv(pqp); //TODo Remove this
       }
-
-      Hyrise::get().storage_manager.drop_table("t_a"); //TODO Remove this
     }
 
     const std::vector<std::shared_ptr<AbstractLQPNode>> &AbstractLQPGenerator::get_lqps() const {

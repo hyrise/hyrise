@@ -12,9 +12,7 @@ namespace opossum {
 
       int selectivity_steps = 10;
 
-      // TODO check whether this should be done in a different phase
-      Hyrise::get().storage_manager.add_table("t_a", _table->getTable());
-      const auto _t_a = StoredTableNode::make("t_a");
+      const auto _t_a = StoredTableNode::make(_table->getTableName());
 
       int column_count = _table->getTable()->column_count();
       std::vector<std::string> column_names = _table->getTable()->column_names();
