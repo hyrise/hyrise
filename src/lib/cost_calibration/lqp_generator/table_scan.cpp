@@ -12,11 +12,11 @@ namespace opossum {
 
       int selectivity_steps = 10;
 
-      const auto _t_a = StoredTableNode::make(_table->getTableName());
+      const auto _t_a = StoredTableNode::make(_table->get_name());
 
-      int column_count = _table->getTable()->column_count();
-      std::vector<std::string> column_names = _table->getTable()->column_names();
-      auto column_data_types = _table->getTable()->column_data_types();
+      int column_count = _table->get_table()->column_count();
+      std::vector<std::string> column_names = _table->get_table()->column_names();
+      auto column_data_types = _table->get_table()->column_data_types();
 
       for (int j = 0; j < column_count; ++j) {
 

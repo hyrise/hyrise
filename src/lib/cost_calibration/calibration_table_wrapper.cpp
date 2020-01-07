@@ -9,17 +9,17 @@ namespace opossum {
                                                    const std::string& table_name,
                                                    const std::vector<ColumnDataDistribution> column_data_distribution_collection)
                                                    : _table(table),
-                                                   _table_name(table_name),
-                                                   _column_data_distribution_collection(column_data_distribution_collection){
+                                                     _name(table_name),
+                                                     _column_data_distribution_collection(column_data_distribution_collection){
     assert(table->column_count() == column_data_distribution_collection.size());
   }
 
-  const std::shared_ptr<Table> CalibrationTableWrapper::getTable() const {
+  const std::shared_ptr<Table> CalibrationTableWrapper::get_table() const {
     return _table;
   }
 
-  const std::string &CalibrationTableWrapper::getTableName() const {
-    return _table_name;
+  const std::string &CalibrationTableWrapper::get_name() const {
+    return _name;
   }
 
   const ColumnDataDistribution CalibrationTableWrapper::get_column_data_distribution(ColumnID id) const {
