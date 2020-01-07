@@ -33,8 +33,7 @@ template <typename ResultIds, typename Results, typename AggregateKey>
 typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key,
                                               const RowID& row_id) {
   // Get the result id for the current key or add it to the id map
-  auto result_id = size_t{0};
-  if constexpr(std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+  if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     if (results.empty()) {
       results.emplace_back();
       results[0].row_id = row_id;
@@ -44,7 +43,7 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     auto it = result_ids.find(key);
     if (it != result_ids.end()) return results[it->second];
 
-    result_id = results.size();
+    auto result_id = results.size();
 
     result_ids.emplace_hint(it, key, result_id);
 
@@ -56,6 +55,18 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
     return results[result_id];
   }
 }
+
+template <typename AggregateKey>
+const AggregateKey& get_aggregate_key(const std::vector<AggregateKey>& hash_keys,
+                                      [[maybe_unused]] const ChunkOffset chunk_offset) {
+  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+    return hash_keys[chunk_offset];
+  } else {
+    static EmptyAggregateKey empty_aggregate_key;
+    return empty_aggregate_key;
+  }
+}
+
 }  // namespace
 
 namespace opossum {
@@ -97,7 +108,7 @@ struct AggregateResultContext : SegmentVisitorContext {
 template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
-    if constexpr(!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+    if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
       auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
       // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
       result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
@@ -121,18 +132,11 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   auto& results = context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  const auto get_aggregate_key = [&]([[maybe_unused]] const auto chunk_offset) {  // TODO dedup
-    if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-      return hash_keys[chunk_offset];
-    } else {
-      return EmptyAggregateKey{};
-    }
-  };
-
   ChunkOffset chunk_offset{0};
 
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
-    auto& result = get_or_add_result(result_ids, results, get_aggregate_key(chunk_offset), RowID{chunk_id, chunk_offset});
+    auto& result = get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(hash_keys, chunk_offset),
+                                     RowID{chunk_id, chunk_offset});
 
     /**
     * If the value is NULL, the current aggregate value does not change.
@@ -175,7 +179,6 @@ void AggregateHash::_aggregate() {
 
   // Check for invalid aggregates
   _validate_aggregates();
-
 
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
@@ -221,9 +224,9 @@ void AggregateHash::_aggregate() {
 
       // Make sure that we did not have to allocate more memory than originally computed
       if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
-        // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
-        // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
-        // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
+        // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we
+        // allocated enough space from the beginning on. It would be more intuitive to compare current_buffer(), but
+        // this seems to be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
         PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
                            " was not enough and a second buffer was needed");
       }
@@ -234,7 +237,8 @@ void AggregateHash::_aggregate() {
     jobs.reserve(_groupby_column_ids.size());
 
     for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
-      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count, this]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
+                                                   this]() {
         const auto column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(column_id);
 
@@ -242,9 +246,9 @@ void AggregateHash::_aggregate() {
           using ColumnDataType = typename decltype(type)::type;
 
           if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
-            // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry.
-            // We cannot do this for types with the same size as AggregateKeyEntry as we need to have a special NULL
-            // value. By using the value itself, we can save us the effort of building the id_map.
+            // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an
+            // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
+            // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto base_segment = chunk_in->get_segment(column_id);
@@ -370,13 +374,6 @@ void AggregateHash::_aggregate() {
     if (!chunk_in) continue;
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
-    const auto get_aggregate_key = [&]([[maybe_unused]] const auto chunk_offset) {
-      if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-        return hash_keys[chunk_offset];
-      } else {
-        return EmptyAggregateKey{};
-      }
-    };
 
     // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
     const auto input_chunk_size = chunk_in->size();
@@ -412,7 +409,8 @@ void AggregateHash::_aggregate() {
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // Make sure the value or combination of values is added to the list of distinct value(s)
-        get_or_add_result(result_ids, results, get_aggregate_key(chunk_offset), RowID{chunk_id, chunk_offset});
+        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(hash_keys, chunk_offset),
+                          RowID{chunk_id, chunk_offset});
       }
     } else {
       ColumnID column_index{0};
@@ -435,7 +433,8 @@ void AggregateHash::_aggregate() {
           // count occurrences for each group key
           for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
             auto& result =
-                get_or_add_result(result_ids, results, get_aggregate_key(chunk_offset), RowID{chunk_id, chunk_offset});
+                get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(hash_keys, chunk_offset),
+                                  RowID{chunk_id, chunk_offset});
             ++result.aggregate_count;
           }
 
@@ -497,6 +496,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
   switch (_groupby_column_ids.size()) {
     case 0:
+    std::cout << "EmptyAggregateKey" << std::endl;
       _aggregate<EmptyAggregateKey>();
       break;
     case 1:
