@@ -8,14 +8,22 @@
 namespace opossum {
 class MeasurementExport {
  public:
-  MeasurementExport(std::string path_to_dir);
+  explicit MeasurementExport(std::string path_to_dir);
 
   void export_to_csv(std::shared_ptr<const AbstractOperator> op) const;
 
  private:
-    const std::string path_to_dir;
-    void export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
+    const std::string _path_to_dir;
+    const std::string _delimiter = ",";
 
-    std::string get_path_by_type(OperatorType operator_type);
+    void _export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
+
+    [[nodiscard]] std::string _path_by_type(OperatorType operator_type) const ;
+
+    void _export_table_scan(std::shared_ptr<const AbstractOperator> op) const;
+
+    void _append_to_file_by_operator_type(std::string line, OperatorType operator_type) const;
+
+    void _create_file_table_scan() const;
 };
 }  // namespace opossum
