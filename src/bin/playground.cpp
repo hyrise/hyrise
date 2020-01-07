@@ -22,7 +22,8 @@ int main() {
   auto table_generator = TableGenerator(table_config);
   const auto tables = table_generator.generate();
 
-  auto measurement_export = MeasurementExport(".");
+  auto const path = ".";
+  auto measurement_export = MeasurementExport(path);
   auto lqp_generator = LQPGenerator();
 
   for (const auto &table : tables){
@@ -36,9 +37,11 @@ int main() {
       const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
+      //Execute LQP directly after generation
       measurement_export.export_to_csv(pqp);
     }
 
+    table->export_table_meta_data(path); //TODO meta_data_only_export
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
 
