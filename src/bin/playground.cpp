@@ -68,7 +68,7 @@ int main() {
     //Execution of lpqs; In the future a good scheduler as replacement for following code would be awesome.
     for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
       const auto pqp = LQPTranslator{}.translate_node(lqp);
-      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+      const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::No);
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
       //Execute LQP directly after generation
