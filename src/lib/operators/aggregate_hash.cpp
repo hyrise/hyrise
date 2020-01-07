@@ -57,9 +57,12 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
 }
 
 template <typename AggregateKey>
-const AggregateKey& get_aggregate_key(const std::vector<AggregateKey>& hash_keys,
+const AggregateKey& get_aggregate_key([[maybe_unused]] const KeysPerChunk<AggregateKey>& keys_per_chunk,
+                                      [[maybe_unused]] const ChunkID chunk_id,
                                       [[maybe_unused]] const ChunkOffset chunk_offset) {
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+    const auto& hash_keys = keys_per_chunk[chunk_id];
+
     return hash_keys[chunk_offset];
   } else {
     static EmptyAggregateKey empty_aggregate_key;
@@ -108,11 +111,12 @@ struct AggregateResultContext : SegmentVisitorContext {
 template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
 struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
-    if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
-      auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
-      // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
-      result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
-    }
+    auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
+
+    // Unused if AggregateKey == EmptyAggregateKey, but we initialize it anyway to reduce the number of diverging code
+    // paths.
+    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
+    result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 
   std::unique_ptr<AggregateResultIdMap<AggregateKey>> result_ids;
@@ -130,13 +134,13 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   auto& result_ids = *context.result_ids;
   auto& results = context.results;
-  const auto& hash_keys = keys_per_chunk[chunk_id];
 
   ChunkOffset chunk_offset{0};
 
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
-    auto& result = get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(hash_keys, chunk_offset),
-                                     RowID{chunk_id, chunk_offset});
+    auto& result =
+        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                          RowID{chunk_id, chunk_offset});
 
     /**
     * If the value is NULL, the current aggregate value does not change.
@@ -182,7 +186,7 @@ void AggregateHash::_aggregate() {
 
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
     /*
     PARTITIONING PHASE
     First we partition the input chunks by the given group key(s).
@@ -373,8 +377,6 @@ void AggregateHash::_aggregate() {
     const auto chunk_in = input_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 
-    const auto& hash_keys = keys_per_chunk[chunk_id];
-
     // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
     const auto input_chunk_size = chunk_in->size();
 
@@ -409,7 +411,7 @@ void AggregateHash::_aggregate() {
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // Make sure the value or combination of values is added to the list of distinct value(s)
-        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(hash_keys, chunk_offset),
+        get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
       }
     } else {
@@ -432,9 +434,9 @@ void AggregateHash::_aggregate() {
 
           // count occurrences for each group key
           for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-            auto& result =
-                get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(hash_keys, chunk_offset),
-                                  RowID{chunk_id, chunk_offset});
+            auto& result = get_or_add_result(result_ids, results,
+                                             get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                             RowID{chunk_id, chunk_offset});
             ++result.aggregate_count;
           }
 
@@ -496,7 +498,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
   switch (_groupby_column_ids.size()) {
     case 0:
-    std::cout << "EmptyAggregateKey" << std::endl;
       _aggregate<EmptyAggregateKey>();
       break;
     case 1:
