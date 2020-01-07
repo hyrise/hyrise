@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-    MeasurementExport::MeasurementExport(std::string path_to_dir) : _path_to_dir(path_to_dir){
+    MeasurementExport::MeasurementExport(const std::string& path_to_dir) : _path_to_dir(path_to_dir){
       _create_file_table_scan();
     }
 

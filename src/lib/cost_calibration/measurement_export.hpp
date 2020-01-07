@@ -8,12 +8,13 @@
 namespace opossum {
 class MeasurementExport {
  public:
-  explicit MeasurementExport(std::string path_to_dir);
+  explicit MeasurementExport(const std::string& path_to_dir);
 
   void export_to_csv(std::shared_ptr<const AbstractOperator> op) const;
 
  private:
-  const std::string _path_to_dir;
+  const std::string& _path_to_dir;
+  //TODO use parserconfig
   const std::string _delimiter = ",";
 
   void _export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
