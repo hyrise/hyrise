@@ -142,7 +142,7 @@ class AggregateHash : public AbstractAggregateOperator {
 namespace std {
 template <>
 struct hash<std::vector<opossum::EmptyAggregateKey>> {
-  size_t operator()(const opossum::EmptyAggregateKey>& key) const {
+  size_t operator()(const opossum::EmptyAggregateKey& key) const {
     return 0;
   }
 };
