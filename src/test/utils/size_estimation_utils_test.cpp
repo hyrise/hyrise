@@ -29,19 +29,21 @@ TEST(SizeEstimationUtilsTest, SizeSmallerThanSampleSize) {
 TEST(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   constexpr auto large_string_length = size_t{500};
   constexpr auto vector_length = size_t{200};
+  const auto large_string = std::string(large_string_length, '#');
+
   pmr_vector<pmr_string> string_vector{vector_length, ""};
-  string_vector[0] = std::string(large_string_length, '#');
-  string_vector[50] = std::string(large_string_length, '#');
-  string_vector[100] = std::string(large_string_length, '#');
-  string_vector[150] = std::string(large_string_length, '#');
+  string_vector[0] = large_string;
+  string_vector[50] = large_string;
+  string_vector[100] = large_string;
+  string_vector[150] = large_string;
 
   // For the sampled method, we do not know whether the SSO-exceeding elements will be in the taken sample. Hence, we
   // only run a sanity check, assuming all values fit within the SSO capacity.
   const auto expected_size_sample = sizeof(pmr_vector<pmr_string>) + vector_length * sizeof(pmr_string);
   EXPECT_GE(string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Sampled), expected_size_sample);
 
-  // For the full estimation, we can expect an accurate measurement. Four strings should reside on the heap.
-  const auto expected_size_full = expected_size_sample + 4 * (large_string_length + 1);
+  // For the full estimation, we can expect a rather accurate measurement. Four strings should reside on the heap.
+  const auto expected_size_full = expected_size_sample + 4 * (large_string.capacity() + 1);
   EXPECT_EQ(string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full), expected_size_full);
 }
 

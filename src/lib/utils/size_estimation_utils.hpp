@@ -28,8 +28,9 @@ size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalcu
   const auto sso_string_capacity = std::string("").capacity();
   auto sso_exceeding_bytes = [&](const auto& single_string) -> size_t {
     if (single_string.capacity() > sso_string_capacity) {
-      // Length is guaranteed to return the number of bytes, independent from any potential encoding.
-      // For heap-allocated strings, \0 is appended to denote the end of the string.
+      // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
+      // since some libraries (e.g. llvm's libc++) also over-allocate the heap strings
+      // (cf. https://shaharmike.com/cpp/std-string/).
       return single_string.capacity() + 1;
     }
     return 0;
@@ -58,11 +59,9 @@ size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalcu
   std::vector<size_t> all_positions(string_vector.size());
   std::iota(all_positions.begin(), all_positions.end(), 0);
 
-  std::cout << "Start sample taking " << std::endl;
   std::vector<size_t> sample_positions(samples_to_draw);
   std::sample(all_positions.begin(), all_positions.end(), sample_positions.begin(), samples_to_draw,
               std::mt19937{std::random_device{}()});
-  std::cout << "Finished sample taking " << std::endl;
 
   // We get the accurate size for all strings in the sample (preallocated buffers + potential heap allocations) and
   // then scale this value using the sampling factor.
