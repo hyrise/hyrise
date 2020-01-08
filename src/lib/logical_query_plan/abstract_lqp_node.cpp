@@ -246,10 +246,19 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::get_constraints() const {
-  if(left_input() && expressions_subset(column_expressions(), left_input()->column_expressions())) {
-    return left_input()->get_constraints();
+    return std::make_shared<ExpressionsConstraintDefinitions>();
+}
+
+const shared_ptr<ECD> forward_constraints() {
+  if constexpr (HYRISE_DEBUG) {
+    SetAusAbstractExpression set(column_expression());
+    for (const auto& constraint : input_constraints) {
+      for (const auto& expr : constraint.expressions) {
+        Assert(set.contains(expr))
+      }
+    }
   }
-  return std::make_shared<ExpressionsConstraintDefinitions>();
+  return input_constraints
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
