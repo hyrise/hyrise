@@ -246,6 +246,9 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::get_constraints() const {
+  if(left_input() && expressions_equal(node_expressions, left_input()->node_expressions)) {
+    return left_input()->get_constraints();
+  }
   return std::make_shared<ExpressionsConstraintDefinitions>();
 }
 
