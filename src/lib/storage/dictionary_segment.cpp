@@ -64,13 +64,12 @@ std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
 
 template <typename T>
 size_t DictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
-  return sizeof(*this) + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
-         _attribute_vector->data_size();
-}
+  const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
 
-template <>
-size_t DictionarySegment<pmr_string>::memory_usage(const MemoryUsageCalculationMode mode) const {
-  return sizeof(*this) + estimate_string_vector_memory_usage(*_dictionary, mode) + _attribute_vector->data_size();
+  if constexpr (std::is_same_v<T, pmr_string>) {
+    return common_elements_size + string_vector_memory_usage(*_dictionary, mode);
+  }
+  return common_elements_size + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type);
 }
 
 template <typename T>

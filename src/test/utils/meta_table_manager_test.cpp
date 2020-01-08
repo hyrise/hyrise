@@ -14,7 +14,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
 
   const auto prefix = MetaTableManager::META_PREFIX;
   const auto path = std::string{"resources/test_data/tbl/meta_tables/meta_"};
-  for (const auto& meta_table_name : {"tables", "columns", "chunks", "segments"}) {
+  for (const auto& meta_table_name : {"tables", "columns", "chunks", "segments", "segments_accurate"}) {
     SCOPED_TRACE(meta_table_name);
 
     const auto int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);

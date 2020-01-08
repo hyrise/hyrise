@@ -70,19 +70,19 @@ std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vecto
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type) {
   switch (compressed_vector_type) {
     case CompressedVectorType::FixedSize4ByteAligned: {
-      stream << pmr_string{"FixedSize4ByteAligned"};
+      stream << "FixedSize4ByteAligned";
       break;
     }
     case CompressedVectorType::FixedSize2ByteAligned: {
-      stream << pmr_string{"FixedSize2ByteAligned"};
+      stream << "FixedSize2ByteAligned";
       break;
     }
     case CompressedVectorType::FixedSize1ByteAligned: {
-      stream << pmr_string{"FixedSize1ByteAligned"};
+      stream << "FixedSize1ByteAligned";
       break;
     }
     case CompressedVectorType::SimdBp128: {
-      stream << pmr_string{"SimdBp128"};
+      stream << "SimdBp128";
       break;
     }
     default:

@@ -15,6 +15,9 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+// TODO(anyone): #1968 introduced this namespace. With the expected growth of the meta table manager of time, there
+//               might be a large number of helper function that are only loosely related to the core functionality
+//               of the MetaTableManager. If this becomes the case, restructure and move the functions to other files.
 size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
   auto distinct_value_count = size_t{0};
   resolve_data_type(segment->data_type(), [&](auto type) {
@@ -67,21 +70,21 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         }
 
         if (mode == MemoryUsageCalculationMode::Full) {
-          const auto distinct_value_count = static_cast<int32_t>(get_distinct_value_count(segment));
+          const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
-                              vector_compression, static_cast<int32_t>(estimated_size)});
+                              vector_compression, static_cast<int64_t>(estimated_size)});
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
-                              static_cast<int32_t>(estimated_size)});
+                              static_cast<int64_t>(estimated_size)});
         }
       }
     }
   }
 }
 
-}  // anonymous namespace
+}  // namespace
 
 namespace opossum {
 
@@ -113,13 +116,13 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
                                               {"column_count", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
                                               {"chunk_count", DataType::Int, false},
-                                              {"max_chunk_size", DataType::Int, false}};
+                                              {"max_chunk_size", DataType::Long, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
                           static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
-                          static_cast<int32_t>(table->max_chunk_size())});
+                          static_cast<int64_t>(table->max_chunk_size())});
   }
 
   return output_table;
@@ -165,6 +168,12 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
   return output_table;
 }
 
+/**
+ * At the moment, each chunk can be sorted by exactly one column or none. Hence, having a column within the chunk table
+ * would be sufficient. However, this will change in the near future (e.g., when a sort-merge join evicts a chunk that
+ * is sorted on two columns). To prepare for this change, this additional table stores the sort orders and allows a
+ * chunk to have multiple sort orders. Cascading sort orders for chunks are currently not planned.
+ */
 std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
@@ -196,7 +205,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
                                               {"column_data_type", DataType::String, false},
                                               {"encoding_type", DataType::String, true},
                                               {"vector_compression_type", DataType::String, true},
-                                              {"estimated_size_in_bytes", DataType::Int, false}};
+                                              {"estimated_size_in_bytes", DataType::Long, false}};
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Sampled);
@@ -209,9 +218,9 @@ std::shared_ptr<Table> MetaTableManager::generate_accurate_segments_table() {
   const auto columns = TableColumnDefinitions{
       {"table_name", DataType::String, false},       {"chunk_id", DataType::Int, false},
       {"column_id", DataType::Int, false},           {"column_name", DataType::String, false},
-      {"column_data_type", DataType::String, false}, {"distinct_value_count", DataType::Int, false},
+      {"column_data_type", DataType::String, false}, {"distinct_value_count", DataType::Long, false},
       {"encoding_type", DataType::String, true},     {"vector_compression_type", DataType::String, true},
-      {"size_in_bytes", DataType::Int, false}};
+      {"size_in_bytes", DataType::Long, false}};
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Full);
