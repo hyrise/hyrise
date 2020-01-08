@@ -60,6 +60,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   std::list<Segments> segments_by_chunks;
   std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
+  std::mutex append_chunk_mutex;
   while (_find_fields_in_chunk(content_view, *table, field_ends, meta)) {
     // create empty chunk
     segments_by_chunks.emplace_back();
@@ -71,7 +72,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     // Remove processed part of the csv content
     content_view = content_view.substr(field_ends.back() + 1);
 
-    std::mutex append_chunk_mutex;
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends, &table, &segments, &meta,
                                                   &escaped_linebreak, &append_chunk_mutex]() {
