@@ -27,11 +27,14 @@ set(
     expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/hyrise_test.cpp
-    lib/import_export/csv_parser_test.cpp
+    lib/import_export/binary/binary_parser_test.cpp
+    lib/import_export/binary/binary_writer_test.cpp
+    lib/import_export/csv/csv_meta_test.cpp
+    lib/import_export/csv/csv_parser_test.cpp
+    lib/import_export/csv/csv_writer_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
     lib/utils/load_table_test.cpp
@@ -45,6 +48,7 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
     logical_query_plan/limit_node_test.cpp
@@ -67,11 +71,9 @@ set(
     operators/alias_operator_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
-    operators/export_binary_test.cpp
-    operators/export_csv_test.cpp
+    operators/export_test.cpp
     operators/get_table_test.cpp
-    operators/import_binary_test.cpp
-    operators/import_csv_test.cpp
+    operators/import_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
     operators/join_hash_test.cpp

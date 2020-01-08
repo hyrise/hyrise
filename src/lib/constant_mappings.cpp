@@ -42,6 +42,9 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::Unencoded, "Unencoded"},
 });
 
+const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileType, std::string>(
+    {{FileType::Tbl, "Tbl"}, {FileType::Csv, "Csv"}, {FileType::Binary, "Binary"}, {FileType::Auto, "Auto"}});
+
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
@@ -62,6 +65,10 @@ std::ostream& operator<<(std::ostream& stream, DataType data_type) {
 
 std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
   return stream << encoding_type_to_string.left.at(encoding_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, FileType file_type) {
+  return stream << file_type_to_string.left.at(file_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
