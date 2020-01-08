@@ -45,11 +45,6 @@ std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOff
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<pmr_string>> FixedStringDictionarySegment<T>::dictionary() const {
-  return _dictionary->dictionary();
-}
-
-template <typename T>
 std::shared_ptr<const FixedStringVector> FixedStringDictionarySegment<T>::fixed_string_dictionary() const {
   return _dictionary;
 }

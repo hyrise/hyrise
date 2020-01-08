@@ -78,7 +78,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     result = _find_matches_in_dictionary(*typed_segment.dictionary());
   } else {
     const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.dictionary());
+    result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
   }
 
   const auto& match_count = result.first;
@@ -110,8 +110,10 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   });
 }
 
+template <typename D>
 std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(
-    const pmr_vector<pmr_string>& dictionary) const {
+    const D& dictionary) const {
+  using StringType = typename std::conditional_t<std::is_same<D, FixedStringVector>::value, std::string_view, pmr_string>;
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;
@@ -120,7 +122,7 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   count = 0u;
   dictionary_matches.reserve(dictionary.size());
 
-  _matcher.resolve(_invert_results, [&](const auto& matcher) {
+  _matcher.resolve<StringType>(_invert_results, [&](const auto& matcher) {
     for (const auto& value : dictionary) {
       const auto matches = matcher(value);
       count += static_cast<size_t>(matches);

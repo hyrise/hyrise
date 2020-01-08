@@ -82,19 +82,23 @@ class LikeMatcher {
    *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
    *        std::cout << matcher("He said hello!") << std::endl;
    *    }
+   *
+   * The first template type T defaults to pmr_string, but can also be std::string_view (e.g., for fixed string
+   * dictionary segments). The template type for the functor is the second template argument, since it usually
+   * deduced while T is not decuded automatically.
    */
-  template <typename Functor>
+  template <typename T = pmr_string, typename Functor>
   void resolve(const bool invert_results, const Functor& functor) const {
     if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
       const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const T& string) -> bool {
         if (string.size() < prefix.size()) return invert_results;
         return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
       });
 
     } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
       const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const T& string) -> bool {
         if (string.size() < suffix.size()) return invert_results;
         return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
       });
@@ -104,7 +108,7 @@ class LikeMatcher {
       // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const T& string) -> bool {
         return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ invert_results;
       });
 
@@ -116,7 +120,7 @@ class LikeMatcher {
         searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
       }
 
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const T& string) -> bool {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
@@ -129,7 +133,9 @@ class LikeMatcher {
     } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
       const auto& regex = std::get<std::regex>(_pattern_variant);
 
-      functor([&](const pmr_string& string) -> bool { return std::regex_match(string, regex) ^ invert_results; });
+      functor([&](const T& string) -> bool {
+        return std::regex_match(string.cbegin(), string.cend(), regex) ^ invert_results;
+      });
 
     } else {
       Fail("Pattern not implemented. Probably a bug.");
