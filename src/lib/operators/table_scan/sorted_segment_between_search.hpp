@@ -44,13 +44,13 @@ class SortedSegmentBetweenSearch {
     using difference_type = typename std::iterator_traits<IteratorType>::difference_type;
     difference_type size = std::distance(it_first, it_last), bound = 1;
 
-    if (!_is_nulls_first && !((*(it_first + (size - 1))).is_null())){
+    if (!_is_nulls_first && !(it_first + (size - 1))->is_null()){
       return;
     }
 
 
     if (_is_nulls_first) {
-      while (bound < size && (*(it_first + bound)).is_null()) {
+      while (bound < size && (it_first + bound)->is_null()) {
         bound *= 2;
       }
 
@@ -58,7 +58,7 @@ class SortedSegmentBetweenSearch {
       _begin = std::lower_bound(it_first + (bound / 2), end, false,
                               [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
     } else {
-      while (bound < size && (*(it_first + (size - bound))).is_null()) {
+      while (bound < size && (it_first + (size - bound))->is_null()) {
         bound *= 2;
       }
 
