@@ -32,16 +32,16 @@ class CsvParser {
    * @param csv_meta      Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
    * @returns             The table that was created from the csv file.
    */
-  static std::shared_ptr<Table> parse(const std::string& filename, const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+  std::shared_ptr<Table> parse(const std::string& filename, const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                       const std::optional<CsvMeta>& csv_meta = std::nullopt);
-  static std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename,
+  std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename,
                                                             const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
  protected:
   /*
    * Use the meta information stored in _meta to create a new table with according column description.
    */
-  static std::shared_ptr<Table> _create_table_from_meta(const ChunkOffset chunk_size, const CsvMeta& meta);
+  std::shared_ptr<Table> _create_table_from_meta(const ChunkOffset chunk_size, const CsvMeta& meta);
 
   /*
    * @param      csv_content String_view on the remaining content of the CSV.
@@ -50,7 +50,7 @@ class CsvParser {
    * csv_content.
    * @returns                False if \p csv_content is empty or chunk_size set to 0, True otherwise.
    */
-  static bool _find_fields_in_chunk(std::string_view csv_content, const Table& table, std::vector<size_t>& field_ends,
+  bool _find_fields_in_chunk(std::string_view csv_content, const Table& table, std::vector<size_t>& field_ends,
                                     const CsvMeta& meta);
 
   /*
@@ -60,13 +60,14 @@ class CsvParser {
    * @param[out] segments   The segments of the chunk, to be populated with data
    * @returns               The number of rows in the chunk
    */
-  static size_t _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  Segments& segments, const CsvMeta& meta, const std::string& escaped_linebreak,
-                                  std::mutex& append_chunk_mutex);
+  size_t _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
+                                  Segments& segments, const CsvMeta& meta, const std::string& escaped_linebreak);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.
    */
-  static void _sanitize_field(std::string& field, const CsvMeta& meta, const std::string& escaped_linebreak);
+  void _sanitize_field(std::string& field, const CsvMeta& meta, const std::string& escaped_linebreak);
+
+  std::mutex _append_chunk_mutex;
 };
 }  // namespace opossum

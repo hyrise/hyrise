@@ -37,7 +37,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
   }
   switch (_type) {
     case FileType::Csv:
-      table = CsvParser::parse(_filename, _chunk_size, _csv_meta);
+      table = CsvParser{}.parse(_filename, _chunk_size, _csv_meta);
       break;
     case FileType::Tbl:
       table = load_table(_filename, _chunk_size);

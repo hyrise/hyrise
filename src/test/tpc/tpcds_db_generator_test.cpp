@@ -10,7 +10,7 @@ using namespace opossum;  // NOLINT
 
 namespace {
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
-  return CsvParser::parse(
+  return CsvParser{}.parse(
       "resources/test_data/csv/tpcds/" + file_name, Chunk::DEFAULT_SIZE,
       process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION));
 }
