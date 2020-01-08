@@ -30,16 +30,6 @@ enum class SegmentAccessType {
 };
 
 // -----------------------------------------------------------------------------------------------------------------
-enum SegmentType {
-  Dictionary,
-  FrameOfReference,
-  LZ4,
-  Reference,
-  RunLength,
-  ValueS
-};
-
-// -----------------------------------------------------------------------------------------------------------------
 
 class SegmentAccessTypeTools {
  public:
@@ -256,51 +246,46 @@ class SingleAccessCountingStrategy {
 };
 
 // -----------------------------------------------------------------------------------------------------------------
-template<class AccessStrategyType, class CountingStrategyType>
 class SegmentAccessStatistics {
  public:
-  explicit SegmentAccessStatistics()
-    : _data_access_strategy{},
-      _counting_strategy{_data_access_strategy} {};
-
   void on_iterator_create(uint64_t count) {
-    _counting_strategy.on_iterator_create(count);
+    increase(SegmentAccessType::IteratorCreate, 1);
+    increase(SegmentAccessType::IteratorSeqAccess, count);
   }
 
   void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-    _counting_strategy.on_iterator_create(positions);
+    // hier muss geprüft werden, um was für einen Zugriff es sich handelt
+    increase(SegmentAccessType::IteratorCreate, 1);
+    increase(SegmentAccessTypeTools::iterator_access_pattern(positions), positions->size());
   }
 
-  void on_iterator_dereference(uint64_t count) {
-    _counting_strategy.on_iterator_dereference(count);
-  }
+  void on_iterator_dereference(uint64_t count) {}
 
-  void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {
-    _counting_strategy.on_iterator_dereference(count, chunk_offset);
-  }
+  void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {}
 
   void on_accessor_create(uint64_t count) {
-    _counting_strategy.on_accessor_create(count);
+    increase(SegmentAccessType::AccessorCreate, 1);
   }
 
   void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    _counting_strategy.on_accessor_access(count, chunk_offset);
+    increase(SegmentAccessType::AccessorAccess, count);
   }
 
   void on_dictionary_access(uint64_t count) {
-    _counting_strategy.on_dictionary_access(count);
+    increase(SegmentAccessType::DictionaryAccess, count);
   }
 
   void on_other_access(uint64_t count) {
-    _counting_strategy.on_other_access(count);
+    increase(SegmentAccessType::Other, count);
   }
 
   uint64_t count(SegmentAccessType type) const {
-    return _data_access_strategy.count(type);
+    //return _data_access_strategy.count(type);
+    return 0;
   }
 
   void reset() {
-    _data_access_strategy.reset();
+    //_data_access_strategy.reset();
   }
 
   std::vector<std::string> to_string() const {
@@ -319,33 +304,33 @@ class SegmentAccessStatistics {
   static void save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables,
     const std::string& path_to_meta_data, const std::string& path_to_access_statistics) {
     // meta-daten mit abspeichern.
-    auto entry_id = 0;
+//    auto entry_id = 0;
     std::ofstream meta_file{path_to_meta_data};
     std::ofstream output_file{path_to_access_statistics};
 
-    meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
-    output_file << "entry_id," + AccessStrategyType::header() + "\n";
-    // iterate over all tables, chunks and segments
-    for (const auto&[table_name, table_ptr] : tables) {
-      for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
-        const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
-        for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
-             column_id < count; ++column_id) {
-          const auto& column_name = table_ptr->column_name(column_id);
-          const auto& segment_ptr = chunk_ptr->get_segment(column_id);
-          const auto& access_statistics = segment_ptr->access_statistics();
-
-          meta_file << entry_id << ',' << table_name << ',' << column_name << ',' << chunk_id << ','
-                    << segment_ptr->size() << ',' << segment_ptr->estimate_memory_usage() << '\n';
-
-          for (const auto& str : access_statistics._data_access_strategy.to_string()) {
-            output_file << entry_id << ',' << str << '\n';
-          }
-
-          ++entry_id;
-        }
-      }
-    }
+//    meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
+//    output_file << "entry_id," + AccessStrategyType::header() + "\n";
+//    // iterate over all tables, chunks and segments
+//    for (const auto&[table_name, table_ptr] : tables) {
+//      for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
+//        const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
+//        for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
+//             column_id < count; ++column_id) {
+//          const auto& column_name = table_ptr->column_name(column_id);
+//          const auto& segment_ptr = chunk_ptr->get_segment(column_id);
+//          const auto& access_statistics = segment_ptr->access_statistics();
+//
+//          meta_file << entry_id << ',' << table_name << ',' << column_name << ',' << chunk_id << ','
+//                    << segment_ptr->size() << ',' << segment_ptr->estimate_memory_usage() << '\n';
+//
+//          for (const auto& str : access_statistics._data_access_strategy.to_string()) {
+//            output_file << entry_id << ',' << str << '\n';
+//          }
+//
+//          ++entry_id;
+//        }
+//      }
+//    }
 
     meta_file.close();
     output_file.close();
@@ -356,24 +341,28 @@ class SegmentAccessStatistics {
    * @param tables map of tables
    */
   static void reset_all(const std::map<std::string, std::shared_ptr<Table>>& tables) {
-    for (const auto&[table_name, table_ptr] : tables) {
-      for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
-        const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
-        for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
-             column_id < count; ++column_id) {
-          const auto& segment_ptr = chunk_ptr->get_segment(column_id);
-          segment_ptr->access_statistics().reset();
-        }
-      }
-    }
-    AtomicTimedAccessStrategy::start_time = std::chrono::steady_clock::now();
+//    for (const auto&[table_name, table_ptr] : tables) {
+//      for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
+//        const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
+//        for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
+//             column_id < count; ++column_id) {
+//          const auto& segment_ptr = chunk_ptr->get_segment(column_id);
+//          segment_ptr->access_statistics().reset();
+//        }
+//      }
+//    }
+//    AtomicTimedAccessStrategy::start_time = std::chrono::steady_clock::now();
+  }
+
+  void increase(SegmentAccessType type, uint64_t count) {
+    _count[static_cast<uint32_t>(type)] += count;
   }
 
  private:
-  AccessStrategyType _data_access_strategy;
-  CountingStrategyType _counting_strategy;
+  std::array<std::atomic_uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> _count;
+
 };
 
-  using SegmentAccessStatistics_T = SegmentAccessStatistics<AtomicTimedAccessStrategy, BulkCountingStrategy<AtomicTimedAccessStrategy>>;
+  using SegmentAccessStatistics_T = SegmentAccessStatistics;
   // using SegmentAccessStatistics_T = SegmentAccessStatistics<NonLockingStrategy, BulkCountingStrategy<NonLockingStrategy>>;
 }  // namespace opossum
