@@ -93,21 +93,21 @@ TEST_F(ProjectionNodeTest, NodeExpressions) {
 }
 
 TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
-  EXPECT_TRUE(_mock_node->get_constraints()->empty());
-  EXPECT_TRUE(_projection_node->get_constraints()->empty());
+  EXPECT_TRUE(_mock_node->constraints()->empty());
+  EXPECT_TRUE(_projection_node->constraints()->empty());
 }
 
 TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
 
   // Recreate MockNode to incorporate two constraints
   recreate_mock_node_with_constraints();
-  EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
+  EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   { // Reorder columns: (a, b, c) -> (c, a, b)
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check
-    const auto lqp_constraints = _projection_node->get_constraints();
+    const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 2);
     // In-depth check
     check_table_constraint_representation(_table_constraints, lqp_constraints);
@@ -117,7 +117,7 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check
-    const auto lqp_constraints = _projection_node->get_constraints();
+    const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 2);
     // In-depth check
     check_table_constraint_representation(_table_constraints, lqp_constraints);
@@ -128,23 +128,23 @@ TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
 
   // Recreate MockNode to incorporate two constraints
   recreate_mock_node_with_constraints();
-  EXPECT_EQ(_mock_node->get_constraints()->size(), 2);
+  EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   { // Test (a, b, c) -> (a, c) - no more constraints valid
     _projection_node = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
-    EXPECT_TRUE(_projection_node->get_constraints()->empty());
+    EXPECT_TRUE(_projection_node->constraints()->empty());
   }
 
   { // Test (a, b, c) -> (c) - no more constraints valid
     _projection_node = ProjectionNode::make(expression_vector(_c), _mock_node);
-    EXPECT_TRUE(_projection_node->get_constraints()->empty());
+    EXPECT_TRUE(_projection_node->constraints()->empty());
   }
 
   { // Test (a, b, c) -> (a, b) - all constraints remain valid
     _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
 
     // Basic check
-    const auto lqp_constraints = _projection_node->get_constraints();
+    const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 2);
     // In-depth check
     check_table_constraint_representation(_table_constraints, lqp_constraints);
@@ -154,7 +154,7 @@ TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
     _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
 
     // Basic check
-    const auto lqp_constraints = _projection_node->get_constraints();
+    const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 1);
     // In-depth check
     check_table_constraint_representation({_table_constraints.at(1)}, lqp_constraints);

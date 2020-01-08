@@ -90,9 +90,9 @@ TEST_F(MockNodeTest, Constraints) {
       std::optional<std::string>{}, TableConstraintDefinitions{a_b_pk_constraint, c_constraint});
 
   // Basic checks
-  const auto mock_a_constraints = _mock_node_a->get_constraints();
+  const auto mock_a_constraints = _mock_node_a->constraints();
   EXPECT_EQ(mock_a_constraints->size(), 2);
-  const auto mock_b_constraints = _mock_node_b->get_constraints();
+  const auto mock_b_constraints = _mock_node_b->constraints();
   EXPECT_TRUE(mock_b_constraints->empty());
 
   // In-depth verification

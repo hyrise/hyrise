@@ -92,7 +92,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::get_constraints() const {
+const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::constraints() const {
   auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
   // Extract relevant constraints from table

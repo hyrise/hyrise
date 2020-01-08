@@ -95,8 +95,8 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
 }
 
 TEST_F(AliasNodeTest, ConstraintsEmpty) {
-  EXPECT_TRUE(mock_node->get_constraints()->empty());
-  EXPECT_TRUE(alias_node->get_constraints()->empty());
+  EXPECT_TRUE(mock_node->constraints()->empty());
+  EXPECT_TRUE(alias_node->constraints()->empty());
 }
 
 TEST_F(AliasNodeTest, ConstraintsForwarding) {
@@ -118,7 +118,7 @@ TEST_F(AliasNodeTest, ConstraintsForwarding) {
   alias_node = AliasNode::make(expressions, aliases, mock_node);
 
   // Basic check
-  const auto lqp_constraints = alias_node->get_constraints();
+  const auto lqp_constraints = alias_node->constraints();
   EXPECT_EQ(lqp_constraints->size(), 2);
   // In-depth check
   check_table_constraint_representation(table_constraints, lqp_constraints);
