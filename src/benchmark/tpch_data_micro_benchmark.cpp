@@ -142,11 +142,33 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan)(benchmark::State&
             _table_wrapper_map.at("lineitem"),
             SegmentIndexType::BTree,
             left_column_ids,
-            PredicateCondition::Equals,
+            PredicateCondition::LessThan,
             right_values
             );
     table_scan->execute();
   }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan_Matches_All_Predicate)(benchmark::State& state) {
+
+    auto& sm = Hyrise::get().storage_manager;
+    auto lineitem_table = sm.get_table("lineitem");
+
+    // Generate an index to benchmark the indexScan
+    std::vector<ColumnID> _indexColumnIDs = { ColumnID{10} };
+    lineitem_table->create_index<BTreeIndex>(_indexColumnIDs);
+    const std::vector<ColumnID> left_column_ids = { ColumnID{10}};
+    const std::vector<AllTypeVariant> right_values = { "1600-01-01" };
+    for (auto _ : state) {
+        const auto table_scan = std::make_shared<IndexScan>(
+                _table_wrapper_map.at("lineitem"),
+                SegmentIndexType::BTree,
+                left_column_ids,
+                PredicateCondition::NotEquals,
+                right_values
+        );
+        table_scan->execute();
+    }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
