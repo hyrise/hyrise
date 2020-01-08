@@ -280,12 +280,13 @@ class SegmentAccessStatistics {
   }
 
   uint64_t count(SegmentAccessType type) const {
-    //return _data_access_strategy.count(type);
-    return 0;
+    return _count[static_cast<uint32_t>(type)];
   }
 
   void reset() {
-    //_data_access_strategy.reset();
+    for (auto type = 0u, end = static_cast<uint32_t>(SegmentAccessType::Count); type < end; ++type) {
+      _count[static_cast<uint32_t>(type)] = 0;
+    }
   }
 
   std::vector<std::string> to_string() const {
