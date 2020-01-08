@@ -245,20 +245,23 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::constraints() const {
+const std::shared_ptr<const ExpressionsConstraintDefinitions> AbstractLQPNode::constraints() const {
     return std::make_shared<ExpressionsConstraintDefinitions>();
 }
 
-const shared_ptr<ECD> forward_constraints() {
+const std::shared_ptr<const ExpressionsConstraintDefinitions> AbstractLQPNode::forward_constraints() const {
+  Assert(left_input(), "Not possible to forward constraints from empty node.");
+  const auto input_constraints = left_input()->constraints();
+  const auto expressions = column_expressions();
   if constexpr (HYRISE_DEBUG) {
-    SetAusAbstractExpression set(column_expression());
-    for (const auto& constraint : input_constraints) {
-      for (const auto& expr : constraint.expressions) {
-        Assert(set.contains(expr))
+    ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
+    for (const auto& constraint : *input_constraints) {
+      for (const auto& expr : constraint.column_expressions) {
+        Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses column expressions.");
       }
     }
   }
-  return input_constraints
+  return input_constraints;
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
