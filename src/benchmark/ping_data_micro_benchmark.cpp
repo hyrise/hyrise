@@ -146,7 +146,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
       // file for table stats
       std::ofstream segment_meta_data_csv_file(SEGMENT_META_DATA_FILE);
-      segment_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,CHUNK_SIZE,ROW_COUNT,SIZE_IN_BYTES\n";
+      segment_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,ROW_COUNT,SIZE_IN_BYTES\n";
 
       std::ofstream index_meta_data_csv_file(INDEX_META_DATA_FILE);
       index_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,ROW_COUNT,SIZE_IN_BYTES\n"; 
@@ -177,7 +177,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
                 const auto& chunk = sorted_table->get_chunk(chunk_id);
                 const auto& segment = chunk->get_segment(column_id);
 
-                segment_meta_data_csv_file << sorted_table_name << "," << sorted_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << segment->size() << "," << segment->estimate_memory_usage() << "\n";
+                segment_meta_data_csv_file << sorted_table_name << "," << sorted_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << segment->estimate_memory_usage() << "\n";
               }
             }
 
