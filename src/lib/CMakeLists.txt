@@ -88,14 +88,20 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
-    import_export/csv_converter.cpp
-    import_export/csv_converter.hpp
-    import_export/csv_meta.cpp
-    import_export/csv_meta.hpp
-    import_export/csv_parser.cpp
-    import_export/csv_parser.hpp
-    import_export/csv_writer.cpp
-    import_export/csv_writer.hpp
+    import_export/binary/binary_parser.cpp
+    import_export/binary/binary_parser.hpp
+    import_export/binary/binary_writer.cpp
+    import_export/binary/binary_writer.hpp
+    import_export/csv/csv_converter.cpp
+    import_export/csv/csv_converter.hpp
+    import_export/csv/csv_meta.cpp
+    import_export/csv/csv_meta.hpp
+    import_export/csv/csv_parser.cpp
+    import_export/csv/csv_parser.hpp
+    import_export/csv/csv_writer.cpp
+    import_export/csv/csv_writer.hpp
+    import_export/file_type.cpp
+    import_export/file_type.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
@@ -119,6 +125,8 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/import_node.cpp
+    logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -178,16 +186,12 @@ set(
     operators/delete.hpp
     operators/difference.cpp
     operators/difference.hpp
-    operators/export_binary.cpp
-    operators/export_binary.hpp
-    operators/export_csv.cpp
-    operators/export_csv.hpp
+    operators/export.cpp
+    operators/export.hpp
     operators/get_table.cpp
     operators/get_table.hpp
-    operators/import_binary.cpp
-    operators/import_binary.hpp
-    operators/import_csv.cpp
-    operators/import_csv.hpp
+    operators/import.hpp
+    operators/import.cpp
     operators/index_scan.cpp
     operators/index_scan.hpp
     operators/insert.cpp
@@ -285,6 +289,8 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/dependent_group_by_reduction_rule.cpp
+    optimizer/strategy/dependent_group_by_reduction_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp

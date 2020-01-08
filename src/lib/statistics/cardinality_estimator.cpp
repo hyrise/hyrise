@@ -205,6 +205,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::CreateView:
     case LQPNodeType::Update:
     case LQPNodeType::Insert:
+    case LQPNodeType::Import:
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:

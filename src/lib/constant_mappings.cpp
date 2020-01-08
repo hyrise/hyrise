@@ -21,6 +21,7 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::Count, "COUNT"},
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
         {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
+        {AggregateFunction::Any, "ANY"},
     });
 
 const boost::bimap<FunctionType, std::string> function_type_to_string =
@@ -40,6 +41,9 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::LZ4, "LZ4"},
     {EncodingType::Unencoded, "Unencoded"},
 });
+
+const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileType, std::string>(
+    {{FileType::Tbl, "Tbl"}, {FileType::Csv, "Csv"}, {FileType::Binary, "Binary"}, {FileType::Auto, "Auto"}});
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
@@ -61,6 +65,10 @@ std::ostream& operator<<(std::ostream& stream, const DataType data_type) {
 
 std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type) {
   return stream << encoding_type_to_string.left.at(encoding_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, const FileType file_type) {
+  return stream << file_type_to_string.left.at(file_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type) {
