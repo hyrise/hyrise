@@ -119,7 +119,8 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
   ReferenceSegment reference_segment_a(_test_table, ColumnID{0}, pos_list_a);
   ReferenceSegment reference_segment_b(_test_table, ColumnID{0}, pos_list_b);
 
-  EXPECT_EQ(reference_segment_a.memory_usage(), reference_segment_b.memory_usage() + 2 * sizeof(RowID));
+  EXPECT_EQ(reference_segment_a.memory_usage(MemoryUsageCalculationMode::Sampled),
+            reference_segment_b.memory_usage(MemoryUsageCalculationMode::Sampled) + 2 * sizeof(RowID));
 }
 
 }  // namespace opossum

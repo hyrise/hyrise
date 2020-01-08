@@ -72,7 +72,8 @@ size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalcu
   }
 
   const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
-  return base_size + static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)));
+  return base_size +
+         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)));
 }
 
 }  // namespace opossum

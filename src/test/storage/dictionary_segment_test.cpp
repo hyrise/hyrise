@@ -204,7 +204,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
       encode_and_compress_segment(
           vs_int, DataType::Int,
           SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})
-          ->memory_usage();
+          ->memory_usage(MemoryUsageCalculationMode::Sampled);
 
   vs_int->append(0);
   vs_int->append(1);
@@ -216,7 +216,8 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
 
   static constexpr auto size_of_attribute = 1u;
 
-  EXPECT_GE(dictionary_segment->memory_usage(), empty_memory_usage + 3 * size_of_attribute);
+  EXPECT_GE(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Sampled),
+            empty_memory_usage + 3 * size_of_attribute);
 }
 
 }  // namespace opossum

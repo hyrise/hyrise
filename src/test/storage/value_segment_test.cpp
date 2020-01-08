@@ -88,9 +88,9 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto empty_usage_int = vs_int.memory_usage();
-  const auto empty_usage_double = vs_double.memory_usage();
-  const auto empty_usage_str = vs_str.memory_usage();
+  const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_double = vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_str = vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
 
   vs_int.append(1);
   vs_int.append(2);
@@ -103,10 +103,10 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
 
   vs_double.append(42.1337);
 
-  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.memory_usage());
-  EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.memory_usage());
+  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
 
-  EXPECT_GE(vs_str.memory_usage(), empty_usage_str + 2 * sizeof(pmr_string));
+  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_str + 2 * sizeof(pmr_string));
   EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Full), empty_usage_str + 2 * sizeof(pmr_string));
 }
 
