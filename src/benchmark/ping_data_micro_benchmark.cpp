@@ -27,8 +27,8 @@ using namespace opossum;
 
 // input and output settings 
 ///////////////////////////////
-constexpr auto SEGMENT_META_DATA_FILE = "../../out/segment_meta_data_int_dict_index.csv";
-constexpr auto INDEX_META_DATA_FILE = "../../out/index_meta_data_int_dict_index.csv";
+constexpr auto SEGMENT_META_DATA_FILE = "../../out/segment_meta_data_int.csv";
+constexpr auto INDEX_META_DATA_FILE = "../../out/index_meta_data_int.csv";
 constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 
 // table and compression settings
@@ -38,10 +38,11 @@ const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 //const auto CHUNK_SIZES = std::vector{size_t{10}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 // Frame of References supports only int columns
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
-const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
-const auto CREATE_INDEX = true; 
+// Dictionary Encoding should always have the id 0
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
+const auto CREATE_INDEX = false; 
 
 // single benchmark values (median, min, max)
 // determined by column stats python script
@@ -63,11 +64,11 @@ const auto CREATE_INDEX = true;
 // quantile benchmark values (int table)
 // timestamp values --> unix timestamp
 ///////////////////////////////
-const auto BM_VAL_CAPTAIN_ID = std::vector{4, 4115, 11787, 57069, 176022, 451746, 616628, 901080, 1156169, 1233112, 1414788};
-const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
-const auto BM_VAL_LATITUDE = std::vector{102191832, 250455204, 250699667, 250872227, 251030861, 251244186, 251724729, 251966912, 252164364, 252437205, 601671321};
-const auto BM_VAL_LONGITUDE = std::vector{-2135243575, 551423584, 551549474, 551792718, 552072508, 552470842, 552692599, 552806365, 553156638, 553640991, 2123391400};
-const auto BM_VAL_TIMESTAMP = std::vector{1541372479, 1541398637, 1541418563, 1541439501, 1542924244, 1545434420, 1545474895, 1545518017, 1548644767, 1548671748, 1548716462};
+const auto BM_VAL_CAPTAIN_ID = std::vector{464, 844, 1628, 4115, 6362, 11787, 24882, 57069, 176022, 451746, 616628, 901080, 954443, 1156169, 1233112, 1414788};
+const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
+const auto BM_VAL_LATITUDE = std::vector{249279532, 249973158, 250299799, 250455204, 250573540, 250699666, 250775666, 250872227, 251030861, 251244185, 251724729, 251966912, 252081200, 252164364, 252437204, 601671321};
+const auto BM_VAL_LONGITUDE = std::vector{550593981, 551164532, 551349072, 551423584, 551481989, 551549474, 551685925, 551792718, 552072508, 552470842, 552692599, 552806365, 552898481, 553156638, 553640991, 2123391399};
+const auto BM_VAL_TIMESTAMP = std::vector{1541379924, 1541382930, 1541389423, 1541398637, 1541408022, 1541418563, 1541428900, 1541439501, 1542924244, 1545434420, 1545474895, 1545518017, 1547639955, 1548644767, 1548671748, 1548716462};
 
 const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
 
@@ -235,7 +236,7 @@ static void BM_Ping_Print_Sorted_Tables(benchmark::State& state) {
 }
 BENCHMARK(BM_Ping_Print_Sorted_Tables);
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length.");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length.");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length.");
@@ -263,11 +264,11 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEq
   // scan
   std::shared_ptr<BinaryPredicateExpression> predicate;
   // should by nicer dicer
-  if (scan_column_index == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_CAPTAIN_ID[search_value_index]));}
-  if (scan_column_index == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_LATITUDE[search_value_index]));}
-  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_LONGITUDE[search_value_index]));}
-  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
-  if (scan_column_index == 4) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
+  if (scan_column_index == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThanEquals, operand, value_(BM_VAL_CAPTAIN_ID[search_value_index]));}
+  if (scan_column_index == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThanEquals, operand, value_(BM_VAL_LATITUDE[search_value_index]));}
+  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThanEquals, operand, value_(BM_VAL_LONGITUDE[search_value_index]));}
+  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThanEquals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
+  if (scan_column_index == 4) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThanEquals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -451,7 +452,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark
 
   const std::vector<ColumnID> scan_column_ids = {scan_column_id};
   for (auto _ : state) {
-    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::GreaterThanEquals, right_values);
+    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::LessThanEquals, right_values);
     index_scan->execute();
   }
 }
@@ -470,9 +471,9 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
 //BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
