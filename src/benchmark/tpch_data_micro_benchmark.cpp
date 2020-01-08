@@ -16,7 +16,7 @@
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "operators/index_scan.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -133,14 +133,14 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan)(benchmark::State&
 
     // Generate an index to benchmark the indexScan
     std::vector<ColumnID> _indexColumnIDs = { ColumnID{10} };
-    lineitem_table->create_index<BTreeIndex>(_indexColumnIDs);
+    lineitem_table->create_index<GroupKeyIndex>(_indexColumnIDs); // TODO: GroupKeyIndex statt BTreeIndex
     // Roughly after _tpchq6_shipdate_less_predicate
   const std::vector<ColumnID> left_column_ids = { ColumnID{10}};
   const std::vector<AllTypeVariant> right_values = { "1995-01-01" };
   for (auto _ : state) {
     const auto table_scan = std::make_shared<IndexScan>(
             _table_wrapper_map.at("lineitem"),
-            SegmentIndexType::BTree,
+            SegmentIndexType::GroupKey,
             left_column_ids,
             PredicateCondition::LessThan,
             right_values
@@ -156,13 +156,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan_Matches_All_Predic
 
     // Generate an index to benchmark the indexScan
     std::vector<ColumnID> _indexColumnIDs = { ColumnID{10} };
-    lineitem_table->create_index<BTreeIndex>(_indexColumnIDs);
+    lineitem_table->create_index<GroupKeyIndex>(_indexColumnIDs);
     const std::vector<ColumnID> left_column_ids = { ColumnID{10}};
     const std::vector<AllTypeVariant> right_values = { "1600-01-01" };
     for (auto _ : state) {
         const auto table_scan = std::make_shared<IndexScan>(
                 _table_wrapper_map.at("lineitem"),
-                SegmentIndexType::BTree,
+                SegmentIndexType::GroupKey,
                 left_column_ids,
                 PredicateCondition::NotEquals,
                 right_values
