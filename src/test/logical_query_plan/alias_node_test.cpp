@@ -1,3 +1,4 @@
+#include <utils/constraint_test_utils.hpp>
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
@@ -8,6 +9,7 @@
 #include "operators/table_wrapper.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
+#include "utils/constraint_test_utils.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
@@ -90,6 +92,36 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   // the equality check fails.
   // The hash function on the other hand uses shallow_hash of the LQPReference, where the pointer is not used for the
   // hash code calculation. Therefore, the hash codes of `a` and `expr_a` are equal.
+}
+
+TEST_F(AliasNodeTest, ConstraintsEmpty) {
+  EXPECT_TRUE(mock_node->get_constraints()->empty());
+  EXPECT_TRUE(alias_node->get_constraints()->empty());
+}
+
+TEST_F(AliasNodeTest, ConstraintsForwarding) {
+  // Recreate MockNode to incorporate two constraints
+  //  Primary Key: a, b
+  const auto table_constraint_1 =
+      TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  //  Unique: b
+  const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+  const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
+
+  mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+  a = lqp_column_(mock_node->get_column("a"));
+  b = lqp_column_(mock_node->get_column("b"));
+
+  // Recreate AliasNode
+  aliases = {"x", "y"};
+  expressions = {b, a};
+  alias_node = AliasNode::make(expressions, aliases, mock_node);
+
+  // Basic check
+  const auto lqp_constraints = alias_node->get_constraints();
+  EXPECT_EQ(lqp_constraints->size(), 2);
+  // In-depth check
+  check_table_constraint_representation(table_constraints, lqp_constraints);
 }
 
 }  // namespace opossum
