@@ -71,10 +71,11 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     // Remove processed part of the csv content
     content_view = content_view.substr(field_ends.back() + 1);
 
+    std::mutex append_chunk_mutex;
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &segments, &meta,
-                                                  &escaped_linebreak]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, segments, meta, escaped_linebreak);
+    tasks.emplace_back(std::make_shared<JobTask>([relevant_content, field_ends, &table, &segments, &meta,
+                                                  &escaped_linebreak, &append_chunk_mutex]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, segments, meta, escaped_linebreak, append_chunk_mutex);
     }));
     tasks.back()->schedule();
   }
@@ -168,7 +169,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
                                     const Table& table, Segments& segments, const CsvMeta& meta,
-                                    const std::string& escaped_linebreak) {
+                                    const std::string& escaped_linebreak, std::mutex& append_chunk_mutex) {
   // For each csv column, create a CsvConverter which builds up a ValueSegment
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
@@ -211,7 +212,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   // Transform the field_offsets to segments and add segments to chunk.
   {
-    std::lock_guard<std::mutex> lock(_append_chunk_mutex);
+    std::lock_guard<std::mutex> lock(append_chunk_mutex);
     for (auto& converter : converters) {
       segments.push_back(converter->finish());
     }
