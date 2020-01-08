@@ -108,7 +108,7 @@ TEST_F(AliasNodeTest, ConstraintsForwarding) {
   const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
 
-  mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+  mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_node", table_constraints);
   a = lqp_column_(mock_node->get_column("a"));
   b = lqp_column_(mock_node->get_column("b"));
 

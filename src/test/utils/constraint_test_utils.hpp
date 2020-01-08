@@ -8,7 +8,7 @@
 namespace opossum {
 
 /**
- * Checks, whether all TableConstraintDefinition objects are represented in ExpressionsConstraintDefinitions.
+ * Checks, whether all given TableConstraintDefinition objects are represented in ExpressionsConstraintDefinitions.
  */
 static void check_table_constraint_representation(const TableConstraintDefinitions& table_constraints,
                                            const std::shared_ptr<ExpressionsConstraintDefinitions> lqp_constraints) {
@@ -41,10 +41,11 @@ static void check_table_constraint_representation(const TableConstraintDefinitio
             }
           }
 
-          // lqp_constraint represents table_constraint since none of the checks have failed
+          // lqp_constraint represents table_constraint since none of the above checks have failed
           return true;
         });
 
+    // Check whether a matching lqp_constraint has been found
     EXPECT_FALSE(matching_lqp_constraint == lqp_constraints->cend());
   }
 }
