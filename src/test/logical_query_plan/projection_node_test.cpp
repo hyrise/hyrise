@@ -162,22 +162,4 @@ TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
 
 }
 
-//TEST_F(ProjectionNodeTest, ConstraintsArithmetics) {
-//  const auto pk_constraint_0_1 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-//  const auto unique_constraint_2 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
-//
-//  _mock_node = MockNode::make(
-//      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a", UniqueConstraintDefinitions{pk_constraint_0_1, unique_constraint_2});
-//
-//  // a + b
-//  _projection_node = ProjectionNode::make(add_(_a, _b), _mock_node);
-//  EXPECT_TRUE(_projection_node->get_constraints()->empty());
-//
-//  // c + 1
-//  _projection_node = ProjectionNode::make(add_(_c, 1));
-//  EXPECT_EQ(_projection_node->get_constraints()->size(), 1);
-//  const auto unique_constraint_0 = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}}, IsPrimaryKey::No};
-//  EXPECT_TRUE(_projection_node->get_constraints()->at(0).equals(unique_constraint_0));
-//}
-
 }  // namespace opossum
