@@ -35,19 +35,14 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::co
   projection_lqp_constraints->reserve(node_expressions.size());
 
   // Check each input constraint for applicability in this projection node
-  for(const auto& constraint : input_lqp_constraints) {
+  const auto expressions = column_expressions();
+  const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
+  for(const auto& constraint : input_lqp_constraints) {
     // Check whether column expressions have been filtered out with this node.
     bool found_all_column_expressions = std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
        [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-
-         const auto matching_prj_column_expr = std::find_if(node_expressions.cbegin(), node_expressions.cend(),
-                                                            [&](const std::shared_ptr<AbstractExpression>& node_expr) {
-                                                              if (*node_expr == *constraint_column_expr)
-                                                                return true;
-                                                              return false;
-                                                            });
-         return matching_prj_column_expr != node_expressions.cend();
+         return expressions_set.contains(constraint_column_expr);
     });
 
     if(found_all_column_expressions) {
