@@ -19,26 +19,4 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-
-# Configure Console
-# add_executable(
-#     hyriseConsole
-
-#     console/console.cpp
-#     console/console.hpp
-#     console/pagination.cpp
-#     console/pagination.hpp
-# )
-# target_link_libraries(
-#     hyriseConsole
-#     hyriseBenchmarkLib
-#     ncurses
-#     ${READLINE_LIBRARY}
-# )
-# target_link_libraries_system(hyriseConsole nlohmann_json::nlohmann_json)
-# target_include_directories(
-#     hyriseConsole
-
-#     SYSTEM PUBLIC
-#     ${READLINE_INCLUDE_DIR}
-# )
+target_link_libraries_system(hyriseCalibration nlohmann_json::nlohmann_json)
