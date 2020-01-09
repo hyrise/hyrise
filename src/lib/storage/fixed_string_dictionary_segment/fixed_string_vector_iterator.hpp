@@ -16,7 +16,7 @@ namespace opossum {
 // Depending on OnConstStorage, it either returns a (mutable) FixedString or an (immutable) std::string_view
 template <bool OnConstStorage,
           typename Storage = std::conditional_t<OnConstStorage, const pmr_vector<char>, pmr_vector<char>>,
-          typename DereferenceValue = std::conditional_t<OnConstStorage, const std::string_view&, FixedString>>
+          typename DereferenceValue = std::conditional_t<OnConstStorage, const std::string_view, FixedString>>
 class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<OnConstStorage>, DereferenceValue,
                                                           std::random_access_iterator_tag, DereferenceValue> {
   using ValueType = std::string_view;
@@ -61,9 +61,8 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   }
 
   template <bool OnConstStorageLocal = OnConstStorage>
-  std::enable_if_t<OnConstStorageLocal, const std::string_view&> dereference() const {  // NOLINT
-    _temporary_return_value = std::string_view{&_chars[_pos], strnlen(&_chars[_pos], _string_length)};
-    return _temporary_return_value;
+  std::enable_if_t<OnConstStorageLocal, const std::string_view> dereference() const {  // NOLINT
+    return std::string_view{&_chars[_pos], strnlen(&_chars[_pos], _string_length)};
   }
 
   template <bool OnConstStorageLocal = OnConstStorage>
