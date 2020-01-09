@@ -17,9 +17,10 @@ namespace opossum {
   * Please note, that there are still differences between the stdlib's. Thus, even the full size accumulation is not
   * guaranteed to be 100% accurate for all libraries.
   */
-template <typename T>
-size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalculationMode mode) {
-  const auto base_size = sizeof(T);
+template <typename V>
+size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalculationMode mode) {
+  using StringType = typename V::value_type;
+  const auto base_size = sizeof(V);
 
   // Early out
   if (string_vector.empty()) return base_size;
@@ -39,7 +40,7 @@ size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalcu
   constexpr auto sampling_factor = 0.01f;
   constexpr auto min_rows = size_t{10};
 
-  auto samples_to_draw = std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
+  const auto samples_to_draw = std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
   samples_to_draw = std::min(samples_to_draw, string_vector.size());
 
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
@@ -52,12 +53,14 @@ size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalcu
     return base_size + elements_size;
   }
 
-  // Create a vector of all possible positions and later use sample to collect a sample of positions. We do not
-  // randomly get positions, since we would need use a set to ensure that we do not have duplicates. The current
-  // approach works mostly sequentially and returns a unique and sorted (better performance when later accessing
-  // the samples positions) vector of sample positions.
-  std::vector<size_t> all_positions(string_vector.size());
-  std::iota(all_positions.begin(), all_positions.end(), 0);
+  std::default_random_engine generator{std::random_device{}()};
+  std::uniform_int_distribution<int> distribution(0, static_cast<int>(samples_to_draw));
+  std::set<size_t> sample_set;
+  while (sample_set.size() < samples_to_draw) {
+    sample_set.insert(static_cast<size_t>(distribution(generator)));
+  }
+  // Create vector from set of samples (std::set yields a sorted order)
+  std::vector<size_t> sample_positions(sample_set.cbegin(), sample_set.cend());
 
   std::vector<size_t> sample_positions(samples_to_draw);
   std::sample(all_positions.begin(), all_positions.end(), sample_positions.begin(), samples_to_draw,
@@ -65,7 +68,7 @@ size_t string_vector_memory_usage(const T& string_vector, const MemoryUsageCalcu
 
   // We get the accurate size for all strings in the sample (preallocated buffers + potential heap allocations) and
   // then scale this value using the sampling factor.
-  auto elements_size = samples_to_draw * sizeof(T);
+  auto elements_size = samples_to_draw * sizeof(StringType);
   for (const auto& sample_position : sample_positions) {
     elements_size += sso_exceeding_bytes(string_vector[sample_position]);
   }
