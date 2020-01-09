@@ -28,7 +28,7 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
 
   auto [table, chunk_count] = _read_header(file);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    _import_chunk(file, table);
+    _import_chunk(file, table, chunk_id < (chunk_count - 1));
   }
 
   return table;
@@ -98,7 +98,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
   return std::make_pair(table, chunk_count);
 }
 
-void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
+void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table, const bool finalize_chunk) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
   Segments output_segments;
@@ -109,6 +109,10 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
 
   const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
   table->append_chunk(output_segments, mvcc_data);
+
+  if (finalize_chunk) {
+    table->get_chunk(ChunkID{table->chunk_count() - 1})->finalize();
+  }
 }
 
 std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
