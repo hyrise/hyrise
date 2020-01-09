@@ -22,8 +22,6 @@ with open(filename) as file:
     content = content[:content.rfind('####/SQL_QUERY####') + len('####/SQL_QUERY####')]
     
     for query in content.split('$$$$$$QUERYNAME:'):
-        # print(query)
-
         query_name = query[:query.find('\n')]
         query_regex = re.search('####SQL_QUERY####(.*)####/SQL_QUERY####', query, re.DOTALL)
         if query_regex:
@@ -33,5 +31,4 @@ with open(filename) as file:
             if query[-1] != ';':
                 query += ';' # append semicolon if not present in query
             query_file.write(query + '\n')
-
-        # last_char_is_semicolon = query[-1] == ';'
+            query_file.close()
