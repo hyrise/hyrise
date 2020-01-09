@@ -45,7 +45,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
     // or the given input vector is small.
-    auto elements_size = string_vector.capacity() * sizeof(T);
+    auto elements_size = string_vector.capacity() * sizeof(StringType);
     for (const auto& single_string : string_vector) {
       elements_size += sso_exceeding_bytes(single_string);
     }
