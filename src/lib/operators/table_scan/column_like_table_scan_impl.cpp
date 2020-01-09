@@ -112,8 +112,6 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
 template <typename D>
 std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(const D& dictionary) const {
-  // using StringType =
-  //     typename std::conditional_t<std::is_same<D, FixedStringVector>::value, std::string_view, pmr_string>;
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;

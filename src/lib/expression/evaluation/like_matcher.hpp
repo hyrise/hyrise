@@ -82,10 +82,6 @@ class LikeMatcher {
    *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
    *        std::cout << matcher("He said hello!") << std::endl;
    *    }
-   *
-   * The first template type T defaults to pmr_string, but can also be std::string_view (e.g., for fixed string
-   * dictionary segments). The template type for the functor is the second template argument, since it can be deduced
-   * while T is not decuded automatically.
    */
   template <typename Functor>
   void resolve(const bool invert_results, const Functor& functor) const {
