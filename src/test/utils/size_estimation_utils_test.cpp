@@ -29,7 +29,7 @@ TEST(SizeEstimationUtilsTest, SizeSmallerThanSampleSize) {
 TEST(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   constexpr auto large_string_length = size_t{500};
   constexpr auto vector_length = size_t{200};
-  const auto large_string = std::string(large_string_length, '#');
+  const auto large_string = pmr_string(large_string_length, '#');
 
   pmr_vector<pmr_string> string_vector{vector_length, ""};
   string_vector[0] = large_string;
