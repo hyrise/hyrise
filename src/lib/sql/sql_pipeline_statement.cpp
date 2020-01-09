@@ -1,7 +1,7 @@
 #include "sql_pipeline_statement.hpp"
 
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>

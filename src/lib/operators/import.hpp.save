@@ -33,6 +33,7 @@ class Import : public AbstractReadOnlyOperator {
 
   const std::string& name() const final;
   const std::string filename;
+  FileType file_type;
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
@@ -46,7 +47,7 @@ class Import : public AbstractReadOnlyOperator {
   // Name for adding the table to the StorageManager
   const std::string _tablename;
   const ChunkOffset _chunk_size;
-  FileType _file_type;
+    const 
   const std::optional<CsvMeta> _csv_meta;
 };
 
