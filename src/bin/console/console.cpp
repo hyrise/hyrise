@@ -530,8 +530,8 @@ int Console::_load_table(const std::string& args) {
     out("Table " + tablename + " already existed. Replacing it.\n");
   }
 
-  auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
   try {
+    auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
     importer->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while importing table:\n  " + std::string(exception.what()) + "\n");

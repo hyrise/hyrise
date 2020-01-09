@@ -11,6 +11,10 @@ FileType import_type_to_file_type(const hsql::ImportType import_type) {
       return FileType::Csv;
     case hsql::ImportType::kImportTbl:
       return FileType::Tbl;
+    case hsql::ImportType::kImportBinary:
+      return FileType::Binary;
+    case hsql::ImportType::kImportAuto:
+      return FileType::Auto;
   }
   Fail("Unknown file type.");
 }

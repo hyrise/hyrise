@@ -68,13 +68,12 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {
-  auto importer = std::make_shared<Import>("not_existing_file", "a");
+  auto importer = std::make_shared<Import>("not_existing_file.tbl", "a");
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportTest, UnknownFileExtension) {
-  auto importer = std::make_shared<Import>("not_existing_file.mp3", "a");
-  EXPECT_THROW(importer->execute(), std::exception);
+  EXPECT_THROW(std::make_shared<Import>("not_existing_file.mp3", "a"), std::exception);
 }
 
 TEST_F(OperatorsImportTest, ReplaceExistingTable) {
