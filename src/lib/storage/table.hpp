@@ -188,12 +188,10 @@ class Table : private Noncopyable {
   }
 
   /**
-   * Add a unique constraint. The column IDs can be passed in an arbitrary order, they will be sorted
-   * by this method. Constraint column IDs will always be sorted from here on.
    * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" constraints to draw attention to that.
    */
-  void add_soft_unique_constraint(const std::unordered_set<ColumnID>& column_ids, const IsPrimaryKey is_primary_key);
+  void add_soft_unique_constraint(const TableConstraintDefinition& table_constraint);
   const TableConstraintDefinitions& get_soft_unique_constraints() const;
 
   /**

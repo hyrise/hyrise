@@ -151,8 +151,8 @@ TEST_F(StoredTableNodeTest, GetStatisticsPruneBothColumns) {
 TEST_F(StoredTableNodeTest, Constraints) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
-  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes});
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No});
 
   const auto table_constraints = table->get_soft_unique_constraints();
   const auto lqp_constraints = _stored_table_node->constraints();
@@ -177,9 +177,9 @@ TEST_F(StoredTableNodeTest, Constraints) {
 TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
-  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
-  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No});
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes});
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No});
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   const auto table_constraints = table->get_soft_unique_constraints();

@@ -295,31 +295,29 @@ std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes
 
 const TableConstraintDefinitions& Table::get_soft_unique_constraints() const { return _constraint_definitions; }
 
-void Table::add_soft_unique_constraint(const std::unordered_set<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
-  for (const auto& column_id : column_ids) {
+void Table::add_soft_unique_constraint(const TableConstraintDefinition& table_constraint) {
+  for (const auto& column_id : table_constraint.columns) {
     Assert(column_id < column_count(), "ColumnID out of range");
-    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
+    Assert(table_constraint.is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
            "Column must be not nullable for primary key constraint");
   }
 
   {
     auto scoped_lock = acquire_append_mutex();
-    if (is_primary_key == IsPrimaryKey::Yes) {
+    if (table_constraint.is_primary_key == IsPrimaryKey::Yes) {
       Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
                           [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
                  _constraint_definitions.end(),
              "Another primary key already exists for this table.");
     }
 
-    TableConstraintDefinition new_constraint{column_ids, is_primary_key};
-
     Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                        [&new_constraint](const auto& existing_constraint) {
-                          return new_constraint.columns == existing_constraint.columns;
+                        [&table_constraint](const auto& existing_constraint) {
+                          return table_constraint.columns == existing_constraint.columns;
                         }) == _constraint_definitions.end(),
            "Another constraint on the same columns already exists.");
 
-    _constraint_definitions.push_back(new_constraint);
+    _constraint_definitions.push_back(table_constraint);
   }
 }
 
