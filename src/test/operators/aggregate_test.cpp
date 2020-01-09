@@ -223,11 +223,11 @@ TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
 
   const auto table = this->_table_wrapper_2_2->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
-    any_(pqp_column_(ColumnID{2}, table->column_data_type(ColumnID{2}), table->column_is_nullable(ColumnID{2}), table->column_name(ColumnID{2})))};
+      any_(pqp_column_(ColumnID{2}, table->column_data_type(ColumnID{2}), table->column_is_nullable(ColumnID{2}),
+                       table->column_name(ColumnID{2})))};
 
-  auto aggregate = std::make_shared<TypeParam>(
-      filtered, aggregate_expressions,
-      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  auto aggregate =
+      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   aggregate->execute();
 
   // Column 2 stores the value 20 twice for the remaining group.
@@ -245,11 +245,11 @@ TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
   // Column 3 stores different values for the tuples of the remaining group.
   const auto table = this->_table_wrapper_2_2->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
-    any_(pqp_column_(ColumnID{3}, table->column_data_type(ColumnID{3}), table->column_is_nullable(ColumnID{3}), table->column_name(ColumnID{3})))};
+      any_(pqp_column_(ColumnID{3}, table->column_data_type(ColumnID{3}), table->column_is_nullable(ColumnID{3}),
+                       table->column_name(ColumnID{3})))};
 
-  auto aggregate = std::make_shared<TypeParam>(
-      filtered, aggregate_expressions,
-      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  auto aggregate =
+      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
