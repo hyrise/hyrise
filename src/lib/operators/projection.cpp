@@ -105,7 +105,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
           // If the ReferenceSegment references a single (FixedString)DictionarySegment, do not materialize it as a
           // ValueSegment, but re-use its dictionary and only copy the value ids.
           auto referenced_dictionary_segment = std::shared_ptr<BaseDictionarySegment>{};
-          // TODO also handle FixedStringDictionary
 
           const auto& pos_list = reference_segment->pos_list();
           if (pos_list->references_single_chunk()) {
