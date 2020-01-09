@@ -19,4 +19,8 @@ std::string plugin_name_from_path(const std::filesystem::path& path);
 // "/long/very/long/path/1234/src/lib/file.cpp" to "src/lib/file.cpp"
 std::string trim_source_file_path(const std::string& path);
 
+// Some description() implementations print addresses, which are non-deterministic. This method replaces them with
+// a dummy address (e.g., for testing).
+std::string replace_addresses(const std::string& input);
+
 }  // namespace opossum

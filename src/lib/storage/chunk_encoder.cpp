@@ -6,14 +6,15 @@
 
 #include "base_value_segment.hpp"
 #include "chunk.hpp"
-#include "table.hpp"
-#include "types.hpp"
-
+#include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
+#include "table.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -136,7 +137,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
     encode_chunk(chunk, column_data_types, chunk_encoding_spec);
@@ -150,7 +151,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     encode_chunk(chunk, column_data_types, segment_encoding_spec);
   }
@@ -164,7 +165,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
     encode_chunk(chunk, column_types, chunk_encoding_spec);
@@ -180,7 +181,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
@@ -193,7 +194,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     encode_chunk(chunk, column_types, segment_encoding_spec);
   }
