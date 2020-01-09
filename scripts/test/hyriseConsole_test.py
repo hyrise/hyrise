@@ -43,11 +43,13 @@ def main():
 	console.expect('Encoding "test_bin" using Unencoded')	
 
 	# Reload table with a specified encoding and check meta tables for applied encoding
-	console.sendline("load resources/test_data/bin/float.bin test_bin RunLength")
-	console.expect('Loading .*bin/float.bin into table "test_bin"')
-	console.expect('Table "test_bin" already existed. Replacing it.')
-	console.expect('Encoding "test_bin" using RunLength')
-	console.sendline("select encoding_name from meta_segments where table_name='test_bin' and chunk_id=0 and column_id=0")
+	console.sendline("load resources/test_data/bin/MultipleChunkSingleFloatColumn/Dictionary.bin test_bin_multichunk")
+	console.expect('Loading .*MultipleChunkSingleFloatColumn/Dictionary.bin into table "test_bin_multichunk"')
+	console.sendline("""load resources/test_data/bin/MultipleChunkSingleFloatColumn/Dictionary.bin test_bin_multichunk RunLength""")
+	console.expect('Loading .*MultipleChunkSingleFloatColumn/Dictionary.bin into table "test_bin_multichunk"')
+	console.expect('Table "test_bin_multichunk" already existed. Replacing it.')
+	console.expect('Encoding "test_bin_multichunk" using RunLength')
+	console.sendline("""select encoding_name from meta_segments where table_name='test_bin_multichunk' and chunk_id=0 and column_id=0""")
 	console.expect('RunLength')
 
 	# Test SQL statement
