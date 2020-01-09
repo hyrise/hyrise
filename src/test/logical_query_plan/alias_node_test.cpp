@@ -102,9 +102,9 @@ TEST_F(AliasNodeTest, ConstraintsForwarding) {
   // Recreate MockNode to incorporate two constraints
   //  Primary Key: a, b
   const auto table_constraint_1 =
-      TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+      TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   //  Unique: b
-  const auto table_constraint_2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+  const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
 
   mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_node", table_constraints);

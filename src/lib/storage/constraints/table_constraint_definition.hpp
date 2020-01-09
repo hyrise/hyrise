@@ -12,25 +12,22 @@ enum class IsPrimaryKey : bool { Yes = true, No = false };
 // For tables, constraints are currently NOT enforced.
 
 struct TableConstraintDefinition final {
-  TableConstraintDefinition(std::vector<ColumnID> column_ids, const IsPrimaryKey is_primary_key)
+  TableConstraintDefinition(std::unordered_set<ColumnID> column_ids, const IsPrimaryKey is_primary_key)
       : columns(std::move(column_ids)), is_primary_key(is_primary_key) {
-    Assert(std::is_sorted(columns.begin(), columns.end()), "Expecting Column IDs to be sorted");
-    Assert(std::unique(columns.begin(), columns.end()) == columns.end(), "Expected Column IDs to be unique");
   }
 
   [[nodiscard]] bool equals(const TableConstraintDefinition& other_constraint) const {
     if (is_primary_key != other_constraint.is_primary_key) return false;
     if (columns.size() != other_constraint.columns.size()) return false;
 
-    // Due to the enforced sorting, we can compare both vectors element-wise
-    for (ColumnID i{0}; i < columns.size(); i++) {
-      if (columns[i] != other_constraint.columns[i]) return false;
+    for (const auto& column_id : columns) {
+      if (!other_constraint.columns.contains(column_id)) return false;
     }
 
     return true;
   }
 
-  std::vector<ColumnID> columns;
+  std::unordered_set<ColumnID> columns;
   IsPrimaryKey is_primary_key;
 };
 
