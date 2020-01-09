@@ -47,7 +47,7 @@ def main():
 	console.expect('Loading .*bin/float.bin into table "test_bin"')
 	console.expect('Table "test_bin" already existed. Replacing it.')
 	console.expect('Encoding "test_bin" using RunLength')
-	console.sendline("select encoding_name from meta_segments where table_name='lineitem' and chunk_id=0 and column_id=0")
+	console.sendline("select encoding_name from meta_segments where table_name='test_bin' and chunk_id=0 and column_id=0")
 	console.expect('RunLength')
 
 	# Test SQL statement
