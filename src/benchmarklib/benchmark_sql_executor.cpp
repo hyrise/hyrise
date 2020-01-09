@@ -24,7 +24,7 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
   if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);
 
-  std::cout << "########## " << sql << std::endl;
+  std::cout << "####SQL_QUERY####\n" << sql << "\n####/SQL_QUERY####" << std::endl;
 
   auto pipeline = pipeline_builder.create_pipeline();
 

@@ -64,7 +64,7 @@ std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRun
     visualize_prefix = std::move(name);
   }
 
-  std::cout << item_name(item_id) << std::endl;
+  std::cout << "$$$$$$QUERYNAME:" << item_name(item_id) << std::endl;
 
   BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
