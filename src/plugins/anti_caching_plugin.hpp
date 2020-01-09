@@ -7,11 +7,23 @@
 
 #include "utils/abstract_plugin.hpp"
 #include "utils/pausable_loop_thread.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+namespace anticaching {
+  struct SegmentID {
+    SegmentID(const std::string& table_name, const ChunkID chunk_id, const ColumnID column_id)
+      : table_name{table_name}, chunk_id{chunk_id}, column_id{column_id} {}
+    std::string table_name;
+    ChunkID chunk_id;
+    ColumnID column_id;
+  };
+}
+
+using namespace anticaching;
 class AntiCachingPlugin : public AbstractPlugin {
  public:
   const std::string description() const;
@@ -27,15 +39,15 @@ class AntiCachingPlugin : public AbstractPlugin {
 
 
  private:
-  using TableNameChunkIDsPair = std::pair<const std::string, std::vector<SegmentAccessStatisticsTools::ChunkIDColumnIDsPair>>;
-  using TimestampTableNamesPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<TableNameChunkIDsPair>>;
+  using SegmentIDAccessCounterPair = std::pair<const SegmentID, const SegmentAccessCounter<uint64_t>>;
+  using TimestampSegmentIDsPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<SegmentIDAccessCounterPair>>;
 
   void _evaluate_statistics();
-  std::vector<TableNameChunkIDsPair> _fetch_current_statistcs();
+  static std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> _fetch_segments();
+  std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> _segments;
+  std::vector<SegmentIDAccessCounterPair> _fetch_current_statistics();
 
-
-
-  std::vector<TimestampTableNamesPair> _access_statistics;
+  std::vector<TimestampSegmentIDsPair> _access_statistics;
   std::unique_ptr<PausableLoopThread> _evaluate_statistics_thread;
   constexpr static std::chrono::milliseconds REFRESH_STATISTICS_INTERVAL = std::chrono::milliseconds(1000);
 };

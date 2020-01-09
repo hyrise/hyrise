@@ -28,22 +28,54 @@ void AntiCachingPlugin::_evaluate_statistics() {
   std::cout << "Evaluating statistics\n";
 
   const auto timestamp = std::chrono::steady_clock::now();
-  auto current_statistics = _fetch_current_statistcs();
+  _segments = _fetch_segments();
+  auto current_statistics = _fetch_current_statistics();
   if (!current_statistics.empty()) {
     _access_statistics.emplace_back(timestamp, std::move(current_statistics));
   }
+
+  // knapsack problem here
+  // MemoryBudget
+  // Wert und Speicherbedarf pro Segment bestimmen.
+  // Alle, die nicht in _access_statististics drin sind, haben den Wert 0
+  // eigentlich benötigen wir ein Liste mit Segmenten
+  // SegmentPtr, table_name, chunk_id, column_id
+  // die erzuegen wir hier
+  // Benötigen alle Segmente
+  // Wie speichere ich alle counter weg?
+  // loop über alle segmente, kopiere counter.
+  // Was passiert, wenn ein Segment hinzukommt oder entfernt wird
+
+  // gearbeitet wird auf segments und _access_statistics// konkreter auf AccessStatistics.back();
+  // values = zugriffe
+  // weights = size
+  // memory budget
+
 }
 
-std::vector<AntiCachingPlugin::TableNameChunkIDsPair> AntiCachingPlugin::_fetch_current_statistcs() {
+std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> AntiCachingPlugin::_fetch_segments() {
+  std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> segments;
   const auto& tables = Hyrise::get().storage_manager.tables();
-  std::vector<AntiCachingPlugin::TableNameChunkIDsPair> table_name_chunk_ids_pairs;
   for (const auto&[table_name, table_ptr] : tables) {
-    auto chunk_id_column_ids_pairs = SegmentAccessStatisticsTools::fetch_counters(table_ptr);
-    if (!chunk_id_column_ids_pairs.empty()) {
-      table_name_chunk_ids_pairs.emplace_back(table_name, std::move(chunk_id_column_ids_pairs));
+    for (auto chunk_id = ChunkID{0}, chunk_count = table_ptr->chunk_count(); chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk_ptr = table_ptr->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}, column_count = static_cast<ColumnID>(chunk_ptr->column_count());
+           column_id < column_count; ++column_id) {
+        segments.emplace_back(SegmentID{table_name, chunk_id, column_id}, chunk_ptr->get_segment(column_id));
+      }
     }
   }
-  return table_name_chunk_ids_pairs;
+  return segments;
+}
+
+std::vector<AntiCachingPlugin::SegmentIDAccessCounterPair> AntiCachingPlugin::_fetch_current_statistics() {
+  std::vector<AntiCachingPlugin::SegmentIDAccessCounterPair> segment_id_access_counter_pairs;
+  segment_id_access_counter_pairs.reserve(_segments.size());
+  for (const auto& segment_id_segment_ptr_pair : _segments) {
+    segment_id_access_counter_pairs.emplace_back(segment_id_segment_ptr_pair.first,
+                                                 segment_id_segment_ptr_pair.second->access_statistics.counter());
+  }
+  return segment_id_access_counter_pairs;
 }
 
 void AntiCachingPlugin::export_access_statistics(const std::string& path_to_meta_data,
