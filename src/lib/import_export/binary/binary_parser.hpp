@@ -57,7 +57,7 @@ class BinaryParser {
    *
    * ¹Number of columns is provided in the binary header
    */
-  static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table, const bool finalize_chunk = false);
+  static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table, const bool finalize_chunk);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<BaseSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, DataType data_type,
