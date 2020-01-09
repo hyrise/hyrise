@@ -40,6 +40,7 @@ std::vector<std::shared_ptr<opossum::Table>> generate() {
             );
             tables.emplace_back(table);
         }
+
     }
     return tables;
 }
@@ -51,7 +52,7 @@ int main() {
           {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String, DataType::Null},
           {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
           {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)},
-          {1000},
+          {1000}, //TODO rename to chunk_size
           {100, 1000, 10000, 100000}
   });
   auto table_generator = TableGenerator(table_config);

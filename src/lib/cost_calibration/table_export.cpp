@@ -87,7 +87,7 @@ namespace opossum {
         auto const segment =  table->get_chunk(ChunkID {0})->get_segment(column_id);
         auto const encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment);
 
-        auto const encoded_type_string = encoded_segment != nullptr ? encoded_segment->encoding_type() : EncodingType::Unencoded;
+        auto const encoded_type_string = encoded_segment != nullptr ? encoded_segment->encoding_type() : EncodingType::Unencoded; //TODO in if and loop though chunk_id
         ss << encoded_type_string << "\n";
       }
 
