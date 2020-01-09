@@ -41,7 +41,6 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   constexpr auto min_rows = size_t{10};
 
   const auto samples_to_draw = std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
-  samples_to_draw = std::min(samples_to_draw, string_vector.size());
 
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
@@ -62,9 +61,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // Create vector from set of samples (std::set yields a sorted order)
   std::vector<size_t> sample_positions(sample_set.cbegin(), sample_set.cend());
 
-  std::vector<size_t> sample_positions(samples_to_draw);
-  std::sample(all_positions.begin(), all_positions.end(), sample_positions.begin(), samples_to_draw,
-              std::mt19937{std::random_device{}()});
+  std::cout << timer.lap().count() << " ns for sampling " << std::endl;
 
   // We get the accurate size for all strings in the sample (preallocated buffers + potential heap allocations) and
   // then scale this value using the sampling factor.
