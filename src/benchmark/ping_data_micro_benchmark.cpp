@@ -27,8 +27,8 @@ using namespace opossum;
 
 // input and output settings 
 ///////////////////////////////
-constexpr auto SEGMENT_META_DATA_FILE = "../../out/segment_meta_data_int.csv";
-constexpr auto INDEX_META_DATA_FILE = "../../out/index_meta_data_int.csv";
+constexpr auto SEGMENT_META_DATA_FILE = "../../out/segment_meta_data_int_index.csv";
+constexpr auto INDEX_META_DATA_FILE = "../../out/index_meta_data_int_index.csv";
 constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 
 // table and compression settings
@@ -39,10 +39,10 @@ const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 // Frame of References supports only int columns
 // Dictionary Encoding should always have the id 0
-const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 //const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
-const auto CREATE_INDEX = false; 
+const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
+const auto CREATE_INDEX = true; 
 
 // single benchmark values (median, min, max)
 // determined by column stats python script
@@ -471,9 +471,9 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
 //BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
 
-//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
