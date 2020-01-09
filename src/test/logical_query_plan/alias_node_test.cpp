@@ -1,4 +1,3 @@
-#include <utils/constraint_test_utils.hpp>
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"

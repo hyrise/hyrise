@@ -76,9 +76,6 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
 const std::shared_ptr<const ExpressionsConstraintDefinitions> MockNode::constraints() const {
   auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  // Extract relevant constraints from table
-  lqp_constraints->reserve(_table_constraints.size());
-
   for (const TableConstraintDefinition& table_constraint : _table_constraints) {
     // Discard constraints which involve pruned column(s)
     const auto discard_constraint = [&]() {
@@ -104,11 +101,11 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> MockNode::constrai
       };
 
       // Search for column expressions that represent the TableConstraintDefinitions's ColumnIDs
-      auto constraint_column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+      auto constraint_column_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>>{};
       for (const auto& column_id : table_constraint.columns) {
         const auto column_expr = get_column_expression(column_id);
         Assert(column_expr, "Did not find column expression for ColumnID in LQPNode");
-        constraint_column_expressions.push_back(column_expr);
+        constraint_column_expressions.emplace(column_expr);
       }
 
       // Create ExpressionsConstraintDefinition

@@ -157,11 +157,21 @@ TEST_F(StoredTableNodeTest, Constraints) {
   const auto table_constraints = table->get_soft_unique_constraints();
   const auto lqp_constraints = _stored_table_node->constraints();
 
+  // Basic check
   EXPECT_EQ(table_constraints.size(), 2);
   EXPECT_EQ(lqp_constraints->size(), 2);
 
-  // Check whether all table constraints are represented in StoredTableNode
+  // In-depth - check whether all table constraints are represented in StoredTableNode
   check_table_constraint_representation(table_constraints, lqp_constraints);
+
+  // Also check whether StoredTableNode is referenced correctly by column expressions
+  for(const auto& lqp_constraint : *lqp_constraints) {
+    for(const auto& expr : lqp_constraint.column_expressions) {
+      const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
+      EXPECT_EQ(column_expr->column_reference.original_node(), _stored_table_node);
+    }
+  }
+
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
@@ -181,16 +191,8 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   EXPECT_EQ(lqp_constraints->size(), 1);
 
   // In-depth check
-  const auto lqp_constraint = lqp_constraints->at(0);
-  const auto table_constraint = table_constraints[2];
-  // Check, whether we got the right table constraint object
-  EXPECT_TRUE(table_constraint.columns.size() == 1 && table_constraint.columns.at(0) == ColumnID{2});
-
-  EXPECT_EQ(lqp_constraint.column_expressions.size(), table_constraint.columns.size());
-  const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint.column_expressions.at(0));
-  const auto column_ref = column_expr->column_reference;
-  EXPECT_EQ(column_ref.original_column_id(), table_constraint.columns[0]);
-  EXPECT_EQ(column_ref.original_node(), _stored_table_node);
+  const auto valid_table_constraint = table_constraints.at(2);
+  check_table_constraint_representation(TableConstraintDefinitions{valid_table_constraint}, lqp_constraints);
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {

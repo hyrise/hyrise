@@ -9,6 +9,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "utils/constraint_test_utils.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -80,41 +81,36 @@ TEST_F(MockNodeTest, Copy) {
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 
 TEST_F(MockNodeTest, Constraints) {
-  const auto a_b_pk_constraint =
+
+  // Primary Key: a, b
+  const auto table_constraint1 =
       TableConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-  const auto c_constraint = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
-  // Constraints can not be added afterwards, so we simply recreate _mock_node_a
+  // Unique: c
+  const auto table_constraint2 = TableConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+  const auto table_constraints = TableConstraintDefinitions{table_constraint1, table_constraint2};
+
+  // Constraints can not be added afterwards, so we have to recreate the MockNode
   _mock_node_a = MockNode::make(
       MockNode::ColumnDefinitions{
           {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}},
-      std::optional<std::string>{}, TableConstraintDefinitions{a_b_pk_constraint, c_constraint});
+      std::optional<std::string>{}, table_constraints);
 
   // Basic checks
-  const auto mock_a_constraints = _mock_node_a->constraints();
-  EXPECT_EQ(mock_a_constraints->size(), 2);
-  const auto mock_b_constraints = _mock_node_b->constraints();
-  EXPECT_TRUE(mock_b_constraints->empty());
+  const auto lqp_constraints_mock_node_a = _mock_node_a->constraints();
+  EXPECT_EQ(lqp_constraints_mock_node_a->size(), 2);
+  EXPECT_TRUE(_mock_node_b->constraints()->empty());
 
   // In-depth verification
-  const auto lqp_constraint0 = mock_a_constraints->at(0);
-  EXPECT_TRUE(lqp_constraint0.column_expressions.size() == 2 && lqp_constraint0.is_primary_key == IsPrimaryKey::Yes);
-  const auto lqp_constraint0_column_expr0 =
-      dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint0.column_expressions[0]);
-  const auto lqp_constraint0_column_expr1 =
-      dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint0.column_expressions[1]);
-  EXPECT_TRUE(lqp_constraint0_column_expr0 && lqp_constraint0_column_expr1);
-  EXPECT_TRUE(lqp_constraint0_column_expr0->column_reference.original_column_id() == ColumnID{0} &&
-              lqp_constraint0_column_expr0->column_reference.original_node() == _mock_node_a);
-  EXPECT_TRUE(lqp_constraint0_column_expr1->column_reference.original_column_id() == ColumnID{1} &&
-              lqp_constraint0_column_expr0->column_reference.original_node() == _mock_node_a);
+  check_table_constraint_representation(table_constraints, lqp_constraints_mock_node_a);
 
-  const auto lqp_constraint1 = mock_a_constraints->at(1);
-  EXPECT_TRUE(lqp_constraint1.column_expressions.size() == 1 && lqp_constraint1.is_primary_key == IsPrimaryKey::No);
-  const auto lqp_constraint1_column_expr0 =
-      dynamic_pointer_cast<LQPColumnExpression>(lqp_constraint1.column_expressions[0]);
-  EXPECT_TRUE(lqp_constraint1_column_expr0);
-  EXPECT_TRUE(lqp_constraint1_column_expr0->column_reference.original_column_id() == ColumnID{2} &&
-              lqp_constraint1_column_expr0->column_reference.original_node() == _mock_node_a);
+  // Also check whether StoredTableNode is referenced correctly by column expressions
+  for(const auto& lqp_constraint : *lqp_constraints_mock_node_a) {
+    for(const auto& expr : lqp_constraint.column_expressions) {
+      const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
+      EXPECT_EQ(column_expr->column_reference.original_node(), _mock_node_a);
+    }
+  }
+
 }
 
 //TEST_F(MockNodeTest, ConstraintsPrunedColumns) {}
