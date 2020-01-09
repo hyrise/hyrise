@@ -205,7 +205,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _results[item_id].duration = {};
     auto& result = _results[item_id];
 
-    SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
+    SegmentAccessStatistics::reset_all(Hyrise::get().storage_manager.tables());
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
@@ -223,7 +223,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
-    SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(),
+    SegmentAccessStatistics::save_to_csv(Hyrise::get().storage_manager.tables(),
       "access_statistics_" + name + "_meta.csv", "access_statistics_" + name + ".csv");
 
     result.duration = _state.benchmark_duration;

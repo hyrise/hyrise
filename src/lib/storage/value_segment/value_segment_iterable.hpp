@@ -17,36 +17,32 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    _segment.access_statistics().on_iterator_create(_segment.size());
+    _segment.access_statistics.on_iterator_create(_segment.size());
     if (_segment.is_nullable()) {
-      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin(),
-                            &_segment};
-      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend(),
-                          &_segment};
+      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
+      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
       functor(begin, end);
     } else {
-      auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin(), &_segment};
-      auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend(), &_segment};
+      auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
+      auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend()};
       functor(begin, end);
     }
   }
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    _segment.access_statistics().on_iterator_create(position_filter);
+    _segment.access_statistics.on_iterator_create(position_filter);
     if (_segment.is_nullable()) {
       auto begin = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                       position_filter->cbegin(), position_filter->cbegin(), &_segment};
+                                       position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                     position_filter->cbegin(), position_filter->cend(), &_segment};
+                                     position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     } else {
       auto begin =
-          NonNullPointAccessIterator{_segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin(),
-                                     &_segment};
+          NonNullPointAccessIterator{_segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin()};
       auto end =
-          NonNullPointAccessIterator{_segment.values().cbegin(), position_filter->cbegin(), position_filter->cend(),
-                                     &_segment};
+          NonNullPointAccessIterator{_segment.values().cbegin(), position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     }
   }
@@ -66,10 +62,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
 
    public:
-    explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it,
-                             const BaseSegment* segment)
-        : _value_it{value_it}, _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))},
-          _segment{segment} {}
+    explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
+        : _value_it{value_it}, _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -94,14 +88,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     std::ptrdiff_t distance_to(const NonNullIterator& other) const { return other._value_it - _value_it; }
 
     NonNullSegmentPosition<T> dereference() const {
-//      _segment->access_statistics().on_iterator_dereference(1);
       return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
     }
 
    private:
     ValueIterator _value_it;
     ChunkOffset _chunk_offset;
-    const BaseSegment* _segment;
   };
 
   class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
@@ -113,11 +105,10 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit Iterator(const ValueIterator begin_value_it, const ValueIterator value_it,
-                      const NullValueIterator null_value_it, const BaseSegment* segment)
+                      const NullValueIterator null_value_it)
         : _value_it(value_it),
           _null_value_it{null_value_it},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))},
-          _segment{segment} {}
+          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -145,7 +136,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._value_it - _value_it; }
 
     SegmentPosition<T> dereference() const {
-//      _segment->access_statistics().on_iterator_dereference(1);
       return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset};
     }
 
@@ -153,7 +143,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
     ChunkOffset _chunk_offset;
-    const BaseSegment* _segment;
   };
 
   class NonNullPointAccessIterator
@@ -166,25 +155,23 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
                                         const PosList::const_iterator position_filter_begin,
-                                        PosList::const_iterator position_filter_it, const BaseSegment* segment)
+                                        PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(
                                                                                              position_filter_begin),
                                                                                          std::move(position_filter_it)},
-          _values_begin_it{values_begin_it}, _segment{segment} {}
+          _values_begin_it{values_begin_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-//      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk), false,
                                 chunk_offsets.offset_in_poslist};
     }
 
    private:
     ValueVectorIterator _values_begin_it;
-    const BaseSegment* _segment;
   };
 
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>> {
@@ -197,19 +184,17 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
                                  const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it, const BaseSegment* segment)
+                                 PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
           _values_begin_it{values_begin_it},
-          _null_values_begin_it{null_values_begin_it},
-          _segment{segment} {}
+          _null_values_begin_it{null_values_begin_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-//      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 *(_null_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 chunk_offsets.offset_in_poslist};
@@ -218,7 +203,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    private:
     ValueVectorIterator _values_begin_it;
     NullValueVectorIterator _null_values_begin_it;
-    const BaseSegment* _segment;
   };
 };
 

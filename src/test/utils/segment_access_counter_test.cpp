@@ -70,19 +70,19 @@ TEST(SegmentAccessCounter, Reset) {
 
 TEST(SegmentAccessCounter, IteratorAccessPattern) {
   auto positions = std::make_shared<PosList>();
-  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
-  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorSeqAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
-  EXPECT_EQ(SegmentAccessType::IteratorIncreasingAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorIncreasingAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
-  EXPECT_EQ(SegmentAccessType::IteratorIncreasingAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorIncreasingAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
-  EXPECT_EQ(SegmentAccessType::IteratorRandomAccess , SegmentAccessTypeTools::iterator_access_pattern(positions));
+  EXPECT_EQ(SegmentAccessType::IteratorRandomAccess , SegmentAccessStatisticsTools::iterator_access_pattern(positions));
 }
 
 

@@ -20,19 +20,20 @@ class AntiCachingPlugin : public AbstractPlugin {
 
   void stop();
 
-  static void export_access_statistics(const std::map<std::string, std::shared_ptr<Table>>& tables,
-                                       const std::string& path_to_meta_data,
-                                       const std::string& path_to_access_statistics);
+  void export_access_statistics(const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
 
-  static void clear_access_statistics(const std::map<std::string, std::shared_ptr<Table>>& tables);
+  void reset_access_statistics();
 
-  using ColumnIDAccessStatisticsPair = std::pair<const ColumnID, const std::vector<uint64_t>>;
-  using ChunkIDColumnIDsPair = std::pair<const ChunkID, std::vector<ColumnIDAccessStatisticsPair>>;
-  using TableNameChunkIDsPair = std::pair<const std::string, std::vector<ChunkIDColumnIDsPair>>;
-  using TimestampTableNamesPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<TableNameChunkIDsPair>>;
+
 
  private:
+  using TableNameChunkIDsPair = std::pair<const std::string, std::vector<SegmentAccessStatisticsTools::ChunkIDColumnIDsPair>>;
+  using TimestampTableNamesPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<TableNameChunkIDsPair>>;
+
   void _evaluate_statistics();
+  std::vector<TableNameChunkIDsPair> _fetch_current_statistcs();
+
+
 
   std::vector<TimestampTableNamesPair> _access_statistics;
   std::unique_ptr<PausableLoopThread> _evaluate_statistics_thread;
@@ -40,3 +41,4 @@ class AntiCachingPlugin : public AbstractPlugin {
 };
 
 }  // namespace opossum
+

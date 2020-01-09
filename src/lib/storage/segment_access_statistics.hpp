@@ -9,333 +9,90 @@
 #include <memory>
 #include <string>
 
-#include <types.hpp>
-#include <storage/pos_list.hpp>
+#include "types.hpp"
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 class Table;
-// -----------------------------------------------------------------------------------------------------------------
-enum class SegmentAccessType {
-  Other,
-  IteratorCreate,
-  IteratorSeqAccess,
-  IteratorIncreasingAccess,
-  IteratorRandomAccess,
-  IteratorDereference,
-  AccessorCreate,
-  AccessorAccess,
-  DictionaryAccess,
-  // number of elements in enum
-    Count
+class BaseSegment;
+class Chunk;
+
+template <typename T>
+class SegmentAccessCounter {
+ public:
+  T other;
+  T iterator_create;
+  T iterator_seq_access;
+  T iterator_increasing_access;
+  T iterator_random_access;
+  T accessor_create;
+  T accessor_access;
+  T dictionary_access;
+
+  void reset();
+
+  T sum() const;
+
+  std::string to_string() const;
+
+  inline static const std::string HEADERS = "Other,IteratorCreate,IteratorSeqAccess,IteratorIncreasingAccess,"
+                                            "IteratorRandomAccess,AccessorCreate,AccessorAccess,"
+                                            "DictionaryAccess";
 };
 
-// -----------------------------------------------------------------------------------------------------------------
-
-class SegmentAccessTypeTools {
+class SegmentAccessStatisticsTools {
  public:
-  inline static const std::string headers = "Other,IteratorCreate,IteratorSeqAccess,IteratorIncreasingAccess,"
-                                            "IteratorRandomAccess,IteratorDereference,AccessorCreate,AccessorAccess,"
-                                            "DictionaryAccess";
-
-  static SegmentAccessType iterator_access_pattern(const std::shared_ptr<const PosList>& positions);
-
- private:
-  // There are five states:
+  // There are six AccessPatterns:
   // 0 (unknown), equivalent to IteratorSeqAccess
   // 1 (sequentially increasing), difference between two neighboring elements is 0 or 1.
   // 2 (increasing randomly)
   // 3 (sequentially decreasing), difference between two neighboring elements is -1 or 0.
   // 4 (decreasing randomly)
   // 5 (random access)
-  enum class State {Unknown, SeqInc, RndInc, SeqDec, RndDec, Rnd, Count};
+  enum class AccessPattern {Unknown, SeqInc, RndInc, SeqDec, RndDec, Rnd};
 
+  static AccessPattern iterator_access_pattern(const std::shared_ptr<const PosList>& positions);
+
+  static SegmentAccessCounter<uint64_t> fetch_counter(const std::shared_ptr<BaseSegment>& segment);
+  using ColumnIDAccessStatisticsPair = std::pair<const ColumnID, const SegmentAccessCounter<uint64_t>>;
+  static std::vector<ColumnIDAccessStatisticsPair> fetch_counters(const std::shared_ptr<Chunk>& chunk);
+  using ChunkIDColumnIDsPair = std::pair<const ChunkID, std::vector<ColumnIDAccessStatisticsPair>>;
+  static std::vector<ChunkIDColumnIDsPair> fetch_counters(const std::shared_ptr<Table>& table);
+
+ private:
   // There are five possible inputs
-  enum class Input {Zero, One, Positive, NegativeOne, Negative, Count};
+  enum class Input {Zero, One, Positive, NegativeOne, Negative};
 
-  constexpr static const std::array<std::array<State, static_cast<uint32_t>(Input::Count)>, static_cast<uint32_t>(State::Count)>
-    _transitions{{{State::Unknown, State::SeqInc, State::SeqInc, State::SeqDec, State::SeqDec},
-                  {State::SeqInc, State::SeqInc, State::RndInc, State::Rnd, State::Rnd},
-                  {State::RndInc, State::RndInc, State::RndInc, State::Rnd, State::Rnd},
-                  {State::SeqDec, State::Rnd, State::Rnd, State::SeqDec, State::RndDec},
-                  {State::RndDec, State::Rnd, State::Rnd, State::RndDec, State::RndDec},
-                  {State::Rnd, State::Rnd, State::Rnd, State::Rnd, State::Rnd}}};
-};
-// -----------------------------------------------------------------------------------------------------------------
-class AtomicAccessStrategy {
- public:
-  uint64_t count(SegmentAccessType type) const;
-
-  void reset();
-
-  void increase(SegmentAccessType type, uint64_t count);
-
-  static std::string header();
-
-  std::vector<std::string> to_string() const;
-
- private:
-  std::array<std::atomic_uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> _count;
+//  constexpr static const std::array<std::array<State, static_cast<uint32_t>(Input::Count)>, static_cast<uint32_t>(State::Count)>
+  constexpr static const std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/>
+    _transitions{{{AccessPattern::Unknown, AccessPattern::SeqInc, AccessPattern::SeqInc, AccessPattern::SeqDec, AccessPattern::SeqDec},
+                  {AccessPattern::SeqInc, AccessPattern::SeqInc, AccessPattern::RndInc, AccessPattern::Rnd, AccessPattern::Rnd},
+                  {AccessPattern::RndInc, AccessPattern::RndInc, AccessPattern::RndInc, AccessPattern::Rnd, AccessPattern::Rnd},
+                  {AccessPattern::SeqDec, AccessPattern::Rnd, AccessPattern::Rnd, AccessPattern::SeqDec, AccessPattern::RndDec},
+                  {AccessPattern::RndDec, AccessPattern::Rnd, AccessPattern::Rnd, AccessPattern::RndDec, AccessPattern::RndDec},
+                  {AccessPattern::Rnd, AccessPattern::Rnd, AccessPattern::Rnd, AccessPattern::Rnd, AccessPattern::Rnd}}};
 };
 
-// -----------------------------------------------------------------------------------------------------------------
-class NoAccessStrategy {
- public:
-  uint64_t count(SegmentAccessType type) const;
-
-  void reset();
-
-  void increase(SegmentAccessType type, uint64_t count);
-
-  static std::string header();
-
-  std::vector<std::string> to_string() const;
-};
-
-// -----------------------------------------------------------------------------------------------------------------
-class AtomicTimedAccessStrategy {
- public:
-  explicit AtomicTimedAccessStrategy();
-
-  uint64_t count(SegmentAccessType type) const;
-
-  void reset();
-
-  void increase(SegmentAccessType type, uint64_t count);
-
-  static std::string header();
-
-  std::vector<std::string> to_string() const;
-
-  static std::chrono::time_point<std::chrono::steady_clock> start_time;
-  static std::chrono::duration<double, std::milli> interval;
-
- private:
-
-  struct Counter {
-    uint64_t timestamp;
-    std::array<std::atomic_uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> counter;
-
-    Counter(uint64_t timestamp) : timestamp{timestamp}, counter{} {};
-    Counter() : Counter(0ul) {}
-    Counter(const Counter& other) {
-      timestamp = other.timestamp;
-      for (auto type = 0ul; type < counter.size(); ++type) {
-        counter[type] = other.counter[type].load();
-      }
-    }
-    Counter(Counter&& other) noexcept {
-      timestamp = other.timestamp;
-      for (auto type = 0ul; type < counter.size(); ++type) {
-        counter[type] = other.counter[type].load();
-      }
-    }
-  };
-
-//  struct Counter {
-//    uint64_t timestamp;
-//    std::array<uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> counter;
-//
-//    Counter(uint64_t timestamp) : timestamp{timestamp}, counter{} {};
-//    Counter() : Counter(0ul) {}
-//  };
-
-  pmr_concurrent_vector<Counter> _counters;
-  Counter& _counter();
-};
-
-// -----------------------------------------------------------------------------------------------------------------
-class NonLockingStrategy {
- public:
-  uint64_t count(SegmentAccessType type) const;
-
-  void reset();
-
-  void increase(SegmentAccessType type, uint64_t count);
-
-  static std::string header();
-
-  std::vector<std::string> to_string() const;
-
- private:
-  std::array<uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> _count;
-};
-
-// -----------------------------------------------------------------------------------------------------------------
-template<class DataAccessStrategy>
-class BulkCountingStrategy {
- public:
-  explicit BulkCountingStrategy(DataAccessStrategy& data_access_strategy)
-    : _data_access_strategy {data_access_strategy} {}
-
-  void on_iterator_create(uint64_t count) {
-     _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
-     _data_access_strategy.increase(SegmentAccessType::IteratorSeqAccess, count);
-  }
-
-  void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-    // hier muss geprüft werden, um was für einen Zugriff es sich handelt
-    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
-    _data_access_strategy.increase(SegmentAccessTypeTools::iterator_access_pattern(positions), positions->size());
-  }
-
-  void on_iterator_dereference(uint64_t count) {}
-
-  void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {}
-
-  void on_accessor_create(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::AccessorCreate, 1);
-  }
-
-  void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(SegmentAccessType::AccessorAccess, count);
-  }
-
-  void on_dictionary_access(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::DictionaryAccess, count);
-  }
-
-  void on_other_access(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::Other, count);
-  }
-
- private:
-  DataAccessStrategy& _data_access_strategy;
-};
-
-// -----------------------------------------------------------------------------------------------------------------
-template<class DataAccessStrategy>
-class SingleAccessCountingStrategy {
- public:
-  explicit SingleAccessCountingStrategy(DataAccessStrategy& data_access_strategy)
-    : _data_access_strategy{data_access_strategy} {}
-
-  void on_iterator_create(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
-  }
-
-  void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-    _data_access_strategy.increase(SegmentAccessType::IteratorCreate, 1);
-  }
-
-  void on_iterator_dereference(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::IteratorDereference, count);
-  }
-
-  void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(SegmentAccessType::IteratorDereference, count);
-  }
-
-  void on_accessor_create(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::AccessorCreate, 1);
-  }
-
-  void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    _data_access_strategy.increase(SegmentAccessType::AccessorAccess, count);
-  }
-
-  void on_dictionary_access(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::DictionaryAccess, count);
-  }
-
-  void on_other_access(uint64_t count) {
-    _data_access_strategy.increase(SegmentAccessType::Other, count);
-  }
-
- private:
-  DataAccessStrategy& _data_access_strategy;
-};
-
-// -----------------------------------------------------------------------------------------------------------------
 class SegmentAccessStatistics {
  public:
-  void on_iterator_create(uint64_t count) {
-    increase(SegmentAccessType::IteratorCreate, 1);
-    increase(SegmentAccessType::IteratorSeqAccess, count);
-  }
+  void on_iterator_create(uint64_t count);
 
-  void on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-    // hier muss geprüft werden, um was für einen Zugriff es sich handelt
-    increase(SegmentAccessType::IteratorCreate, 1);
-    increase(SegmentAccessTypeTools::iterator_access_pattern(positions), positions->size());
-  }
+  void on_iterator_create(const std::shared_ptr<const PosList>& positions);
 
-  void on_iterator_dereference(uint64_t count) {}
+  void on_accessor_create(uint64_t count);
 
-  void on_iterator_dereference(uint64_t count, ChunkOffset chunk_offset) {}
+  void on_accessor_access(uint64_t count, ChunkOffset chunk_offset);
 
-  void on_accessor_create(uint64_t count) {
-    increase(SegmentAccessType::AccessorCreate, 1);
-  }
+  void on_dictionary_access(uint64_t count);
 
-  void on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-    increase(SegmentAccessType::AccessorAccess, count);
-  }
+  void on_other_access(uint64_t count);
 
-  void on_dictionary_access(uint64_t count) {
-    increase(SegmentAccessType::DictionaryAccess, count);
-  }
+  void reset();
 
-  void on_other_access(uint64_t count) {
-    increase(SegmentAccessType::Other, count);
-  }
-
-  uint64_t count(SegmentAccessType type) const {
-    return _count[static_cast<uint32_t>(type)];
-  }
-
-  void reset() {
-    for (auto type = 0u, end = static_cast<uint32_t>(SegmentAccessType::Count); type < end; ++type) {
-      _count[static_cast<uint32_t>(type)] = 0;
-    }
-  }
-
-  std::vector<std::string> to_string() const {
-    std::string str;
-    str.reserve(static_cast<uint32_t>(SegmentAccessType::Count) * 4);
-    str.append(std::to_string(count(static_cast<SegmentAccessType>(0))));
-
-    for (uint8_t type = 1; type < static_cast<uint32_t>(SegmentAccessType::Count); ++type) {
-      str.append(",");
-      str.append(std::to_string(count(static_cast<SegmentAccessType>(type))));
-    }
-
-    return std::vector<std::string>{str};
-  }
+  SegmentAccessCounter<uint64_t> counter() const;
 
   static void save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables,
-    const std::string& path_to_meta_data, const std::string& path_to_access_statistics) {
-    // meta-daten mit abspeichern.
-//    auto entry_id = 0;
-    std::ofstream meta_file{path_to_meta_data};
-    std::ofstream output_file{path_to_access_statistics};
-
-//    meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
-//    output_file << "entry_id," + AccessStrategyType::header() + "\n";
-//    // iterate over all tables, chunks and segments
-//    for (const auto&[table_name, table_ptr] : tables) {
-//      for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
-//        const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
-//        for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
-//             column_id < count; ++column_id) {
-//          const auto& column_name = table_ptr->column_name(column_id);
-//          const auto& segment_ptr = chunk_ptr->get_segment(column_id);
-//          const auto& access_statistics = segment_ptr->access_statistics();
-//
-//          meta_file << entry_id << ',' << table_name << ',' << column_name << ',' << chunk_id << ','
-//                    << segment_ptr->size() << ',' << segment_ptr->estimate_memory_usage() << '\n';
-//
-//          for (const auto& str : access_statistics._data_access_strategy.to_string()) {
-//            output_file << entry_id << ',' << str << '\n';
-//          }
-//
-//          ++entry_id;
-//        }
-//      }
-//    }
-
-    meta_file.close();
-    output_file.close();
-  }
+    const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
 
   /**
    * Resets access statistics of every segment in table
@@ -355,15 +112,9 @@ class SegmentAccessStatistics {
 //    AtomicTimedAccessStrategy::start_time = std::chrono::steady_clock::now();
   }
 
-  void increase(SegmentAccessType type, uint64_t count) {
-    _count[static_cast<uint32_t>(type)] += count;
-  }
-
  private:
-  std::array<std::atomic_uint64_t, static_cast<uint32_t>(SegmentAccessType::Count)> _count;
+  SegmentAccessCounter<std::atomic_uint64_t> _counter;
 
 };
 
-  using SegmentAccessStatistics_T = SegmentAccessStatistics;
-  // using SegmentAccessStatistics_T = SegmentAccessStatistics<NonLockingStrategy, BulkCountingStrategy<NonLockingStrategy>>;
 }  // namespace opossum

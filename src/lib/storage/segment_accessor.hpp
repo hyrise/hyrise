@@ -44,7 +44,7 @@ template <typename T, typename SegmentType>
 class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {
-    _segment.access_statistics().on_accessor_create(_segment.size());
+    _segment.access_statistics.on_accessor_create(_segment.size());
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
@@ -53,7 +53,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   }
 
   ~SegmentAccessor() {
-    _segment.access_statistics().on_accessor_access(_accesses, 0);
+    _segment.access_statistics.on_accessor_access(_accesses, 0);
   }
 
  protected:
@@ -107,7 +107,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
  public:
   explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {
-    _segment.access_statistics().on_accessor_create(_segment.size());
+    _segment.access_statistics.on_accessor_create(_segment.size());
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
@@ -117,7 +117,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
   ~SingleChunkReferenceSegmentAccessor() {
-    _segment.access_statistics().on_accessor_access(_accesses, 0);
+    _segment.access_statistics.on_accessor_access(_accesses, 0);
   }
 
  protected:

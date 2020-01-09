@@ -32,7 +32,7 @@ template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
-  access_statistics().on_other_access(1);
+  access_statistics.on_other_access(1);
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
     return NULL_VALUE;
@@ -42,7 +42,7 @@ AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) 
 
 template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionarySegment<T>::dictionary() const {
-  access_statistics().on_dictionary_access(1);
+  access_statistics.on_dictionary_access(1);
   return _dictionary;
 }
 
@@ -82,7 +82,7 @@ template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  access_statistics().on_dictionary_access(1);
+  access_statistics.on_dictionary_access(1);
 
   const auto typed_value = boost::get<T>(value);
 
@@ -95,7 +95,7 @@ template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  access_statistics().on_dictionary_access(1);
+  access_statistics.on_dictionary_access(1);
 
   const auto typed_value = boost::get<T>(value);
 
@@ -107,7 +107,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
 template <typename T>
 AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
-  access_statistics().on_dictionary_access(1);
+  access_statistics.on_dictionary_access(1);
   return (*_dictionary)[value_id];
 }
 
