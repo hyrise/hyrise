@@ -80,7 +80,7 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit
 
   // Krichly: never erasing types in hope to have actually working sorted searches
-  return LZ4SegmentIterable<T>{segment};
+  return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
 }
 
 }  // namespace opossum
