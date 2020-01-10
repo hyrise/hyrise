@@ -63,7 +63,7 @@ std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-size_t RunLengthSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
+size_t RunLengthSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size =
       sizeof(*this) + _null_values->size() / CHAR_BIT +
       _end_positions->size() * sizeof(typename decltype(_end_positions)::element_type::value_type);
