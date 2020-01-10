@@ -95,7 +95,7 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   vs_int.append(1);
   vs_int.append(2);
 
-  const auto short_str = "Hello";
+  const auto short_str = pmr_string{"Hello"};
   const auto longer_str = pmr_string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
 
   vs_str.append(short_str);
@@ -106,8 +106,10 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
   EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
 
-  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_str + 2 * sizeof(pmr_string));
-  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Full), empty_usage_str + 2 * sizeof(pmr_string));
+  const auto min_expected_size = empty_usage_str + 2 * sizeof(pmr_string);
+  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), min_expected_size);
+  // The short string will fit within the SSO capacity of a string and the long string will be placed on the heap.
+  EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), min_expected_size + longer_str.capacity() + 1);
 }
 
 }  // namespace opossum

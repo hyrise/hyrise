@@ -8,7 +8,7 @@ namespace opossum {
 
 class MetaTableManagerTest : public BaseTest {};
 
-TEST_F(MetaTableManagerTest, TableBasedMetaData) {
+TEST(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
   auto& storage_manager = Hyrise::get().storage_manager;
 

@@ -283,7 +283,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 370
-  EXPECT_EQ(index->memory_consumption(), 370u);
+  EXPECT_EQ(index->memory_consumption(), 441u);
 #endif
 }
 
