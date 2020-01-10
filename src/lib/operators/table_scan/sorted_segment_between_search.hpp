@@ -19,7 +19,7 @@ namespace opossum {
 template <typename IteratorType, typename SearchValueType>
 class SortedSegmentBetweenSearch {
  public:
-  SortedSegmentBetweenSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by,
+  SortedSegmentBetweenSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by, const bool nullable,
                              const PredicateCondition& predicate_condition, const SearchValueType& left_value,
                              const SearchValueType& right_value)
       : _begin{begin},
@@ -27,6 +27,7 @@ class SortedSegmentBetweenSearch {
         _predicate_condition{predicate_condition},
         _left_value{left_value},
         _right_value{right_value},
+        _nullable{nullable},
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
@@ -278,7 +279,8 @@ public:
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
     // decrease the effective sort range by excluding null values based on their ordering
     //auto start = std::chrono::system_clock::now();
-    _exponential_search_for_nulls(_begin, _end);
+    if (_nullable)
+      _exponential_search_for_nulls(_begin, _end);
     //auto end = std::chrono::system_clock::now();
     //std::cout << "exponential search: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
     //start = std::chrono::system_clock::now();
@@ -298,6 +300,7 @@ public:
   const PredicateCondition _predicate_condition;
   const SearchValueType _left_value;
   const SearchValueType _right_value;
+  const bool _nullable;
   const bool _is_ascending;
   const bool _is_nulls_first;
 };

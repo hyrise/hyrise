@@ -27,7 +27,8 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
                                                        PredicateCondition predicate_condition)
     : AbstractDereferencedColumnTableScanImpl(in_table, column_id, predicate_condition),
       left_value{left_value},
-      right_value{right_value} {
+      right_value{right_value},
+      _column_is_nullable{in_table->column_is_nullable(column_id)} {
   const auto column_data_type = in_table->column_data_type(column_id);
   Assert(column_data_type == data_type_from_all_type_variant(left_value), "Type of lower bound has to match column");
   Assert(column_data_type == data_type_from_all_type_variant(right_value), "Type of upper bound has to match column");
@@ -170,7 +171,7 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
         auto sorted_segment_search =
-            SortedSegmentBetweenSearch(segment_begin, segment_end, order_by_mode, predicate_condition,
+            SortedSegmentBetweenSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
                                        boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {

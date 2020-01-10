@@ -46,6 +46,8 @@ class ColumnBetweenTableScanImpl : public AbstractDereferencedColumnTableScanImp
   void _scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                             const std::shared_ptr<const PosList>& position_filter,
                             const OrderByMode order_by_mode) const;
+ private:
+  const bool _column_is_nullable;
 };
 
 }  // namespace opossum
