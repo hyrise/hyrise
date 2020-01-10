@@ -21,7 +21,7 @@ size_t string_heap_size(const T& string) {
     return string.capacity() + 1;
   }
   return 0;
-};
+}
 
 /**
   * This function iterates over the given string vector @param string_vector strings and sums up the memory usage. Due
