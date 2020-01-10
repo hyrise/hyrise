@@ -527,11 +527,11 @@ int Console::_load_table(const std::string& args) {
   out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
   if (Hyrise::get().storage_manager.has_table(tablename)) {
-    out("Table " + tablename + " already existed. Replacing it.\n");
+    out("Table \"" + tablename + "\" already existed. Replacing it.\n");
   }
 
-  auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
   try {
+    auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
     importer->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while importing table:\n  " + std::string(exception.what()) + "\n");
@@ -591,7 +591,7 @@ int Console::_export_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
   auto get_table = std::make_shared<GetTable>(tablename);
   get_table->execute();
 

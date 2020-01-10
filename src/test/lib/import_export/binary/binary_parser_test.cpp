@@ -64,6 +64,9 @@ TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
   EXPECT_EQ(table->chunk_count(), 2u);
+  // The binary importer finalizes all chunks
+  EXPECT_FALSE(table->get_chunk(ChunkID{0})->is_mutable());
+  EXPECT_FALSE(table->get_chunk(ChunkID{1})->is_mutable());
 }
 
 TEST_P(BinaryParserMultiEncodingTest, StringSegment) {

@@ -10,14 +10,18 @@
 
 namespace opossum {
 
-Import::Import(const std::string& filename, const std::string& tablename, const ChunkOffset chunk_size,
-               const FileType type, const std::optional<CsvMeta>& csv_meta)
+Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
+               const FileType file_type, const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::Import),
-      _filename(filename),
+      filename(init_filename),
       _tablename(tablename),
       _chunk_size(chunk_size),
-      _type(type),
-      _csv_meta(csv_meta) {}
+      _file_type(file_type),
+      _csv_meta(csv_meta) {
+  if (_file_type == FileType::Auto) {
+    _file_type = file_type_from_filename(filename);
+  }
+}
 
 const std::string& Import::name() const {
   static const auto name = std::string{"Import"};
@@ -26,24 +30,21 @@ const std::string& Import::name() const {
 
 std::shared_ptr<const Table> Import::_on_execute() {
   // Check if file exists before giving it to the parser
-  std::ifstream file(_filename);
-  Assert(file.is_open(), "Import: Could not find file " + _filename);
+  std::ifstream file(filename);
+  Assert(file.is_open(), "Import: Could not find file " + filename);
   file.close();
 
   std::shared_ptr<Table> table;
 
-  if (_type == FileType::Auto) {
-    _type = file_type_from_filename(_filename);
-  }
-  switch (_type) {
+  switch (_file_type) {
     case FileType::Csv:
-      table = CsvParser::parse(_filename, _chunk_size, _csv_meta);
+      table = CsvParser::parse(filename, _chunk_size, _csv_meta);
       break;
     case FileType::Tbl:
-      table = load_table(_filename, _chunk_size);
+      table = load_table(filename, _chunk_size);
       break;
     case FileType::Binary:
-      table = BinaryParser::parse(_filename);
+      table = BinaryParser::parse(filename);
       break;
     case FileType::Auto:
       Fail("File type should have been determined previously.");
@@ -62,7 +63,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
 std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Import>(_filename, _tablename, _chunk_size, _type, _csv_meta);
+  return std::make_shared<Import>(filename, _tablename, _chunk_size, _file_type, _csv_meta);
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

@@ -109,6 +109,7 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
 
   const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
   table->append_chunk(output_segments, mvcc_data);
+  table->last_chunk()->finalize();
 }
 
 std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
