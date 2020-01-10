@@ -253,7 +253,7 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
 }
 
 class EncodedSegmentChunkOffsetTest : public IterablesTest,
-                                          public ::testing::WithParamInterface<SegmentEncodingSpec> {};
+                                      public ::testing::WithParamInterface<SegmentEncodingSpec> {};
 
 auto formatter_chunk_offset = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   auto stream = std::stringstream{};
@@ -266,10 +266,9 @@ auto formatter_chunk_offset = [](const ::testing::TestParamInfo<SegmentEncodingS
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedSegmentChunkOffsetTest,
-                         ::testing::ValuesIn(all_segment_encoding_specs),
-                         formatter_chunk_offset);
+                         ::testing::ValuesIn(all_segment_encoding_specs), formatter_chunk_offset);
 
-TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators){
+TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
   auto test_table = table;
   auto encoding_spec = GetParam();
   auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
@@ -288,13 +287,12 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators){
 
     const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
 
-    iterable.with_iterators([&](auto begin, auto end){
-        while (begin != end) {
-          end--;
-        }
-        EXPECT_EQ(end->chunk_offset(), 0u);
+    iterable.with_iterators([&](auto begin, auto end) {
+      while (begin != end) {
+        end--;
       }
-    );
+      EXPECT_EQ(end->chunk_offset(), 0u);
+    });
   });
 }
 

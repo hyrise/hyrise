@@ -102,9 +102,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
     }
 
-    SegmentPosition<T> dereference() const {
-      return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset};
-    }
+    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
 
    private:
     ValueIterator _value_it;
