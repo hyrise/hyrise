@@ -73,7 +73,6 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   const size_t _string_length;
   Storage& _chars;
   size_t _pos;
-  mutable std::string_view _temporary_return_value;
 };
 
 }  // namespace opossum
