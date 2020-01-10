@@ -78,7 +78,9 @@ template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   // LZ4Segment always gets erased as its decoding is so slow, the virtual function calls won't make
   // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit
-  return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
+
+  // Krichly: never erasing types in hope to have actually working sorted searches
+  return LZ4SegmentIterable<T>{segment};
 }
 
 }  // namespace opossum

@@ -102,15 +102,19 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     }
 
     void advance(std::ptrdiff_t n) {
-      // For now, the lazy approach
-      if (n < 0) {
-        for (std::ptrdiff_t i = n; i < 0; ++i) {
-          decrement();
-        }
-      } else {
-        for (std::ptrdiff_t i = 0; i < n; ++i) {
-          increment();
-        }
+      // Krichly: replaced the original version of this function (code MB)
+      _offset_value_it += n;
+      _chunk_offset += n;
+      _null_value_it += n;
+      _index_within_frame += n;
+      // Ensure that we correctly set the new block minimum and index within a frame.
+      if (n > 0 && _index_within_frame >= FrameOfReferenceSegment<T>::block_size) {
+        _index_within_frame = _index_within_frame % FrameOfReferenceSegment<T>::block_size;
+        _block_minimum_it += 1 + n / FrameOfReferenceSegment<T>::block_size; // REALLY?????
+        return;
+      } else if (n < 0 && _index_within_frame < 0) {
+        _index_within_frame = _index_within_frame % FrameOfReferenceSegment<T>::block_size;
+        _block_minimum_it -= 1 + n / FrameOfReferenceSegment<T>::block_size; // REALLY?????
       }
     }
 
