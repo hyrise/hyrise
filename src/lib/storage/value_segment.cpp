@@ -171,7 +171,7 @@ size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculati
 
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
 
-  if constexpr (std::is_same_v<T, pmr_string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
     return common_elements_size + string_vector_memory_usage(_values, mode);
   }
 
