@@ -63,6 +63,7 @@ const auto CREATE_INDEX = true;
 
 // quantile benchmark values (int table)
 // timestamp values --> unix timestamp
+// [0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
 ///////////////////////////////
 const auto BM_VAL_CAPTAIN_ID = std::vector{464, 844, 1628, 4115, 6362, 11787, 24882, 57069, 176022, 451746, 616628, 901080, 954443, 1156169, 1233112, 1414788};
 const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
