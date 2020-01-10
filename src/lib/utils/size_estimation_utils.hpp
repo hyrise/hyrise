@@ -3,6 +3,7 @@
 #include <random>
 
 #include "types.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -37,11 +38,13 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     return 0;
   };
 
-  constexpr auto sampling_factor = 0.01f;
+  constexpr auto sampling_factor = 0.005f;
   constexpr auto min_rows = size_t{10};
 
-  const auto samples_to_draw = std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
+  const auto samples_to_draw =
+      std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
 
+  Timer timer;
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
     // or the given input vector is small.
@@ -49,6 +52,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     for (const auto& single_string : string_vector) {
       elements_size += sso_exceeding_bytes(single_string);
     }
+    std::cout << timer.lap().count() << " ns for full loop with elements #" << string_vector.size() << std::endl;
     return base_size + elements_size;
   }
 
@@ -69,6 +73,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   for (const auto& sample_position : sample_positions) {
     elements_size += sso_exceeding_bytes(string_vector[sample_position]);
   }
+  std::cout << timer.lap().count() << " ns for sampled loop with elements #" << sample_positions.size() << std::endl;
 
   const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
   return base_size +

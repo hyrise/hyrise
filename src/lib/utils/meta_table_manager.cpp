@@ -10,6 +10,7 @@
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 
@@ -56,7 +57,10 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         const auto& segment = chunk->get_segment(column_id);
 
         const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+
         const auto estimated_size = segment->memory_usage(mode);
+        // std::cout << timer.lap().count() << " ns for mem usage with "
+        //           << (mode == MemoryUsageCalculationMode::Full ? "full " : "sampled") << std::endl;
         AllTypeVariant encoding = NULL_VALUE;
         AllTypeVariant vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
@@ -70,7 +74,9 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         }
 
         if (mode == MemoryUsageCalculationMode::Full) {
+          // Timer timer2;
           const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
+          // std::cout << timer2.lap().count() << " ns for distinct count" << std::endl;
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
                               vector_compression, static_cast<int64_t>(estimated_size)});
@@ -198,6 +204,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
+  std::cout << "Generating segments" << std::endl;
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"column_id", DataType::Int, false},
@@ -214,6 +221,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_accurate_segments_table() {
+  std::cout << "Generating accurate segments" << std::endl;
   PerformanceWarning("Accurate segment information are expensive to gather. Use with caution.");
   const auto columns = TableColumnDefinitions{
       {"table_name", DataType::String, false},       {"chunk_id", DataType::Int, false},
