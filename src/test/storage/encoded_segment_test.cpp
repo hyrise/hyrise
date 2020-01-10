@@ -303,4 +303,253 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 
+// Testing the internal data structures of Run Length-encoded segments for monotonically increasing values
+TEST_F(EncodedSegmentTest, RunLengthEncodingMonotonicallyIncreasing) {
+  constexpr auto row_count = int32_t{100};
+  auto values = pmr_concurrent_vector<int32_t>(row_count);
+
+  for (auto row_id = int32_t{0u}; row_id < row_count; ++row_id) {
+    values[row_id] = row_id;
+  }
+
+  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
+  const auto encoded_segment =
+      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+
+  const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
+  ASSERT_TRUE(run_length_segment);
+
+  EXPECT_EQ(run_length_segment->values()->size(), row_count);
+  EXPECT_EQ(run_length_segment->end_positions()->size(), row_count);
+  EXPECT_EQ(run_length_segment->end_positions()->front(), 0ul);
+  EXPECT_EQ(run_length_segment->end_positions()->back(), 99ul);
+}
+
+TEST_F(EncodedSegmentTest, RunLengthEncodingVaryingRuns) {
+  constexpr auto row_count = int32_t{100};
+  constexpr auto single_value_runs_decreasing = 10;
+  constexpr auto long_value_runs = 8;
+  constexpr auto long_value_element_repititions = 10;
+  constexpr auto single_value_runs_increasing =
+      row_count - single_value_runs_decreasing - long_value_runs * long_value_element_repititions;
+  auto values = pmr_concurrent_vector<int32_t>(row_count);
+
+  // fill first ten values with decreasing values
+  for (auto row_id = int32_t{0u}; row_id < single_value_runs_decreasing; ++row_id) {
+    values[row_id] = single_value_runs_decreasing - row_id;
+  }
+
+  // the next 8 values are repeated 10 times each (i.e., 80 values)
+  auto row_id = single_value_runs_decreasing;
+  for (auto value = int32_t{0}; value < long_value_runs; ++value) {
+    for (auto repetition = 0; repetition < long_value_element_repititions; ++repetition) {
+      values[row_id] = value;
+      ++row_id;
+    }
+  }
+
+  // fill remainder with increasing values
+  while (row_id < row_count) {
+    values[row_id] = row_id;
+    ++row_id;
+  }
+
+  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
+  const auto encoded_segment =
+      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+
+  const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
+  ASSERT_TRUE(run_length_segment);
+
+  // values, end_positions, and null_values should have the same length
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->end_positions()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->null_values()->size());
+  EXPECT_EQ(run_length_segment->values()->size(),
+            single_value_runs_decreasing + long_value_runs + single_value_runs_increasing);
+
+  EXPECT_EQ(run_length_segment->end_positions()->front(), 0ul);
+  EXPECT_EQ(run_length_segment->end_positions()->back(), 99ul);
+
+  // first longer run has the value 10, starts at position 10, and ends at position 19
+  EXPECT_EQ(run_length_segment->values()->at(10), 0);
+  EXPECT_EQ(run_length_segment->end_positions()->at(9), 9);
+  EXPECT_EQ(run_length_segment->end_positions()->at(10), 19);
+  EXPECT_EQ(run_length_segment->values()->at(11), 1);
+
+  // Values as expected
+  EXPECT_EQ(run_length_segment->values()->at(0), 10);
+  EXPECT_EQ(run_length_segment->values()->at(1), 9);
+  EXPECT_EQ(run_length_segment->values()->at(9), 1);
+  EXPECT_EQ(run_length_segment->values()->at(17), 7);
+  EXPECT_EQ(run_length_segment->values()->at(18), 90);
+  EXPECT_EQ(run_length_segment->values()->at(27), 99);
+}
+
+// Testing the internal data structures of Run Length-encoded segments for runs and NULL values where NULL values are
+// fully covering single- and multi-element value runs.
+TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
+  constexpr auto row_count = int32_t{100};
+  constexpr auto long_runs = 9;
+  constexpr auto elements_per_long_run = 10;
+  constexpr auto short_runs = 10;
+  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto null_values = pmr_concurrent_vector<bool>(row_count);
+
+  // the next 9 values are repeated 10 times each (i.e., 90 values)
+  auto row_id = 0;
+  for (auto value = int32_t{0}; value < long_runs; ++value) {
+    for (auto repetition = 0; repetition < elements_per_long_run; ++repetition) {
+      values[row_id] = value;
+
+      // We set two values (i.e., two runs of 10 each) as being NULL
+      if (value == 3 || value == 4) {
+        null_values[row_id] = true;
+      }
+
+      ++row_id;
+    }
+  }
+
+  // fill remainder with increasing values
+  while (row_id < row_count) {
+    values[row_id] = row_id;
+    ++row_id;
+  }
+  null_values[95] = true;
+  null_values[96] = true;
+
+  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+  const auto encoded_segment =
+      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+
+  const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
+  ASSERT_TRUE(run_length_segment);
+
+  // The handling of NULL values is unintuitive. When two runs of values are both NULL, they are merged into
+  // a single run, only keeping the first value of both runs in values() as a placeholder for the merged NULL run.
+  // That means the runs of values 3/4 and the single-value runs of 95/96 are stored as two value runs 3 and 95 in the
+  // values() vector (thus, we substract two from the number of expected runs).
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->end_positions()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->null_values()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), long_runs + short_runs - 2);
+  EXPECT_EQ(run_length_segment->end_positions()->front(), 9ul);
+  EXPECT_EQ(run_length_segment->end_positions()->back(), 99ul);
+
+  // Values runs for values 4 and 96 have been basically removed.
+  EXPECT_EQ(run_length_segment->values()->at(3), 3);
+  EXPECT_EQ(run_length_segment->values()->at(4), 5);
+  EXPECT_EQ(run_length_segment->values()->at(13), 95);  // 9 + 5 - 1 (succeeding run of 4 removed from values())
+  EXPECT_EQ(run_length_segment->values()->at(14), 97);  // no value 96 in values()
+
+  // Check that successive NULL runs are merged to single position
+  EXPECT_EQ(run_length_segment->null_values()->at(2), false);
+  EXPECT_EQ(run_length_segment->null_values()->at(3), true);  // NULLs of values 3/4 are merged into single run
+  EXPECT_EQ(run_length_segment->null_values()->at(4), false);
+  EXPECT_EQ(run_length_segment->null_values()->at(12), false);
+  EXPECT_EQ(run_length_segment->null_values()->at(13), true);
+  EXPECT_EQ(run_length_segment->null_values()->at(14), false);
+}
+
+// Testing the internal data structures of Run Length-encoded segments for runs and NULL values where NULL values are
+// either at the very first or last position, or a NULL value run spans two value runs.
+TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
+  constexpr auto row_count = int32_t{20};
+  constexpr auto run_count = 2;
+  constexpr auto value_repititions = 10;
+  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto null_values = pmr_concurrent_vector<bool>(row_count);
+
+  // two value runs, 10 each
+  auto row_id = size_t{0};
+  for (auto value = int32_t{0u}; value < run_count; ++value) {
+    for (auto index = int32_t{0u}; index < value_repititions; ++index) {
+      values[row_id] = value;
+      ++row_id;
+    }
+  }
+
+  // Adding four NULL value runs (three single element runs, one two element run)
+  null_values[0] = true;  // very first position is NULL
+  null_values[7] = true;  // single value in run is NULL
+
+  // range of NULLs over position where values/run change
+  null_values[9] = true;
+  null_values[10] = true;
+
+  null_values[19] = true;  // last position is NULL
+
+  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+  const auto encoded_segment =
+      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+
+  const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
+  ASSERT_TRUE(run_length_segment);
+
+  // NULL value runs are runs as well. We have four NULL runs and two value runs, where one run is split in two due to
+  // a NULL value in between.
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->end_positions()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->null_values()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), 4 + run_count + 1);
+
+  EXPECT_EQ(run_length_segment->end_positions()->front(), 0);  // value run longer, but first position is NULL
+  EXPECT_EQ(run_length_segment->end_positions()->at(1), 6);
+  EXPECT_EQ(run_length_segment->end_positions()->at(2), 7);
+  EXPECT_EQ(run_length_segment->end_positions()->back(), 19ul);
+
+  // Run is split as NULL value occur, hence values can repeat
+  EXPECT_EQ(run_length_segment->values()->at(1), run_length_segment->values()->at(2));
+
+  // NULL value run spans two elements of different value runs (last value of first run, first of second run). Hence,
+  // second value run starts at position 11 instead of 10 due to NULL value.
+  EXPECT_EQ(run_length_segment->end_positions()->at(3), 8);
+  EXPECT_EQ(run_length_segment->end_positions()->at(4), 10);
+}
+
+// Testing the internal data structures of Frame of Reference-encoded segments. In particular, the determination of the
+// reference value (i.e., the block minimum) as well as the difference to the reference value are checked. This test
+// does not test the creation of multiple frames as the required vectors are too large for unit testing.
+TEST_F(EncodedSegmentTest, FrameOfReference) {
+  constexpr auto row_count = int32_t{17};
+  constexpr auto minimum = int32_t{5};
+  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto null_values = pmr_concurrent_vector<bool>(row_count);
+
+  for (auto row_id = int32_t{0u}; row_id < row_count; ++row_id) {
+    values[row_id] = minimum + row_id;
+  }
+  null_values[1] = true;
+  null_values[7] = true;
+
+  auto values_copy = values;
+  auto null_values_copy = null_values;
+  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+  const auto encoded_segment =
+      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::FrameOfReference});
+
+  const auto for_segment = std::dynamic_pointer_cast<const FrameOfReferenceSegment<int32_t>>(encoded_segment);
+  ASSERT_TRUE(for_segment);
+
+  EXPECT_EQ(for_segment->block_minima().size(), 1);  // single block
+  EXPECT_EQ(for_segment->offset_values().size(), row_count);
+  EXPECT_EQ(for_segment->null_values().size(), row_count);
+
+  EXPECT_EQ(for_segment->null_values()[0], false);
+  EXPECT_EQ(for_segment->null_values()[1], true);
+  EXPECT_EQ(for_segment->null_values()[7], true);
+  EXPECT_EQ(for_segment->null_values()[16], false);
+
+  // Block minium should be the smallest value: 0
+  EXPECT_EQ(for_segment->block_minima().front(), minimum);
+  resolve_compressed_vector_type(for_segment->offset_values(), [&](const auto& offset_values) {
+    auto offset_iter = offset_values.cbegin();
+    auto values_iter = values_copy.cbegin();
+    auto null_values_iter = null_values_copy.cbegin();
+    for (; offset_iter != offset_values.cend(); ++offset_iter, ++values_iter, ++null_values_iter) {
+      if (!*null_values_iter) {
+        EXPECT_EQ(*offset_iter, *values_iter - minimum);
+      }
+    }
+  });
+}
+
 }  // namespace opossum

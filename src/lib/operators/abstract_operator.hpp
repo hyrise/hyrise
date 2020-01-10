@@ -20,11 +20,9 @@ enum class OperatorType {
   Alias,
   Delete,
   Difference,
-  ExportBinary,
-  ExportCsv,
+  Export,
   GetTable,
-  ImportBinary,
-  ImportCsv,
+  Import,
   IndexScan,
   Insert,
   JoinHash,
@@ -123,6 +121,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+
+  // LQP node with which this operator has been created. Might be uninitialized.
+  std::shared_ptr<const AbstractLQPNode> lqp_node;
 
  protected:
   // abstract method to actually execute the operator

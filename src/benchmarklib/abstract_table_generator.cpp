@@ -3,7 +3,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
-#include "operators/export_binary.hpp"
+#include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
@@ -80,6 +80,11 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
+   * Add constraints if defined by the benchmark
+   */
+  _add_constraints(table_info_by_name);
+
+  /**
    * Finalizing all chunks of all tables that are still mutable.
    */
   // TODO(any): Finalization might trigger encoding in the future.
@@ -135,7 +140,7 @@ void AbstractTableGenerator::generate_and_store() {
 
       std::cout << "- Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
       Timer per_table_timer;
-      ExportBinary::write_binary(*table_info.table, binary_file_path);
+      BinaryWriter::write(*table_info.table, binary_file_path);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
     metrics.binary_caching_duration = timer.lap();
@@ -213,5 +218,8 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }
 
 AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const { return {}; }
+
+void AbstractTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
 
 }  // namespace opossum

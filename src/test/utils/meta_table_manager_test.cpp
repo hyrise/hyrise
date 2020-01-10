@@ -51,7 +51,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
 
   {
     // TEST SQL features on meta tables
-    const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM meta_tables WHERE \"table\" = 'int_int'"}
+    const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM meta_tables WHERE table_name = 'int_int'"}
                            .create_pipeline()
                            .get_result_table();
 

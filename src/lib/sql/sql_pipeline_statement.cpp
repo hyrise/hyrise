@@ -1,5 +1,6 @@
 #include "sql_pipeline_statement.hpp"
 
+#include <fstream>
 #include <iomanip>
 #include <utility>
 
@@ -10,6 +11,7 @@
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
@@ -107,7 +109,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
-        _optimized_logical_plan = plan;
+        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
+        // and concurrent translations might conflict.
+        _optimized_logical_plan = plan->deep_copy();
         return _optimized_logical_plan;
       }
     }
@@ -297,6 +301,12 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
       const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
       AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
                   "There is no view '" + drop_view->view_name + "'.");
+      break;
+    }
+    case OperatorType::Import: {
+      const auto import = std::dynamic_pointer_cast<Import>(pqp);
+      std::ifstream file(import->filename);
+      AssertInput(file.good(), "There is no file '" + import->filename + "'.");
       break;
     }
     default:

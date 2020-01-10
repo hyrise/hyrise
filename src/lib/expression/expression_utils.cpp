@@ -119,12 +119,13 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
   return std::make_shared<LQPColumnExpression>(adapted_column_reference);
 }
 
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                    const AbstractExpression::DescriptionMode mode) {
   std::stringstream stream;
 
-  if (!expressions.empty()) stream << expressions.front()->as_column_name();
+  if (!expressions.empty()) stream << expressions.front()->description(mode);
   for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
-    stream << ", " << expressions[expression_idx]->as_column_name();
+    stream << ", " << expressions[expression_idx]->description(mode);
   }
 
   return stream.str();
@@ -157,7 +158,29 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
 
   visit_expression(expression, [&](const auto& sub_expression) {
     if (lqp.find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
+
+    if (AggregateExpression::is_count_star(*sub_expression)) {
+      // COUNT(*) needs special treatment. Because its argument is the invalid column id, it is not part of any node's
+      // column_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
+      // its original_node is part of lqp.
+      const auto& aggregate_expression = static_cast<const AggregateExpression&>(*sub_expression);
+      const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());
+      const auto& original_node = lqp_column_expression.column_reference.original_node();
+
+      // Now check if lqp contains that original_node
+      evaluable = false;
+      visit_lqp(lqp.shared_from_this(), [&](const auto& sub_lqp) {
+        if (sub_lqp == original_node) {
+          evaluable = true;
+        }
+        return LQPVisitation::VisitInputs;
+      });
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
     if (sub_expression->type == ExpressionType::LQPColumn) evaluable = false;
+
     return ExpressionVisitation::VisitArguments;
   });
 

@@ -304,33 +304,71 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePlacementRuleTest, MovePastInnerSemiAntiCrossJoin) {
+TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(less_than_(_a_a, 5),
-    JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
-      JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_c_a, _a_a),
-        JoinNode::make(JoinMode::Cross,
-          JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
-            PredicateNode::make(exists_(_subquery),
-              _table_a),
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      PredicateNode::make(greater_than_(_b_b, 123),
+        JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
+          JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+            _table_b,
             _table_c),
-          StoredTableNode::make("c")),
-        StoredTableNode::make("c")),
-      StoredTableNode::make("c")));
+          _table_a))));
 
   const auto expected_lqp =
-  PredicateNode::make(exists_(_subquery),
-    JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
-      JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_c_a, _a_a),
-        JoinNode::make(JoinMode::Cross,
-          JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
-            PredicateNode::make(less_than_(_a_a, 5),
-              _table_a),
-            _table_c),
-          StoredTableNode::make("c")),
-        StoredTableNode::make("c")),
-      StoredTableNode::make("c")));
+  JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+    PredicateNode::make(greater_than_(_b_b, 123),
+      JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
+        _table_b,
+        _table_a)),
+    PredicateNode::make(greater_than_(_c_a, 150),
+      PredicateNode::make(greater_than_(_c_a, 100),
+        _table_c)));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(sum_(_c_b), 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+        _table_c)));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(sum_(_c_b), 150),
+    AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+      PredicateNode::make(greater_than_(_c_a, 100),
+        _table_c)));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, PushDownAntiThroughAggregate) {
+  // clang-format off
+  const auto input_lqp =
+  JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_c_a, _b_a),
+    PredicateNode::make(greater_than_(sum_(_c_b), 150),
+      PredicateNode::make(greater_than_(_c_a, 100),
+        AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+          _table_c))),
+    _table_b);
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(sum_(_c_b), 150),
+    AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+      JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_c_a, _b_a),
+        PredicateNode::make(greater_than_(_c_a, 100),
+          _table_c),
+        _table_b)));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

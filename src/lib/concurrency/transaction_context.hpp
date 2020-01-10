@@ -44,6 +44,8 @@ enum class TransactionPhase {
   Committed    // Transaction has been committed.
 };
 
+std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
+
 /**
  * @brief Representation of a transaction
  */

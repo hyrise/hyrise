@@ -27,11 +27,14 @@ set(
     expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/hyrise_test.cpp
-    lib/import_export/csv_parser_test.cpp
+    lib/import_export/binary/binary_parser_test.cpp
+    lib/import_export/binary/binary_writer_test.cpp
+    lib/import_export/csv/csv_meta_test.cpp
+    lib/import_export/csv/csv_parser_test.cpp
+    lib/import_export/csv/csv_writer_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
     lib/utils/load_table_test.cpp
@@ -45,6 +48,7 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
     logical_query_plan/limit_node_test.cpp
@@ -67,11 +71,9 @@ set(
     operators/alias_operator_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
-    operators/export_binary_test.cpp
-    operators/export_csv_test.cpp
+    operators/export_test.cpp
     operators/get_table_test.cpp
-    operators/import_binary_test.cpp
-    operators/import_csv_test.cpp
+    operators/import_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
     operators/join_hash_test.cpp
@@ -116,6 +118,7 @@ set(
     optimizer/strategy/chunk_pruning_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
+    optimizer/strategy/dependent_group_by_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/in_expression_rewrite_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
@@ -124,9 +127,11 @@ set(
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
+    optimizer/strategy/semi_join_reduction_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
+    plugins/mvcc_delete_plugin_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_socket.hpp
     server/postgres_protocol_handler_test.cpp
@@ -159,6 +164,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
+    storage/constraints_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
     storage/encoded_string_segment_test.cpp
@@ -205,10 +211,14 @@ set (
     concurrency/stress_test.cpp
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpcc_test.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
+    plugins/mvcc_delete_plugin_system_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
@@ -217,7 +227,7 @@ set(
     gtest
     gmock
     sqlite3
-    hyriseBenchmarkLib
+    MvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE

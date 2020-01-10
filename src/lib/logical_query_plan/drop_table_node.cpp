@@ -5,9 +5,11 @@ namespace opossum {
 DropTableNode::DropTableNode(const std::string& table_name, const bool if_exists)
     : BaseNonQueryNode(LQPNodeType::DropTable), table_name(table_name), if_exists(if_exists) {}
 
-std::string DropTableNode::description() const { return std::string("[DropTable] Name: '") + table_name + "'"; }
+std::string DropTableNode::description(const DescriptionMode mode) const {
+  return std::string("[DropTable] Name: '") + table_name + "'";
+}
 
-size_t DropTableNode::_shallow_hash() const {
+size_t DropTableNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(table_name);
   boost::hash_combine(hash, if_exists);
   return hash;

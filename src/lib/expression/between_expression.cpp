@@ -27,11 +27,10 @@ std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
                                              upper_bound()->deep_copy());
 }
 
-std::string BetweenExpression::as_column_name() const {
+std::string BetweenExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << _enclose_argument_as_column_name(*value()) << " " << predicate_condition << " "
-         << _enclose_argument_as_column_name(*lower_bound()) << " AND "
-         << _enclose_argument_as_column_name(*upper_bound());
+  stream << _enclose_argument(*value(), mode) << " " << predicate_condition << " "
+         << _enclose_argument(*lower_bound(), mode) << " AND " << _enclose_argument(*upper_bound(), mode);
   return stream.str();
 }
 

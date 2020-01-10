@@ -1,3 +1,5 @@
+#include "chunk.hpp"
+
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -8,7 +10,6 @@
 #include <vector>
 
 #include "base_segment.hpp"
-#include "chunk.hpp"
 #include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
@@ -71,10 +72,10 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
 
 ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
-uint32_t Chunk::size() const {
+ChunkOffset Chunk::size() const {
   if (_segments.empty()) return 0;
   const auto first_segment = get_segment(ColumnID{0});
-  return static_cast<uint32_t>(first_segment->size());
+  return static_cast<ChunkOffset>(first_segment->size());
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
@@ -218,13 +219,21 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
-void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
-  DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");
-  _cleanup_commit_id = cleanup_commit_id;
-}
-
 const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
 
 void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
+
+std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
+  if (_cleanup_commit_id == 0) {
+    // Cleanup-Commit-ID is not yet set
+    return std::nullopt;
+  }
+  return std::optional<CommitID>{_cleanup_commit_id.load()};
+}
+
+void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
+  Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
+  _cleanup_commit_id.store(cleanup_commit_id);
+}
 
 }  // namespace opossum

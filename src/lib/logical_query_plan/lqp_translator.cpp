@@ -25,6 +25,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_node.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -32,6 +33,7 @@
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
@@ -89,7 +91,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
     return operator_iter->second;
   }
 
-  const auto pqp = _translate_by_node_type(node->type, node);
+  auto pqp = _translate_by_node_type(node->type, node);
+
+  // Adding the actual LQP node that led to the creation of the PQP node.  Note, the LQP needs to be set in
+  // _translate_predicate_node_to_index_scan() as well, because the function creates two scans operators and returns
+  // only the merging union node (all three PQP nodes share the same originating LQP node).
+  pqp->lqp_node = node;
   _operator_by_lqp_node.emplace(node, pqp);
 
   return pqp;
@@ -120,6 +127,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
+    case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
       // clang-format on
 
@@ -211,6 +219,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   index_scan->included_chunk_ids = indexed_chunks;
   table_scan->excluded_chunk_ids = indexed_chunks;
+
+  // set lqp node
+  index_scan->lqp_node = node;
+  table_scan->lqp_node = node;
 
   return std::make_shared<UnionAll>(index_scan, table_scan);
 }
@@ -328,7 +340,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
   });
-
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
 
   return join_operator;
@@ -473,6 +484,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
+  return std::make_shared<Import>(import_node->filename, import_node->tablename, Chunk::DEFAULT_SIZE,
+                                  import_node->filetype);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

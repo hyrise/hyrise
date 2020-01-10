@@ -608,6 +608,16 @@ TEST_F(CardinalityEstimatorTest, PredicateOrDoesNotIncreaseCardinality) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 100);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateIn) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, list_(10, 11, 12, 13)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 40);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
@@ -877,11 +887,7 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
   // more to test here
 
-  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
-  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  EXPECT_EQ(estimator.estimate_cardinality(static_table_node), 0.0f);
-
-  const auto create_table_lqp = CreateTableNode::make("t", false, static_table_node);
+  const auto create_table_lqp = CreateTableNode::make("t", false, node_a);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0f);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(node_a, std::vector<ParameterID>{});
