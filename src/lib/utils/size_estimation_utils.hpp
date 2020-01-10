@@ -27,7 +27,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
 
   // Get the default pre-allocated capacity of SSO strings.
   const auto sso_string_capacity = std::string("").capacity();
-  auto sso_exceeding_bytes = [&](const auto& single_string) -> size_t {
+  auto string_heap_size = [&](const auto& single_string) -> size_t {
     if (single_string.capacity() > sso_string_capacity) {
       // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
       // since some libraries (e.g. llvm's libc++) also over-allocate the heap strings
@@ -48,7 +48,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     // or the given input vector is small.
     auto elements_size = string_vector.capacity() * sizeof(StringType);
     for (const auto& single_string : string_vector) {
-      elements_size += sso_exceeding_bytes(single_string);
+      elements_size += string_heap_size(single_string);
     }
     return base_size + elements_size;
   }
@@ -66,7 +66,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // later scale this value using the sampling factor.
   auto elements_size = samples_to_draw * sizeof(StringType);
   for (const auto& sample_position : sample_positions) {
-    elements_size += sso_exceeding_bytes(string_vector[sample_position]);
+    elements_size += string_heap_size(string_vector[sample_position]);
   }
 
   const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
