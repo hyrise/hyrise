@@ -31,7 +31,7 @@ size_t string_heap_size(const T& string) {
   *
   * Depending on the @param mode, either all strings all considered or a sample is taken and evaluated.
   *
-  * Please note, that there are still differences between the stdlib's. Thus, even the full size accumulation is not
+  * Please note, that there are still differences between the stdlib's. Also the full size accumulation is not
   * guaranteed to be 100% accurate for all libraries.
   */
 template <typename V>
