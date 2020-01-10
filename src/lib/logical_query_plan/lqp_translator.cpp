@@ -58,6 +58,7 @@
 #include "projection_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -202,7 +203,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+    const auto& chunk_indexes = chunk->chunk_indexes();
+    const auto chunk_index_iter = chunk_indexes->find(column_ids);
+    if (chunk_index_iter != chunk_indexes->cend() && chunk_index_iter->second->type() == SegmentIndexType::GroupKey) {
       indexed_chunks.emplace_back(chunk_id);
     }
   }

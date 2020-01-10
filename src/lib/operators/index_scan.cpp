@@ -120,8 +120,10 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};
 
-  const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index, "Index of specified type not found for segment (vector).");
+  const auto& index = chunk->chunk_indexes()->at(_left_column_ids);
+  // TODO: get covering indexes and select "best"
+  Assert(_index_type == index->type(),
+         "Index of specified type not present for segment" + (_left_column_ids.size() > 1 ? "s." : "."));
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {

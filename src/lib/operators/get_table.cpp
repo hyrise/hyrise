@@ -180,7 +180,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     } else {
       auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
       auto output_segments_iter = output_segments.begin();
-      auto output_indexes = Indexes{};
+      auto output_indexes = std::make_shared<IndexesByColumnIDsMap>();
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
       for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
@@ -197,9 +197,13 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
-        auto indexes = stored_chunk->get_indexes({*output_segments_iter});
-        if (!indexes.empty()) {
-          output_indexes.insert(std::end(output_indexes), std::begin(indexes), std::end(indexes));
+        const auto& chunk_indexes = stored_chunk->chunk_indexes();
+
+        // TODO: include covering indexes. Right now, only single column indexes are forwarded
+        const auto index_iter = chunk_indexes->find({stored_column_id});
+        if (index_iter != chunk_indexes->cend()) {
+          const auto column_id_list = std::vector<ColumnID>{stored_column_id};
+          output_indexes->emplace(column_id_list, index_iter->second);
         }
         ++output_segments_iter;
       }

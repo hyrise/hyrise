@@ -101,37 +101,33 @@ std::shared_ptr<Table> MetaTableManager::generate_indexes_table() {
                                               {"index_type", DataType::String, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  // TODO(anyone): we should store the indexes that are available within each chunk. We have IndexStatistics for
-  //     tables, but that would mean we can only handle the indexes that have been created for the whole table.
-  //     As soon as we expect tables to grow over time, the current way of handling indexes needs to be adapted.
-  //     Comment that shall not be merged: Martin votes for moving all IndexStatistics information to the chunks.
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    const auto column_count = table->column_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        const auto& indexes = chunk->get_indexes(std::initializer_list<ColumnID>{column_id});
-        auto index_id = int32_t{0};
-        for (const auto& index : indexes) {
-          std::stringstream index_type_name;
-          // TODO(anyone): use some form of index_type_name << index->type();
-          if (std::dynamic_pointer_cast<const GroupKeyIndex>(index)) {
-            index_type_name << "GroupKeyIndex";
-          } else if (std::dynamic_pointer_cast<const CompositeGroupKeyIndex>(index)) {
-            index_type_name << "CompositeGroupKeyIndex";
-          } else if (std::dynamic_pointer_cast<const AdaptiveRadixTreeIndex>(index)) {
-            index_type_name << "AdaptiveRadixTreeIndex";
-          } else if (std::dynamic_pointer_cast<const BTreeIndex>(index)) {
-            index_type_name << "BTreeIndex";
-          } else {
-            index_type_name << "Unknown";
-          }
+      const auto& indexes = chunk->chunk_indexes();
 
+      auto index_id = int32_t{0};
+      for (const auto& [columnd_ids, index] : *indexes) {
+        std::stringstream index_type_name;
+        // TODO(anyone): use some form of index_type_name << index->type();
+        if (std::dynamic_pointer_cast<const GroupKeyIndex>(index)) {
+          index_type_name << "GroupKeyIndex";
+        } else if (std::dynamic_pointer_cast<const CompositeGroupKeyIndex>(index)) {
+          index_type_name << "CompositeGroupKeyIndex";
+        } else if (std::dynamic_pointer_cast<const AdaptiveRadixTreeIndex>(index)) {
+          index_type_name << "AdaptiveRadixTreeIndex";
+        } else if (std::dynamic_pointer_cast<const BTreeIndex>(index)) {
+          index_type_name << "BTreeIndex";
+        } else {
+          index_type_name << "Unknown";
+        }
+
+        for (const auto& column_id : columnd_ids) {
           output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(index_id),
                                 static_cast<int32_t>(column_id), pmr_string{index_type_name.str()}});
-
-          ++index_id;
         }
+
+        ++index_id;
       }
     }
   }
@@ -140,12 +136,10 @@ std::shared_ptr<Table> MetaTableManager::generate_indexes_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
-  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
-                                              {"chunk_id", DataType::Int, false},
-                                              {"column_id", DataType::Int, false},
-                                              {"column_name", DataType::String, false},
-                                              {"column_data_type", DataType::String, false},
-                                              {"encoding_name", DataType::String, true}};
+  const auto columns =
+      TableColumnDefinitions{{"table_name", DataType::String, false},       {"chunk_id", DataType::Int, false},
+                             {"column_id", DataType::Int, false},           {"column_name", DataType::String, false},
+                             {"column_data_type", DataType::String, false}, {"encoding_name", DataType::String, true}};
   // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 

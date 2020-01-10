@@ -28,6 +28,7 @@ class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
 using Indexes = pmr_vector<std::shared_ptr<AbstractIndex>>;
+using IndexesByColumnIDsMap = std::map<std::vector<ColumnID>, std::shared_ptr<AbstractIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
@@ -48,7 +49,8 @@ class Chunk : private Noncopyable {
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+        const std::shared_ptr<IndexesByColumnIDsMap> chunk_indexes = std::make_shared<IndexesByColumnIDsMap>());
 
   // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
   bool is_mutable() const;
@@ -93,15 +95,11 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
-  std::vector<std::shared_ptr<AbstractIndex>> get_indexes(
-      const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::vector<std::shared_ptr<AbstractIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
+  const std::shared_ptr<IndexesByColumnIDsMap>& chunk_indexes() const;
 
-  std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
-                                           const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
-                                           const std::vector<ColumnID>& column_ids) const;
+  const std::shared_ptr<std::vector<AbstractIndex>>& covering_indexes(const std::vector<ColumnID> column_ids) const;
 
+  // TODO: move this method into createIndex(columnIDs)
   template <typename Index>
   std::shared_ptr<AbstractIndex> create_index(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index) {
@@ -115,14 +113,15 @@ class Chunk : private Noncopyable {
                 "All segments must be part of the chunk.");
 
     auto index = std::make_shared<Index>(segments_to_index);
-    _indexes.emplace_back(index);
     return index;
   }
 
   template <typename Index>
   std::shared_ptr<AbstractIndex> create_index(const std::vector<ColumnID>& column_ids) {
     const auto segments = _get_segments_for_ids(column_ids);
-    return create_index<Index>(segments);
+    const auto index = create_index<Index>(segments);
+    _chunk_indexes->emplace(column_ids, index);
+    return index;
   }
 
   void remove_index(const std::shared_ptr<AbstractIndex>& index);
@@ -133,7 +132,7 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
-  /**
+  /** 
    * To perform Chunk pruning, a Chunk can be associated with statistics.
    * @{
    */
@@ -191,11 +190,13 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+
+  // std::map over std::unordered_map as we do not need to implement hashing of vectors the map is expected to be small
+  std::shared_ptr<IndexesByColumnIDsMap> _chunk_indexes;
 
   // Default value of zero means "not set"
   std::atomic<CommitID> _cleanup_commit_id{0};

@@ -180,35 +180,20 @@ TYPED_TEST(MultiSegmentIndexTest, QueryWithFewerValuesThanColumns) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiSegmentIndexTest, IsIndexForTest) {
-  EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int}));
-  EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int, this->dict_segment_str}));
-  EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_segment_str}));
-  EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_segment_str, this->dict_segment_int}));
-
-  EXPECT_FALSE(this->index_int_str->is_index_for({this->dict_segment_str, this->dict_segment_int}));
-  EXPECT_FALSE(this->index_str_int->is_index_for({this->dict_segment_int}));
-  EXPECT_FALSE(this->index_str_int->is_index_for({this->dict_segment_int, this->dict_segment_str}));
-  EXPECT_FALSE(this->index_str_int->is_index_for({}));
-}
-
 TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   auto chunk = std::make_shared<Chunk>(Segments({this->dict_segment_int, this->dict_segment_str}));
 
-  chunk->create_index<TypeParam>({this->dict_segment_int});
-  chunk->create_index<TypeParam>({this->dict_segment_int, this->dict_segment_str});
+  chunk->create_index<TypeParam>({ColumnID{0}});
+  chunk->create_index<TypeParam>({ColumnID{0}, ColumnID{1}});
 
-  auto indexes_int = chunk->get_indexes({this->dict_segment_int});
-  auto indexes_int_str = chunk->get_indexes({this->dict_segment_int, this->dict_segment_str});
-  auto indexes_str = chunk->get_indexes({this->dict_segment_str});
+  const auto& chunk_indexes = chunk->chunk_indexes();
+  EXPECT_NO_THROW(chunk_indexes->at({ColumnID{0}}));
+  EXPECT_NO_THROW(chunk_indexes->at({ColumnID{0}, ColumnID{1}}));
+  EXPECT_THROW(chunk_indexes->at({ColumnID{1}, ColumnID{0}}), std::logic_error);
+  EXPECT_THROW(chunk_indexes->at({ColumnID{1}}), std::logic_error);
 
-  EXPECT_EQ(indexes_int.size(), 2u);
-  EXPECT_EQ(indexes_int_str.size(), 1u);
-  EXPECT_EQ(indexes_str.size(), 0u);
-
-  EXPECT_TRUE(indexes_int[0]->is_index_for({this->dict_segment_int}));
-  EXPECT_TRUE(indexes_int[1]->is_index_for({this->dict_segment_int}));
-  EXPECT_TRUE(indexes_int_str[0]->is_index_for({this->dict_segment_int, this->dict_segment_str}));
+  // TODO: We through out a test which gets indexes for columnid=0 and that received two indexes.
+  // Right now, we expect the caller to handle these cases and manually. Shall we create a "get_covering_indexes" method?
 }
 
 }  // namespace opossum

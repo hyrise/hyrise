@@ -162,12 +162,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       if (reference_segment_pos_list->references_single_chunk()) {
         const auto index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
         Assert(index_data_table_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-        const auto& indexes = index_data_table_chunk->get_indexes(index_data_table_column_ids);
+        const auto& chunk_indexes = index_data_table_chunk->chunk_indexes();
+        const auto& index_iter = chunk_indexes->find(index_data_table_column_ids);
 
-        if (!indexes.empty()) {
+        if (index_iter != chunk_indexes->cend()) {  // TODO: reintroduce via multimap????
           // We assume the first index to be efficient for our join
           // as we do not want to spend time on evaluating the best index inside of this join loop
-          const auto& index = indexes.front();
+          const auto& index = index_iter->second;
 
           // Scan all chunks from the probe side input
           const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
@@ -198,13 +199,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
       Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-      const auto& indexes =
-          index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
+      const auto& chunk_indexes = index_chunk->chunk_indexes();
+      const auto& index_iter = chunk_indexes->find({_adjusted_primary_predicate.column_ids.second});
 
-      if (!indexes.empty()) {
-        // We assume the first index to be efficient for our join
-        // as we do not want to spend time on evaluating the best index inside of this join loop
-        const auto& index = indexes.front();
+      if (index_iter != chunk_indexes->cend()) {
+        const auto& index = index_iter->second;
 
         // Scan all chunks from the probe side input
         const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();

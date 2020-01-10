@@ -18,8 +18,9 @@
 namespace opossum {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
+             const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+             const std::shared_ptr<IndexesByColumnIDsMap> chunk_indexes)
+    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _chunk_indexes(chunk_indexes) {
   DebugAssert(!_segments.empty(),
               "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
@@ -88,14 +89,6 @@ SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
-std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
-    const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
-  auto result = std::vector<std::shared_ptr<AbstractIndex>>();
-  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(segments); });
-  return result;
-}
-
 void Chunk::finalize() {
   Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
   _is_mutable = false;
@@ -111,30 +104,24 @@ void Chunk::finalize() {
   }
 }
 
-std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
-  auto segments = _get_segments_for_ids(column_ids);
-  return get_indexes(segments);
-}
+const std::shared_ptr<IndexesByColumnIDsMap>& Chunk::chunk_indexes() const { return _chunk_indexes; }
 
-std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                                const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
-  auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
-    return index->is_index_for(segments) && index->type() == index_type;
-  });
-
-  return (index_it == _indexes.cend()) ? nullptr : *index_it;
-}
-
-std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                                const std::vector<ColumnID>& column_ids) const {
-  auto segments = _get_segments_for_ids(column_ids);
-  return get_index(index_type, segments);
-}
+const std::shared_ptr<std::vector<AbstractIndex>>& Chunk::covering_indexes(const std::vector<ColumnID> column_ids) {
+  for (const auto& [index_column_ids, index] : _chunk_indexes) {
+    if (std::search(index_column_ids.begin(), index_column_ids.end(), col))
+  }
+};
 
 void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
-  auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
-  DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
-  _indexes.erase(it);
+  // We do not expect remove_index to be often called or called on critical paths. Hence, iterating to delete an index
+  // should be acceptable.
+  auto indexes_map_iter = std::find_if(_chunk_indexes->cbegin(), _chunk_indexes->cend(),
+                                       [&](const auto& map_index) { return index == map_index.second; });
+
+  DebugAssert(indexes_map_iter != _chunk_indexes->cend(), "Trying to remove a non-existing index");
+  if (indexes_map_iter != _chunk_indexes->cend()) {
+    _chunk_indexes->erase(indexes_map_iter);
+  }
 }
 
 bool Chunk::references_exactly_one_table() const {
@@ -159,7 +146,7 @@ bool Chunk::references_exactly_one_table() const {
 
 void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   // Migrating chunks with indexes is not implemented yet.
-  if (!_indexes.empty()) {
+  if (!_chunk_indexes->empty()) {
     Fail("Cannot migrate Chunk with Indexes.");
   }
 
