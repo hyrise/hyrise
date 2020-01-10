@@ -3,7 +3,6 @@
 #include <random>
 
 #include "types.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -44,7 +43,6 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   const auto samples_to_draw =
       std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
 
-  Timer timer;
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
     // or the given input vector is small.
@@ -52,7 +50,6 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     for (const auto& single_string : string_vector) {
       elements_size += sso_exceeding_bytes(single_string);
     }
-    std::cout << timer.lap().count() << " ns for full loop with elements #" << string_vector.size() << std::endl;
     return base_size + elements_size;
   }
 
@@ -65,15 +62,12 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // Create vector from set of samples (std::set yields a sorted order)
   std::vector<size_t> sample_positions(sample_set.cbegin(), sample_set.cend());
 
-  std::cout << timer.lap().count() << " ns for sampling " << std::endl;
-
   // We get the accurate size for all strings in the sample (preallocated buffers + potential heap allocations) and
-  // then scale this value using the sampling factor.
+  // later scale this value using the sampling factor.
   auto elements_size = samples_to_draw * sizeof(StringType);
   for (const auto& sample_position : sample_positions) {
     elements_size += sso_exceeding_bytes(string_vector[sample_position]);
   }
-  std::cout << timer.lap().count() << " ns for sampled loop with elements #" << sample_positions.size() << std::endl;
 
   const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
   return base_size +
