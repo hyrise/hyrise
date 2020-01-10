@@ -23,12 +23,13 @@
 
 namespace opossum {
 
+template <typename DataType>
 struct SumUpWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     auto distance = end - begin;
 
-    _sum = 0u;
+    _sum = 0;
 
     for (; begin != end; ++begin) {
       --distance;
@@ -43,7 +44,7 @@ struct SumUpWithIterator {
     ASSERT_EQ(distance, 0);
   }
 
-  uint32_t& _sum;
+  DataType& _sum;
   std::vector<ChunkOffset>& _accessed_offsets;
 };
 
@@ -170,9 +171,9 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
     using SegmentType = std::decay_t<decltype(segment)>;
 
     if constexpr (!std::is_same_v<pmr_string, ColumnDataType>) {
-      auto sum = uint32_t{0};
+      auto sum = ColumnDataType{0};
       auto accessed_offsets = std::vector<ChunkOffset>{};
-      auto functor = SumUpWithIterator{sum, accessed_offsets};
+      auto functor = SumUpWithIterator<ColumnDataType>{sum, accessed_offsets};
 
       const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
       if (with_position_filter) {
@@ -236,19 +237,21 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     using SegmentType = std::decay_t<decltype(segment)>;
 
-    auto concatenate = pmr_string();
-    auto functor = AppendWithIterator{concatenate};
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+      auto concatenate = pmr_string();
+      auto functor = AppendWithIterator{concatenate};
 
-    const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
-    if (with_position_filter) {
-      if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
-        iterable.with_iterators(position_filter, functor);
+      const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+      if (with_position_filter) {
+        if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+          iterable.with_iterators(position_filter, functor);
+        }
+      } else {
+        iterable.with_iterators(functor);
       }
-    } else {
-      iterable.with_iterators(functor);
-    }
 
-    EXPECT_EQ(concatenate, expected_concatenation(with_position_filter));
+      EXPECT_EQ(concatenate, expected_concatenation(with_position_filter));
+    }
   });
 }
 
@@ -305,9 +308,9 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 
   auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
 
-  auto sum = uint32_t{0};
+  auto sum = int{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int>{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24825u);
   EXPECT_EQ(accessed_offsets,
