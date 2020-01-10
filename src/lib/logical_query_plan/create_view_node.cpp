@@ -11,7 +11,7 @@ CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_p
                                const bool if_not_exists)
     : BaseNonQueryNode(LQPNodeType::CreateView), view_name(view_name), view(view), if_not_exists(if_not_exists) {}
 
-std::string CreateViewNode::description() const {
+std::string CreateViewNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
   stream << "[CreateView] " << (if_not_exists ? "IfNotExists " : "");
   stream << "Name: " << view_name << ", Columns: ";
@@ -25,7 +25,7 @@ std::string CreateViewNode::description() const {
   return stream.str();
 }
 
-size_t CreateViewNode::_shallow_hash() const {
+size_t CreateViewNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(view_name);
   boost::hash_combine(hash, view);
   boost::hash_combine(hash, if_not_exists);

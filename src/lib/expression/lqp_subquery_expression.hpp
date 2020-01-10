@@ -28,7 +28,7 @@ class LQPSubqueryExpression : public AbstractExpression {
                         const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
 
   // Returns whether this query is correlated, i.e., uses external parameters

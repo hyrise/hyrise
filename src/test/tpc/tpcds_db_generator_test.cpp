@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "hyrise.hpp"
-#include "import_export/csv_parser.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "testing_assert.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -10,10 +10,9 @@ using namespace opossum;  // NOLINT
 
 namespace {
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
-  return CsvParser{}.parse(
-      "resources/test_data/csv/tpcds/" + file_name,
-      process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION),
-      Chunk::DEFAULT_SIZE);
+  return CsvParser::parse(
+      "resources/test_data/csv/tpcds/" + file_name, Chunk::DEFAULT_SIZE,
+      process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION));
 }
 }  // namespace
 
