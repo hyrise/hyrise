@@ -63,10 +63,10 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // can directly use std::set to generate distinct sample positions. std::set is slightly faster than
   // std::unordered_set + sorting for small sample sizes.
   std::default_random_engine generator{std::random_device{}()};
-  std::uniform_int_distribution<int> distribution(0, static_cast<int>(samples_to_draw));
+  std::uniform_int_distribution<size_t> distribution(0ul, samples_to_draw);
   std::set<size_t> sample_set;
   while (sample_set.size() < samples_to_draw) {
-    sample_set.insert(static_cast<size_t>(distribution(generator)));
+    sample_set.insert(distribution(generator));
   }
   // Create vector from set of samples (std::set yields a sorted order)
   std::vector<size_t> sample_positions(sample_set.cbegin(), sample_set.cend());
