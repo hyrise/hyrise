@@ -1,3 +1,9 @@
+#include <chrono>
+#include <thread>
+#include <iostream>
+#include <fstream>
+#include "stdio.h"
+
 #include "meta_table_manager.hpp"
 
 #include "constant_mappings.hpp"
@@ -14,6 +20,7 @@ MetaTableManager::MetaTableManager() {
   _methods["columns"] = &MetaTableManager::generate_columns_table;
   _methods["chunks"] = &MetaTableManager::generate_chunks_table;
   _methods["segments"] = &MetaTableManager::generate_segments_table;
+  _methods["workload"] = &MetaTableManager::generate_workload_table;
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
@@ -116,6 +123,47 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
   }
 
   return output_table;
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
+  const auto columns = TableColumnDefinitions{{"cpu_total_used", DataType::Float, false},
+                                              {"cpu_process_used", DataType::Float, false},
+                                              {"ram_available", DataType::Int, false},
+                                              {"ram_total_used", DataType::Int, false},
+                                              {"ram_process_used", DataType::Int, false}};
+
+  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+
+#if defined(__unix__) || defined(__unix) || defined(unix)
+  // Linux
+  
+  uint32_t time_window = 1000;
+
+  FILE* stat_file;
+  stat_file = fopen("/proc/stat", "r");
+  unsigned long long total_user_ref, total_user_low_ref, total_system_ref, total_idle_ref;
+  std::fscanf(stat_file, "cpu %llu %llu %llu %llu", &total_user_ref, &total_user_low_ref, &total_system_ref, &total_idle_ref);
+  fclose(stat_file);
+  
+  std::this_thread::sleep_for(std::chrono::milliseconds(time_window));
+  
+  stat_file = fopen("/proc/stat", "r");
+  unsigned long long total_user, total_user_low, total_system, total_idle;
+  std::fscanf(stat_file, "cpu %llu %llu %llu %llu", &total_user, &total_user_low, &total_system, &total_idle);
+  fclose(stat_file);
+
+  auto used = (total_user - total_user_ref) + (total_user_low - total_user_low_ref) + (total_system - total_system_ref);
+  auto total = used + (total_idle - total_idle_ref);
+
+  float total_percent_usage = used / total;
+
+  output_table->append({total_percent_usage, 0.0, 0, 0, 0});
+  return output_table;
+
+#else 
+  // undefined OS
+  return output_table;
+#endif
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
