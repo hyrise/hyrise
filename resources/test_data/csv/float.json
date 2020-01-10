@@ -1,0 +1,8 @@
+{
+    "columns": [
+        {
+            "name": "a",
+            "type": "float"
+        }
+    ]
+}
