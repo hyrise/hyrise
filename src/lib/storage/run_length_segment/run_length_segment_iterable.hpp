@@ -52,20 +52,20 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
    public:
     explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
-                      const EndPositionIterator& end_position_it, const ChunkOffset start_position)
+                      const EndPositionIterator& end_position_it, const ChunkOffset chunk_offset)
         : _value_it{value_it},
           _null_value_it{null_value_it},
           _end_position_it{end_position_it},
           _end_position_it_begin{end_position_it},
-          _current_position{start_position} {}
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
-      ++_current_position;
+      ++_chunk_offset;
 
-      if (_current_position > *_end_position_it) {
+      if (_chunk_offset > *_end_position_it) {
         ++_value_it;
         ++_null_value_it;
         ++_end_position_it;
@@ -73,10 +73,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void decrement() {
-      --_current_position;
+      --_chunk_offset;
 
       // Make sure to only check the previous end position when we are not in the very first run.
-      if (_end_position_it != _end_position_it_begin && _current_position <= *(_end_position_it - 1)) {
+      if (_end_position_it != _end_position_it_begin && _chunk_offset <= *(_end_position_it - 1)) {
         --_value_it;
         --_null_value_it;
         --_end_position_it;
@@ -96,14 +96,14 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       }
     }
 
-    bool equal(const Iterator& other) const { return _current_position == other._current_position; }
+    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
-      return std::ptrdiff_t{other._current_position} - std::ptrdiff_t{_current_position};
+      return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
     }
 
     SegmentPosition<T> dereference() const {
-      return SegmentPosition<T>{*_value_it, *_null_value_it, _current_position};
+      return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset};
     }
 
    private:
@@ -111,7 +111,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
     EndPositionIterator _end_position_it_begin;
-    ChunkOffset _current_position;
+    ChunkOffset _chunk_offset;
   };
 
   /**

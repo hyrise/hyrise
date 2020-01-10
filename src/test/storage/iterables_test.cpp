@@ -1,3 +1,4 @@
+
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -248,6 +249,52 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
     }
 
     EXPECT_EQ(concatenate, expected_concatenation(with_position_filter));
+  });
+}
+
+class EncodedSegmentChunkOffsetTest : public IterablesTest,
+                                          public ::testing::WithParamInterface<SegmentEncodingSpec> {};
+
+auto formatter_chunk_offset = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+  auto stream = std::stringstream{};
+  stream << info.param;
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedSegmentChunkOffsetTest,
+                         ::testing::ValuesIn(all_segment_encoding_specs),
+                         formatter_chunk_offset);
+
+TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators){
+  auto test_table = table;
+  auto encoding_spec = GetParam();
+  auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
+  for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
+    if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
+      chunk_encoding_spec[column_id] = encoding_spec;
+    }
+  }
+  ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
+
+  auto chunk = test_table->get_chunk(ChunkID{0u});
+  auto base_segment = chunk->get_segment(ColumnID{0u});
+
+  resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+
+    iterable.with_iterators([&](auto begin, auto end){
+        while (begin != end) {
+          end--;
+        }
+        EXPECT_EQ(end->chunk_offset(), 0u);
+      }
+    );
   });
 }
 
