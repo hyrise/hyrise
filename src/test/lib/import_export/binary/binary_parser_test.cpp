@@ -21,7 +21,7 @@ class DISABLED_BinaryParserTest : public BinaryParserTest {}; /* #1367 */
 
 class BinaryParserMultiEncodingTest : public BinaryParserTest, public ::testing::WithParamInterface<EncodingType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto import_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -34,7 +34,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryParserMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
-                         formatter);
+                         import_binary_formatter);
 
 TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto expected_table =
@@ -64,6 +64,9 @@ TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
   EXPECT_EQ(table->chunk_count(), 2u);
+  // The binary importer finalizes all chunks
+  EXPECT_FALSE(table->get_chunk(ChunkID{0})->is_mutable());
+  EXPECT_FALSE(table->get_chunk(ChunkID{1})->is_mutable());
 }
 
 TEST_P(BinaryParserMultiEncodingTest, StringSegment) {

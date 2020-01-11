@@ -45,7 +45,7 @@ void MvccData::grow_by(size_t delta, TransactionID transaction_id, CommitID begi
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   stream << "TIDs: ";
-  for (const auto& tid : mvcc_data.tids) stream << tid << ", ";
+  for (const auto& tid : mvcc_data.tids) stream << tid.load() << ", ";
   stream << std::endl;
 
   stream << "BeginCIDs: ";

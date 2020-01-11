@@ -3,6 +3,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include "server_types.hpp"
 #include "session.hpp"
 
 namespace opossum {

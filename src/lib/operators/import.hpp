@@ -27,11 +27,12 @@ class Import : public AbstractReadOnlyOperator {
    * @param file_type      Optional. Type indicating the file format. If not present, it is guessed by the filename.
    * @param csv_meta       Optional. A specific meta config, used instead of filename + '.json'
    */
-  explicit Import(const std::string& filename, const std::string& tablename,
-                  const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const FileType type = FileType::Auto,
+  explicit Import(const std::string& init_filename, const std::string& tablename,
+                  const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const FileType file_type = FileType::Auto,
                   const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
   const std::string& name() const final;
+  const std::string filename;
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
@@ -42,16 +43,11 @@ class Import : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  // Name of the import file
-  const std::string _filename;
   // Name for adding the table to the StorageManager
   const std::string _tablename;
   const ChunkOffset _chunk_size;
-  FileType _type;
+  FileType _file_type;
   const std::optional<CsvMeta> _csv_meta;
-
-  std::shared_ptr<Table> _import();
-  std::shared_ptr<Table> _import_any_type();
 };
 
 }  // namespace opossum
