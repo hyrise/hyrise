@@ -15,6 +15,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
 
   std::string description() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   const UnionMode union_mode;

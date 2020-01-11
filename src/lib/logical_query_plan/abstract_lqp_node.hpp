@@ -146,7 +146,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  virtual const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const;
+  [[nodiscard]] virtual const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const;
 
   /**
    * Perform a deep equality check
