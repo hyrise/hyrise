@@ -7,14 +7,14 @@
 
 namespace opossum {
 
-static constexpr char filename[] = "socket_file";
-
 using AsioStreamDescriptor = boost::asio::posix::stream_descriptor;
 
 // Instead of writing data to the network device this class puts the information into a file. This allows an easier
 // verification of input and output and works independently from the network.
 class MockSocket {
  public:
+  static constexpr char filename[] = "socket_file";
+
   MockSocket() : _path(test_data_path + filename) {
     _file_descriptor = open(_path.c_str(), O_RDWR | O_CREAT | O_APPEND, 0755);
     _stream = std::make_shared<AsioStreamDescriptor>(_io_service, _file_descriptor);

@@ -247,10 +247,6 @@ enum class UseMvcc : bool { Yes = true, No = false };
 
 enum class CleanupTemporaries : bool { Yes = true, No = false };
 
-enum class HasNullTerminator : bool { Yes = true, No = false };
-
-enum class SendExecutionInfo : bool { Yes = true, No = false };
-
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
