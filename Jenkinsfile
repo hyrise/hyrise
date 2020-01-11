@@ -315,7 +315,7 @@ try {
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
-          sh "cd clang-debug && CCACHE_DEBUG=1 CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_BASEDIR=`pwd` CCACHE_NOHASHDIR=1 make -j8 && ../scripts/analyze_ccache_usage.py"
+          sh "cd clang-debug && CCACHE_DEBUG=1 CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1 CCACHE_BASEDIR=`pwd` CCACHE_NOHASHDIR=1 make -j8 && ../scripts/analyze_ccache_usage.py"
           sh "./clang-debug/hyriseTest"
           sh "./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
