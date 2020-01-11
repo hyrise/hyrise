@@ -5,6 +5,14 @@
 
 namespace opossum {
 
+TEST(SizeEstimationUtilsTest, SingleString) {
+  auto string1 = std::string{"a"};
+  auto string2 = pmr_string{"b"};
+
+  EXPECT_EQ(string_heap_size(string1), 0);
+  EXPECT_EQ(string_heap_size(string2), 0);
+}
+
 // Check early out of estimation
 TEST(SizeEstimationUtilsTest, EmptyVector) {
   const auto empty_vector = pmr_vector<pmr_string>{};
