@@ -11,8 +11,8 @@
 namespace opossum {
 
 FunctionExpression::FunctionExpression(const FunctionType function_type,
-                                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
-    : AbstractExpression(ExpressionType::Function, arguments), function_type(function_type) {
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
+    : AbstractExpression(ExpressionType::Function, init_arguments), function_type(function_type) {
   switch (function_type) {
     case FunctionType::Substring:
       Assert(arguments.size() == 3, "Substring expects 3 parameters");

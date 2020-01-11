@@ -21,7 +21,7 @@ class StorageDictionarySegmentTest : public BaseTestWithParam<VectorCompressionT
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
 
-auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
+auto dictionary_segment_test_formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   const auto vector_compression = info.param;
 
   auto stream = std::stringstream{};
@@ -35,7 +35,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          ::testing::Values(VectorCompressionType::SimdBp128,
                                            VectorCompressionType::FixedSizeByteAligned),
-                         formatter);
+                         dictionary_segment_test_formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vs_int->append(i);

@@ -49,8 +49,8 @@ class MultiSegmentIndexTest : public BaseTest {
 };
 
 // List of indexes to test
-typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndexes;
-TYPED_TEST_SUITE(MultiSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
+typedef ::testing::Types<CompositeGroupKeyIndex> MultiSegmentIndexTypes;
+TYPED_TEST_SUITE(MultiSegmentIndexTest, MultiSegmentIndexTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
