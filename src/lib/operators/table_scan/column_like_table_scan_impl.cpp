@@ -98,6 +98,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   // LIKE matches no rows
   if (match_count == 0u) {
+    ++chunk_scans_skipped;
     return;
   }
 

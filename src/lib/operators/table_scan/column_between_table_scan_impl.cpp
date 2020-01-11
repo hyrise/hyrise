@@ -105,6 +105,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
    * Early out: No entries match
    */
   if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
+    ++chunk_scans_skipped;
     return;
   }
 

@@ -109,7 +109,7 @@ class JoinIndexTest : public BaseTest {
       index_side_input = right;
     }
 
-    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join->performance_data());
+    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
       EXPECT_EQ(performance_data.chunks_scanned_with_index,
@@ -131,6 +131,22 @@ class JoinIndexTest : public BaseTest {
 typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex, GroupKeyIndex> DerivedIndices;
 
 TYPED_TEST_SUITE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+
+TYPED_TEST(JoinIndexTest, Desc) {
+  if constexpr (!std::is_same_v<TypeParam, GroupKeyIndex>) {
+    return;  // CompositeGroupKeyIndex is currently not null-aware (#1818)
+  }
+  auto join = std::make_shared<JoinIndex>(this->_table_wrapper_a, this->_table_wrapper_a, JoinMode::Inner,
+                                          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                                          std::vector<OperatorJoinPredicate>{}, IndexSide::Right);
+
+  std::cout << join->description(DescriptionMode::SingleLine) << std::endl;
+
+  std::cout << join->description(DescriptionMode::MultiLine) << std::endl;
+  join->execute();
+
+  std::cout << join->description(DescriptionMode::MultiLine) << std::endl;
+}
 
 TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,

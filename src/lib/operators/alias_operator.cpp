@@ -21,8 +21,10 @@ const std::string& AliasOperator::name() const {
 }
 
 std::string AliasOperator::description(DescriptionMode description_mode) const {
+  const auto separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   std::stringstream stream;
-  stream << "Alias [";
+
+  stream << "Alias" << separator << "[";
   stream << boost::algorithm::join(_aliases, description_mode == DescriptionMode::SingleLine ? ", " : "\n");
   stream << "]";
   return stream.str();
