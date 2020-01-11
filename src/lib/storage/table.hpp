@@ -203,7 +203,7 @@ class Table : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
  protected:
   const TableColumnDefinitions _column_definitions;

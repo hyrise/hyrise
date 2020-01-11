@@ -1,0 +1,9 @@
+table_name|chunk_id|column_id|column_name|column_data_type|distinct_value_count|encoding_type|vector_compression_type|size_in_bytes
+string|int|int|string|string|long|string_null|string_null|long
+int_int|0|0|a|int|2|null|null|176
+int_int|0|1|b|int|2|null|null|176
+int_int|1|0|a|int|1|null|null|172
+int_int|1|1|b|int|1|null|null|172
+int_int_int_null|0|0|a|int|2|RunLength|null|96
+int_int_int_null|0|1|b|int|1|Dictionary|SimdBp128|100
+int_int_int_null|0|2|c|int|2|null|null|265

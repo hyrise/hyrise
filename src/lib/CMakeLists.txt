@@ -575,6 +575,7 @@ set(
     utils/sqlite_add_indices.hpp
     utils/sqlite_wrapper.cpp
     utils/sqlite_wrapper.hpp
+    utils/size_estimation_utils.hpp
     utils/string_utils.cpp
     utils/string_utils.hpp
     utils/template_type.hpp
