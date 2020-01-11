@@ -246,7 +246,8 @@ TEST(CachePolicyTest, Iterators) {
   auto element_count = size_t{0};
   auto value_sum = size_t{0};
 
-  for (const auto& [key, value] : cache) {
+  for (auto it = cache.unsafe_begin(); it != cache.unsafe_end(); ++it) {
+    const auto& [key, value] = *it;
     ++element_count;
     value_sum += value;
     ASSERT_EQ(value, 100);

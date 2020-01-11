@@ -179,6 +179,7 @@ try {
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-debug-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./scripts/test/hyriseBenchmarkTPCC_test.py clang-debug-addr-ub-sanitizers"
             } else {
               Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
             }
@@ -205,6 +206,7 @@ try {
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./scripts/test/hyriseBenchmarkTPCC_test.py clang-release-addr-ub-sanitizers"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
             }
@@ -215,6 +217,8 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers-no-numa"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./scripts/test/hyriseBenchmarkTPCC_test.py clang-release-addr-ub-sanitizers-no-numa"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
             }
@@ -226,6 +230,7 @@ try {
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./scripts/test/hyriseBenchmarkTPCC_test.py clang-relwithdebinfo-thread-sanitizer"
             } else {
               Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
             }
@@ -236,6 +241,8 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-relwithdebinfo-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseTest clang-relwithdebinfo-thread-sanitizer-no-numa"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer-no-numa"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./scripts/test/hyriseBenchmarkTPCC_test.py clang-relwithdebinfo-thread-sanitizer-no-numa"
             } else {
               Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizerNoNuma")
             }
@@ -271,8 +278,9 @@ try {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir ./clang-release-memcheck-test"
               // If this shows a leak, try --leak-check=full, which is slower but more precise
-              sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-              sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 --verify -r 1"
+              sh "valgrind --tool=memcheck --track-origins=yes --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+              sh "valgrind --tool=memcheck --track-origins=yes --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 -r 1 --scheduler --cores 10"
+              sh "valgrind --tool=memcheck --track-origins=yes --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCC -s 1 --scheduler --cores 10"
             } else {
               Utils.markStageSkippedForConditional("memcheckReleaseTest")
             }
