@@ -56,7 +56,6 @@ class Cache {
   // Returns and refreshes the cache entry for the given query. Causes undefined behavior if the query is not in the
   // cache. This needs a write lock to be acquired as most implementation update some type of access count when
   // retrieving an entry.
-  // TODO(anyone): Change this to an assertion
   Value get_entry(const Key& query) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     return _impl->get(query);

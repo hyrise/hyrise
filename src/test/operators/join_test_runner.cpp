@@ -30,7 +30,6 @@ enum class InputSide { Left, Right };
 // input itself is already a reference Table.
 enum class InputTableType {
   // Input Tables are data
-  // TODO add stress test where these grow (both in terms of number of chunks and size of the last chunk) while the join is executed
   Data,
   // Input Tables are reference Tables with all Segments of a Chunk having the same PosList.
   SharedPosList,
