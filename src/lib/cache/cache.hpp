@@ -77,11 +77,6 @@ class Cache {
     return _impl->size();
   }
 
-  // Returns a reference to the underlying cache.
-  // TODO: Is this actually needed?
-  AbstractCacheImpl<Key, Value>& unsafe_cache() { return *_impl; }
-  const AbstractCacheImpl<Key, Value>& unsafe_cache() const { return *_impl; }
-
   // Replaces the underlying cache by creating a new object of the given cache type.
   template <class cache_t>
   void replace_cache_impl(size_t capacity) {
