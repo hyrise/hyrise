@@ -92,6 +92,7 @@ add_subdirectory(benchmarklib)
 add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(plugins)
+add_subdirectory(calibration)
 
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")
