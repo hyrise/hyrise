@@ -131,7 +131,10 @@ int main(int argc, char* argv[]) {
                           benchmark_runner->sqlite_wrapper);
   }
 
-//  SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
+  // AntiCachingPlugin laden.
+  Hyrise::get().plugin_manager.load_plugin("lib/libAntiCachingPlugin.so");
+  // Reset der Counter durchführen.
+
   benchmark_runner->run();
 //  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), "access_statistics_tpch_10s_meta.csv",
 //    "access_statistics_tpch_10s.csv");

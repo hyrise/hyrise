@@ -1,6 +1,7 @@
 #include "anti_caching_plugin.hpp"
 
 #include <iostream>
+#include <numeric>
 
 #include "hyrise.hpp"
 #include "knapsack_solver.hpp"
@@ -29,7 +30,6 @@ void AntiCachingPlugin::_evaluate_statistics() {
   std::cout << "Evaluating statistics\n";
 
   const auto timestamp = std::chrono::steady_clock::now();
-  _segments = _fetch_segments();
   auto current_statistics = _fetch_current_statistics();
   if (!current_statistics.empty()) {
     _access_statistics.emplace_back(timestamp, std::move(current_statistics));
@@ -51,7 +51,55 @@ void AntiCachingPlugin::_evaluate_statistics() {
   // values = zugriffe
   // weights = size
   // memory budget
-  // oder holen wir uns hier einfach genau die größen, die wir brauchen? Sprich ID, Zugriffe
+  // oder holen wir uns hier einfach genau die größen, die wir brauchen? Sprich ID, Zugriffe (ja)
+  _evict_segments();
+
+
+}
+
+void AntiCachingPlugin::_evict_segments() {
+  if (_access_statistics.empty()) {
+    std::cout << "No segments found.";
+    return;
+  }
+
+  const auto& access_statistics = _access_statistics.back().second;
+  // values ermitteln
+  std::vector<float> values(access_statistics.size());
+  std::vector<size_t> memory_usages(access_statistics.size());
+  for (size_t index = 0, end = access_statistics.size(); index < end; ++index) {
+    const auto& segment_info = access_statistics[index];
+    values[index] = _compute_value(segment_info);
+    memory_usages[index] = segment_info.memory_usage;
+  }
+
+  const auto selected_indices = KnapsackSolver::solve(memory_budget, values, memory_usages);
+
+  // knapsack solver ausführen
+  // printen, was evicted wurde.
+  const auto total_size = std::accumulate(memory_usages.cbegin(), memory_usages.cend(), 0);
+  const auto selected_size = std::accumulate(selected_indices.cbegin(), selected_indices.cend(), 0,
+                                             [&memory_usages](const size_t a, const size_t b) {
+                                               return memory_usages[a] + memory_usages[b];
+                                             });
+
+  std::cout << access_statistics.size() << " segments (" << total_size / 1048576 << " MB), " << (access_statistics.size() - selected_indices.size())
+            << " evicted (" << (total_size - selected_size) / 1048576 << " MB )\n";
+}
+
+float AntiCachingPlugin::_compute_value(const SegmentInfo& segment_info) {
+  // data type spielt vermutlich auch eine Rolle
+  const auto& counter = segment_info.access_counter;
+  const auto seq_access_factor = 1.0f;
+  const auto seq_increasing_access_factor = 1.2f;
+  const auto rnd_access_factor = 900'000.0f / 350'000.0f;
+  const auto accessor_access_factor = rnd_access_factor;
+  const auto dictionary_access_factor = 0.0f;
+  // Zugriffe * Zugriffsart // faktor für zugriffsart
+  return counter.accessor_access * accessor_access_factor + counter.iterator_seq_access * seq_access_factor +
+         counter.iterator_increasing_access + seq_increasing_access_factor +
+         counter.iterator_random_access * rnd_access_factor +
+         counter.other * rnd_access_factor + counter.dictionary_access * dictionary_access_factor;
 }
 
 std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> AntiCachingPlugin::_fetch_segments() {
@@ -69,14 +117,18 @@ std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> AntiCachingPlugi
   return segments;
 }
 
-std::vector<AntiCachingPlugin::SegmentIDAccessCounterPair> AntiCachingPlugin::_fetch_current_statistics() {
-  std::vector<AntiCachingPlugin::SegmentIDAccessCounterPair> segment_id_access_counter_pairs;
-  segment_id_access_counter_pairs.reserve(_segments.size());
-  for (const auto& segment_id_segment_ptr_pair : _segments) {
-    segment_id_access_counter_pairs.emplace_back(segment_id_segment_ptr_pair.first,
-                                                 segment_id_segment_ptr_pair.second->access_statistics.counter());
+std::vector<SegmentInfo> AntiCachingPlugin::_fetch_current_statistics() {
+  std::vector<SegmentInfo> access_statistics;
+  const auto segments = AntiCachingPlugin::_fetch_segments();
+  access_statistics.reserve(segments.size());
+  for (const auto& segment_id_segment_ptr_pair : segments) {
+    access_statistics.emplace_back(segment_id_segment_ptr_pair.first.table_name,
+                                   segment_id_segment_ptr_pair.first.chunk_id,
+                                   segment_id_segment_ptr_pair.first.column_id,
+                                   segment_id_segment_ptr_pair.second->estimate_memory_usage(),
+                                   segment_id_segment_ptr_pair.second->access_statistics.counter());
   }
-  return segment_id_access_counter_pairs;
+  return access_statistics;
 }
 
 void AntiCachingPlugin::export_access_statistics(const std::string& path_to_meta_data,

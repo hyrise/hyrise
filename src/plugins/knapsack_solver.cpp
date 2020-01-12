@@ -1,6 +1,8 @@
 #include "knapsack_solver.hpp"
 
+#include <limits>
 #include <numeric>
+
 
 /**
  * Simple implementation for approximating the knapsack problem. We assume, that the memory budget is so large, that in
@@ -15,13 +17,15 @@
 std::vector<size_t> KnapsackSolver::solve(const uint64_t memory_budget, const std::vector<float> values, const std::vector<uint64_t> costs) {
   DebugAssert(values.size() == costs.size(), "Vectors 'values' and 'costs' must contain the same number of elements.");
   std::vector<size_t> indices(values.size());
-  std::itoa(indices.cbegin(), indices.cend(), 0);
+  std::iota(indices.begin(), indices.end(), 0);
   std::vector<float> values_cost_ratio(values.size());
   for (size_t index = 0, end = values.size(); index < end; ++ index) {
-    values_cost_ratio[index] = values[index] / costs[index];
+    uint64_t cost = costs[index];
+    if (cost > 0) values_cost_ratio[index] = values[index] / costs[index];
+    else values_cost_ratio[index] = std::numeric_limits<uint64_t>::max();
   }
-  std::sort(indices.cbegin(), indices.cend(), [](const auto a, const auto b) {
-    return values_cost_ratio[a] < values_cost_ratio[b];
+  std::sort(indices.begin(), indices.end(), [&values_cost_ratio](const auto a, const auto b) {
+    return values_cost_ratio[a] > values_cost_ratio[b];
   });
 
   std::vector<size_t> selected_indices;
@@ -29,7 +33,7 @@ std::vector<size_t> KnapsackSolver::solve(const uint64_t memory_budget, const st
   for (const auto index : indices) {
     if (required_memory_of_selection + costs[index] < memory_budget) {
       selected_indices.emplace_back(index);
-      required_memory_of_selection += costs[index]
+      required_memory_of_selection += costs[index];
     }
   }
 
