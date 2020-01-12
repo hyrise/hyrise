@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "../base_test.hpp"
 
 #include "all_type_variant.hpp"
 #include "table_builder.hpp"
@@ -11,7 +11,9 @@ const auto table_builder_test_types = boost::hana::tuple<int32_t, std::optional<
 const auto table_builder_test_names = boost::hana::make_tuple("a", "b", "c");
 }  // namespace
 
-TEST(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
+class TableBuilderTest : public BaseTest {};
+
+TEST_F(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
   auto table_builder = TableBuilder(4, table_builder_test_types, table_builder_test_names);
   const auto table = table_builder.finish_table();
 
@@ -23,7 +25,7 @@ TEST(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
   EXPECT_EQ(table->columns_are_nullable(), std::vector({false, true, false}));
 }
 
-TEST(TableBuilderTest, AppendsRows) {
+TEST_F(TableBuilderTest, AppendsRows) {
   auto table_builder = TableBuilder(4, table_builder_test_types, table_builder_test_names);
   table_builder.append_row(42, 42.0f, "42");
   table_builder.append_row(43, std::optional<float>{}, "43");

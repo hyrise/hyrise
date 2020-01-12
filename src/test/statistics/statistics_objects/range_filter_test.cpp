@@ -261,27 +261,6 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
                                         static_cast<TypeParam>(0.38 * lowest)));
 }
 
-// Test predicates which are not supported by the range filter
-TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
-  const pmr_vector<int> values{-1000, -900, 900, 1000};
-  const auto filter = RangeFilter<int>::build_filter(values);
-
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::In, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotIn, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, {17}));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, NULL_VALUE));
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, NULL_VALUE));
-
-  // For the default filter, the following value is prunable.
-  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 1));
-  // But malformed predicates are skipped intentionally and are thus not prunable
-  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 1, NULL_VALUE));
-}
-
 TYPED_TEST(RangeFilterTest, Sliced) {
   using Ranges = std::vector<std::pair<TypeParam, TypeParam>>;
 
@@ -334,6 +313,27 @@ TYPED_TEST(RangeFilterTest, SliceWithPredicateReturnsNullptr) {
   EXPECT_NE(filter->sliced(PredicateCondition::LessThanEquals, this->_min_value), nullptr);
   EXPECT_NE(filter->sliced(PredicateCondition::GreaterThanEquals, this->_max_value), nullptr);
   EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, this->_max_value), nullptr);
+}
+
+// Test predicates which are not supported by the range filter
+TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
+  const pmr_vector<int> values{-1000, -900, 900, 1000};
+  const auto filter = RangeFilter<int>::build_filter(values);
+
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Like, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotLike, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::In, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::NotIn, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, {17}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, NULL_VALUE));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNotNull, NULL_VALUE));
+
+  // For the default filter, the following value is prunable.
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 1));
+  // But malformed predicates are skipped intentionally and are thus not prunable
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 1, NULL_VALUE));
 }
 
 }  // namespace opossum
