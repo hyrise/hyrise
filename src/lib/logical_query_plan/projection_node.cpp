@@ -46,7 +46,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::co
     });
 
     if(found_all_column_expressions) {
-      projection_lqp_constraints->push_back(constraint);
+      projection_lqp_constraints->emplace(constraint);
     } // else { save constraint for the next block - derived constraints }
   }
 
