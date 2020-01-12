@@ -1,6 +1,6 @@
 #include "string"
 #include "storage/table.hpp"
-#include "cost_calibration/calibration_table_wrapper.hpp"
+#include "calibration_table_wrapper.hpp"
 
 namespace opossum {
 class TableExport{

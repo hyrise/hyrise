@@ -9,6 +9,8 @@ add_executable(
     lqp_generator.hpp
     measurement_export.cpp
     measurement_export.hpp
+    table_export.cpp
+    table_export.hpp
     table_generator.cpp
     table_generator.hpp
 )
