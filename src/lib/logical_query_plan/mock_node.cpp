@@ -17,7 +17,7 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
       name(name),
       _column_definitions(column_definitions),
       _table_constraints(constraints) {
-  //TODO(Julian) Maybe check for validity of constraints
+  // Maybe TODO(Julian) Check the validity of given constraints
 }
 
 LQPColumnReference MockNode::get_column(const std::string& column_name) const {
@@ -142,6 +142,10 @@ const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const { ret
 
 void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
+}
+
+void MockNode::set_table_constraints(const TableConstraintDefinitions& table_constraints) {
+  _table_constraints = table_constraints;
 }
 
 size_t MockNode::_shallow_hash() const {

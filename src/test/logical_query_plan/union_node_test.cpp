@@ -13,6 +13,7 @@ namespace opossum {
 class UnionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
+
     _mock_node1 = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
@@ -81,11 +82,25 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
 TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
-  // TODO Continue here 11.01.2020
-}
 
-TEST_F(UnionNodeTest, ConstraintsUnionAll) {
+  // Add two unique constraints to _mock_node1
+  // Primary Key: a, b
+  const auto table_constraint_1 =
+      TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  // Unique: c
+  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No};
+  _mock_node1->set_table_constraints(TableConstraintDefinitions{table_constraint_1, table_constraint_2});
+  EXPECT_EQ(_mock_node1->constraints()->size(), 2);
 
+  // Test constraint forwarding
+  EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
+  EXPECT_EQ(*_union_node->constraints(), *_mock_node1->constraints());
+
+  // Negative test - input nodes with differing constraints should lead to failure
+  auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
+  mock_node1_changed->set_table_constraints(TableConstraintDefinitions{table_constraint_1});
+  _union_node->set_right_input(mock_node1_changed);
+  EXPECT_THROW(_union_node->constraints(), std::logic_error);
 }
 
 }  // namespace opossum

@@ -51,6 +51,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
+  void set_table_constraints(const TableConstraintDefinitions& table_constraints);
+
   std::optional<std::string> name;
 
  protected:

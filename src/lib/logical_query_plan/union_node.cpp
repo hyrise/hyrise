@@ -26,7 +26,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> UnionNode::constra
   case UnionMode::Positions:
     // UnionPositions merges two reference tables with the same original table(s). Any duplicate records are
     // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
-    Assert(left_input()->constraints() == right_input()->constraints(), "Input tables should have the same constraints.");
+    Assert(*left_input()->constraints() == *right_input()->constraints(), "Input tables should have the same constraints.");
     return forward_constraints();
 
   case UnionMode::All:
