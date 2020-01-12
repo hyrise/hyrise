@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "hyrise.hpp"
+#include "knapsack_solver.hpp"
 #include <storage/segment_access_statistics.hpp>
 
 namespace opossum {
