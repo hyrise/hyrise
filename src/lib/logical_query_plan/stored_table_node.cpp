@@ -98,7 +98,6 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::c
   // Extract relevant constraints from table
   const auto& table_constraints =
       Hyrise::get().storage_manager.get_table(table_name).get()->get_soft_unique_constraints();
-  lqp_constraints->reserve(table_constraints.size());
 
   for (const TableConstraintDefinition& table_constraint : table_constraints) {
     // Discard constraints which involve pruned column(s)

@@ -30,12 +30,12 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::constraints() const {
-  auto input_lqp_constraints = *left_input()->constraints();
+  auto& input_lqp_constraints = *left_input()->constraints();
   auto projection_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
   projection_lqp_constraints->reserve(node_expressions.size());
 
   // Check each input constraint for applicability in this projection node
-  const auto expressions = column_expressions();
+  const auto& expressions = column_expressions();
   const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for(const auto& constraint : input_lqp_constraints) {
@@ -50,7 +50,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::co
     } // else { save constraint for the next block - derived constraints }
   }
 
-  // TODO(anyone) Very basic equality check above. In the future, we also might want to look for
+  // TODO(anyone) Very basic check above. In the future, we also might want to look for
   //  derived column expressions, like 'column + 1', that preserve uniqueness.
   //  However, in case of derived column expressions we also have to create new, derived constraints.
   // { ... }

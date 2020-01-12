@@ -99,22 +99,14 @@ TEST_F(AliasNodeTest, ConstraintsEmpty) {
 }
 
 TEST_F(AliasNodeTest, ConstraintsForwarding) {
-  // Recreate MockNode to incorporate two constraints
+  // Add constraints to MockNode
   //  Primary Key: a, b
   const auto table_constraint_1 =
       TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   //  Unique: b
   const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
-
-  mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_node", table_constraints);
-  a = lqp_column_(mock_node->get_column("a"));
-  b = lqp_column_(mock_node->get_column("b"));
-
-  // Recreate AliasNode
-  aliases = {"x", "y"};
-  expressions = {b, a};
-  alias_node = AliasNode::make(expressions, aliases, mock_node);
+  mock_node->set_table_constraints(table_constraints);
 
   // Basic check
   const auto lqp_constraints = alias_node->constraints();

@@ -38,17 +38,6 @@ class ProjectionNodeTest : public BaseTest {
     _table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   }
 
-  void recreate_mock_node(const TableConstraintDefinitions& table_constraints_in) {
-    _mock_node =
-        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
-                       "t_a", table_constraints_in);
-    _a = _mock_node->get_column("a");
-    _b = _mock_node->get_column("b");
-    _c = _mock_node->get_column("c");
-
-    _projection_node = nullptr;
-  }
-
   TableConstraintDefinition _table_constraint_1;
   TableConstraintDefinition _table_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
@@ -92,9 +81,9 @@ TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
 
 TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
 
-  // Recreate MockNode to incorporate two constraints
+  // Add constraints to MockNode
   const auto table_constraints = TableConstraintDefinitions{_table_constraint_1, _table_constraint_2};
-  recreate_mock_node(table_constraints);
+  _mock_node->set_table_constraints(table_constraints);
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   { // Reorder columns: (a, b, c) -> (c, a, b)
@@ -120,9 +109,9 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
 
 TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
 
-  // Recreate MockNode to incorporate two constraints
+  // Add constraints to MockNode
   const auto table_constraints = TableConstraintDefinitions{_table_constraint_1, _table_constraint_2};
-  recreate_mock_node(table_constraints);
+  _mock_node->set_table_constraints(table_constraints);
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   // Test (a, b, c) -> (a, c) - no more constraints valid
@@ -150,7 +139,7 @@ TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
     const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 1);
     // In-depth check
-    const auto valid_table_constraint = _table_constraint_2;
+    const auto& valid_table_constraint = _table_constraint_2;
     check_table_constraint_representation(TableConstraintDefinitions{valid_table_constraint}, lqp_constraints);
   }
 }

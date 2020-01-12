@@ -82,18 +82,14 @@ TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions
 
 TEST_F(MockNodeTest, Constraints) {
 
+  // Add constraints to MockNode
   // Primary Key: a, b
   const auto table_constraint1 =
       TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   // Unique: c
   const auto table_constraint2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
   const auto table_constraints = TableConstraintDefinitions{table_constraint1, table_constraint2};
-
-  // Constraints can not be added afterwards, so we have to recreate the MockNode
-  _mock_node_a = MockNode::make(
-      MockNode::ColumnDefinitions{
-          {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}},
-      std::optional<std::string>{}, table_constraints);
+  _mock_node_a->set_table_constraints(table_constraints);
 
   // Basic checks
   const auto lqp_constraints_mock_node_a = _mock_node_a->constraints();
