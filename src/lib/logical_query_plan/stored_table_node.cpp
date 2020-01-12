@@ -125,7 +125,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::c
       };
 
       // Search for column expressions representing the table_constraint's ColumnIDs
-      auto constraint_column_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>>{};
+      auto constraint_column_expressions = ExpressionUnorderedSet{};
       for (const auto& column_id : table_constraint.columns) {
         const auto column_expr = get_column_expression(column_id);
         Assert(column_expr, "Did not find column expression in LQPNode");

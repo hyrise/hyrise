@@ -101,7 +101,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> MockNode::constrai
       };
 
       // Search for column expressions that represent the TableConstraintDefinitions's ColumnIDs
-      auto constraint_column_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>>{};
+      auto constraint_column_expressions = ExpressionUnorderedSet{};
       for (const auto& column_id : table_constraint.columns) {
         const auto column_expr = get_column_expression(column_id);
         Assert(column_expr, "Did not find column expression for ColumnID in LQPNode");

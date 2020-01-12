@@ -11,20 +11,17 @@ namespace opossum {
 // Defines a unique constraint on a set of abstract expressions. Can optionally be a PRIMARY KEY.
 
 struct ExpressionsConstraintDefinition final {
-  ExpressionsConstraintDefinition(std::unordered_set<std::shared_ptr<AbstractExpression>> init_column_expressions,
+  ExpressionsConstraintDefinition(ExpressionUnorderedSet init_column_expressions,
                                   const IsPrimaryKey is_primary_key)
       : column_expressions(std::move(init_column_expressions)), is_primary_key(is_primary_key) {
   }
 
-  bool operator==(const ExpressionsConstraintDefinition& other_constraint) const {
-    if (is_primary_key != other_constraint.is_primary_key) return false;
-    if (column_expressions.size() != other_constraint.column_expressions.size()) return false;
-
-    for(const auto& column_expr : column_expressions) {
-      if(!other_constraint.column_expressions.contains(column_expr)) return false;
-    }
-
-    return true;
+  bool operator==(const ExpressionsConstraintDefinition& rhs) const {
+    return column_expressions == rhs.column_expressions &&
+           is_primary_key == rhs.is_primary_key;
+  }
+  bool operator!=(const ExpressionsConstraintDefinition& rhs) const {
+    return !(rhs == *this);
   }
 
   size_t hash() const {
@@ -35,7 +32,7 @@ struct ExpressionsConstraintDefinition final {
     return hash;
   }
 
-  std::unordered_set<std::shared_ptr<AbstractExpression>> column_expressions;
+  ExpressionUnorderedSet column_expressions;
   IsPrimaryKey is_primary_key;
 };
 
