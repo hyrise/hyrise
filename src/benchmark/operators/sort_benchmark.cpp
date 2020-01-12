@@ -49,7 +49,7 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
   }
 
  protected:
-  std::shared_ptr<Table> GenerateCustomTable(const size_t row_count, const ChunkOffset chunk_size,
+  std::shared_ptr<Table> GenerateCustomTable(const ChunkOffset chunk_size, const size_t row_count,
                                              const DataType data_type = DataType::Int,
                                              const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                              const std::optional<float> null_ratio = std::nullopt) {
@@ -69,13 +69,13 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
         UseMvcc::Yes, null_ratio);
   }
 
-  void InitializeCustomTableWrapper(const size_t row_count, const ChunkOffset chunk_size,
+  void InitializeCustomTableWrapper(const ChunkOffset chunk_size, const size_t row_count,
                                     const DataType data_type = DataType::Int,
                                     const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                     const std::optional<float> null_ratio = std::nullopt) {
     // We only set _table_wrapper_a because this is the only table (currently) used in the Sort Benchmarks
     _table_wrapper_a =
-        std::make_shared<TableWrapper>(GenerateCustomTable(row_count, chunk_size, data_type, column_names, null_ratio));
+        std::make_shared<TableWrapper>(GenerateCustomTable(chunk_size, row_count, data_type, column_names, null_ratio));
     _table_wrapper_a->execute();
   }
 
