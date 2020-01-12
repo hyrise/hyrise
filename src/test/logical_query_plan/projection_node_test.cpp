@@ -20,7 +20,6 @@ namespace opossum {
 class ProjectionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_constraints = {};
     _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
@@ -30,26 +29,19 @@ class ProjectionNodeTest : public BaseTest {
 
     // SELECT c, a, b, b+c AS some_addition, a+c [...]
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
+
+    // Constraints for later use
+    // Primary Key: a, b
+    _table_constraint_1 =
+        TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+    // Unique: b
+    _table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   }
 
-  void recreate_mock_node_with_constraints(TableConstraintDefinitions table_constraints_in = {}) {
-
-    if(table_constraints_in.empty()) {
-      // Primary Key: a, b
-      const auto table_constraint_1 =
-          TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-      // Unique: b
-      const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
-
-      _table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
-    } else {
-      _table_constraints = table_constraints_in;
-    }
-
+  void recreate_mock_node(const TableConstraintDefinitions& table_constraints_in) {
     _mock_node =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}},
-                       "t_a", _table_constraints);
-
+                       "t_a", table_constraints_in);
     _a = _mock_node->get_column("a");
     _b = _mock_node->get_column("b");
     _c = _mock_node->get_column("c");
@@ -57,7 +49,8 @@ class ProjectionNodeTest : public BaseTest {
     _projection_node = nullptr;
   }
 
-  TableConstraintDefinitions _table_constraints;
+  TableConstraintDefinition _table_constraint_1;
+  TableConstraintDefinition _table_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
   LQPColumnReference _a, _b, _c;
@@ -100,7 +93,8 @@ TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
 TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
 
   // Recreate MockNode to incorporate two constraints
-  recreate_mock_node_with_constraints();
+  const auto table_constraints = TableConstraintDefinitions{_table_constraint_1, _table_constraint_2};
+  recreate_mock_node(table_constraints);
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   { // Reorder columns: (a, b, c) -> (c, a, b)
@@ -110,7 +104,7 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
     const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 2);
     // In-depth check
-    check_table_constraint_representation(_table_constraints, lqp_constraints);
+    check_table_constraint_representation(table_constraints, lqp_constraints);
   }
 
   { // Reorder columns: (a, b, c) -> (b, c, a)
@@ -120,46 +114,45 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
     const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 2);
     // In-depth check
-    check_table_constraint_representation(_table_constraints, lqp_constraints);
+    check_table_constraint_representation(table_constraints, lqp_constraints);
   }
 }
 
 TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
 
   // Recreate MockNode to incorporate two constraints
-  recreate_mock_node_with_constraints();
+  const auto table_constraints = TableConstraintDefinitions{_table_constraint_1, _table_constraint_2};
+  recreate_mock_node(table_constraints);
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
-  { // Test (a, b, c) -> (a, c) - no more constraints valid
+  // Test (a, b, c) -> (a, c) - no more constraints valid
     _projection_node = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
     EXPECT_TRUE(_projection_node->constraints()->empty());
-  }
 
-  { // Test (a, b, c) -> (c) - no more constraints valid
+   // Test (a, b, c) -> (c) - no more constraints valid
     _projection_node = ProjectionNode::make(expression_vector(_c), _mock_node);
     EXPECT_TRUE(_projection_node->constraints()->empty());
-  }
 
-  { // Test (a, b, c) -> (a, b) - all constraints remain valid
+   // Test (a, b, c) -> (a, b) - all constraints remain valid
     _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
-
+ {
     // Basic check
     const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 2);
     // In-depth check
-    check_table_constraint_representation(_table_constraints, lqp_constraints);
+    check_table_constraint_representation(table_constraints, lqp_constraints);
   }
 
-  { // Test (a, b, c) -> (b) - unique constraint for b remains valid
+   // Test (a, b, c) -> (b) - unique constraint for b remains valid
     _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
-
+  {
     // Basic check
     const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 1);
     // In-depth check
-    check_table_constraint_representation({_table_constraints.at(1)}, lqp_constraints);
+    const auto valid_table_constraint = _table_constraint_2;
+    check_table_constraint_representation(TableConstraintDefinitions{valid_table_constraint}, lqp_constraints);
   }
-
 }
 
 }  // namespace opossum

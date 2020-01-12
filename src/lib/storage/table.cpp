@@ -317,7 +317,7 @@ void Table::add_soft_unique_constraint(const TableConstraintDefinition& table_co
                         }) == _constraint_definitions.end(),
            "Another constraint on the same columns already exists.");
 
-    _constraint_definitions.push_back(table_constraint);
+    _constraint_definitions.emplace(table_constraint);
   }
 }
 
