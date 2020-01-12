@@ -50,6 +50,7 @@ void AntiCachingPlugin::_evaluate_statistics() {
   // values = zugriffe
   // weights = size
   // memory budget
+  // oder holen wir uns hier einfach genau die größen, die wir brauchen? Sprich ID, Zugriffe
 }
 
 std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> AntiCachingPlugin::_fetch_segments() {
