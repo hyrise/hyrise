@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"

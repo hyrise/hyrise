@@ -2,7 +2,6 @@
 
 #include "all_type_variant.hpp"
 #include "table_builder.hpp"
-#include "testing_assert.hpp"
 
 namespace opossum {
 

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
 #include "storage/table.hpp"

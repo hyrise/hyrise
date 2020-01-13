@@ -5,12 +5,10 @@
 #include <boost/hana/pair.hpp>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
