@@ -21,15 +21,15 @@ if [ ! -z "$output" ]; then
 	exitcode=1
 fi
 
-# Gtest's TEST() should not be used. Use TEST_F() instead.
+# Gtest's TEST() should not be used. Use TEST_F() instead. This might require additional test classes but ensures that state is cleaned up properly.
 output=$(grep -rn '^TEST(' src/test | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  TEST() should not be used as it does not clean up global state (e.g., the Hyrise singleton)./')
 if [ ! -z "$output" ]; then
 	echo "$output"
 	exitcode=1
 fi
 
-# Gtest's TEST() should not be used. Use TEST_F() instead.
-output=$(grep -rn ':\w*(?:public|protected|private)?\w+::testing::Test' src/test | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  TEST() should not be used as it does not clean up global state (e.g., the Hyrise singleton)./')
+# Tests should inherit from BaseTest or BaseTestWithParams of base_test.hpp to ensure proper destruction.
+output=$(grep -rEn ':[[:space:]]*(public|protected|private)?[[:space:]]+::testing::Test' src/test | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Tests should inherit from BaseTest\/BaseTestWithParams to ensure a proper clean up./')
 if [ ! -z "$output" ]; then
 	echo "$output"
 	exitcode=1
