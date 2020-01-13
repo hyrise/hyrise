@@ -5,7 +5,9 @@
 
 namespace opossum {
 
-TEST(SizeEstimationUtilsTest, SingleString) {
+class SizeEstimationUtilsTest : public BaseTest {};
+
+TEST_F(SizeEstimationUtilsTest, SingleString) {
   auto string1 = std::string{"a"};
   auto string2 = pmr_string{"b"};
 
@@ -14,7 +16,7 @@ TEST(SizeEstimationUtilsTest, SingleString) {
 }
 
 // Check early out of estimation
-TEST(SizeEstimationUtilsTest, EmptyVector) {
+TEST_F(SizeEstimationUtilsTest, EmptyVector) {
   const auto empty_vector = pmr_vector<pmr_string>{};
   const auto expected_size = sizeof(pmr_vector<pmr_string>);
 
@@ -23,7 +25,7 @@ TEST(SizeEstimationUtilsTest, EmptyVector) {
 }
 
 // Check that sampling works as expected when the input vector is shorter than the minimal sample size.
-TEST(SizeEstimationUtilsTest, SizeSmallerThanSampleSize) {
+TEST_F(SizeEstimationUtilsTest, SizeSmallerThanSampleSize) {
   // Small vector with strings that are stored within the initial string object (SSO)
   pmr_vector<pmr_string> small_vector{"a", "b", "c"};
 
@@ -34,7 +36,7 @@ TEST(SizeEstimationUtilsTest, SizeSmallerThanSampleSize) {
   EXPECT_EQ(string_vector_memory_usage(small_vector, MemoryUsageCalculationMode::Full), expected_size);
 }
 
-TEST(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
+TEST_F(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   constexpr auto large_string_length = size_t{500};
   constexpr auto vector_length = size_t{200};
   const auto large_string = pmr_string(large_string_length, '#');

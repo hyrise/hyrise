@@ -1,12 +1,10 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
 #include "operators/print.hpp"
 #include "storage/table.hpp"
-#include "testing_assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

@@ -11,9 +11,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "SQLParser.h"
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+
+#include "SQLParser.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "../base_test.hpp"
 
 #include "utils/format_duration.hpp"
 
@@ -6,7 +6,9 @@ using namespace std::chrono_literals;  // NOLINT
 
 namespace opossum {
 
-TEST(Format, Duration) {
+class FormatDurationTest : public BaseTest {};
+
+TEST_F(FormatDurationTest, Duration) {
   // It seems std::chrono_literals can't handle `12'345'678`, otherwise I'd use it here...
   EXPECT_EQ(format_duration(0ns), "0 ns");
   EXPECT_EQ(format_duration(11ns), "11 ns");

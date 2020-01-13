@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/product.hpp"
