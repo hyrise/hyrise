@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class TableStatisticsTest : public ::testing::Test {};
+class TableStatisticsTest : public BaseTest {};
 
 TEST_F(TableStatisticsTest, FromTable) {
   const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);

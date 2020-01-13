@@ -1,10 +1,12 @@
-#include "gtest/gtest.h"
+#include "../base_test.hpp"
 
 #include "utils/column_ids_after_pruning.hpp"
 
 namespace opossum {
 
-TEST(ColumnPruning, ColumnIDMapping) {
+class ColumnIdsAfterPruningTest : public BaseTest {};
+
+TEST_F(ColumnIdsAfterPruningTest, ColumnIDMapping) {
   auto actual_column_mapping = column_ids_after_pruning(6, {ColumnID{0}, ColumnID{1}, ColumnID{2}});
   auto expected_column_mapping = std::vector<std::optional<ColumnID>>{std::nullopt, std::nullopt, std::nullopt,
                                                                       ColumnID{0},  ColumnID{1},  ColumnID{2}};

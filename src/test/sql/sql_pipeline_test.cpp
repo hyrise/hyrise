@@ -1,13 +1,13 @@
 #include <memory>
 #include <string>
 #include <utility>
+
 #include "base_test.hpp"
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
-#include "gtest/gtest.h"
-#include "logical_query_plan/join_node.hpp"
 
+#include "logical_query_plan/join_node.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
