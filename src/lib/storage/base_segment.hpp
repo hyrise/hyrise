@@ -30,7 +30,7 @@ class BaseSegment : private Noncopyable {
   // Estimate how much memory the segment is using.
   // Might be inaccurate, especially if the segment contains non-primitive data,
   // such as strings who memory usage is implementation defined
-  virtual size_t estimate_memory_usage() const = 0;
+  virtual size_t memory_usage(const MemoryUsageCalculationMode mode) const = 0;
 
  private:
   const DataType _data_type;

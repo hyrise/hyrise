@@ -321,7 +321,7 @@ void Table::add_soft_unique_constraint(const TableConstraintDefinition& table_co
   }
 }
 
-size_t Table::estimate_memory_usage() const {
+size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
 
   const auto chunk_count = _chunks.size();
@@ -329,7 +329,7 @@ size_t Table::estimate_memory_usage() const {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
-    bytes += chunk->estimate_memory_usage();
+    bytes += chunk->memory_usage(mode);
   }
 
   for (const auto& column_definition : _column_definitions) {

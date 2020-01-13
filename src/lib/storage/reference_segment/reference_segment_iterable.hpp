@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
@@ -12,10 +13,9 @@
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 
 namespace opossum {
-
-enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 
 template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {
@@ -29,16 +29,16 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto referenced_table = _segment.referenced_table();
     const auto referenced_column_id = _segment.referenced_column_id();
 
-    const auto& pos_list = *_segment.pos_list();
+    const auto& pos_list = _segment.pos_list();
 
-    const auto begin_it = pos_list.begin();
-    const auto end_it = pos_list.end();
+    const auto begin_it = pos_list->begin();
+    const auto end_it = pos_list->end();
 
     // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
     // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
     // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
 
-    if (pos_list.references_single_chunk() && pos_list.size() > 0 && !begin_it->is_null()) {
+    if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
 
       bool functor_was_called = false;
@@ -71,12 +71,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
 
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
-            auto accessor = std::make_shared<SegmentAccessor<T, SegmentType>>(typed_segment);
+            const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+            segment_iterable.with_iterators(pos_list, functor);
 
-            auto begin = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, begin_it};
-            auto end = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, end_it};
-
-            functor(begin, end);
             functor_was_called = true;
           } else {
             Fail("Found ReferenceSegment pointing to ReferenceSegment");
@@ -94,16 +91,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       if (functor_was_called) return;
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
-      // As accessor is an AbstractSegmentAccessor here, functor only gets initialized only once, no matter how many
-      // different accessors there might be.
 
-      auto accessor =
-          std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
-
-      auto begin = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, begin_it};
-      auto end = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, end_it};
-
-      functor(begin, end);
+      const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
+      segment_iterable.with_iterators(pos_list, functor);
     } else {
       using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
 

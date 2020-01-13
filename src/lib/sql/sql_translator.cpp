@@ -30,6 +30,7 @@
 #include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -40,6 +41,7 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -186,6 +188,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_prepare(static_cast<const hsql::PrepareStatement&>(statement));
     case hsql::kStmtExecute:
       return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
+    case hsql::kStmtImport:
+      return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
 
     default:
       FailInput("SQL statement type not supported");
@@ -1204,6 +1208,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   return prepared_plan->instantiate(parameters);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
+  return ImportNode::make(import_statement.tableName, import_statement.filePath,
+                          import_type_to_file_type(import_statement.type));
+}
+
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
     const std::shared_ptr<AbstractLQPNode>& input_node) {
   if (_use_mvcc == UseMvcc::No) return input_node;
@@ -1359,7 +1369,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::StandardDeviationSample:
             return std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
-
+          case AggregateFunction::Any:
+            Fail("ANY() is an internal aggregation function.");
           case AggregateFunction::Count:
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {

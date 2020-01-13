@@ -18,9 +18,9 @@ namespace opossum {
 
 ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id,
-                                                       const PredicateCondition& predicate_condition,
+                                                       const PredicateCondition& init_predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, value{value} {
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition}, value{value} {
   Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(value),
          "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
          "ExpressionEvaluatorTableScanImpl.");
@@ -153,6 +153,12 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                                          boost::get<ColumnDataType>(value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          if (begin == end) return;
+
+          // General note: If the predicate is NotEquals, there might be two matching ranges. scan_sorted_segment
+          // combines these two ranges into a single one via boost::join(range_1, range_2).
+          // See sorted_segment_search.hpp for further details.
+
           size_t output_idx = matches.size();
 
           matches.resize(matches.size() + std::distance(begin, end));

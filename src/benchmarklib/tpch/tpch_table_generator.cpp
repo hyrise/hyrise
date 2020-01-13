@@ -10,7 +10,7 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
-#include "operators/import_binary.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
 #include "table_builder.hpp"
 #include "utils/list_directory.hpp"
@@ -134,7 +134,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
       std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
       BenchmarkTableInfo table_info;
-      table_info.table = ImportBinary::read_binary(table_file);
+      table_info.table = BinaryParser::parse(table_file);
       table_info.loaded_from_binary = true;
       table_info_by_name[table_name] = table_info;
 
