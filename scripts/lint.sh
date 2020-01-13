@@ -21,6 +21,13 @@ if [ ! -z "$output" ]; then
 	exitcode=1
 fi
 
+# Gtest's TEST() should not be used. Use TEST_F() instead.
+output=$(grep -rn '^TEST(' src/test | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  TEST() should not be used as it does not clean up global state (e.g., the Hyrise singleton)./')
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
+
 # The singleton pattern should not be manually implemented
 output=$(grep -rn 'static[^:]*instance;' --exclude singleton.hpp src | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Singletons should not be implemented manually. Have a look at src\/lib\/utils\/singleton.hpp/')
 if [ ! -z "$output" ]; then
