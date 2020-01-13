@@ -30,7 +30,7 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::constraints() const {
-  auto& input_lqp_constraints = *left_input()->constraints();
+  auto input_lqp_constraints = left_input()->constraints();
   auto projection_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
   projection_lqp_constraints->reserve(node_expressions.size());
 
@@ -38,16 +38,17 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::co
   const auto& expressions = column_expressions();
   const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
-  for(const auto& constraint : input_lqp_constraints) {
+  for (const auto& constraint : *input_lqp_constraints) {
     // Check whether column expressions have been filtered out with this node.
-    bool found_all_column_expressions = std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
-       [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-         return expressions_set.contains(constraint_column_expr);
-    });
+    bool found_all_column_expressions =
+        std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
+                    [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
+                      return expressions_set.contains(constraint_column_expr);
+                    });
 
-    if(found_all_column_expressions) {
-      projection_lqp_constraints->emplace(constraint);
-    } // else { save constraint for the next block - derived constraints }
+    if (found_all_column_expressions) {
+      projection_lqp_constraints->insert(constraint);
+    }  // else { save constraint for the next block - derived constraints }
   }
 
   // TODO(anyone) Very basic check above. In the future, we also might want to look for

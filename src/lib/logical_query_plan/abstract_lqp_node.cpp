@@ -252,7 +252,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AbstractLQPNode::c
 const std::shared_ptr<const ExpressionsConstraintDefinitions> AbstractLQPNode::forward_constraints() const {
   Assert(left_input(), "Not possible to forward constraints from empty node.");
   const auto input_constraints = left_input()->constraints();
-  const auto expressions = column_expressions();
+  const auto& expressions = column_expressions();
   if constexpr (HYRISE_DEBUG) {
     ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
     for (const auto& constraint : *input_constraints) {
