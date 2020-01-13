@@ -79,12 +79,13 @@ void AntiCachingPlugin::_evict_segments() {
   // printen, was evicted wurde.
   const auto total_size = std::accumulate(memory_usages.cbegin(), memory_usages.cend(), 0);
   const auto selected_size = std::accumulate(selected_indices.cbegin(), selected_indices.cend(), 0,
-                                             [&memory_usages](const size_t a, const size_t b) {
-                                               return memory_usages[a] + memory_usages[b];
+                                             [&memory_usages](const size_t sum, const size_t index) {
+                                               return sum + memory_usages[index];
                                              });
 
-  std::cout << access_statistics.size() << " segments (" << total_size / 1048576 << " MB), " << (access_statistics.size() - selected_indices.size())
-            << " evicted (" << (total_size - selected_size) / 1048576 << " MB )\n";
+  std::cout << access_statistics.size() << " segments (" << total_size / 1048576.0 << " MB), "
+            << (access_statistics.size() - selected_indices.size())
+            << " evicted (" << (total_size - selected_size) / 1048576.0 << " MB )\n";
 }
 
 float AntiCachingPlugin::_compute_value(const SegmentInfo& segment_info) {
@@ -110,7 +111,8 @@ std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> AntiCachingPlugi
       const auto& chunk_ptr = table_ptr->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}, column_count = static_cast<ColumnID>(chunk_ptr->column_count());
            column_id < column_count; ++column_id) {
-        segments.emplace_back(SegmentID{table_name, chunk_id, column_id}, chunk_ptr->get_segment(column_id));
+        const auto& column_name = table_ptr->column_name(column_id);
+        segments.emplace_back(SegmentID{table_name, chunk_id, column_id, column_name}, chunk_ptr->get_segment(column_id));
       }
     }
   }
@@ -122,44 +124,43 @@ std::vector<SegmentInfo> AntiCachingPlugin::_fetch_current_statistics() {
   const auto segments = AntiCachingPlugin::_fetch_segments();
   access_statistics.reserve(segments.size());
   for (const auto& segment_id_segment_ptr_pair : segments) {
-    access_statistics.emplace_back(segment_id_segment_ptr_pair.first.table_name,
-                                   segment_id_segment_ptr_pair.first.chunk_id,
-                                   segment_id_segment_ptr_pair.first.column_id,
+    access_statistics.emplace_back(segment_id_segment_ptr_pair.first,
                                    segment_id_segment_ptr_pair.second->estimate_memory_usage(),
                                    segment_id_segment_ptr_pair.second->access_statistics.counter());
   }
   return access_statistics;
 }
 
-void AntiCachingPlugin::export_access_statistics(const std::string& path_to_meta_data,
+void AntiCachingPlugin::export_access_statistics(const std::vector<TimestampSegmentInfoPair>& access_statistics,
+                                                 const std::string& path_to_meta_data,
                                                  const std::string& path_to_access_statistics) {
-//  auto entry_id = 0;
+  auto entry_id = 0;
   std::ofstream meta_file{path_to_meta_data};
   std::ofstream output_file{path_to_access_statistics};
 
-//  meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
-//  output_file << "entry_id," + AccessStrategyType::header() + "\n";
-//  // iterate over all tables, chunks and segments
-//  for (const auto&[table_name, table_ptr] : tables) {
-//    for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
-//      const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
-//      for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
-//           column_id < count; ++column_id) {
-//        const auto& column_name = table_ptr->column_name(column_id);
-//        const auto& segment_ptr = chunk_ptr->get_segment(column_id);
-//        const auto& access_statistics = segment_ptr->access_statistics();
-//
-//        meta_file << entry_id << ',' << table_name << ',' << column_name << ',' << chunk_id << ','
-//                  << segment_ptr->size() << ',' << segment_ptr->estimate_memory_usage() << '\n';
-//
-//        for (const auto& str : access_statistics._data_access_strategy.to_string()) {
-//          output_file << entry_id << ',' << str << '\n';
-//        }
-//
-//        ++entry_id;
-//      }
-//    }
-//  }
+  meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
+  output_file << "entry_id," + AccessStrategyType::header() + "\n";
+  // iterate over all tables, chunks and segments
+  for (const auto&[table_name, table_ptr] : tables) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
+      const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
+      for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
+           column_id < count; ++column_id) {
+        const auto& column_name = table_ptr->column_name(column_id);
+        const auto& segment_ptr = chunk_ptr->get_segment(column_id);
+        const auto& access_statistics = segment_ptr->access_statistics();
+
+        meta_file << entry_id << ',' << table_name << ',' << column_name << ',' << chunk_id << ','
+                  << segment_ptr->size() << ',' << segment_ptr->estimate_memory_usage() << '\n';
+
+        for (const auto& str : access_statistics._data_access_strategy.to_string()) {
+          output_file << entry_id << ',' << str << '\n';
+        }
+
+        ++entry_id;
+      }
+    }
+  }
 
   meta_file.close();
   output_file.close();

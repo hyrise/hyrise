@@ -15,25 +15,23 @@ namespace opossum {
 
 namespace anticaching {
 struct SegmentID {
-  SegmentID(const std::string& table_name, const ChunkID chunk_id, const ColumnID column_id)
-    : table_name{table_name}, chunk_id{chunk_id}, column_id{column_id} {}
+  SegmentID(const std::string& table_name, const ChunkID chunk_id, const ColumnID column_id,
+            const std::string& column_name)
+    : table_name{table_name}, chunk_id{chunk_id}, column_id{column_id}, column_name{column_name} {}
 
   std::string table_name;
   ChunkID chunk_id;
   ColumnID column_id;
+  std::string column_name;
 };
 
 struct SegmentInfo {
-  SegmentInfo(const std::string& table_name, const ChunkID chunk_id, const ColumnID column_id,
-              const size_t memory_usage, SegmentAccessCounter<uint64_t> access_counter)
-    : table_name{table_name}, chunk_id{chunk_id}, column_id{column_id}, memory_usage{memory_usage},
-      access_counter{std::move(access_counter)} {}
+  SegmentInfo(SegmentID segment_id, const size_t memory_usage, SegmentAccessCounter<uint64_t> access_counter)
+    : segment_id{std::move(segment_id)}, memory_usage{memory_usage}, access_counter{std::move(access_counter)} {}
 
-  std::string table_name;
-  ChunkID chunk_id;
-  ColumnID column_id;
-  size_t memory_usage;
-  SegmentAccessCounter<uint64_t> access_counter;
+  const SegmentID segment_id;
+  const size_t memory_usage;
+  const SegmentAccessCounter<uint64_t> access_counter;
 };
 }
 
@@ -49,15 +47,16 @@ class AntiCachingPlugin : public AbstractPlugin {
 
   void stop();
 
-  void export_access_statistics(const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
+  using TimestampSegmentInfoPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<SegmentInfo>>;
+  static void export_access_statistics(const std::vector<TimestampSegmentInfoPair>& access_statistics,
+    const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
 
   void reset_access_statistics();
 
-  size_t memory_budget = 1000ul * 1024ul * 10204ul;
+  size_t memory_budget = 50ul * 1024ul * 1024ul;
 
  private:
   using SegmentIDAccessCounterPair = std::pair<const SegmentID, const SegmentAccessCounter<uint64_t>>;
-  using TimestampSegmentInfoPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<SegmentInfo>>;
 
   static std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> _fetch_segments();
   std::vector<SegmentInfo> _fetch_current_statistics();
