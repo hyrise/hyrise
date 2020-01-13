@@ -315,8 +315,10 @@ TYPED_TEST(RangeFilterTest, SliceWithPredicateReturnsNullptr) {
   EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, this->_max_value), nullptr);
 }
 
+class RangeFilterTestUntyped : public BaseTest {};
+
 // Test predicates which are not supported by the range filter
-TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
+TEST_F(RangeFilterTestUntyped, DoNotPruneUnsupportedPredicates) {
   const pmr_vector<int> values{-1000, -900, 900, 1000};
   const auto filter = RangeFilter<int>::build_filter(values);
 
