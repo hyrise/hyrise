@@ -120,8 +120,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                 *referenced_dictionary_segment, [&](const auto& typed_segment) {
                   using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
 
-                  if constexpr (std::is_same_v<DictionarySegmentType, DictionarySegment<ColumnDataType>> ||
-                                std::is_same_v<DictionarySegmentType, FixedStringDictionarySegment<ColumnDataType>>) {
+                  if constexpr (std::is_same_v<DictionarySegmentType, DictionarySegment<ColumnDataType>>) {
                     const auto& dictionary = typed_segment.dictionary();
 
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(pos_list->size());
@@ -136,9 +135,31 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                       }
                     });
 
-                    auto compressed_attribute_vector =
-                        compress_vector(filtered_attribute_vector, VectorCompressionType::FixedSizeByteAligned, {});
+                    // auto compressed_attribute_vector =
+                    //     compress_vector(filtered_attribute_vector, VectorCompressionType::FixedSizeByteAligned, {});
+                    auto compressed_attribute_vector = std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
                     output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
+                        dictionary, std::move(compressed_attribute_vector),
+                        referenced_dictionary_segment->null_value_id());
+                  } else if constexpr (std::is_same_v<DictionarySegmentType, FixedStringDictionarySegment<ColumnDataType>>) {
+                    const auto& dictionary = typed_segment.fixed_string_dictionary();
+
+                    auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(pos_list->size());
+
+                    auto iterable = create_iterable_from_attribute_vector(typed_segment);
+                    auto chunk_offset = ChunkOffset{0};
+                    iterable.with_iterators(pos_list, [&](auto it, auto end) {
+                      while (it != end) {
+                        filtered_attribute_vector[chunk_offset] = it->value();
+                        ++it;
+                        ++chunk_offset;
+                      }
+                    });
+
+                    // auto compressed_attribute_vector =
+                    //     compress_vector(filtered_attribute_vector, VectorCompressionType::FixedSizeByteAligned, {});
+                    auto compressed_attribute_vector = std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
+                    output_segments[column_id] = std::make_shared<FixedStringDictionarySegment<ColumnDataType>>(
                         dictionary, std::move(compressed_attribute_vector),
                         referenced_dictionary_segment->null_value_id());
                   } else {
