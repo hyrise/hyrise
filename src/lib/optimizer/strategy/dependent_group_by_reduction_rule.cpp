@@ -140,12 +140,10 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
       // Gather sizes of table constraints (i.e., the number of columns) to start with the shortest constraint (either
       // unique or primary key) in hope that the shorter one will later form the group-by clause.
-      std::vector<std::pair<size_t, size_t>> constraints_position_and_size;
+      std::vector<std::pair<TableConstraintDefinition, size_t>> constraints_position_and_size;
       constraints_position_and_size.reserve(table_constraints.size());
-      auto constraint_id = size_t{0};
       for (const auto& table_constraint : table_constraints) {
-        constraints_position_and_size.emplace_back(constraint_id, table_constraint.columns.size());
-        ++constraint_id;
+        constraints_position_and_size.emplace_back(table_constraint, table_constraint.columns.size());
       }
       std::sort(constraints_position_and_size.begin(), constraints_position_and_size.end(),
                 [](const auto& left, const auto& right) { return left.second < right.second; });
@@ -156,8 +154,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       // reduced the group-by list. The reason is that there is no advantage in a second reduction if the first
       // reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
       // place, we can ignore the remaining constraints.
-      for (const auto& [position, size] : constraints_position_and_size) {
-        const auto& table_constraint = table_constraints[position];
+      for (const auto& [table_constraint, size] : constraints_position_and_size) {
         group_by_list_changed |= reduce_group_by_columns_for_constraint(table_constraint, group_by_columns,
                                                                         stored_table_node, aggregate_node);
         if (group_by_list_changed) break;
