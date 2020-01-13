@@ -214,7 +214,7 @@ try {
         }, clangReleaseAddrUBSanitizersNoNuma: {
           stage("clang-release:addr-ub-sanitizers w/o NUMA") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-release-addr-ub-sanitizers-no-numa"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
@@ -238,7 +238,7 @@ try {
         }, clangRelWithDebInfoThreadSanitizerNoNuma: {
           stage("clang-relwithdebinfo:thread-sanitizer w/o NUMA") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-relwithdebinfo-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCC -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-relwithdebinfo-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH hyriseBenchmarkTPCC -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseTest clang-relwithdebinfo-thread-sanitizer-no-numa"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer-no-numa"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer-no-numa/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
