@@ -140,7 +140,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                     output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
                         dictionary, std::move(compressed_attribute_vector),
                         referenced_dictionary_segment->null_value_id());
-                  } else if constexpr (std::is_same_v<DictionarySegmentType,
+                  } else if constexpr (std::is_same_v<DictionarySegmentType,  // NOLINT
                                                       FixedStringDictionarySegment<ColumnDataType>>) {
                     const auto& dictionary = typed_segment.fixed_string_dictionary();
 
