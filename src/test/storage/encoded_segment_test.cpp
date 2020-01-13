@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"

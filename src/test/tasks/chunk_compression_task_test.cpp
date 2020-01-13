@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
