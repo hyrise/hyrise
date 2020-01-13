@@ -135,13 +135,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                       }
                     });
 
-                    // auto compressed_attribute_vector =
-                    //     compress_vector(filtered_attribute_vector, VectorCompressionType::FixedSizeByteAligned, {});
-                    auto compressed_attribute_vector = std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
+                    auto compressed_attribute_vector =
+                        std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
                     output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
                         dictionary, std::move(compressed_attribute_vector),
                         referenced_dictionary_segment->null_value_id());
-                  } else if constexpr (std::is_same_v<DictionarySegmentType, FixedStringDictionarySegment<ColumnDataType>>) {
+                  } else if constexpr (std::is_same_v<DictionarySegmentType,
+                                                      FixedStringDictionarySegment<ColumnDataType>>) {
                     const auto& dictionary = typed_segment.fixed_string_dictionary();
 
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(pos_list->size());
@@ -156,9 +156,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                       }
                     });
 
-                    // auto compressed_attribute_vector =
-                    //     compress_vector(filtered_attribute_vector, VectorCompressionType::FixedSizeByteAligned, {});
-                    auto compressed_attribute_vector = std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
+                    auto compressed_attribute_vector =
+                        std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
                     output_segments[column_id] = std::make_shared<FixedStringDictionarySegment<ColumnDataType>>(
                         dictionary, std::move(compressed_attribute_vector),
                         referenced_dictionary_segment->null_value_id());

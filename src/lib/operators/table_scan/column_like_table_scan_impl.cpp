@@ -121,23 +121,22 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   dictionary_matches.reserve(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
-    #ifdef __clang__
-    // For the loop through the dictionary, we want to use const auto& for DictionaySegments. However,
-    // FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
-    // error about a potential copy for the loop value.
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wrange-loop-analysis"
-    #endif
-
+#ifdef __clang__
+// For the loop through the dictionary, we want to use const auto& for DictionaySegments. However,
+// FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
+// error about a potential copy for the loop value.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrange-loop-analysis"
+#endif
     for (const auto& value : dictionary) {
       const auto matches = matcher(value);
       count += static_cast<size_t>(matches);
       dictionary_matches.push_back(matches);
     }
 
-    #ifdef __clang__
-    #pragma clang diagnostic pop
-    #endif
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   });
 
   return result;
