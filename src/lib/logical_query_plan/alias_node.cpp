@@ -33,10 +33,6 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expres
   return node_expressions;
 }
 
-const std::shared_ptr<const ExpressionsConstraintDefinitions> AliasNode::constraints() const {
-  return forward_constraints();
-}
-
 size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {
