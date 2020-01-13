@@ -70,7 +70,7 @@ class OperatorsExportTest : public BaseTest {
 
 class OperatorsExportMultiFileTypeTest : public OperatorsExportTest, public ::testing::WithParamInterface<FileType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<FileType> info) {
+auto export_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -81,7 +81,7 @@ auto formatter = [](const ::testing::TestParamInfo<FileType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Binary), formatter);
+                         ::testing::Values(FileType::Csv, FileType::Binary), export_test_formatter);
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
   auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);

@@ -126,7 +126,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
       encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   const auto empty_dictionary_segment =
       std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(empty_compressed_segment);
-  const auto empty_memory_usage = empty_dictionary_segment->estimate_memory_usage();
+  const auto empty_memory_usage = empty_dictionary_segment->memory_usage();
 
   vs_str->append("A");
   vs_str->append("B");
@@ -140,8 +140,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   static constexpr auto size_of_dictionary = 3u;
 
   // We have to substract 1 since the empty FixedStringSegment actually contains one null terminator
-  EXPECT_EQ(dictionary_segment->estimate_memory_usage(),
-            empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
+  EXPECT_EQ(dictionary_segment->memory_usage(), empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 
 }  // namespace opossum
