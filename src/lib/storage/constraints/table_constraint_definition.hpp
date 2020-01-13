@@ -12,20 +12,15 @@ enum class IsPrimaryKey : bool { Yes = true, No = false };
 // For tables, constraints are currently NOT enforced.
 
 struct TableConstraintDefinition final {
-
   TableConstraintDefinition() = default;
 
   TableConstraintDefinition(std::unordered_set<ColumnID> column_ids, const IsPrimaryKey is_primary_key)
-      : columns(std::move(column_ids)), is_primary_key(is_primary_key) {
-  }
+      : columns(std::move(column_ids)), is_primary_key(is_primary_key) {}
 
   bool operator==(const TableConstraintDefinition& rhs) const {
-    return columns == rhs.columns &&
-           is_primary_key == rhs.is_primary_key;
+    return columns == rhs.columns && is_primary_key == rhs.is_primary_key;
   }
-  bool operator!=(const TableConstraintDefinition& rhs) const {
-    return !(rhs == *this);
-  }
+  bool operator!=(const TableConstraintDefinition& rhs) const { return !(rhs == *this); }
 
   size_t hash() const {
     auto hash = boost::hash_value(is_primary_key);
@@ -52,6 +47,7 @@ struct TableConstraintDefinitionEqual final {
   }
 };
 
-using TableConstraintDefinitions = std::unordered_set<TableConstraintDefinition, TableConstraintDefinitionHash, TableConstraintDefinitionEqual>;
+using TableConstraintDefinitions =
+    std::unordered_set<TableConstraintDefinition, TableConstraintDefinitionHash, TableConstraintDefinitionEqual>;
 
 }  // namespace opossum

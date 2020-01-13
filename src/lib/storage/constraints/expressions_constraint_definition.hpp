@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <functional>
+#include <vector>
 #include "expression/abstract_expression.hpp"
 #include "storage/constraints/table_constraint_definition.hpp"
 #include "types.hpp"
@@ -11,18 +11,13 @@ namespace opossum {
 // Defines a unique constraint on a set of abstract expressions. Can optionally be a PRIMARY KEY.
 
 struct ExpressionsConstraintDefinition final {
-  ExpressionsConstraintDefinition(ExpressionUnorderedSet init_column_expressions,
-                                  const IsPrimaryKey is_primary_key)
-      : column_expressions(std::move(init_column_expressions)), is_primary_key(is_primary_key) {
-  }
+  ExpressionsConstraintDefinition(ExpressionUnorderedSet init_column_expressions, const IsPrimaryKey is_primary_key)
+      : column_expressions(std::move(init_column_expressions)), is_primary_key(is_primary_key) {}
 
   bool operator==(const ExpressionsConstraintDefinition& rhs) const {
-    return column_expressions == rhs.column_expressions &&
-           is_primary_key == rhs.is_primary_key;
+    return column_expressions == rhs.column_expressions && is_primary_key == rhs.is_primary_key;
   }
-  bool operator!=(const ExpressionsConstraintDefinition& rhs) const {
-    return !(rhs == *this);
-  }
+  bool operator!=(const ExpressionsConstraintDefinition& rhs) const { return !(rhs == *this); }
 
   size_t hash() const {
     auto hash = boost::hash_value(is_primary_key);
@@ -49,8 +44,8 @@ struct ExpressionsConstraintDefinitionEqual final {
   }
 };
 
-using ExpressionsConstraintDefinitions = std::unordered_set<ExpressionsConstraintDefinition,
-                                                            ExpressionsConstraintDefinitionHash,
-                                                            ExpressionsConstraintDefinitionEqual>;
+using ExpressionsConstraintDefinitions =
+    std::unordered_set<ExpressionsConstraintDefinition, ExpressionsConstraintDefinitionHash,
+                       ExpressionsConstraintDefinitionEqual>;
 
 }  // namespace opossum

@@ -23,20 +23,21 @@ const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::column_expres
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> UnionNode::constraints() const {
   switch (union_mode) {
-  case UnionMode::Positions:
-    // UnionPositions merges two reference tables with the same original table(s). Any duplicate records are
-    // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
-    Assert(*left_input()->constraints() == *right_input()->constraints(), "Input tables should have the same constraints.");
-    return forward_constraints();
+    case UnionMode::Positions:
+      // UnionPositions merges two reference tables with the same original table(s). Any duplicate records are
+      // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
+      Assert(*left_input()->constraints() == *right_input()->constraints(),
+             "Input tables should have the same constraints.");
+      return forward_constraints();
 
-  case UnionMode::All:
-    // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.
-    // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
-    // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous nodes.
-    [[fallthrough]];
+    case UnionMode::All:
+      // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.
+      // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
+      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous nodes.
+      [[fallthrough]];
 
-  default:
-    return std::make_shared<ExpressionsConstraintDefinitions>();
+    default:
+      return std::make_shared<ExpressionsConstraintDefinitions>();
   }
 }
 

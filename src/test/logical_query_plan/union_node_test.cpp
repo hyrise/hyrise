@@ -13,7 +13,6 @@ namespace opossum {
 class UnionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-
     _mock_node1 = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
@@ -82,11 +81,9 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
 TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
-
   // Add two unique constraints to _mock_node1
   // Primary Key: a, b
-  const auto table_constraint_1 =
-      TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   // Unique: c
   const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No};
   _mock_node1->set_table_constraints(TableConstraintDefinitions{table_constraint_1, table_constraint_2});

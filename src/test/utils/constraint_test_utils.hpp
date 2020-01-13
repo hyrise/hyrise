@@ -10,8 +10,9 @@ namespace opossum {
 /**
  * Checks, whether all given TableConstraintDefinition objects are represented in ExpressionsConstraintDefinitions.
  */
-static void check_table_constraint_representation(const TableConstraintDefinitions& table_constraints,
-                                           const std::shared_ptr<const ExpressionsConstraintDefinitions> lqp_constraints) {
+static void check_table_constraint_representation(
+    const TableConstraintDefinitions& table_constraints,
+    const std::shared_ptr<const ExpressionsConstraintDefinitions> lqp_constraints) {
   for (const auto& table_constraint : table_constraints) {
     const auto matching_lqp_constraint = std::find_if(
         lqp_constraints->cbegin(), lqp_constraints->cend(), [&](const ExpressionsConstraintDefinition& lqp_constraint) {

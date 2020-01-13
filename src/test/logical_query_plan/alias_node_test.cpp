@@ -7,8 +7,8 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/table_wrapper.hpp"
 #include "testing_assert.hpp"
-#include "utils/load_table.hpp"
 #include "utils/constraint_test_utils.hpp"
+#include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
@@ -104,7 +104,8 @@ TEST_F(AliasNodeTest, ConstraintsForwarding) {
   const auto table_constraint_1 =
       TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
   //  Unique: b
-  const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+  const auto table_constraint_2 =
+      TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
   mock_node->set_table_constraints(table_constraints);
 

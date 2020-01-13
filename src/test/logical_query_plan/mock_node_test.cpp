@@ -81,7 +81,6 @@ TEST_F(MockNodeTest, Copy) {
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 
 TEST_F(MockNodeTest, Constraints) {
-
   // Add constraints to MockNode
   // Primary Key: a, b
   const auto table_constraint1 =
@@ -100,13 +99,12 @@ TEST_F(MockNodeTest, Constraints) {
   check_table_constraint_representation(table_constraints, lqp_constraints_mock_node_a);
 
   // Also check whether StoredTableNode is referenced correctly by column expressions
-  for(const auto& lqp_constraint : *lqp_constraints_mock_node_a) {
-    for(const auto& expr : lqp_constraint.column_expressions) {
+  for (const auto& lqp_constraint : *lqp_constraints_mock_node_a) {
+    for (const auto& expr : lqp_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
       EXPECT_EQ(column_expr->column_reference.original_node(), _mock_node_a);
     }
   }
-
 }
 
 //TEST_F(MockNodeTest, ConstraintsPrunedColumns) {}

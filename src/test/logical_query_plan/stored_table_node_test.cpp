@@ -165,13 +165,12 @@ TEST_F(StoredTableNodeTest, Constraints) {
   check_table_constraint_representation(table_constraints, lqp_constraints);
 
   // Also check whether StoredTableNode is referenced correctly by column expressions
-  for(const auto& lqp_constraint : *lqp_constraints) {
-    for(const auto& expr : lqp_constraint.column_expressions) {
+  for (const auto& lqp_constraint : *lqp_constraints) {
+    for (const auto& expr : lqp_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
       EXPECT_EQ(column_expr->column_reference.original_node(), _stored_table_node);
     }
   }
-
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
@@ -199,7 +198,8 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
-  EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->get_soft_unique_constraints().empty());
+  EXPECT_TRUE(
+      Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->get_soft_unique_constraints().empty());
   EXPECT_TRUE(_stored_table_node->constraints()->empty());
 }
 
