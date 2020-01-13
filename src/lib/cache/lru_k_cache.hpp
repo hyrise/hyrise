@@ -118,6 +118,8 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     ++_access_counter;
 
     auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "key not present");
+
     Handle handle = it->second;
     LRUKCacheEntry& entry = (*handle);
     entry.add_history_entry(_access_counter);
