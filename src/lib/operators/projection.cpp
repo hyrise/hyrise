@@ -120,11 +120,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                 *referenced_dictionary_segment, [&](const auto& typed_segment) {
                   using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
 
-                  // Write new attribute vector containing the positions given from the input_pos_list and compress it
-                  [[maybe_unused]] auto create_filtered_and_compressed_pos_list = [](const auto& input_segment,
-                                                                                     const auto& input_pos_list) {
+                  // Write new a attribute vector containing the positions given from the input_pos_list
+                  [[maybe_unused]] auto materialized_filtered_attribute_vector = [](const auto& dictionary_segment,
+                                                                              const auto& input_pos_list) {
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
-                    auto iterable = create_iterable_from_attribute_vector(input_segment);
+                    auto iterable = create_iterable_from_attribute_vector(dictionary_segment);
                     auto chunk_offset = ChunkOffset{0};
                     iterable.with_iterators(input_pos_list, [&](auto it, auto end) {
                       while (it != end) {
@@ -133,21 +133,25 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                         ++chunk_offset;
                       }
                     });
+                    // As dictionary segments expect a BaseCompressedVector, we use a max-width (i.e., uint32_t)
+                    // FixedByteAlignedVector as we can directly forward the new attribute vector.
                     return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
                   };
 
+                  // Clang tidy complains about a cloned branch.
+                  // clang-format off
                   if constexpr (std::is_same_v<DictionarySegmentType, DictionarySegment<ColumnDataType>>) {
                     const auto compressed_attribute_vector =
-                        create_filtered_and_compressed_pos_list(typed_segment, pos_list);
+                        materialized_filtered_attribute_vector(typed_segment, pos_list);
                     const auto& dictionary = typed_segment.dictionary();
 
                     output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
                         dictionary, std::move(compressed_attribute_vector),
                         referenced_dictionary_segment->null_value_id());
-                  } else if constexpr (std::is_same_v<DictionarySegmentType,  // NOLINT
+                  } else if constexpr (std::is_same_v<DictionarySegmentType,  // NOLINT - lint.sh wants {} on same line
                                                       FixedStringDictionarySegment<ColumnDataType>>) {
                     const auto compressed_attribute_vector =
-                        create_filtered_and_compressed_pos_list(typed_segment, pos_list);
+                        materialized_filtered_attribute_vector(typed_segment, pos_list);
                     const auto& dictionary = typed_segment.fixed_string_dictionary();
 
                     output_segments[column_id] = std::make_shared<FixedStringDictionarySegment<ColumnDataType>>(
@@ -156,6 +160,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                   } else {
                     Fail("Referenced segment was dynamically casted to BaseDictionarySegment, but resolve failed");
                   }
+                  // clang-format on
                 });
           } else {
             // End of dictionary segment shortcut - handle all other referenced segments and ReferenceSegments that
