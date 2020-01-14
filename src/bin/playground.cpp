@@ -7,7 +7,6 @@
 #include <scheduler/operator_task.hpp>
 #include <cost_calibration/lqp_generator.hpp>
 #include <operators/table_wrapper.hpp>
-#include <operators/export_csv.hpp>
 #include "types.hpp"
 #include "hyrise.hpp"
 
@@ -63,11 +62,6 @@ int main() {
 
   for (const auto &table : tables){
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
-
-    auto table_wrapper = std::make_shared<TableWrapper>(table->get_table());
-    table_wrapper->execute();
-    auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, "./test.csv");
-    ex->execute();
 
     const auto lqps = lqp_generator.generate(OperatorType::TableScan, table);
 
