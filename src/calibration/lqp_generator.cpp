@@ -69,12 +69,16 @@ namespace opossum {
           case DataType::Null:
             break;
           case DataType::String:
-            // TODO check how to do different selectivity levels
           {
+            // TODO check distribution
             auto column = stored_table_node->get_column(column_names.at(column_id));
-            generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, "yo"), stored_table_node));
-            break;
-          }
+            const int step_size = static_cast<int>(table->get_table()->row_count() / selectivity_resolution);
+            for (int selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) {
+              // TODO make string generation properly (ie. check whether 'like' operator produces these results)
+              const auto predicate_string =  SyntheticTableGenerator::generate_value<std::string>(selectivity_step*step_size);
+              generated_lpqs.emplace_back(PredicateNode::make(like_(column, predicate_string), stored_table_node));
+            }
+          } break;
           case DataType::Int:
           case DataType::Long:
           case DataType::Double:

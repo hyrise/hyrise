@@ -13,6 +13,13 @@
 using namespace opossum;  // NOLINT
 
 int main() {
+
+  for (int i = 0; i < 100; i++) {
+    std::cout << opossum::SyntheticTableGenerator::generate_value<std::string>(i) << std::endl;
+  }
+
+
+
   auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
           {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String, DataType::Null},
           {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
