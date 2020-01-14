@@ -2,7 +2,7 @@
 
 #include "base_test.hpp"
 
-#include "export_export/file_type.hpp"
+#include "import_export/file_type.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/exort_node.hpp"
 
