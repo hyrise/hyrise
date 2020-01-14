@@ -173,15 +173,17 @@ TYPED_TEST(CountingQuotientFilterTypedTest, HashBits) {
   }
 }
 
+class CountingQuotientFilterTest : public BaseTest {};
+
 // Floating point types are not supported.
-TEST(CountingQuotientFilterTest, FloatingPointTypesUnsupported) {
+TEST_F(CountingQuotientFilterTest, FloatingPointTypesUnsupported) {
   EXPECT_NO_THROW(CountingQuotientFilter<int>(4, 4));
 
   EXPECT_THROW(CountingQuotientFilter<float>(4, 4), std::logic_error);
   EXPECT_THROW(CountingQuotientFilter<double>(4, 4), std::logic_error);
 }
 
-TEST(CountingQuotientFilterTest, QuotientSizes) {
+TEST_F(CountingQuotientFilterTest, QuotientSizes) {
   // Quotient needs to be larger than zero.
   EXPECT_THROW(CountingQuotientFilter<int>(0, 4), std::logic_error);
 

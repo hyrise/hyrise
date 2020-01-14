@@ -1,9 +1,9 @@
 #include <cstdlib>
 #include <string>
 
+#include <boost/variant.hpp>
+
 #include "base_test.hpp"
-#include "boost/variant.hpp"
-#include "gtest/gtest.h"
 
 #include "types.hpp"
 

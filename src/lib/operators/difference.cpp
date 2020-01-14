@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/lexical_cast.hpp>
+
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
 

@@ -1,4 +1,3 @@
-#include <gtest/gtest.h>
 #include "base_test.hpp"
 
 namespace opossum {

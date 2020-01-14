@@ -144,7 +144,7 @@ class Chunk : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class CreatePreparedPlanNodeTest : public ::testing::Test {
+class CreatePreparedPlanNodeTest : public BaseTest {
  public:
   void SetUp() override {
     lqp = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));

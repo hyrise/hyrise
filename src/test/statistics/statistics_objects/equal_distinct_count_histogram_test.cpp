@@ -3,7 +3,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"

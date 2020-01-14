@@ -1,9 +1,8 @@
 #include <memory>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
+
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
