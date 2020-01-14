@@ -1,6 +1,8 @@
+#pragma once
+
 #include <string>
 
-#include "abstract_lqp_node.hpp"
+#include "base_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "import_export/file_type.hpp"
 #include "storage/table_column_definition.hpp"
@@ -10,9 +12,8 @@ namespace opossum {
 /**
  * This node type represents the COPY TO management command.
  */
-class ExportNode : public EnableMakeForLQPNode<ExportNode>, public AbstractLQPNode {
+class ExportNode : public EnableMakeForLQPNode<ExportNode>, public BaseNonQueryNode {
  public:
-  //ExportNode(const std::string& init_tablename, const std::string& init_filename, const FileType init_filetype, const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
   ExportNode(const std::string& init_tablename, const std::string& init_filename, const FileType init_filetype);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;

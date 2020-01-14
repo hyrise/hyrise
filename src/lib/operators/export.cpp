@@ -10,7 +10,10 @@
 namespace opossum {
 
 Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type)
-    : AbstractReadOnlyOperator(OperatorType::Export, in), _filename(filename), _type(type) {}
+    : AbstractReadOnlyOperator(OperatorType::Export, in), _filename(filename), _type(type) {
+      if (_file_type == FileType::Auto) {
+        _file_type = file_type_from_filename(filename);
+    }
 
 const std::string& Export::name() const {
   static const auto name = std::string{"Export"};
@@ -38,7 +41,8 @@ std::shared_ptr<const Table> Export::_on_execute() {
       Fail("Export: Exporting file type is not supported.");
   }
 
-  return _input_left->get_output();
+  // must match ExportNode::column_expressions
+  return nullptr;
 }
 
 std::shared_ptr<AbstractOperator> Export::_on_deep_copy(

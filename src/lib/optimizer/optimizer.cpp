@@ -249,6 +249,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
         case LQPNodeType::DropTable:
+        case LQPNodeType::Export:
         case LQPNodeType::Import:
         case LQPNodeType::StaticTable:
         case LQPNodeType::StoredTable:
@@ -260,7 +261,6 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
         case LQPNodeType::Delete:
-        case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
         case LQPNodeType::Predicate:

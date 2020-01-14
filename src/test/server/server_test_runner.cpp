@@ -1,5 +1,6 @@
 #include <pqxx/pqxx>
 
+#include <fstream>
 #include <future>
 #include <thread>
 
@@ -40,6 +41,8 @@ class ServerTestRunner : public BaseTest {
     // Give the server time to shut down gracefully before force-closing the socket it's working on
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
+
+    std::remove(_export_filename.c_str());
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
@@ -48,6 +51,7 @@ class ServerTestRunner : public BaseTest {
   std::string _connection_string;
 
   std::shared_ptr<Table> _table_a;
+  const std::string _export_filename = test_data_path + "server_test.bin";
 };
 
 TEST_F(ServerTestRunner, TestSimpleSelect) {
@@ -100,6 +104,20 @@ TEST_F(ServerTestRunner, TestCopyImport) {
 
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("another_table"));
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
+}
+
+TEST_F(ServerTestRunner, TestCopyExport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  Hyrise::get().storage_manager.add_table("yet_another_table", _table_a);
+
+  const auto result = transaction.exec("COPY table_a TO '" + _export_filename + "';");
+  std::ifstream file{_export_filename};
+  EXPECT_TRUE(file.good());
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {

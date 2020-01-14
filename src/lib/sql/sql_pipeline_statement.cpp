@@ -11,6 +11,7 @@
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -309,6 +310,12 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
       AssertInput(file.good(), "There is no file '" + import->filename + "'.");
       break;
     }
+    /*case OperatorType::Export: {
+      const auto export_table = std::dynamic_pointer_cast<Export>(pqp);
+      AssertInput(storage_manager.has_table(export_table->tablename),
+                  "There is no table '" + export_table->tablename + "'.");
+      break;
+    }*/
     default:
       break;
   }
