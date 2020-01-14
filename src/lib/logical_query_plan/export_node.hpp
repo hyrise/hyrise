@@ -12,7 +12,8 @@ namespace opossum {
  */
 class ExportNode : public EnableMakeForLQPNode<ExportNode>, public AbstractLQPNode {
  public:
-  ExportNode(const std::string& init_tablename, const std::string& init_filename, const FileType init_filetype, const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+  //ExportNode(const std::string& init_tablename, const std::string& init_filename, const FileType init_filetype, const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+  ExportNode(const std::string& init_tablename, const std::string& init_filename, const FileType init_filetype);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

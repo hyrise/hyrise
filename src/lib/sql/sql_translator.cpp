@@ -1222,7 +1222,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
   auto export_table_node = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
   // TODO: forward expressions?
   return ExportNode::make(export_statement.tableName, export_statement.filePath,
-                          import_type_to_file_type(export_statement.type), export_table_node->column_expressions());
+                          import_type_to_file_type(export_statement.type)
+                          //, export_table_node->column_expressions());
+                          );
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

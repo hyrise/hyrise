@@ -9,9 +9,16 @@
 
 namespace opossum {
 
-ExportNode::ExportNode(const std::string& init_tablename, const std::string& init_filename,
+/*ExportNode::ExportNode(const std::string& init_tablename, const std::string& init_filename,
                        const FileType init_filetype, const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractLQPNode(LQPNodeType::Export, expressions),
+      tablename(init_tablename),
+      filename(init_filename),
+      filetype(init_filetype) {} */
+
+ExportNode::ExportNode(const std::string& init_tablename, const std::string& init_filename,
+                       const FileType init_filetype)
+    : AbstractLQPNode(LQPNodeType::Export),
       tablename(init_tablename),
       filename(init_filename),
       filetype(init_filetype) {}
@@ -30,12 +37,14 @@ size_t ExportNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> ExportNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return ExportNode::make(tablename, filename, filetype, expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping));
+  //return ExportNode::make(tablename, filename, filetype, expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping));
+  return ExportNode::make(tablename, filename, filetype);
 }
 
 bool ExportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& export_node = static_cast<const ExportNode&>(rhs);
-  return expressions_equal_to_expressions_in_different_lqp(node_expressions, export_node.node_expressions, node_mapping) && tablename == export_node.tablename && filename == export_node.filename && filetype == export_node.filetype;
+  // return expressions_equal_to_expressions_in_different_lqp(node_expressions, export_node.node_expressions, node_mapping) &&
+  return tablename == export_node.tablename && filename == export_node.filename && filetype == export_node.filetype;
 }
 
 }  // namespace opossum
