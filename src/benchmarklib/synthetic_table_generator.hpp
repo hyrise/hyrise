@@ -58,6 +58,20 @@ struct ColumnDataDistribution {
   double max_value;
 };
 
+struct ColumnSpecification {
+  ColumnSpecification(const ColumnDataDistribution& data_distribution, const DataType& data_type,
+                   const std::optional<std::string> name = std::nullopt, const std::optional<float> null_ratio = std::nullopt)
+      : data_distribution(data_distribution), data_type(data_type), name(name), null_ratio(null_ratio) {}
+
+  const ColumnDataDistribution data_distribution;
+
+  const DataType data_type;
+
+  const std::optional<std::string> name;
+
+  const std::optional<float> null_ratio;
+};
+
 class SyntheticTableGenerator {
  public:
   // Simple table generation, mainly for simple tests
