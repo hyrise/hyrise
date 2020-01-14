@@ -50,29 +50,22 @@ namespace opossum {
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
-  auto table =
-      generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                     {num_columns, {DataType::Int}}, num_rows, chunk_size,
-                     std::vector<SegmentEncodingSpec>(num_columns, segment_encoding_spec), std::nullopt, UseMvcc::No);
+  ColumnSpecification column_specification = {{ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)},
+                                              DataType::Int,
+                                              std::nullopt,
+                                              std::nullopt};
+  auto table = generate_table({num_columns, column_specification}, num_rows, chunk_size,
+                              std::vector<SegmentEncodingSpec>(num_columns, segment_encoding_spec), UseMvcc::No);
 
   return table;
 }
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
-    const std::vector<ColumnDataDistribution>& column_data_distributions,
-    const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::optional<ChunkEncodingSpec>& segment_encoding_specs,
-    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc,
-    const std::optional<float> null_ratio) {
+    const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows, const ChunkOffset chunk_size,
+    const std::optional<ChunkEncodingSpec>& segment_encoding_specs, const UseMvcc use_mvcc) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
-  Assert(column_data_distributions.size() == column_data_types.size(),
-         "Length of value distributions needs to equal length of column data types.");
-  if (column_names) {
-    Assert(column_data_distributions.size() == column_names->size(),
-           "When set, the number of column names needs to equal number of value distributions.");
-  }
   if (segment_encoding_specs) {
-    Assert(column_data_distributions.size() == segment_encoding_specs->size(),
+    Assert(column_specifications.size() == segment_encoding_specs->size(),
            "Length of value distributions needs to equal length of column encodings.");
   }
 
@@ -83,15 +76,17 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   const auto previous_scheduler = Hyrise::get().scheduler();
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  const auto num_columns = column_data_distributions.size();
+  const auto num_columns = column_specifications.size();
   const auto num_chunks =
       static_cast<size_t>(std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size)));
 
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    const auto column_name = column_names ? (*column_names)[column_id] : "column_" + std::to_string(column_id + 1);
-    column_definitions.emplace_back(column_name, column_data_types[column_id], false);
+    const auto column_name = column_specifications[column_id].name.has_value()
+                                 ? column_specifications[column_id].name.value()
+                                 : "column_" + std::to_string(column_id + 1);
+    column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
@@ -103,12 +98,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {
-        resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
+        resolve_data_type(column_specifications[column_index].data_type, [&](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
           std::vector<int> values;
           values.reserve(chunk_size);
-          const auto& column_data_distribution = column_data_distributions[column_index];
+          const auto& column_data_distribution = column_specifications[column_index].data_distribution;
 
           std::random_device random_device;
           auto pseudorandom_engine = std::mt19937{};
@@ -156,10 +151,10 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
            * constructor in a regular interval based on the null_ratio with true.
            */
-          if (null_ratio.has_value()) {
+          if (column_specifications[column_index].null_ratio.has_value()) {
             null_values = std::vector<bool>(chunk_size, false);
 
-            const double step_size = 1.0 / null_ratio.value();
+            const double step_size = 1.0 / column_specifications[column_index].null_ratio.value();
             double current_row_offset = 0.0;
             while (current_row_offset < chunk_size) {
               null_values[static_cast<const int>(current_row_offset)] = true;
@@ -183,7 +178,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
 
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
-          if (null_ratio.has_value()) {
+          if (column_specifications[column_index].null_ratio.has_value()) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
                 create_typed_segment_values<ColumnDataType>(values), null_values);
           } else {
@@ -194,8 +189,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           if (!segment_encoding_specs) {
             segments[column_index] = value_segment;
           } else {
-            segments[column_index] = ChunkEncoder::encode_segment(value_segment, column_data_types[column_index],
-                                                                  segment_encoding_specs->at(column_index));
+            segments[column_index] = ChunkEncoder::encode_segment(
+                value_segment, column_specifications[column_index].data_type, segment_encoding_specs->at(column_index));
           }
         });
       }));
