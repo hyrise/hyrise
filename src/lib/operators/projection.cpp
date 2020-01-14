@@ -120,7 +120,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                 *referenced_dictionary_segment, [&](const auto& typed_segment) {
                   using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
 
-                  // Write new a attribute vector containing the positions given from the input_pos_list
+                  // Write new a attribute vector containing only positions given from the input_pos_list.
                   [[maybe_unused]] auto materialize_filtered_attribute_vector = [](const auto& dictionary_segment,
                                                                                    const auto& input_pos_list) {
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
@@ -133,8 +133,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                         ++chunk_offset;
                       }
                     });
-                    // As dictionary segments expect a BaseCompressedVector, we use a max-width (i.e., uint32_t)
-                    // FixedByteAlignedVector as we can directly forward the new attribute vector.
+                    // DictionarySegments take BaseCompressedVectors, not an std::vector<ValueId> for the attribute
+                    // vector. But the latter can be wrapped into a FixedSizeByteAligned<uint32_t> without copying.
                     return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
                   };
 
