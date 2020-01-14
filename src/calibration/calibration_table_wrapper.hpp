@@ -21,8 +21,6 @@ class CalibrationTableWrapper {
 
   const std::string &get_name() const;
 
-  void export_table_meta_data(const std::string& filepath) const;
-
 private:
   const std::shared_ptr<Table> _table;
   const std::string _name;

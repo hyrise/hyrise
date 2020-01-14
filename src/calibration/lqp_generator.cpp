@@ -1,6 +1,10 @@
 #include <expression/expression_functional.hpp>
 #include "logical_query_plan/predicate_node.hpp"
 #include "lqp_generator.hpp"
+
+#include "expression/expression_functional.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+
 #include "calibration_table_wrapper.hpp"
 
 using namespace opossum::expression_functional;

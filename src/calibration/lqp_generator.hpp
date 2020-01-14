@@ -1,7 +1,11 @@
 #include "string"
 #include <logical_query_plan/abstract_lqp_node.hpp>
 #include "logical_query_plan/stored_table_node.hpp"
-#include "cost_calibration/calibration_table_wrapper.hpp"
+#include <string>
+
+#include "calibration_table_wrapper.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 
 namespace opossum{
 class LQPGenerator {
