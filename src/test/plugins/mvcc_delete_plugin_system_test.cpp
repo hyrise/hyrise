@@ -3,7 +3,6 @@
 #include <thread>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"
@@ -62,7 +61,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * Updates a single row to make it invalid in its chunk. Data modification is not involved, so the row gets reinserted
    * at the end of the table.
    * - Updates start at position 220 (INITIAL_UPDATE_OFFSET), so the first chunk stays untouched.
-   * - Updates stop just before the end of Chunk 3, so that it is "fresh" and not cleaned up.
+   * - Updates stop just before the end of Chunk 3 (at position 598), so that it is "fresh" and not cleaned up.
    */
   void update_next_row() {
     if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) return;  // -> if (_counter == 598)...
@@ -175,7 +174,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
     }
     // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
+    ASSERT_GT(attempts_remaining, -1);
   }
 
   // (6) Verify the correctness of the logical delete operation.
@@ -212,7 +211,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     }
 
     // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
+    ASSERT_GT(attempts_remaining, -1);
   }
 
   // (9) Check after conditions
@@ -239,13 +238,23 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (11) Prepare clean-up of chunk 3
   {
+    // Wait for the previous updates to finish
+    {
+      auto attempts_remaining = max_attempts;
+      while (_counter < INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+      // Check that we have not given up
+      ASSERT_GT(attempts_remaining, -1);
+    }
+
     // Kill a couple of commit IDs so that criterion 2 is fulfilled and chunk 3 is eligible for clean-up, too.
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
       // To increase the global _last_commit_id, we need to execute a transaction with read-write operators
       // We perform some dummy updates so that the table is unmodified and the validation routine does not complain
       auto pipeline =
-          SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = 0"}}
+          SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = -1"}}
               .create_pipeline();
 
       // Execute and verify update transaction
@@ -266,7 +275,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
     }
     // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
+    ASSERT_GT(attempts_remaining, -1);
   }
 
   // (13) Verify the correctness of the logical delete operation.

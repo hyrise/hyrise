@@ -78,8 +78,10 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
     empty_encoded_segment = encode_and_compress_segment(empty_original_segment, data_type, encoding_spec);
   }
 
-  EXPECT_GT(copied_segment->estimate_memory_usage(), empty_encoded_segment->estimate_memory_usage());
-  const auto estimated_usage = copied_segment->estimate_memory_usage() - empty_encoded_segment->estimate_memory_usage();
+  const auto copied_segment_size = copied_segment->memory_usage(MemoryUsageCalculationMode::Full);
+  const auto empty_segment_size = empty_encoded_segment->memory_usage(MemoryUsageCalculationMode::Full);
+  EXPECT_GT(copied_segment_size, empty_segment_size);
+  const auto estimated_usage = copied_segment_size - empty_segment_size;
 
   EXPECT_EQ(resource.allocated, estimated_usage);
 }

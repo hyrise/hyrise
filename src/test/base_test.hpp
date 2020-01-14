@@ -5,9 +5,10 @@
 #include <utility>
 #include <vector>
 
+#include "gtest/gtest.h"
+
 #include "cache/cache.hpp"
 #include "expression/expression_functional.hpp"
-#include "gtest/gtest.h"
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"

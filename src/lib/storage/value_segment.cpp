@@ -11,6 +11,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -126,14 +127,23 @@ std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const Polymor
 }
 
 template <typename T>
-size_t ValueSegment<T>::estimate_memory_usage() const {
-  size_t null_values_size = 0u;
+size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+  auto null_value_vector_size = size_t{0};
   if (_null_values) {
-    null_values_size = _null_values->capacity() % CHAR_BIT ? _null_values->capacity() / CHAR_BIT + 1
-                                                           : _null_values->capacity() / CHAR_BIT;
+    null_value_vector_size = _null_values->capacity() * sizeof(bool);
+    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
+    null_value_vector_size =
+        sizeof(_null_values) +
+        (_null_values->capacity() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
   }
 
-  return sizeof(*this) + _values.capacity() * sizeof(T) + null_values_size;
+  const auto common_elements_size = sizeof(*this) + null_value_vector_size;
+
+  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+    return common_elements_size + string_vector_memory_usage(_values, mode);
+  }
+
+  return common_elements_size + _values.capacity() * sizeof(T);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);

@@ -1,7 +1,7 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "utils/assert.hpp"
 
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
@@ -13,8 +13,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
 
 namespace opossum {
 

@@ -1,13 +1,13 @@
 #include <memory>
 #include <string>
 #include <utility>
+
 #include "base_test.hpp"
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
-#include "gtest/gtest.h"
-#include "logical_query_plan/join_node.hpp"
 
+#include "logical_query_plan/join_node.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
@@ -17,21 +17,6 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
-
-namespace {
-// This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
-// could break if something is changed within the optimizer.
-// It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
-// predicate and then optimized to a Join.
-std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
-    [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
-      if (node->type != opossum::LQPNodeType::Join) return false;
-      if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
-        return join_node->join_mode == opossum::JoinMode::Cross;
-      }
-      return false;
-    };
-}  // namespace
 
 namespace opossum {
 

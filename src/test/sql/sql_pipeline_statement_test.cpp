@@ -1,11 +1,11 @@
 #include <memory>
 #include <string>
 #include <utility>
+
 #include "base_test.hpp"
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
-#include "gtest/gtest.h"
 
 #include "cache/cache.hpp"
 #include "hyrise.hpp"

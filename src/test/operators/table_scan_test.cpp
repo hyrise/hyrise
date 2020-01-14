@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -259,14 +258,14 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> _int_int_partly_compressed;
 };
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto table_scan_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::FrameOfReference),
-                         formatter);
+                         table_scan_test_formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);

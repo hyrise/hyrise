@@ -17,7 +17,7 @@ MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   stream << "TIDs: ";
-  for (const auto& tid : mvcc_data.tids) stream << tid << ", ";
+  for (const auto& tid : mvcc_data.tids) stream << tid.load() << ", ";
   stream << std::endl;
 
   stream << "BeginCIDs: ";

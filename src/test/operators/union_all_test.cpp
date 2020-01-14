@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/pqp_column_expression.hpp"
 #include "operators/projection.hpp"

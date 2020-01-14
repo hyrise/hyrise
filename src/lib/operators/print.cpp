@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/lexical_cast.hpp>
+
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/base_encoded_segment.hpp"

@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class OperatorsJoinNestedLoopTest : public ::testing::Test {
+class OperatorsJoinNestedLoopTest : public BaseTest {
  public:
   void SetUp() override {
     const auto dummy_table =

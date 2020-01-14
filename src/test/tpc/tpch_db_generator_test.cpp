@@ -1,13 +1,14 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "hyrise.hpp"
-#include "testing_assert.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-TEST(TPCHTableGeneratorTest, SmallScaleFactor) {
+class TPCHTableGeneratorTest : public BaseTest {};
+
+TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
   /**
    * Check whether the data that TPCHTableGenerator generates with a scale factor of 0.01 is the exact same that dbgen
    *     generates
@@ -50,7 +51,7 @@ TEST(TPCHTableGeneratorTest, SmallScaleFactor) {
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_002 + "region.tbl", chunk_size));
 }
 
-TEST(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
+TEST_F(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
   /**
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
@@ -66,7 +67,7 @@ TEST(TPCHTableGeneratorTest, RowCountsMediumScaleFactor) {
   EXPECT_EQ(table_info_by_name.at("region").table->row_count(), std::floor(5));
 }
 
-TEST(TpchTableGeneratorTest, GenerateAndStore) {
+TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("part"));
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("supplier"));
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("partsupp"));

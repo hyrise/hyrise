@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "../base_test.hpp"
 
 #include "optimizer/join_ordering/enumerate_ccp.hpp"
 
@@ -18,11 +18,13 @@ bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& l
 
 namespace opossum {
 
+class EnumerateCcpTest : public BaseTest {};
+
 /**
  * Test that the correct CCPs are enumerated for _very_ simple graphs and that they are enumerated in the correct order
  */
 
-TEST(EnumerateCcpTest, Simple) {
+TEST_F(EnumerateCcpTest, Simple) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}};
 
   const auto pairs = EnumerateCcp{2, edges}();  // NOLINT - {}()
@@ -32,7 +34,7 @@ TEST(EnumerateCcpTest, Simple) {
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b01ul, 0b10ul)));
 }
 
-TEST(EnumerateCcpTest, Chain) {
+TEST_F(EnumerateCcpTest, Chain) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {1, 2}, {2, 3}};
 
   const auto pairs = EnumerateCcp{4, edges}();  // NOLINT - {}()
@@ -51,7 +53,7 @@ TEST(EnumerateCcpTest, Chain) {
   EXPECT_TRUE(equals(pairs[9], std::make_pair(0b0111ul, 0b1000ul)));
 }
 
-TEST(EnumerateCcpTest, Ring) {
+TEST_F(EnumerateCcpTest, Ring) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {1, 2}, {2, 0}};
 
   const auto pairs = EnumerateCcp{3, edges}();  // NOLINT - {}()
@@ -66,7 +68,7 @@ TEST(EnumerateCcpTest, Ring) {
   EXPECT_TRUE(equals(pairs[5], std::make_pair(0b101ul, 0b010ul)));
 }
 
-TEST(EnumerateCcpTest, Star) {
+TEST_F(EnumerateCcpTest, Star) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {0, 2}, {0, 3}};
 
   const auto pairs = EnumerateCcp{4, edges}();  // NOLINT - {}()
@@ -87,7 +89,7 @@ TEST(EnumerateCcpTest, Star) {
   EXPECT_TRUE(equals(pairs[11], std::make_pair(0b1101ul, 0b0010ul)));
 }
 
-TEST(EnumerateCcpTest, Clique) {
+TEST_F(EnumerateCcpTest, Clique) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {0, 2}, {0, 3}, {1, 2}, {2, 3}, {1, 3}};
 
   const auto pairs = EnumerateCcp{4, edges}();  // NOLINT - {}()
@@ -120,7 +122,7 @@ TEST(EnumerateCcpTest, Clique) {
   EXPECT_TRUE(equals(pairs[24], std::make_pair(0b1101ul, 0b0010ul)));
 }
 
-TEST(EnumerateCcpTest, RandomJoinGraphShape) {
+TEST_F(EnumerateCcpTest, RandomJoinGraphShape) {
   /**
    *    0
    *   / \
@@ -150,7 +152,7 @@ TEST(EnumerateCcpTest, RandomJoinGraphShape) {
   EXPECT_TRUE(equals(pairs[14], std::make_pair(0b01011ul, 0b00100ul)));
 }
 
-TEST(EnumerateCcpTest, ArbitraryVertexNumbering) {
+TEST_F(EnumerateCcpTest, ArbitraryVertexNumbering) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 2}, {2, 1}};
 
   const auto pairs = EnumerateCcp{3, edges}();  // NOLINT - {}()

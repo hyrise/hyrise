@@ -5,7 +5,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -15,7 +15,7 @@
 namespace opossum {
 
 // Base Class for tests that should be run with various encodings
-class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
+class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path,
                                                   ChunkOffset max_chunk_size = Chunk::DEFAULT_SIZE) {
@@ -34,7 +34,7 @@ class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
   }
 };
 
-inline std::string all_segment_encoding_specs_formatter(
+inline std::string all_segment_encoding_specs_formatter( // TODO use everywhere
     const testing::TestParamInfo<EncodingTest::ParamType>& param_info) {
   std::stringstream stringstream;
   stringstream << param_info.param;

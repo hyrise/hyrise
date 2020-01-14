@@ -1,10 +1,10 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "lossless_cast.hpp"
 
 namespace opossum {
 
-class LosslessCastTest : public ::testing::Test {};
+class LosslessCastTest : public BaseTest {};
 
 TEST_F(LosslessCastTest, IdenticalSourceAndTarget) {
   EXPECT_EQ(lossless_cast<int32_t>(int32_t(5)), int32_t(5));

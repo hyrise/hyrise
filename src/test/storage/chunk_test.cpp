@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"

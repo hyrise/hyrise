@@ -164,7 +164,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
           }
 
           // reset data
-          data.clear();
+          data = decltype(data){};
           data.reserve(chunk_size);
         }
         row_index++;

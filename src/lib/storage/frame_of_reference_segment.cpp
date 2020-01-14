@@ -60,11 +60,10 @@ std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator
 }
 
 template <typename T, typename U>
-size_t FrameOfReferenceSegment<T, U>::estimate_memory_usage() const {
-  const auto null_values_size =
-      _null_values.capacity() % CHAR_BIT ? _null_values.capacity() / CHAR_BIT + 1 : _null_values.capacity() / CHAR_BIT;
-
-  return sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() + null_values_size;
+size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode) const {
+  // MemoryUsageCalculationMode ignored since full calculation is efficient.
+  return sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() +
+         _null_values.capacity() / CHAR_BIT;
 }
 
 template <typename T, typename U>
