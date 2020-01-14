@@ -121,7 +121,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                   using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
 
                   // Write new attribute vector containing the positions given from the input_pos_list and compress it
-                  [[maybe unused]] auto create_filtered_and_compressed_pos_list = [](const auto& input_segment,
+                  [[maybe_unused]] auto create_filtered_and_compressed_pos_list = [](const auto& input_segment,
                                                                                      const auto& input_pos_list) {
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
                     auto iterable = create_iterable_from_attribute_vector(input_segment);
