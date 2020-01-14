@@ -68,7 +68,8 @@ class SyntheticTableGenerator {
       const std::vector<ColumnDataDistribution>& column_data_distributions,
       const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
       const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
-      const std::optional<std::vector<std::string>>& column_names = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+      const std::optional<std::vector<std::string>>& column_names = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No,
+      const std::optional<float> null_ratio = std::nullopt);
 
   /**
     * Function to create a typed value from an integer. The data generation creates integers with the requested

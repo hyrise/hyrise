@@ -62,7 +62,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
     const std::optional<ChunkEncodingSpec>& segment_encoding_specs,
-    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
+    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc,
+    const std::optional<float> null_ratio) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
          "Length of value distributions needs to equal length of column data types.");
@@ -149,6 +150,23 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             }
           }
 
+          std::vector<bool> null_values;
+
+          /**
+           * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
+           * constructor in a regular interval based on the null_ratio with true.
+           */
+          if (null_ratio.has_value()) {
+            null_values = std::vector<bool>(chunk_size, false);
+
+            const double step_size = 1.0 / null_ratio.value();
+            double current_row_offset = 0.0;
+            while (current_row_offset < chunk_size) {
+              null_values[static_cast<const int>(current_row_offset)] = true;
+              current_row_offset += step_size;
+            }
+          }
+
           /**
           * Generate values according to distribution. We first add the given min and max values of that column to avoid
           * early exists via dictionary pruning (no matter which values are later searched, the local segment
@@ -164,8 +182,14 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             values.push_back(generate_value_by_distribution_type());
           }
 
-          auto value_segment =
-              std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
+          std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
+          if (null_ratio.has_value()) {
+            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
+                create_typed_segment_values<ColumnDataType>(values), null_values);
+          } else {
+            value_segment =
+                std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
+          }
 
           if (!segment_encoding_specs) {
             segments[column_index] = value_segment;
