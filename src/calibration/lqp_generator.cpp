@@ -1,3 +1,5 @@
+#include <expression/expression_functional.hpp>
+#include "logical_query_plan/predicate_node.hpp"
 #include "lqp_generator.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -67,12 +69,15 @@ namespace opossum {
           case DataType::Null:
             break;
           case DataType::String:
-            // TODO check how to do different selectivity levels
           {
+            // TODO check distribution
             auto column = stored_table_node->get_column(column_names.at(column_id));
-            generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, "yo"), stored_table_node));
-            break;
-          }
+            const int step_size = static_cast<int>(table->get_table()->row_count() / selectivity_resolution);
+            for (int selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) {
+              const auto predicate_string =  SyntheticTableGenerator::generate_value<pmr_string>(selectivity_step*step_size);
+              generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, predicate_string), stored_table_node));
+            }
+          } break;
           case DataType::Int:
           case DataType::Long:
           case DataType::Double:
@@ -98,7 +103,8 @@ namespace opossum {
                                                       const double lower_bound_predicate, const double upper_bound,
                                                       std::shared_ptr<StoredTableNode> table,
                                                       const std::string &column_name) const {
-         const int reference_scan_resolution = 10;
+
+      const int reference_scan_resolution = 10;
 
       auto column = table->get_column(column_name);
       auto get_predicate = [column,lower_bound_predicate](const std::shared_ptr<AbstractLQPNode>& base)
