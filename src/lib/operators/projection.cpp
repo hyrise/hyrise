@@ -121,7 +121,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                   using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
 
                   // Write new attribute vector containing the positions given from the input_pos_list and compress it
-                  auto create_filtered_and_compressed_pos_list = [](const auto& input_segment, const auto& input_pos_list) {
+                  [[maybe unused]] auto create_filtered_and_compressed_pos_list = [](const auto& input_segment,
+                                                                                     const auto& input_pos_list) {
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
                     auto iterable = create_iterable_from_attribute_vector(input_segment);
                     auto chunk_offset = ChunkOffset{0};
@@ -136,7 +137,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                   };
 
                   if constexpr (std::is_same_v<DictionarySegmentType, DictionarySegment<ColumnDataType>>) {
-                    const auto compressed_attribute_vector = create_filtered_and_compressed_pos_list(typed_segment, pos_list);
+                    const auto compressed_attribute_vector =
+                        create_filtered_and_compressed_pos_list(typed_segment, pos_list);
                     const auto& dictionary = typed_segment.dictionary();
 
                     output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
@@ -144,7 +146,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                         referenced_dictionary_segment->null_value_id());
                   } else if constexpr (std::is_same_v<DictionarySegmentType,  // NOLINT
                                                       FixedStringDictionarySegment<ColumnDataType>>) {
-                    const auto compressed_attribute_vector = create_filtered_and_compressed_pos_list(typed_segment, pos_list);
+                    const auto compressed_attribute_vector =
+                        create_filtered_and_compressed_pos_list(typed_segment, pos_list);
                     const auto& dictionary = typed_segment.fixed_string_dictionary();
 
                     output_segments[column_id] = std::make_shared<FixedStringDictionarySegment<ColumnDataType>>(
