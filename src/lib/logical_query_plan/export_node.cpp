@@ -3,7 +3,6 @@
 #include <sstream>
 
 #include "constant_mappings.hpp"
-// #include "static_table_node.hpp"
 
 namespace opossum {
 
@@ -16,7 +15,7 @@ ExportNode::ExportNode(const std::string& init_tablename, const std::string& ini
 
 std::string ExportNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
-  stream << "[Exort] Name: '" << tablename << "'";
+  stream << "[Export] Name: '" << tablename << "'";
   return stream.str();
 }
 

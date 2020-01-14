@@ -4,7 +4,7 @@
 
 #include "import_export/file_type.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/exort_node.hpp"
+#include "logical_query_plan/export_node.hpp"
 
 namespace opossum {
 
@@ -15,7 +15,7 @@ class ExportNodeTest : public BaseTest {
   std::shared_ptr<ExportNode> _export_node;
 };
 
-TEST_F(ExportNodeTest, Description) { EXPECT_EQ(_Export_node->description(), "[Export] Name: 'tablename'"); }
+TEST_F(ExportNodeTest, Description) { EXPECT_EQ(_export_node->description(), "[Export] Name: 'tablename'"); }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
   const auto another_export_node = ExportNode::make("tablename", "filename", FileType::Csv);
