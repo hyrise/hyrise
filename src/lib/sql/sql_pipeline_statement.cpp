@@ -143,14 +143,15 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   std::cout << *unoptimized_lqp << std::endl;
   
-  std::cout << "LQP CHACHE IS ----------------------------__________---------- " << lqp_cache->size() << std::endl;
+  std::cout << "LQP CACHE SIZE IS -------------------------------------- " << lqp_cache->size() << std::endl;
 
   for (auto &e : *lqp_cache) {
-    std::cout << "ONE ENTRYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYy " << e.first << std::endl;
+    std::cout << "KEYYYYYY " << e.first << std::endl;
+    std::cout << "VALUEEEE " << *(e.second) << std::endl;
   }
   
   if (lqp_cache) {
-    if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp)) {
+    if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp->hash())) {
       const auto plan = (*cached_plan)->lqp;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
@@ -170,7 +171,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
 
-  auto optimized_without_values = _optimizer->optimize(std::move(unoptimized_lqp));
+  // There has to be a better way to copy an unoptimized LQP
+  auto ulqp = unoptimized_lqp->deep_copy();
+  auto optimized_without_values = _optimizer->optimize(std::move(ulqp));
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
@@ -181,7 +184,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache) {
-    lqp_cache->set(unoptimized_lqp, prepared_plan);
+    lqp_cache->set(unoptimized_lqp->hash(), prepared_plan);
   }
 
   _optimized_logical_plan = prepared_plan->instantiate(values);
