@@ -1,9 +1,14 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import GradientBoostingRegressor
 import sys
 import matplotlib.pyplot as plt
 import joblib
+import numpy as np
 
 
 # store model and metadata about the model in one object (there might be better ways, tbd)
@@ -69,18 +74,42 @@ def preprocess_data(data):
     return ohe_data
 
 
-def train_model(train_data):
+def train_model(train_data, type):
     # not for now, since there are no compression types in the data
     #ohe_data = preprocess_data(train_data)
 
     ohe_data = train_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
     ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
-    print('train ' + ohe_data.columns)
     y = ohe_data[['RUNTIME_NS']]
     X = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
-    model = LinearRegression().fit(X, y)
+    if type == 'linear':
+        model = LinearRegression().fit(X, y)
+    elif type == 'ridge':
+        model = Ridge(alpha=1000).fit(X,y)
+    elif type == 'lasso':
+        model = Lasso(alpha=1000).fit(X,y)
+    elif type == 'boost':
+        model = GradientBoostingRegressor(loss='huber').fit(X,y)
 
     return model
+
+
+def generate_model_plot(model, test_data, method, data_type, encoding):
+    ohe_data = test_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
+    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
+    real_y = ohe_data[['RUNTIME_NS']]
+    ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
+    pred_y = model.predict(ohe_data)
+
+    print('{}_{}_{}'.format(data_type, encoding, method))
+    plt.scatter(real_y, pred_y, c='b')
+    plt.title('{}_{}_{}'.format(data_type, encoding, method))
+    plt.ylim([0, max(np.amax(pred_y), np.amax(real_y.to_numpy())) + 10000000])
+    plt.xlim([0, max(np.amax(pred_y), np.amax(real_y.to_numpy())) + 10000000])
+    plt.xlabel("Real Time")
+    plt.ylabel("Predicted Time")
+    output_path = 'prediction/{}_{}_{}'.format(method, data_type, encoding)
+    plt.savefig(output_path, bbox_inches='tight')
 
 
 def generate_output(costmodel, test_data, out):
@@ -94,7 +123,6 @@ def generate_output(costmodel, test_data, out):
     ohe_data['DATA_TYPE_long'] = 0
     ohe_data['DATA_TYPE_string'] = 0
     ohe_data['DATA_TYPE_double'] = 0
-    print('predict ' + ohe_data.columns)
     y_true = ohe_data[['RUNTIME_NS']]
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
     y_pred = costmodel.model.predict(ohe_data)
@@ -118,25 +146,17 @@ def calculate_error(y_true, y_pred):
     mse = mean_squared_error(y_true, y_pred, squared=False)
     return mse
 
-
-def plot_predictions(data_true, data_pred, out):
-    # plot the true values against the predicted values to visualize the model's accuracies
-    fig = plt.figure()
-    # plot here
-
-    return fig
-
-
 def main():
     tpch = [arg for arg in sys.argv[1:5]]
     test_data = import_test_data(tpch)
     train_data = import_train_data([arg for arg in sys.argv[5:8]])
+    model_types = ['linear', 'lasso', 'ridge', 'boost']
     # TODO: maybe order the test and trainings data in the same way (does it influence the regression?)
     output_folder = sys.argv[8]
     cost_models = []
 
     # also keep one 'universal' model in case some thing comes up, that we don't have a specific model for?
-    u_cost_model = train_model(train_data)
+    u_cost_model = train_model(train_data, 'linear')
     cost_models.append(CostModel(u_cost_model, data_type='None', encoding='None'))
     # make models for different scan operators and combinations of encodings/compressions
     test_data_splitted = []
@@ -144,28 +164,35 @@ def main():
     for encoding in train_data['ENCODING'].unique():
         for data_type in train_data['DATA_TYPE'].unique():
 
-            model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
-            model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
+            model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['DATA_TYPE'] == data_type) &
+                                                                                (train_data['ENCODING'] == encoding)])
+            # model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
+            #model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
             # if we have train data for this combination, train a model
 
+            dfilename = 'data/splitted_{}_{}_train_data.sav'.format(data_type, encoding)
+            joblib.dump(model_test_data, dfilename)
+
             if not model_train_data.empty:
-                model = train_model(model_train_data)
+                for type in model_types:
+                    model = train_model(model_train_data, type)
 
-                cost_model = CostModel(model, encoding, data_type)
-                cost_models.append(cost_model)
-                filename = 'models/{}_{}_model.sav'.format(data_type, encoding)
-                joblib.dump(model, filename)
+                    #cost_model = CostModel(model, encoding, data_type)
+                    #cost_models.append(cost_model)
+                    filename = 'models/splitted_{}_{}_{}_model.sav'.format(type, data_type, encoding)
+                    joblib.dump(model, filename)
+                    generate_model_plot(model, model_test_data, type, data_type, encoding)
 
-                # if there is no test_data for this combination, continue
-                if model_test_data.empty:
-                    continue
-                test_data_splitted.append(model_test_data)
+                    # if there is no test_data for this combination, continue
+                    if model_test_data.empty:
+                        continue
+                    test_data_splitted.append(model_test_data)
 
-                # predict the runtime for the queries of the test_data that correspond to this model and calculate the
-                # error (SSE)
-                #model_mse = generate_output(cost_model, model_test_data, output_folder)
+                    # predict the runtime for the queries of the test_data that correspond to this model and calculate the
+                    # error (SSE)
+                    #model_mse = generate_output(cost_model, model_test_data, output_folder)
 
-            # if we don't have a model for this combination but test_data, add the test_data to test on the universal model
+                # if we don't have a model for this combination but test_data, add the test_data to test on the universal model
             if not model_test_data.empty:
                 leftover_test_data.append(model_test_data)
 
