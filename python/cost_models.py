@@ -153,7 +153,7 @@ def main():
 
                 cost_model = CostModel(model, encoding, data_type)
                 cost_models.append(cost_model)
-                filename = 'models/{}{}_model.sav'.format(data_type, encoding)
+                filename = 'models/{}_{}_model.sav'.format(data_type, encoding)
                 joblib.dump(model, filename)
 
                 # if there is no test_data for this combination, continue
