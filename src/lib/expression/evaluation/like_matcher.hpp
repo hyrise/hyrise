@@ -87,14 +87,14 @@ class LikeMatcher {
   void resolve(const bool invert_results, const Functor& functor) const {
     if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
       const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const auto& string) -> bool {
         if (string.size() < prefix.size()) return invert_results;
         return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
       });
 
     } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
       const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const auto& string) -> bool {
         if (string.size() < suffix.size()) return invert_results;
         return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
       });
@@ -104,7 +104,7 @@ class LikeMatcher {
       // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const auto& string) -> bool {
         return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ invert_results;
       });
 
@@ -116,7 +116,7 @@ class LikeMatcher {
         searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
       }
 
-      functor([&](const pmr_string& string) -> bool {
+      functor([&](const auto& string) -> bool {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
@@ -129,7 +129,9 @@ class LikeMatcher {
     } else if (std::holds_alternative<std::regex>(_pattern_variant)) {
       const auto& regex = std::get<std::regex>(_pattern_variant);
 
-      functor([&](const pmr_string& string) -> bool { return std::regex_match(string, regex) ^ invert_results; });
+      functor([&](const auto& string) -> bool {
+        return std::regex_match(string.cbegin(), string.cend(), regex) ^ invert_results;
+      });
 
     } else {
       Fail("Pattern not implemented. Probably a bug.");
