@@ -113,9 +113,8 @@ TEST_F(ServerTestRunner, TestCopyExport) {
   // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
-  Hyrise::get().storage_manager.add_table("yet_another_table", _table_a);
-
   const auto result = transaction.exec("COPY table_a TO '" + _export_filename + "';");
+
   std::ifstream file{_export_filename};
   EXPECT_TRUE(file.good());
 }
