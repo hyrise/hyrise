@@ -1,8 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <fstream>
 #include <memory>
 #include <utility>
+#include <sstream>
 #include <string>
 
 #include "utils/abstract_plugin.hpp"
@@ -23,14 +25,23 @@ struct SegmentID {
   ChunkID chunk_id;
   ColumnID column_id;
   std::string column_name;
+
+  bool operator==(const SegmentID& other) const;
+};
+
+struct SegmentIDHasher {
+  std::size_t operator()(const SegmentID& segment_id) const;
 };
 
 struct SegmentInfo {
-  SegmentInfo(SegmentID segment_id, const size_t memory_usage, SegmentAccessCounter<uint64_t> access_counter)
-    : segment_id{std::move(segment_id)}, memory_usage{memory_usage}, access_counter{std::move(access_counter)} {}
+  SegmentInfo(SegmentID segment_id, const size_t memory_usage, const ChunkOffset size,
+              SegmentAccessCounter<uint64_t> access_counter)
+    : segment_id{std::move(segment_id)}, memory_usage{memory_usage}, size{size},
+      access_counter{std::move(access_counter)} {}
 
   const SegmentID segment_id;
   const size_t memory_usage;
+  const ChunkOffset size;
   const SegmentAccessCounter<uint64_t> access_counter;
 };
 }
@@ -41,6 +52,9 @@ class AntiCachingPlugin : public AbstractPlugin {
   friend class AntiCachingPluginTest;
 
  public:
+  AntiCachingPlugin();
+  ~AntiCachingPlugin();
+
   const std::string description() const;
 
   void start();
@@ -48,26 +62,35 @@ class AntiCachingPlugin : public AbstractPlugin {
   void stop();
 
   using TimestampSegmentInfoPair = std::pair<const std::chrono::time_point<std::chrono::steady_clock>, std::vector<SegmentInfo>>;
-  static void export_access_statistics(const std::vector<TimestampSegmentInfoPair>& access_statistics,
-    const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
+
+  void export_access_statistics(const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
 
   void reset_access_statistics();
 
-  size_t memory_budget = 50ul * 1024ul * 1024ul;
+  size_t memory_budget = 25ul * 1024ul * 1024ul;
 
  private:
   using SegmentIDAccessCounterPair = std::pair<const SegmentID, const SegmentAccessCounter<uint64_t>>;
 
   static std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> _fetch_segments();
+
   std::vector<SegmentInfo> _fetch_current_statistics();
 
   void _evaluate_statistics();
+
   static float _compute_value(const SegmentInfo& segment_info);
+
   void _evict_segments();
+
+  std::ofstream _log_file;
+  void _log_line(const std::string& text);
 
   std::vector<TimestampSegmentInfoPair> _access_statistics;
   std::unique_ptr<PausableLoopThread> _evaluate_statistics_thread;
+
   constexpr static std::chrono::milliseconds REFRESH_STATISTICS_INTERVAL = std::chrono::milliseconds(10'000);
+
+  const std::chrono::time_point<std::chrono::steady_clock> _initialization_time{std::chrono::steady_clock::now()};
 };
 
 }  // namespace opossum

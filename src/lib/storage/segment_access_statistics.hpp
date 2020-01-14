@@ -98,19 +98,7 @@ class SegmentAccessStatistics {
    * Resets access statistics of every segment in table
    * @param tables map of tables
    */
-  static void reset_all(const std::map<std::string, std::shared_ptr<Table>>& tables) {
-//    for (const auto&[table_name, table_ptr] : tables) {
-//      for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
-//        const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
-//        for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count());
-//             column_id < count; ++column_id) {
-//          const auto& segment_ptr = chunk_ptr->get_segment(column_id);
-//          segment_ptr->access_statistics().reset();
-//        }
-//      }
-//    }
-//    AtomicTimedAccessStrategy::start_time = std::chrono::steady_clock::now();
-  }
+  static void reset_all(const std::map<std::string, std::shared_ptr<Table>>& tables);
 
  private:
   SegmentAccessCounter<std::atomic_uint64_t> _counter;

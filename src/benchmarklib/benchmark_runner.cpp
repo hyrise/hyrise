@@ -194,6 +194,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
+  SegmentAccessStatistics::reset_all(Hyrise::get().storage_manager.tables());
   for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
 
@@ -204,8 +205,6 @@ void BenchmarkRunner::_benchmark_ordered() {
     _results[item_id].unsuccessful_runs = {};
     _results[item_id].duration = {};
     auto& result = _results[item_id];
-
-    SegmentAccessStatistics::reset_all(Hyrise::get().storage_manager.tables());
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 

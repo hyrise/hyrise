@@ -534,7 +534,7 @@ int Console::_save_segment_access_counter(const std::string& args) {
   const auto path_to_meta_data = arguments[0];
   const auto path_to_access_counters = arguments[1];
 
-  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), path_to_meta_data,
+  SegmentAccessStatistics::save_to_csv(Hyrise::get().storage_manager.tables(), path_to_meta_data,
                                          path_to_access_counters);
 
   return ReturnCode::Ok;
@@ -546,7 +546,7 @@ int Console::_clear_segment_access_counter(const std::string& args) {
   auto arguments = std::vector<std::string>{};
   boost::algorithm::split(arguments, input, boost::is_space());
 
-  SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
+  SegmentAccessStatistics::reset_all(Hyrise::get().storage_manager.tables());
 
   return ReturnCode::Ok;
 }
@@ -565,8 +565,8 @@ int Console::_set_capture_interval(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto interval = std::stoi(arguments[0]);
-  AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{interval};
+//  const auto interval = std::stoi(arguments[0]);
+//  AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{interval};
 
   return ReturnCode::Ok;
 }
