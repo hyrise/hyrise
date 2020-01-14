@@ -9,8 +9,9 @@
 
 namespace opossum {
 
-Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type)
-    : AbstractReadOnlyOperator(OperatorType::Export, in), _filename(filename), _type(type) {
+Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename,
+               const FileType& file_type)
+    : AbstractReadOnlyOperator(OperatorType::Export, in), _filename(filename), _file_type(file_type) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
   }
@@ -26,11 +27,7 @@ std::shared_ptr<const Table> Export::_on_execute() {
     Fail("Export: File name must not be empty.");
   }
 
-  if (_type == FileType::Auto) {
-    _type = file_type_from_filename(_filename);
-  }
-
-  switch (_type) {
+  switch (_file_type) {
     case FileType::Csv:
       CsvWriter::write(*input_table_left(), _filename);
       break;
@@ -49,7 +46,7 @@ std::shared_ptr<const Table> Export::_on_execute() {
 std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Export>(copied_input_left, _filename, _type);
+  return std::make_shared<Export>(copied_input_left, _filename, _file_type);
 }
 
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
