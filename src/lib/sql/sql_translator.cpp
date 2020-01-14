@@ -41,6 +41,7 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -190,6 +191,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
     case hsql::kStmtImport:
       return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
+    case hsql::kStmtExport:
+      return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
 
     default:
       FailInput("SQL statement type not supported");
@@ -1212,6 +1215,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
                           import_type_to_file_type(import_statement.type));
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
+  return ExportNode::make(export_statement.tableName, export_statement.filePath,
+                          import_type_to_file_type(export_statement.type));
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

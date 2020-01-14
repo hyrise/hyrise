@@ -10,7 +10,7 @@
 namespace opossum {
 
 /**
- * This node type represents the IMPORT management command.
+ * This node type represents the IMPORT / COPY FROM management command.
  */
 class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
  public:
