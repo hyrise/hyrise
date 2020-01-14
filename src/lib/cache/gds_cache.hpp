@@ -91,6 +91,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
 
   Value& get(const Key& key) {
     auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "key not present");
     Handle handle = it->second;
     GDSCacheEntry& entry = (*handle);
     entry.priority = _inflation + entry.cost / entry.size;
