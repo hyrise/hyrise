@@ -16,6 +16,7 @@
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "file_based_benchmark_item_runner.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "hyrise.hpp"
@@ -30,10 +31,33 @@
 #include "types.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
 using namespace opossum;  // NOLINT
+
+// Shamelessly copied from tpcds_benchmark.cpp
+namespace {
+const std::unordered_set<std::string> filename_blacklist() {
+  auto filename_blacklist = std::unordered_set<std::string>{};
+  const auto blacklist_file_path = "hyrise/resources/benchmark/tpcds/query_blacklist.cfg";
+  std::ifstream blacklist_file(blacklist_file_path);
+
+  if (!blacklist_file) {
+    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  } else {
+    std::string filename;
+    while (std::getline(blacklist_file, filename)) {
+      if (filename.size() > 0 && filename.at(0) != '#') {
+        filename_blacklist.emplace(filename);
+      }
+    }
+    blacklist_file.close();
+  }
+  return filename_blacklist;
+}
+}  // namespace
 
 void extract_meta_data(std::string folder_name) {
   std::ofstream table_meta_data_csv_file(folder_name + "/table_meta_data.csv");
@@ -127,25 +151,64 @@ void extract_physical_query_plan_cache_data(std::string folder_name) {
 }
 
 int main(int argc, const char* argv[]) {
-  constexpr auto SCALE_FACTOR = 0.01f;
-  constexpr auto BENCHMARK = "TPC-H";
+
+  // USAGE:
+  //  This branch shall facilitate the CSV export of workload runtime data.
+  //  ninja -C relwithdeb Driver hyrisePlayground && ./relwithdeb/hyrisePlayground TPC-H relwithdeb/libDriver.dylib
+  //  First parameter is the desired benchmark. The remaining parameters list plugins (currently, one plugin) 
   constexpr auto USE_PREPARED_STATEMENTS = false;
+  auto SCALE_FACTOR = 0.0f;  // later overwritten
+
+  const auto BENCHMARKS = std::vector<std::string>{"TPC-H", "TPC-DS", "JOB"}; 
+  auto BENCHMARK = BENCHMARKS[1];
 
   auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-  config->max_runs = 10;
+  config->max_runs = 1;
   config->enable_visualization = false;
   config->chunk_size = 100'000;
   config->cache_binary_tables = true;
 
-  auto context = BenchmarkRunner::create_context(*config);
+  if (argc > 1) {
+    BENCHMARK = std::string(argv[1]);
+  }
 
-  const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{5}};
-  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR, tpch_query_ids_benchmark);
-  // auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR);
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
-      *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, config), context);
-  Hyrise::get().benchmark_runner = benchmark_runner;
-  benchmark_runner->run();
+  //
+  //  TPC-H
+  //
+  if (BENCHMARK == "TPC-H") {
+    SCALE_FACTOR = 0.01f;
+    const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{5}};
+    auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR, tpch_query_ids_benchmark);
+    // auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR);
+    auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+        *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, config), BenchmarkRunner::create_context(*config));
+    Hyrise::get().benchmark_runner = benchmark_runner;
+    benchmark_runner->run();
+  }
+  //
+  //  /TPC-H
+  //
+
+
+
+  //
+  //  TPC-DS
+  //
+  if (BENCHMARK == "TPC-DS") {
+    SCALE_FACTOR = 1.0f;
+    config->max_runs = 1;
+    const std::string query_path = "hyrise/resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification";
+
+    auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
+    auto table_generator = std::make_unique<TpcdsTableGenerator>(SCALE_FACTOR, config);
+    auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(query_generator), std::move(table_generator),
+                                            opossum::BenchmarkRunner::create_context(*config));
+    Hyrise::get().benchmark_runner = benchmark_runner;
+    benchmark_runner->run();
+  }
+  //
+  //  /TPC-DS
+  //
 
   std::string folder_name = std::string(BENCHMARK) + "__" + std::to_string(SCALE_FACTOR);
   std::filesystem::create_directories(folder_name);
@@ -154,8 +217,8 @@ int main(int argc, const char* argv[]) {
   extract_meta_data(folder_name);
   extract_physical_query_plan_cache_data(folder_name);
 
-  if (argc > 1) {
-    for (auto plugin_id = 1; plugin_id < argc; ++plugin_id) {
+  if (argc > 2) {  // first argument is benchmark
+    for (auto plugin_id = 2; plugin_id < argc; ++plugin_id) {
       const std::filesystem::path plugin_path(argv[plugin_id]);
       const auto plugin_name = plugin_name_from_path(plugin_path);
       Hyrise::get().plugin_manager.load_plugin(plugin_path);
