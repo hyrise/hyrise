@@ -34,6 +34,8 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
   std::set_intersection(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
                         group_by_columns.end(), std::inserter(intersection, intersection.begin()));
 
+  // TODO(Julian) 2020-01-14 01:30 Continue here: Why is there no intersection being found? DependentGroupByReductionRuleTest.SingleKeyReduction
+
   // Skip the current constraint as the primary key/unique constraint is not completely present.
   if (intersection.size() != constraint_columns.size()) {
     return false;
@@ -49,7 +51,7 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
 
     // Remove column from group-by list.
     // Further, decrement the aggregate's index which denotes the end of group-by expressions.
-    const auto idx_before = aggregate_node.aggregate_expressions_begin_idx;
+    const auto begin_idx_before = aggregate_node.aggregate_expressions_begin_idx;
     aggregate_node.node_expressions.erase(
     std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
                        [&](const auto node_expression) {
@@ -62,7 +64,7 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
                          return false;
                        }),
         aggregate_node.node_expressions.end());
-      Assert(aggregate_node.aggregate_expressions_begin_idx = idx_before - 1, "Failed to remove column from group-by list.");
+      Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before, "Failed to remove column from group-by list.");
 
       // Add the ANY() aggregate to the list of aggregate columns.
       const auto aggregate_any_expression = any_(group_by_column);
