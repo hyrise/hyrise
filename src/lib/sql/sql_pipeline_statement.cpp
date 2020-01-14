@@ -2,12 +2,15 @@
 
 #include <iomanip>
 #include <utility>
+#include <numeric>
 
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
+#include "expression/placeholder_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -102,21 +105,53 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto unoptimized_lqp = get_unoptimized_logical_plan();
 
+  std::vector<std::shared_ptr<AbstractExpression>> values;
+  ParameterID parameter_id(0);
+
+  std::cerr << "replaced a val=++++++++++++++++++++++++++++++++++++++++++++++=ue" << std::endl;
+
+
+  visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+    if (node) {
+      std::cerr << "have a node===========================================================================================================ue" << std::endl;
+
+      for (auto& root_expression : node->node_expressions) {
+        visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
+          std::cerr << "have an expression of type "<< static_cast<size_t>(expression->type) <<"===========================================================================================================ue" << std::endl;
+
+          if (expression->type == ExpressionType::Value) {
+            std::cerr << "have a value expression===========================================================================================================ue" << std::endl;
+            values.push_back(expression);
+            expression = std::make_shared<PlaceholderExpression>(parameter_id);
+            parameter_id++;
+            std::cerr << "replaced a val==============================================================================================================ue" << std::endl;
+          }
+          if (expression->type == ExpressionType::Placeholder) {
+            std::cerr << "OH NO IT IS ALREADY A PLACEHOLDER===========================================================================================================ue" << std::endl;
+          }
+          return ExpressionVisitation::VisitArguments;
+        });
+      }
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+
+
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
     if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp)) {
-      const auto plan = *cached_plan;
+      const auto plan = (*cached_plan)->lqp;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
-        _optimized_logical_plan = plan->deep_copy();
+        _optimized_logical_plan = (*cached_plan)->instantiate(values);
         return _optimized_logical_plan;
       }
     }
   }
-
 
   const auto started = std::chrono::high_resolution_clock::now();
 
@@ -125,16 +160,21 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp));
+  auto optimized_without_values = _optimizer->optimize(std::move(unoptimized_lqp));
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
+  std::vector<ParameterID> all_parameter_ids(parameter_id);
+  std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
+  auto prepared_plan = std::make_shared<PreparedPlan>(optimized_without_values, all_parameter_ids);
+
   // Cache newly created plan for the according sql statement
   if (lqp_cache) {
-    lqp_cache->set(unoptimized_lqp, _optimized_logical_plan);
+    lqp_cache->set(unoptimized_lqp, prepared_plan);
   }
 
+  _optimized_logical_plan = prepared_plan->instantiate(values);
   return _optimized_logical_plan;
 }
 
