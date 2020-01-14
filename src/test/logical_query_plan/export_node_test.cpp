@@ -2,8 +2,8 @@
 
 #include "base_test.hpp"
 
-#include "expression/expression_utils.hpp"
 #include "export_export/file_type.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/exort_node.hpp"
 
 namespace opossum {

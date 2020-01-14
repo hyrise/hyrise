@@ -11,9 +11,10 @@ namespace opossum {
 
 Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type)
     : AbstractReadOnlyOperator(OperatorType::Export, in), _filename(filename), _type(type) {
-      if (_file_type == FileType::Auto) {
-        _file_type = file_type_from_filename(filename);
-    }
+  if (_file_type == FileType::Auto) {
+    _file_type = file_type_from_filename(filename);
+  }
+}
 
 const std::string& Export::name() const {
   static const auto name = std::string{"Export"};
