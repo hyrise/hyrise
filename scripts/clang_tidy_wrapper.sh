@@ -14,6 +14,6 @@ if grep "$file_relative_to_source" $cmake_source_dir/.clang-tidy-ignore > /dev/n
 	echo "clang-tidy: Ignoring $file_relative_to_source"
 	exit 0
 else
-	exec clang-tidy -header-filter=$1/src/ $file $@
+	exec clang-tidy $file $@
   exit $?
 fi

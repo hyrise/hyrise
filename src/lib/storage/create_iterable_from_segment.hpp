@@ -1,13 +1,26 @@
 #pragma once
 
-#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
-#include "storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp"
-#include "storage/lz4_segment/lz4_segment_iterable.hpp"
-#include "storage/run_length_segment/run_length_segment_iterable.hpp"
-#include "storage/segment_iterables/any_segment_iterable.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
+#include "types.hpp"
 
 namespace opossum {
+
+template <typename T>
+class ValueSegment;
+
+template <typename T>
+class DictionarySegment;
+
+template <typename T>
+class RunLengthSegment;
+
+template <typename T>
+class FixedStringDictionarySegment;
+
+template <typename T, typename>
+class FrameOfReferenceSegment;
+
+template <typename T>
+class LZ4Segment;
 
 class ReferenceSegment;
 template <typename T, EraseReferencedSegmentType>
@@ -25,85 +38,36 @@ class ReferenceSegmentIterable;
  * In debug mode, create_iterable_from_segment returns a type erased
  * iterable, i.e., all iterators have the same type
  *
+ * Functions must be forward-declared because otherwise, we run into
+ * circular include dependencies.
+ *
  * @{
  */
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
-auto create_iterable_from_segment(const ValueSegment<T>& segment) {
-  if constexpr (EraseSegmentType) {
-    return create_any_segment_iterable<T>(segment);
-  } else {
-    return ValueSegmentIterable<T>{segment};
-  }
-}
+auto create_iterable_from_segment(const ValueSegment<T>& segment);
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
-auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
-#ifdef HYRISE_ERASE_DICTIONARY
-  PerformanceWarning("DictionarySegmentIterable erased by compile-time setting");
-  return AnySegmentIterable<T>(DictionarySegmentIterable<T, pmr_vector<T>>(segment));
-#else
-  if constexpr (EraseSegmentType) {
-    return create_any_segment_iterable<T>(segment);
-  } else {
-    return DictionarySegmentIterable<T, pmr_vector<T>>{segment};
-  }
-#endif
-}
+auto create_iterable_from_segment(const DictionarySegment<T>& segment);
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
-auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
-#ifdef HYRISE_ERASE_RUNLENGTH
-  PerformanceWarning("RunLengthSegmentIterable erased by compile-time setting");
-  return AnySegmentIterable<T>(RunLengthSegmentIterable<T>(segment));
-#else
-  if constexpr (EraseSegmentType) {
-    return create_any_segment_iterable<T>(segment);
-  } else {
-    return RunLengthSegmentIterable<T>{segment};
-  }
-#endif
-}
+auto create_iterable_from_segment(const RunLengthSegment<T>& segment);
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
-auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
-#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-  PerformanceWarning("FixedStringDictionarySegmentIterable erased by compile-time setting");
-  return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
-#else
-  if constexpr (EraseSegmentType) {
-    return create_any_segment_iterable<T>(segment);
-  } else {
-    return DictionarySegmentIterable<T, FixedStringVector>{segment};
-  }
-#endif
-}
+auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment);
 
-template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
-auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
-#ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-  PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
-  return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
-#else
-  if constexpr (EraseSegmentType) {
-    return create_any_segment_iterable<T>(segment);
-  } else {
-    return FrameOfReferenceSegmentIterable<T>{segment};
-  }
-#endif
+template <typename T, typename Enabled, bool EraseSegmentType = HYRISE_DEBUG>
+auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment);
+
+// Fix template deduction so that we can call `create_iterable_from_segment<T, false>` on FrameOfReferenceSegments
+template <typename T, bool EraseSegmentType, typename Enabled>
+auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment) {
+  return create_iterable_from_segment<T, Enabled, EraseSegmentType>(segment);
 }
 
 template <typename T, bool EraseSegmentType = true>
-auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
-  // LZ4Segment always gets erased as its decoding is so slow, the virtual function calls won't make
-  // a difference. If we'd allow it to not be erased we'd risk compile time increase creeping in for no benefit
-  return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
-}
+auto create_iterable_from_segment(const LZ4Segment<T>& segment);
 
-/**
- * This function must be forward-declared because ReferenceSegmentIterable
- * includes this file leading to a circular dependency
- */
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG,
           EraseReferencedSegmentType = (HYRISE_DEBUG ? EraseReferencedSegmentType::Yes
                                                      : EraseReferencedSegmentType::No)>
@@ -113,4 +77,6 @@ auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 }  // namespace opossum
 
+// Include these only now to break up include dependencies
+#include "create_iterable_from_reference_segment.ipp"
 #include "create_iterable_from_segment.ipp"

@@ -22,8 +22,8 @@ namespace opossum {
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id, const AllTypeVariant& left_value,
                                                        const AllTypeVariant& right_value,
-                                                       PredicateCondition predicate_condition)
-    : AbstractDereferencedColumnTableScanImpl(in_table, column_id, predicate_condition),
+                                                       PredicateCondition init_predicate_condition)
+    : AbstractDereferencedColumnTableScanImpl(in_table, column_id, init_predicate_condition),
       left_value{left_value},
       right_value{right_value},
       _column_is_nullable{in_table->column_is_nullable(column_id)} {

@@ -62,5 +62,3 @@ echo ${start_commit}: $(git log -1 --pretty=%B ${start_commit} | head -n 1)
 echo ${end_commit}: $(git log -1 --pretty=%B ${end_commit} | head -n 1)
 
 ../scripts/compare_benchmarks.py auto_${start_commit}.json auto_${end_commit}.json
-
-rm auto_*.json
