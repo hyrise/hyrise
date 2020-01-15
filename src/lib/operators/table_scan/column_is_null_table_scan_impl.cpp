@@ -33,7 +33,12 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
   if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
     _scan_value_segment(*value_segment, chunk_id, *matches);
   } else {
-    _scan_generic_segment(*segment, chunk_id, *matches);
+    const auto ordered_by = chunk->ordered_by();
+    if (ordered_by && ordered_by->first == _column_id) {
+      _scan_generic_ordered_segment(*segment, chunk_id, *matches, ordered_by->second);
+    } else {
+      _scan_generic_segment(*segment, chunk_id, *matches);
+    }
   }
 
   return matches;
@@ -49,6 +54,31 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
     _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
   });
 }
+
+  void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                        PosList& matches, const OrderByMode order_by) const {
+    const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
+    segment_with_iterators(segment, [&](auto begin, auto end) {
+      // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
+      const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
+
+      if (is_nulls_first) {
+        end = std::upper_bound(begin, end, invert, [](const auto& _, const auto& segment_position) {
+          return segment_position.is_null();
+        });
+      } else {
+        begin = std::lower_bound(begin, end, invert, [](const auto& segment_position, const auto& _) {
+          return segment_position.is_null();
+        });
+      }
+
+      size_t output_idx = matches.size();
+      matches.resize(matches.size() + std::distance(begin, end));
+      for (auto segment_it = begin; segment_it != end; ++segment_it) {
+        matches[output_idx++] = RowID{chunk_id, segment_it->chunk_offset()};
+      }
+    });
+  }
 
 void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id,
                                                     PosList& matches) const {
