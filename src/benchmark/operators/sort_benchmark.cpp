@@ -49,7 +49,7 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
   }
 
  protected:
-  std::shared_ptr<Table> GenerateCustomTable(const ChunkOffset chunk_size, const size_t row_count,
+  std::shared_ptr<Table> GenerateCustomTable(const size_t row_count, const ChunkOffset chunk_size,
                                              const DataType data_type = DataType::Int,
                                              const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                              const std::optional<float> null_ratio = std::nullopt) {
@@ -69,13 +69,13 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
         UseMvcc::Yes, null_ratio);
   }
 
-  void InitializeCustomTableWrapper(const ChunkOffset chunk_size, const size_t row_count,
+  void InitializeCustomTableWrapper(const size_t row_count, const ChunkOffset chunk_size,
                                     const DataType data_type = DataType::Int,
                                     const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                     const std::optional<float> null_ratio = std::nullopt) {
     // We only set _table_wrapper_a because this is the only table (currently) used in the Sort Benchmarks
     _table_wrapper_a =
-        std::make_shared<TableWrapper>(GenerateCustomTable(chunk_size, row_count, data_type, column_names, null_ratio));
+        std::make_shared<TableWrapper>(GenerateCustomTable(row_count, chunk_size, data_type, column_names, null_ratio));
     _table_wrapper_a->execute();
   }
 
@@ -95,7 +95,7 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
     column_names->push_back("col_1");
     column_names->push_back("col_2");
     storage_manager.add_table("table_a",
-                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
+                              GenerateCustomTable(size_t{40'000}, ChunkOffset{2'000}, DataType::Int, column_names));
 
     for (auto _ : state) {
       hsql::SQLParserResult result;
@@ -110,17 +110,17 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
 
 class SortPicoBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{2}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(size_t{2}, ChunkOffset{2'000}); }
 };
 
 class SortSmallBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{4'000}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(size_t{4'000}, ChunkOffset{2'000}); }
 };
 
 class SortLargeBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{400'000}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(size_t{400'000}, ChunkOffset{2'000}); }
 };
 
 class SortReferencePicoBenchmark : public SortPicoBenchmark {
@@ -158,28 +158,28 @@ class SortReferenceLargeBenchmark : public SortLargeBenchmark {
 class SortStringSmallBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{4'000}, DataType::String);
+    InitializeCustomTableWrapper(size_t{4'000}, ChunkOffset{2'000}, DataType::String);
   }
 };
 
 class SortStringBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{40'000}, DataType::String);
+    InitializeCustomTableWrapper(size_t{40'000}, ChunkOffset{2'000}, DataType::String);
   }
 };
 
 class SortStringLargeBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{400'000}, DataType::String);
+    InitializeCustomTableWrapper(size_t{400'000}, ChunkOffset{2'000}, DataType::String);
   }
 };
 
 class SortNullBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, std::nullopt,
+    InitializeCustomTableWrapper(size_t{40'000}, ChunkOffset{2'000}, DataType::Int, std::nullopt,
                                  std::optional<float>{0.2});
   }
 };
