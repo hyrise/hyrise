@@ -7,11 +7,11 @@
 namespace opossum {
 
 ExportNode::ExportNode(const std::string& init_tablename, const std::string& init_filename,
-                       const FileType init_filetype)
+                       const FileType init_file_type)
     : BaseNonQueryNode(LQPNodeType::Export),
       tablename(init_tablename),
       filename(init_filename),
-      filetype(init_filetype) {}
+      file_type(init_file_type) {}
 
 std::string ExportNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
@@ -22,17 +22,17 @@ std::string ExportNode::description(const DescriptionMode mode) const {
 size_t ExportNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(tablename);
   boost::hash_combine(hash, filename);
-  boost::hash_combine(hash, filetype);
+  boost::hash_combine(hash, file_type);
   return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> ExportNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return ExportNode::make(tablename, filename, filetype);
+  return ExportNode::make(tablename, filename, file_type);
 }
 
 bool ExportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& export_node = static_cast<const ExportNode&>(rhs);
-  return tablename == export_node.tablename && filename == export_node.filename && filetype == export_node.filetype;
+  return tablename == export_node.tablename && filename == export_node.filename && file_type == export_node.file_type;
 }
 
 }  // namespace opossum

@@ -503,7 +503,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
   const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
   auto export_table = std::make_shared<GetTable>(export_node->tablename);
 
-  return std::make_shared<Export>(export_table, export_node->filename, export_node->filetype);
+  return std::make_shared<Export>(export_table, export_node->filename, export_node->file_type);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
