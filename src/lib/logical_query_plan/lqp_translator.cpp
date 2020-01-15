@@ -500,10 +500,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
   const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
-  auto export_table = std::make_shared<GetTable>(export_node->tablename);
-
-  return std::make_shared<Export>(export_table, export_node->filename, export_node->file_type);
+  return std::make_shared<Export>(input_operator, export_node->filename, export_node->file_type);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
