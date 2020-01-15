@@ -1221,7 +1221,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   // Make sure the table exists
   AssertInput(Hyrise::get().storage_manager.has_table(export_statement.tableName),
-              "There is no table '" + export_statement->tableName + "'.");
+              "There is no table '" + export_statement.tableName + "'.");
 
   // Create a ValidateNode
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
