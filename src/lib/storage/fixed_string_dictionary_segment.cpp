@@ -45,11 +45,6 @@ std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOff
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<pmr_string>> FixedStringDictionarySegment<T>::dictionary() const {
-  return _dictionary->dictionary();
-}
-
-template <typename T>
 std::shared_ptr<const FixedStringVector> FixedStringDictionarySegment<T>::fixed_string_dictionary() const {
   return _dictionary;
 }
@@ -71,7 +66,8 @@ std::shared_ptr<BaseSegment> FixedStringDictionarySegment<T>::copy_using_allocat
 }
 
 template <typename T>
-size_t FixedStringDictionarySegment<T>::estimate_memory_usage() const {
+size_t FixedStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
+  // MemoryUsageCalculationMode ignored as full calculation is efficient.
   return sizeof(*this) + _dictionary->data_size() + _attribute_vector->data_size();
 }
 

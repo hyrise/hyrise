@@ -1,8 +1,6 @@
 #include <boost/asio.hpp>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "mock_socket.hpp"
 
 #include "server/write_buffer.hpp"

@@ -513,28 +513,27 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
 
   std::vector<std::thread> threads;
-  auto item_table = std::async(std::launch::async, &TPCCTableGenerator::generate_item_table, this);
-  auto warehouse_table = std::async(std::launch::async, &TPCCTableGenerator::generate_warehouse_table, this);
-  auto stock_table = std::async(std::launch::async, &TPCCTableGenerator::generate_stock_table, this);
-  auto district_table = std::async(std::launch::async, &TPCCTableGenerator::generate_district_table, this);
-  auto customer_table = std::async(std::launch::async, &TPCCTableGenerator::generate_customer_table, this);
-  auto history_table = std::async(std::launch::async, &TPCCTableGenerator::generate_history_table, this);
-  auto order_line_counts = std::async(std::launch::async, &TPCCTableGenerator::generate_order_line_counts, this).get();
-  auto order_table = std::async(std::launch::async, &TPCCTableGenerator::generate_order_table, this, order_line_counts);
-  auto order_line_table =
-      std::async(std::launch::async, &TPCCTableGenerator::generate_order_line_table, this, order_line_counts);
-  auto new_order_table = std::async(std::launch::async, &TPCCTableGenerator::generate_new_order_table, this);
+  auto item_table = generate_item_table();
+  auto warehouse_table = generate_warehouse_table();
+  auto stock_table = generate_stock_table();
+  auto district_table = generate_district_table();
+  auto customer_table = generate_customer_table();
+  auto history_table = generate_history_table();
+  auto new_order_table = generate_new_order_table();
 
-  return std::unordered_map<std::string, BenchmarkTableInfo>(
-      {{"ITEM", BenchmarkTableInfo{item_table.get()}},
-       {"WAREHOUSE", BenchmarkTableInfo{warehouse_table.get()}},
-       {"STOCK", BenchmarkTableInfo{stock_table.get()}},
-       {"DISTRICT", BenchmarkTableInfo{district_table.get()}},
-       {"CUSTOMER", BenchmarkTableInfo{customer_table.get()}},
-       {"HISTORY", BenchmarkTableInfo{history_table.get()}},
-       {"ORDER", BenchmarkTableInfo{order_table.get()}},
-       {"ORDER_LINE", BenchmarkTableInfo{order_line_table.get()}},
-       {"NEW_ORDER", BenchmarkTableInfo{new_order_table.get()}}});
+  auto order_line_counts = generate_order_line_counts();
+  auto order_table = generate_order_table(order_line_counts);
+  auto order_line_table = generate_order_line_table(order_line_counts);
+
+  return std::unordered_map<std::string, BenchmarkTableInfo>({{"ITEM", BenchmarkTableInfo{item_table}},
+                                                              {"WAREHOUSE", BenchmarkTableInfo{warehouse_table}},
+                                                              {"STOCK", BenchmarkTableInfo{stock_table}},
+                                                              {"DISTRICT", BenchmarkTableInfo{district_table}},
+                                                              {"CUSTOMER", BenchmarkTableInfo{customer_table}},
+                                                              {"HISTORY", BenchmarkTableInfo{history_table}},
+                                                              {"ORDER", BenchmarkTableInfo{order_table}},
+                                                              {"ORDER_LINE", BenchmarkTableInfo{order_line_table}},
+                                                              {"NEW_ORDER", BenchmarkTableInfo{new_order_table}}});
 }
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT
