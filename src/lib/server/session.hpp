@@ -51,7 +51,7 @@ class Session {
   const SendExecutionInfo _send_execution_info;
   bool _terminate_session = false;
   bool _sync_send_after_error = false;
-  std::shared_ptr<TransactionContext> _transaction;
+  std::shared_ptr<TransactionContext> _transaction_context;
   std::unordered_map<std::string, std::shared_ptr<AbstractOperator>> _portals;
 };
 }  // namespace opossum

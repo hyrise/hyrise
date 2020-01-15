@@ -27,7 +27,7 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
       stream << sql_pipeline.metrics();
       execution_info.pipeline_metrics = stream.str();
     }
-  } else if (pipeline_status == SQLPipelineStatus::RolledBack) {
+  } else if (pipeline_status == SQLPipelineStatus::Failure) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
     execution_info.error_message = {
         {PostgresMessageType::HumanReadableError,

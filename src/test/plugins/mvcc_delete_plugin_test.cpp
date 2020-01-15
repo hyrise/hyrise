@@ -177,7 +177,7 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
   }
 
   EXPECT_FALSE(_try_logical_delete(_table_name, ChunkID{1}, transaction_context));
-  EXPECT_EQ(transaction_context->phase(), TransactionPhase::RolledBack);
+  EXPECT_EQ(transaction_context->phase(), TransactionPhase::ErrorRolledBack);
 }
 
 /**

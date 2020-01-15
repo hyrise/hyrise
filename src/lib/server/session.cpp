@@ -10,7 +10,8 @@ namespace opossum {
 Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
-      _send_execution_info(send_execution_info) {}
+      _send_execution_info(send_execution_info),
+      _transaction_context(Hyrise::get().transaction_manager.new_transaction_context()) {}
 
 std::shared_ptr<Socket> Session::socket() { return _socket; }
 
@@ -106,9 +107,10 @@ void Session::_handle_simple_query() {
   _portals.erase("");
 
   const auto [execution_information, transaction_context] =
-      QueryHandler::execute_pipeline(query, _send_execution_info, _transaction);
+      QueryHandler::execute_pipeline(query, _send_execution_info, _transaction_context);
 
   if (!execution_information.error_message.empty()) {
+    _transaction_context = nullptr;
     _postgres_protocol_handler->send_error_message(execution_information.error_message);
   } else {
     uint64_t row_count = 0;
@@ -125,7 +127,7 @@ void Session::_handle_simple_query() {
     _postgres_protocol_handler->send_command_complete(
         ResultSerializer::build_command_complete_message(execution_information.root_operator, row_count));
 
-    _transaction = transaction_context;
+    _transaction_context = transaction_context;
   }
   _postgres_protocol_handler->send_ready_for_query();
 }
@@ -166,9 +168,9 @@ void Session::_handle_bind_command() {
 
 void Session::_sync() {
   _postgres_protocol_handler->read_sync_packet();
-  if (_transaction) {
-    _transaction->commit();
-    _transaction.reset();
+  if (!_transaction_context->is_auto_commit()) {
+    _transaction_context->commit();
+    _transaction_context.reset();
   }
   _postgres_protocol_handler->send_ready_for_query();
 }
@@ -190,8 +192,8 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
-  physical_plan->set_transaction_context_recursively(_transaction);
+  if (!_transaction_context) _transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  physical_plan->set_transaction_context_recursively(_transaction_context);
 
   const auto result_table = QueryHandler::execute_prepared_plan(physical_plan);
 

@@ -29,19 +29,20 @@ class CommitContext;
  *      |                             |
  *   Rollback operators             Commit operators
  *      |                             |
- *  +------------+                  Wait for all previous
- *  | RolledBack |                  transaction to be committed
- *  +------------+                    |
+ *  +-----------------+          Wait for all previous
+ *  | ErrorRolledBack |        transaction to be committed
+ *  +-----------------+               |
  *                                 +-----------+
  *                                 | Committed |
  *                                 +-----------+
  */
 enum class TransactionPhase {
-  Active,      // Transaction has just been created. Operators may be executed.
-  Aborted,     // One of the operators failed. Transaction needs to be rolled back.
-  RolledBack,  // Transaction has been rolled back.
-  Committing,  // Commit ID has been assigned. Operators may commit records.
-  Committed    // Transaction has been committed.
+  Active,                // Transaction has just been created. Operators may be executed.
+  Aborted,               // One of the operators failed. Transaction needs to be rolled back.
+  ExplicitlyRolledBack,  // Transaction has been rolled back due to rollback transaction statement.
+  ErrorRolledBack,       // Transaction has been rolled back due to error.
+  Committing,            // Commit ID has been assigned. Operators may commit records.
+  Committed,             // Transaction has been committed.
 };
 
 std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
@@ -53,7 +54,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id);
+  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id, bool is_auto_commit = true);
   ~TransactionContext();
 
   /**
@@ -80,14 +81,14 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   TransactionPhase phase() const;
 
   /**
-   * Returns true if rollback has been called.
+   * Returns true if transaction has been aborted.
    */
   bool aborted() const;
 
   /**
    * Aborts and rolls back the transaction.
    */
-  void rollback();
+  void rollback(bool is_explicit = false);
 
   /**
    * Commits the transaction.
@@ -125,6 +126,12 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void on_operator_finished();
   /**@}*/
 
+  /**
+   * Returns information, whether the transaction context is automatically generated or explicitly created in order to
+   * keep the transaction context alive for multiple statements in one session.
+   */
+  bool is_auto_commit();
+
  private:
   /**
    * @defgroup Lifetime management
@@ -140,7 +147,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Sets the transaction phase to RolledBack.
    */
-  void _mark_as_rolled_back();
+  void _mark_as_rolled_back(bool is_explicit = false);
 
   /**
    * Sets transaction phase to Committing.
@@ -184,5 +191,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
+
+  const bool _is_auto_commit;
 };
 }  // namespace opossum

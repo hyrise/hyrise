@@ -279,7 +279,7 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
-  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+  if (pipeline_status == SQLPipelineStatus::Failure) {
     _handle_rollback();
     out("A transaction conflict has been detected:");
     out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
@@ -911,7 +911,7 @@ int Console::_rollback_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _explicitly_created_transaction_context->rollback();
+  _explicitly_created_transaction_context->rollback(true);
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("Transaction (" + transaction_id + ") has been rolled back.\n");

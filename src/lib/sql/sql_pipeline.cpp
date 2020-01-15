@@ -2,11 +2,11 @@
 
 #include <algorithm>
 #include <utility>
-
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
+#include "hyrise.hpp"
 #include "sql_plan_cache.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
@@ -182,7 +182,7 @@ const std::vector<std::shared_ptr<AbstractOperator>>& SQLPipeline::get_physical_
   return _physical_plans;
 }
 
-const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
+const std::vector<std::vector<std::shared_ptr<AbstractTask>>>& SQLPipeline::get_tasks() {
   if (!_tasks.empty()) {
     return _tasks;
   }
@@ -202,7 +202,10 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::get_result_table() & {
   const auto& [pipeline_status, tables] = get_result_tables();
 
-  if (pipeline_status != SQLPipelineStatus::Success) {
+  DebugAssert(pipeline_status != SQLPipelineStatus::NotExecuted,
+              "SQLPipeline::get_result_table() should either return Success or RolledBack");
+
+  if (pipeline_status == SQLPipelineStatus::Failure) {
     static std::shared_ptr<const Table> null_table;
     return {pipeline_status, null_table};
   }
@@ -224,34 +227,37 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
 
   _result_tables.reserve(pipeline_size);
 
-  std::shared_ptr<TransactionContext> previous_statement_transaction_context = nullptr;
-
-  if (pipeline_size > 0) {
-    previous_statement_transaction_context = _sql_pipeline_statements.front()->transaction_context();
-  }
+  std::shared_ptr<TransactionContext> previous_statement_transaction_context = _transaction_context;
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     pipeline_statement->set_transaction_context(previous_statement_transaction_context);
     const auto& [statement_status, table] = pipeline_statement->get_result_table();
-    if (statement_status == SQLPipelineStatus::RolledBack) {
+    if (statement_status == SQLPipelineStatus::Failure) {
       _failed_pipeline_statement = pipeline_statement;
 
-      if (_transaction_context) {
+      if (_transaction_context && !_transaction_context->is_auto_commit()) {
         // The pipeline was executed using a transaction context (i.e., no auto-commit after each statement).
         // Previously returned results are invalid.
         _result_tables.clear();
       }
 
-      return {SQLPipelineStatus::RolledBack, _result_tables};
+      return {SQLPipelineStatus::Failure, _result_tables};
     }
 
     DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
     _result_tables.emplace_back(table);
 
-    // We only want to set the previous statement context if it is shared across statements and not auto generated
-    previous_statement_transaction_context =
-        pipeline_statement->shared_transaction_context() ? pipeline_statement->transaction_context() : nullptr;
+    switch (pipeline_statement->transaction_context()->phase()) {
+      case TransactionPhase::Committed:
+      case TransactionPhase::ExplicitlyRolledBack:
+        previous_statement_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+        break;
+      default:
+        previous_statement_transaction_context = pipeline_statement->transaction_context()->is_auto_commit()
+                                                     ? Hyrise::get().transaction_manager.new_transaction_context()
+                                                     : pipeline_statement->transaction_context();
+    }
   }
 
   _pipeline_status = SQLPipelineStatus::Success;
