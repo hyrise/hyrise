@@ -60,17 +60,35 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
     const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
     segment_with_iterators(segment, [&](auto begin, auto end) {
       // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
-      const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
-
-      if (is_nulls_first) {
-        end = std::upper_bound(begin, end, invert, [](const auto& _, const auto& segment_position) {
-          return segment_position.is_null();
-        });
-      } else {
-        begin = std::lower_bound(begin, end, invert, [](const auto& segment_position, const auto& _) {
-          return segment_position.is_null();
-        });
+      const auto predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
+      if (predicate_is_null) {
+        if (is_nulls_first) {
+          end = std::upper_bound(begin, end, true, [](const auto& _, const auto& segment_position) {
+            return segment_position.is_null();
+          });
+        } else {  // nulls last
+          begin = std::lower_bound(begin, end, true, [](const auto& segment_position, const auto& _) {
+            return segment_position.is_null();
+          });
+        }
+      } else {  // not null
+        if (is_nulls_first) {
+          begin = std::upper_bound(begin, end, true, [](const auto& _, const auto& segment_position) {
+            return segment_position.is_null();
+          });
+        } else {  // nulls last
+          end = std::lower_bound(begin, end, true, [](const auto& segment_position, const auto& _) {
+            return segment_position.is_null();
+          });
+        }
       }
+
+      std::cout << predicate_is_null << is_nulls_first << std::endl;
+
+      for (auto segment_it = begin; segment_it != end; ++segment_it) {
+        std::cout << segment_it->value() << '\t';
+      }
+      std::cout << std::endl;
 
       size_t output_idx = matches.size();
       matches.resize(matches.size() + std::distance(begin, end));

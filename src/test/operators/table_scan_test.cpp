@@ -215,7 +215,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
                             const std::map<PredicateCondition, std::vector<AllTypeVariant>>& tests) {
     for (const auto& test : tests) {
       const auto predicate_condition = test.first;
-      const auto& expected = test.second;
+      const auto& expected = test.second; // {12, 123}
 
       const auto column = get_column_expression(in, ColumnID{1});
 
@@ -640,6 +640,23 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
       {PredicateCondition::IsNull, {12, 123}},
       {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+
+  scan_for_null_values(table_wrapper, tests);
+}
+
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
+  const int chunk_count = 2;
+  auto table = load_table("resources/test_data/tbl/int_float_null_sorted_asc_2.tbl", chunk_count);
+  table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
+  table->get_chunk(ChunkID{1})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
+          {PredicateCondition::IsNull, {1, 2}},
+          {PredicateCondition::IsNotNull, {3, 4}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
