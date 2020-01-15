@@ -15,13 +15,16 @@ class QueryHandlerTest : public BaseTest {
 
 TEST_F(QueryHandlerTest, ExecutePipeline) {
   const std::string query = "SELECT 1;";
-  const auto& result = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
 
-  EXPECT_TRUE(result.error_message.empty());
-  EXPECT_EQ(result.result_table->column_count(), 1);
-  EXPECT_EQ(result.result_table->row_count(), 1);
-  EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", result.pipeline_metrics);
-  EXPECT_EQ(result.root_operator, OperatorType::Projection);
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto [execution_information, transaction_context] =
+      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+
+  EXPECT_TRUE(execution_information.error_message.empty());
+  EXPECT_EQ(execution_information.result_table->column_count(), 1);
+  EXPECT_EQ(execution_information.result_table->row_count(), 1);
+  EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", execution_information.pipeline_metrics);
+  EXPECT_EQ(execution_information.root_operator, OperatorType::Projection);
 }
 
 TEST_F(QueryHandlerTest, CreatePreparedPlan) {
@@ -63,7 +66,8 @@ TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
 
   // Simple queries invalidate an existing plan as well
   const std::string query = "SELECT 1;";
-  QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
 
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
 }
