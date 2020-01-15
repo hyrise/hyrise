@@ -310,12 +310,6 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
       AssertInput(file.good(), "There is no file '" + import->filename + "'.");
       break;
     }
-    /*case OperatorType::Export: {
-      const auto export_table = std::dynamic_pointer_cast<Export>(pqp);
-      AssertInput(storage_manager.has_table(export_table->tablename),
-                  "There is no table '" + export_table->tablename + "'.");
-      break;
-    }*/
     default:
       break;
   }
