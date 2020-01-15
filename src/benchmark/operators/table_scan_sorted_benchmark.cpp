@@ -22,7 +22,7 @@ namespace {
 
 const auto ROWS = 1'000'000;
 const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
-const auto STRING_SIZE = 16;
+const auto STRING_SIZE = 512;
 
 opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
   auto table_column_definitions = opossum::TableColumnDefinitions();
