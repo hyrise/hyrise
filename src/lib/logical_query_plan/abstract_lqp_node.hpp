@@ -6,11 +6,12 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "storage/constraints/expressions_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class LQPColumnExpression;
 
 enum class LQPNodeType {
   Aggregate,
@@ -129,7 +130,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
    *         has a special treatment (it is represented as an LQPColumnReference with an INVALID_COLUMN_ID), it might
-  *          be evaluable even if find_column_id returns nullopt.
+   *          be evaluable even if find_column_id returns nullopt.
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 
@@ -137,6 +138,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return The ColumnID of the @param expression. Assert()s that it can be found
    */
   ColumnID get_column_id(const AbstractExpression& expression) const;
+
+  /**
+   * @return A shared pointer to LQPColumnExpression of @param column_id or std::nullopt if it can't be found.
+   */
+  std::optional<const std::shared_ptr<LQPColumnExpression>> find_column_expression(const ColumnID column_id) const;
+
 
   /**
    * @return whether the output column at @param column_id is nullable

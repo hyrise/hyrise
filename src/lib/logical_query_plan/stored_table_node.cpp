@@ -112,25 +112,16 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::c
     }();
 
     if (!discard_constraint) {
-      const auto get_column_expression = [this](ColumnID column_id) {
-        for (auto expr : this->column_expressions()) {
-          const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
-          Assert(column_expr, "Unexpected expression type in column_expression()");
-          if (column_expr->column_reference.original_column_id() == column_id) {
-            return column_expr;
-          }
-        }
-        return std::shared_ptr<LQPColumnExpression>(nullptr);
-      };
-
       // Search for column expressions representing the table_constraint's ColumnIDs
       auto constraint_column_expressions = ExpressionUnorderedSet{};
+
       for (const auto& column_id : table_constraint.columns) {
-        const auto column_expr = get_column_expression(column_id);
-        Assert(column_expr, "Did not find column expression in LQPNode");
+        const auto column_expr_opt = find_column_expression(column_id);
+        Assert(column_expr_opt, "Did not find column expression in LQPNode");
         Assert(!(table_constraint.is_primary_key == IsPrimaryKey::Yes && is_column_nullable(column_id)),
                "Primary Key constraint requires column(s) to be non-NULL.");
-        constraint_column_expressions.emplace(column_expr);
+
+        constraint_column_expressions.insert(*column_expr_opt);
       }
 
       // Create ExpressionsConstraintDefinition
