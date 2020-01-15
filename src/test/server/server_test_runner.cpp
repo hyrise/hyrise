@@ -106,6 +106,27 @@ TEST_F(ServerTestRunner, TestCopyImport) {
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
 }
 
+TEST_F(ServerTestRunner, TestInvalidCopyImport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  // Ill-formed
+  EXPECT_THROW(transaction.exec("COPY another_table FROM;"), pqxx::sql_error);
+
+  // File is not existing
+  EXPECT_THROW(transaction.exec("COPY another_table FROM 'not/existing/file.tbl';"), pqxx::sql_error);
+
+  // Unsupported file extension
+  EXPECT_THROW(transaction.exec("COPY another_table FROM 'resources/test_data/tbl/float';"), pqxx::sql_error);
+
+  // Check whether server is still running and connection established
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), _table_a->row_count());
+}
+
 TEST_F(ServerTestRunner, TestCopyExport) {
   pqxx::connection connection{_connection_string};
 
@@ -117,6 +138,29 @@ TEST_F(ServerTestRunner, TestCopyExport) {
 
   std::ifstream file{_export_filename};
   EXPECT_TRUE(file.good());
+}
+
+TEST_F(ServerTestRunner, TestInvalidCopyExport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  const auto result = transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
+
+  // Ill-formed
+  EXPECT_THROW(transaction.exec("COPY table_a TO;"), pqxx::sql_error);
+
+  // Table is not existing
+  EXPECT_THROW(transaction.exec("COPY not_existing TO './does_not_work.tbl';"), pqxx::sql_error);
+
+  // Unsupported file extension
+  EXPECT_THROW(transaction.exec("COPY table_a TO './does_not_work.mp3';"), pqxx::sql_error);
+
+  // Check whether server is still running and connection established
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {
