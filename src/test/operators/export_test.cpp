@@ -127,12 +127,22 @@ TEST_F(OperatorsExportTest, NonsensePath) {
   EXPECT_THROW(exporter->execute(), std::exception);
 }
 
-TEST_F(OperatorsExportTest, EmptyPath) {
+TEST_F(OperatorsExportTest, EmptyPathWithoutFileType) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
   EXPECT_THROW(std::make_shared<opossum::Export>(table_wrapper, ""), std::exception);
+}
+
+TEST_F(OperatorsExportTest, EmptyPathWithFileType) {
+  table->append({1, "hello", 3.5f});
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "", FileType::Csv)
+
+  EXPECT_THROW(exporter->execute(), std::exception);
 }
 
 TEST_F(OperatorsExportTest, UnknownFileExtension) {
