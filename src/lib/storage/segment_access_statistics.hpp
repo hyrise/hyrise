@@ -1,21 +1,15 @@
 #pragma once
 
-#include <array>
 #include <atomic>
-#include <chrono>
-#include <fstream>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
 
-#include "types.hpp"
 #include "storage/pos_list.hpp"
+#include "types.hpp"
 
 namespace opossum {
 class Table;
-class BaseSegment;
-class Chunk;
 
 template <typename T>
 class SegmentAccessCounter {
@@ -42,6 +36,8 @@ class SegmentAccessCounter {
 
 class SegmentAccessStatisticsTools {
  public:
+  static void reset_all(const std::map<std::string, std::shared_ptr<Table>>& tables);
+
   // There are six AccessPatterns:
   // 0 (unknown), equivalent to IteratorSeqAccess
   // 1 (sequentially increasing), difference between two neighboring elements is 0 or 1.
@@ -52,12 +48,6 @@ class SegmentAccessStatisticsTools {
   enum class AccessPattern {Unknown, SeqInc, RndInc, SeqDec, RndDec, Rnd};
 
   static AccessPattern iterator_access_pattern(const std::shared_ptr<const PosList>& positions);
-
-  static SegmentAccessCounter<uint64_t> fetch_counter(const std::shared_ptr<BaseSegment>& segment);
-  using ColumnIDAccessStatisticsPair = std::pair<const ColumnID, const SegmentAccessCounter<uint64_t>>;
-  static std::vector<ColumnIDAccessStatisticsPair> fetch_counters(const std::shared_ptr<Chunk>& chunk);
-  using ChunkIDColumnIDsPair = std::pair<const ChunkID, std::vector<ColumnIDAccessStatisticsPair>>;
-  static std::vector<ChunkIDColumnIDsPair> fetch_counters(const std::shared_ptr<Table>& table);
 
  private:
   // There are five possible inputs
@@ -91,18 +81,8 @@ class SegmentAccessStatistics {
 
   SegmentAccessCounter<uint64_t> counter() const;
 
-  static void save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables,
-    const std::string& path_to_meta_data, const std::string& path_to_access_statistics);
-
-  /**
-   * Resets access statistics of every segment in table
-   * @param tables map of tables
-   */
-  static void reset_all(const std::map<std::string, std::shared_ptr<Table>>& tables);
-
  private:
   SegmentAccessCounter<std::atomic_uint64_t> _counter;
-
 };
 
 }  // namespace opossum

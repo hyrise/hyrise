@@ -194,7 +194,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
-  SegmentAccessStatistics::reset_all(Hyrise::get().storage_manager.tables());
+  SegmentAccessStatisticsTools::reset_all(Hyrise::get().storage_manager.tables());
   for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
 
@@ -221,9 +221,6 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-
-    SegmentAccessStatistics::save_to_csv(Hyrise::get().storage_manager.tables(),
-      "access_statistics_" + name + "_meta.csv", "access_statistics_" + name + ".csv");
 
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
