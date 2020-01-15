@@ -28,9 +28,6 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "operators/print.hpp"
-#include "operators/get_table.hpp"
-
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -224,9 +221,6 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
       auto scan = create_table_scan(in, ColumnID{1}, predicate_condition, NULL_VALUE);
       scan->execute();
-
-      auto pr = std::make_shared<Print>(scan);
-      pr->execute();
 
       const auto expected_result = std::vector<AllTypeVariant>{{12, 123}};
       ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);

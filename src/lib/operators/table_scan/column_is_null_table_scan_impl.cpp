@@ -12,7 +12,6 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table,
@@ -59,16 +58,8 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
   void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                         PosList& matches, const OrderByMode order_by) const {
     const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
+    const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
     segment_with_iterators(segment, [&](auto begin, auto end) {
-      // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
-      const auto predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
-      std::cout << "before scan ";
-      // TODO returns everything if no null present
-      for (auto segment_it = begin; segment_it != end; ++segment_it) {
-        std::cout << segment_it->value() << (segment_it->is_null() ? "null " : "notnull ") << '\t';
-      }
-      std::cout << std::endl << std::endl;
-
       if (predicate_is_null) {
         if (is_nulls_first) {
           end = std::lower_bound(begin, end, false,
@@ -86,16 +77,6 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
                                  [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
         }
       }
-
-      std::cout << (predicate_is_null ? "ISNULL " : "NOTNULL ")
-        << (is_nulls_first ? "nulls first" : "nulls last")
-        << std::endl;
-
-      std::cout << "found values ";
-      for (auto segment_it = begin; segment_it != end; ++segment_it) {
-        std::cout << segment_it->value() << '\t';
-      }
-      std::cout << std::endl;
 
       size_t output_idx = matches.size();
       matches.resize(matches.size() + std::distance(begin, end));
