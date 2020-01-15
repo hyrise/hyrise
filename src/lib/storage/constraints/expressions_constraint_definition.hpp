@@ -19,33 +19,25 @@ struct ExpressionsConstraintDefinition final {
   }
   bool operator!=(const ExpressionsConstraintDefinition& rhs) const { return !(rhs == *this); }
 
-  size_t hash() const {
-    auto hash = boost::hash_value(is_primary_key);
-    for (const auto& expression : column_expressions) {
-      boost::hash_combine(hash, expression->hash());
-    }
-    return hash;
-  }
-
   ExpressionUnorderedSet column_expressions;
   IsPrimaryKey is_primary_key;
 };
 
-// Wrapper-structs for enabling hash based containers containing ExpressionsConstraintDefinition
-struct ExpressionsConstraintDefinitionHash final {
-  size_t operator()(const ExpressionsConstraintDefinition& expressions_constraint_definition) const {
-    return expressions_constraint_definition.hash();
-  }
-};
-struct ExpressionsConstraintDefinitionEqual final {
-  size_t operator()(const ExpressionsConstraintDefinition& constraint_a,
-                    const ExpressionsConstraintDefinition& constraint_b) const {
-    return constraint_a == constraint_b;
-  }
-};
-
-using ExpressionsConstraintDefinitions =
-    std::unordered_set<ExpressionsConstraintDefinition, ExpressionsConstraintDefinitionHash,
-                       ExpressionsConstraintDefinitionEqual>; // TODO analog ändern
+using ExpressionsConstraintDefinitions = std::unordered_set<ExpressionsConstraintDefinition>;
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::ExpressionsConstraintDefinition> {
+  size_t operator()(const opossum::ExpressionsConstraintDefinition& constraint) const {
+    auto hash = boost::hash_value(constraint.is_primary_key);
+    for (const auto& expression : constraint.column_expressions) {
+      boost::hash_combine(hash, expression->hash());
+    }
+    return hash;
+  }
+};
+
+} // namespace std
