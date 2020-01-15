@@ -192,40 +192,20 @@ class SortedSegmentBetweenSearch {
     if (_is_ascending) {
       switch (_predicate_condition) {
         case PredicateCondition::BetweenInclusive:
-          {
-            std::thread get_first_bound_thread ([this, &middle](){
-              _begin = _get_first_bound(_left_value, _begin, middle + 1);
-            });
-            _end = _get_last_bound(_right_value, middle, _end);
-            get_first_bound_thread.join();
-          }
+          _begin = _get_first_bound(_left_value, _begin, _end);
+          _end = _get_last_bound(_right_value, _begin, _end);
           return;
         case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_last_bound(_left_value, _begin, middle + 1);
-            });
-            _end = _get_last_bound(_right_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_last_bound(_left_value, _begin, _end);
+          _end = _get_last_bound(_right_value, _begin, _end);
           return;
         case PredicateCondition::BetweenUpperExclusive:
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_first_bound(_left_value, _begin, middle + 1);
-            });
-            _end = _get_first_bound(_right_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_first_bound(_left_value, _begin, _end);
+          _end = _get_first_bound(_right_value, _begin, _end);
           return;
         case PredicateCondition::BetweenExclusive:
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_last_bound(_left_value, _begin, middle + 1);
-            });
-            _end = _get_first_bound(_right_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_last_bound(_left_value, _begin, _end);
+          _end = _get_first_bound(_right_value, _begin, _end);
           return;
         default:
           Fail("Unsupported predicate condition encountered");
@@ -233,40 +213,20 @@ class SortedSegmentBetweenSearch {
     } else {
       switch (_predicate_condition) {
         case PredicateCondition::BetweenInclusive:
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_first_bound(_right_value, _begin, middle + 1);
-            });
-            _end = _get_last_bound(_left_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_first_bound(_right_value, _begin, _end);
+          _end = _get_last_bound(_left_value, _begin, _end);
           return;
         case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_first_bound(_right_value, _begin, middle + 1);
-            });
-            _end = _get_first_bound(_left_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_first_bound(_right_value, _begin, _end);
+          _end = _get_first_bound(_left_value, _begin, _end);
           return;
         case PredicateCondition::BetweenUpperExclusive:
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_last_bound(_right_value, _begin, middle + 1);
-            });
-            _end = _get_last_bound(_left_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_last_bound(_right_value, _begin, _end);
+          _end = _get_last_bound(_left_value, _begin, _end);
           return;
         case PredicateCondition::BetweenExclusive:
-          {
-            std::thread get_lower_bound_thread ([this, &middle](){
-              _begin = _get_last_bound(_right_value, _begin, middle + 1);
-            });
-            _end = _get_first_bound(_left_value, middle, _end);
-            get_lower_bound_thread.join();
-          }
+          _begin = _get_last_bound(_right_value, _begin, _end);
+          _end = _get_first_bound(_left_value, _begin, _end);
           return;
         default:
           Fail("Unsupported predicate condition encountered");
