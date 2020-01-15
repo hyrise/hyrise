@@ -140,7 +140,7 @@ TEST_F(OperatorsExportTest, EmptyPathWithFileType) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "", FileType::Csv)
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "", FileType::Csv);
 
   EXPECT_THROW(exporter->execute(), std::exception);
 }
