@@ -147,8 +147,6 @@ TEST_F(ServerTestRunner, TestInvalidCopyExport) {
   // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
-  const auto result = transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
-
   // Ill-formed
   EXPECT_THROW(transaction.exec("COPY table_a TO;"), pqxx::sql_error);
 
