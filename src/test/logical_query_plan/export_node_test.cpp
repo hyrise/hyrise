@@ -11,10 +11,10 @@ namespace opossum {
 class ExportNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-  	_mock_node = MockNode::make(
+    _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-  	_export_node = ExportNode::make("tablename", "filename", FileType::Csv, _mock_node);
+    _export_node = ExportNode::make("tablename", "filename", FileType::Csv, _mock_node);
   }
 
   std::shared_ptr<ExportNode> _export_node;
