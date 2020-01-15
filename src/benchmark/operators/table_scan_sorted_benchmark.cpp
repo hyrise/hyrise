@@ -8,7 +8,6 @@
 #include "expression/expression_functional.hpp"
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -22,9 +21,7 @@ namespace opossum {
 namespace {
 
 const auto ROWS = 1'000'000;
-//const auto ROWS = 100;
 const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
-//const auto CHUNK_SIZE = ChunkOffset{10};
 const auto STRING_SIZE = 16;
 
 opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
@@ -124,8 +121,6 @@ void BM_TableScanSorted(
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
 
   const auto table_wrapper = table_creator(encoding_type, mode);
-  //auto print = std::make_shared<Print>(table_wrapper);
-  //print->execute();
 
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
 
@@ -151,7 +146,7 @@ void BM_TableScanSorted(
         left_search_value = static_cast<ColumnDataType>(left_raw_value);
         right_search_value = static_cast<ColumnDataType>(right_raw_value);
       }
-      //std::cout << left_search_value << " // " << right_search_value << std::endl;
+      
       predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
                                                       value_(left_search_value), value_(right_search_value));
     } else {

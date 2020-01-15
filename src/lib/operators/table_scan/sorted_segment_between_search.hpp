@@ -1,7 +1,5 @@
 #pragma once
 
-#include <chrono>
-
 #include <type_traits>
 #include <thread>
 #include <functional>
@@ -45,8 +43,6 @@ class SortedSegmentBetweenSearch {
     if (!_is_nulls_first && !(it_last - 1)->is_null()){
       return;
     }
-
-    std::cout << "no early out for null search" << std::endl;
 
     using difference_type = typename std::iterator_traits<IteratorType>::difference_type;
     difference_type size = std::distance(it_first, it_last), bound = 1;
@@ -154,17 +150,10 @@ class SortedSegmentBetweenSearch {
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end() {
     const IteratorType& middle = _find_middle_element();
-    std::cout << "set begin and end" << std::endl;
-
-    std::cout << "left value " << _left_value << std::endl;
-    std::cout << "right value " << _right_value << std::endl;
-    std::cout << "begin " << _begin->value() << std::endl;
-    std::cout << "end " << (_end - 1)->value() << std::endl;
 
     if (_begin == _end) return;
-    
+
     if (_is_ascending) {
-      std::cout << "ascending" << std::endl;
       // early out everything matches
       if (_begin->value() > _left_value && (_end - 1)->value() < _right_value) {
         return;
@@ -172,19 +161,17 @@ class SortedSegmentBetweenSearch {
 
       // early out nothing matches
       if (_begin->value() > _right_value || (_end - 1)->value() < _left_value) {
-        _begin = _end; 
+        _begin = _end;
         return;
       }
     } else {
-      std::cout << "descending" << std::endl;
+      // early out everything matches
       if (_begin->value() < _right_value && (_end - 1)->value() > _left_value) {
-        std::cout << "all match" << std::endl;
         return;
       }
-      std::cout << "not all match" << std::endl;
+      // early out nothing matches
       if ((_end - 1)->value() > _right_value || _begin->value() < _left_value) {
-        _begin = _end; 
-        std::cout << "no match" << std::endl;
+        _begin = _end;
         return;
       }
     }
@@ -277,20 +264,12 @@ class SortedSegmentBetweenSearch {
 public:
   template <typename ResultConsumer>
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
-    // decrease the effective sort range by excluding null values based on their ordering
-    //auto start = std::chrono::system_clock::now();
-    if (_nullable)
+    // decrease the effective sort range by excluding null values based on their ordering (first or last)
+    if (_nullable) {
       _exponential_search_for_nulls(_begin, _end);
-    //auto end = std::chrono::system_clock::now();
-    //std::cout << "exponential search: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
-    //start = std::chrono::system_clock::now();
+    }
     _set_begin_and_end();
-    //end = std::chrono::system_clock::now();
-    //std::cout << "star begin: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
-    //start = std::chrono::system_clock::now();
     result_consumer(_begin, _end);
-    //end = std::chrono::system_clock::now();
-    //std::cout << "result consumer: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
   }
 
  private:

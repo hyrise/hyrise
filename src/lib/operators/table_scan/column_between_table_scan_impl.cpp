@@ -1,7 +1,5 @@
 #include "column_between_table_scan_impl.hpp"
 
-#include <chrono>
-
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -43,15 +41,12 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
-    //std::cout << "scan sorted segment" << std::endl;
     _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
   } else {
     // Select optimized or generic scanning implementation based on segment type
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-      //std::cout << "scan dict segment" << std::endl;
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else {
-      //std::cout << "scan generic segment" << std::endl;
       _scan_generic_segment(segment, chunk_id, matches, position_filter);
     }
   }
@@ -86,7 +81,6 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
                                                         const std::shared_ptr<const PosList>& position_filter) const {
-  //auto start = std::chrono::system_clock::now();
 
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
@@ -114,7 +108,6 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
       _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
     });
 
-    //std::cout << "all match" << std::endl;
     return;
   }
 
@@ -143,18 +136,10 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return (position.value() - lower_bound_value_id) < value_id_diff;
   };
 
-  //auto end = std::chrono::system_clock::now();
-  //std::cout << "preparation: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
-
-  //start = std::chrono::system_clock::now();
-
   attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
     // No need to check for NULL because NULL would be represented as a value ID outside of our range
     _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches);
   });
-
-  //end = std::chrono::system_clock::now();
-  //std::cout << "scan: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count() << "ns" << std::endl;
 
 }
 
@@ -175,12 +160,10 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                        boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          std::cout << "1" << std::endl;
           size_t output_idx = matches.size();
 
           matches.resize(matches.size() + std::distance(begin, end));
 
-          std::cout << "2" << std::endl;
           /**
              * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
              * by calculating the offsets based on the first offset instead of calling chunk_offset()
@@ -188,24 +171,19 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
              * ChunkOffsets in position_filter are not necessarily continuous, therefore we need to use the iterator.
              */
           if (position_filter) {
-            std::cout << "3" << std::endl;
             for (; begin != end; ++begin) {
               matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
             }
           } else {
-            std::cout << "4" << std::endl;
             const auto distance = std::distance(begin, end);
             if (distance > 0) {
-              std::cout << "5" << std::endl;
               const auto first_offset = begin->chunk_offset();
 
               for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
                 matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
-                std::cout << "6" << std::endl;
               }
             }
           }
-          std::cout << "7" << std::endl;
         });
       });
     }
