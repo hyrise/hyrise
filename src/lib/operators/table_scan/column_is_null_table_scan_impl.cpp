@@ -61,7 +61,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
     const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
     segment_with_iterators(segment, [&](auto begin, auto end) {
       if (is_nulls_first) {
-        const auto first_not_null = std::lower_bound(begin, end, false,
+        const auto first_not_null = std::lower_bound(begin, end, bool{},
                                [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
         if (predicate_is_null) {
           end = first_not_null;
@@ -69,7 +69,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
           begin = first_not_null;
         }
       } else {  // nulls last
-        const auto first_null = std::lower_bound(begin, end, true,
+        const auto first_null = std::lower_bound(begin, end, bool{},
                                  [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
         if (predicate_is_null) {
           begin = first_null;
