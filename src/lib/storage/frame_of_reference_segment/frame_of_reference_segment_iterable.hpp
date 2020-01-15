@@ -25,7 +25,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
                                                   _segment.null_values().cbegin()};
 
       auto end = Iterator<OffsetValueIteratorT>{_segment.block_minima().cend(), offset_values.cend(),
-                                                  _segment.null_values().cend()};
+                                                _segment.null_values().cend()};
 
       functor(begin, end);
     });

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <type_traits>
-#include <thread>
 #include <functional>
+#include <thread>
+#include <type_traits>
 
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
@@ -30,17 +30,13 @@ class SortedSegmentBetweenSearch {
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
-
-
   void _exponential_search_for_nulls(IteratorType it_first, IteratorType it_last) {
-
-
     if (it_first == it_last) return;
     // If no null values are present
     if (_is_nulls_first && !it_first->is_null()) {
       return;
     }
-    if (!_is_nulls_first && !(it_last - 1)->is_null()){
+    if (!_is_nulls_first && !(it_last - 1)->is_null()) {
       return;
     }
 
@@ -54,7 +50,7 @@ class SortedSegmentBetweenSearch {
 
       auto end = it_first + std::min(bound, size);
       _begin = std::lower_bound(it_first + (bound / 2), end, false,
-                              [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+                                [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
     } else {
       while (bound < size && (it_first + (size - bound))->is_null()) {
         bound *= 2;
@@ -66,8 +62,7 @@ class SortedSegmentBetweenSearch {
     }
   }
 
-
-/**
+  /**
    * _get_first_bound and _get_last_bound are used to retrieve the lower and upper bound in a sorted segment but are
    * independent of its sort order. _get_first_bound will always return the bound with the smaller offset and
    * _get_last_bound will return the bigger offset.
@@ -125,9 +120,9 @@ class SortedSegmentBetweenSearch {
           // continue search up to this point
           _end = it;
           count = step;
-        }
-        else  // iterator value is in range [_left_value, _right_value]
+        } else {  // iterator value is in range [_left_value, _right_value]
           return it;
+        }
       } else {  // descending
         if (_left_value > value) {
           // there are no larger values right of the current iterator position
@@ -139,9 +134,9 @@ class SortedSegmentBetweenSearch {
           // continue search from the next position
           _begin = ++it;
           count -= step + 1;
-        }
-        else // iterator value is in range [_left_value, _right_value]
+        } else {  // iterator value is in range [_left_value, _right_value]
           return it;
+        }
       }
     }
     return _begin;
@@ -221,7 +216,7 @@ class SortedSegmentBetweenSearch {
     }
   }
 
-public:
+ public:
   template <typename ResultConsumer>
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
     // decrease the effective sort range by excluding null values based on their ordering (first or last)

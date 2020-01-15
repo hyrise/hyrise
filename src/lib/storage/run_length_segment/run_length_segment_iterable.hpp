@@ -17,10 +17,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin =
-        Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(), _segment.end_positions()->cbegin(), _segment.end_positions()->cbegin(), 0u};
-    auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(), _segment.end_positions()->cbegin(),
-                        static_cast<ChunkOffset>(_segment.size())};
+    auto begin = Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(),
+                          _segment.end_positions()->cbegin(), _segment.end_positions()->cbegin(), 0u};
+    auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(),
+                        _segment.end_positions()->cbegin(), static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }

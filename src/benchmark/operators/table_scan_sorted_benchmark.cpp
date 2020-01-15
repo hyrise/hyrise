@@ -130,7 +130,7 @@ void BM_TableScanSorted(
 
   std::shared_ptr<AbstractPredicateExpression> predicate;
   const auto column_expression =
-          pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
+      pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
   resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -146,7 +146,7 @@ void BM_TableScanSorted(
         left_search_value = static_cast<ColumnDataType>(left_raw_value);
         right_search_value = static_cast<ColumnDataType>(right_raw_value);
       }
-      
+
       predicate = std::make_shared<BetweenExpression>(PredicateCondition::BetweenUpperExclusive, column_expression,
                                                       value_(left_search_value), value_(right_search_value));
     } else {
@@ -209,10 +209,11 @@ void registerTableScanSortedBenchmarks() {
             const auto& table_generator = table_types.at(data_type);
 
             const std::string between_label = is_between_scan ? "Between" : "";
-            benchmark::RegisterBenchmark(
-                ("BM_Table" + between_label + "ScanSorted/" + encoding_name + "/"
-                + std::to_string(selectivity) + "/" + data_type + "/" + mode).c_str(),
-                BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, table_generator);
+            benchmark::RegisterBenchmark(("BM_Table" + between_label + "ScanSorted/" + encoding_name + "/" +
+                                          std::to_string(selectivity) + "/" + data_type + "/" + mode)
+                                             .c_str(),
+                                         BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan,
+                                         table_generator);
           }
         }
       }

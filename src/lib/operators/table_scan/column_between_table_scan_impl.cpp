@@ -80,8 +80,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
-                                                        const std::shared_ptr<const PosList>& position_filter) const {
-
+                                                          const std::shared_ptr<const PosList>& position_filter) const {
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
     lower_bound_value_id = segment.lower_bound(left_value);
@@ -140,7 +139,6 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     // No need to check for NULL because NULL would be represented as a value ID outside of our range
     _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches);
   });
-
 }
 
 void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
@@ -155,9 +153,9 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        auto sorted_segment_search =
-            SortedSegmentBetweenSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
-                                       boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
+        auto sorted_segment_search = SortedSegmentBetweenSearch(
+            segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
+            boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           size_t output_idx = matches.size();
