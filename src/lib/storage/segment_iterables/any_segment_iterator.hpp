@@ -23,7 +23,7 @@ class AnySegmentIteratorWrapperBase {
   virtual void advance(std::ptrdiff_t n) = 0;
   virtual bool equal(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual std::ptrdiff_t distance_to(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
-  virtual SegmentPosition<T> dereference() const = 0;
+  virtual SegmentPosition<T>& dereference() const = 0;
 
   /**
    * Segment iterators need to be copyable so we need a way
@@ -63,9 +63,10 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
     return casted_other->_iterator - _iterator;
   }
 
-  SegmentPosition<T> dereference() const final {
+  SegmentPosition<T>& dereference() const final {
     const auto value = *_iterator;
-    return {value.value(), value.is_null(), value.chunk_offset()};
+    tmp = {value.value(), value.is_null(), value.chunk_offset()};
+    return tmp;
   }
 
   std::unique_ptr<AnySegmentIteratorWrapperBase<T>> clone() const final {
@@ -74,6 +75,7 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
 
  private:
   Iterator _iterator;
+  mutable SegmentPosition<T> tmp{T{}, false, ChunkOffset{0}};
 };
 
 }  // namespace detail
@@ -140,10 +142,14 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
     return _wrapper->distance_to(other._wrapper.get());
   }
 
-  SegmentPosition<T> dereference() const { return _wrapper->dereference(); }
+  SegmentPosition<T>& dereference() const {
+    tmp = _wrapper->dereference();
+    return tmp;
+  }
 
  private:
   std::unique_ptr<opossum::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
+  mutable SegmentPosition<T> tmp{T{}, false, ChunkOffset{0}};
 };
 
 }  // namespace opossum

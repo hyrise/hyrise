@@ -91,13 +91,17 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
 
-    SegmentPosition<T> dereference() const {
+    SegmentPosition<T>& dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};
+      if (is_null) {
+        tmp = SegmentPosition<T>{T{}, true, _chunk_offset};
+        return tmp;
+      }
 
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
+      tmp = SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
+      return tmp;
     }
 
    private:
@@ -105,6 +109,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     ValueID _null_value_id;
     ZsIteratorType _attribute_it;
     ChunkOffset _chunk_offset;
+
+    mutable SegmentPosition<T> tmp{T{}, false, ChunkOffset{0}};
   };
 
   template <typename ZsDecompressorType, typename DictionaryIteratorType>
@@ -128,21 +134,27 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    SegmentPosition<T> dereference() const {
+    SegmentPosition<T>& dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto value_id = _attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+      if (is_null) {
+        tmp = SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+        return tmp;
+      }
 
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
+      tmp = SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
+      return tmp;
     }
 
    private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     std::shared_ptr<ZsDecompressorType> _attribute_decompressor;
+
+    mutable SegmentPosition<T> tmp{T{}, false, ChunkOffset{0}};
   };
 
  private:

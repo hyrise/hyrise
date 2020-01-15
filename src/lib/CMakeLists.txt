@@ -427,17 +427,6 @@ set(
     storage/dictionary_segment.hpp
     storage/encoding_type.cpp
     storage/encoding_type.hpp
-    storage/fixed_string_dictionary_segment.cpp
-    storage/fixed_string_dictionary_segment.hpp
-    storage/fixed_string_dictionary_segment/fixed_string.cpp
-    storage/fixed_string_dictionary_segment/fixed_string.hpp
-    storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
-    storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
-    storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
-    storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
-    storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
-    storage/frame_of_reference_segment.cpp
-    storage/frame_of_reference_segment.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -465,10 +454,6 @@ set(
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
-    storage/lz4_segment/lz4_encoder.hpp
-    storage/lz4_segment/lz4_segment_iterable.hpp
-    storage/lz4_segment.cpp
-    storage/lz4_segment.hpp
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
@@ -479,10 +464,6 @@ set(
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
     storage/resolve_encoded_segment_type.hpp
-    storage/run_length_segment.cpp
-    storage/run_length_segment.hpp
-    storage/run_length_segment/run_length_encoder.hpp
-    storage/run_length_segment/run_length_segment_iterable.hpp
     storage/segment_accessor.cpp
     storage/segment_accessor.hpp
     storage/segment_encoding_utils.cpp

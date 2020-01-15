@@ -6,7 +6,6 @@
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
@@ -36,8 +35,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     std::vector<T> dense_values;    // contains the actual values (no NULLs)
     std::vector<bool> null_values;  // bitmap to mark NULL values
 
-    auto max_string_length = size_t{0};
-
     segment_iterable.with_iterators([&](auto segment_it, const auto segment_end) {
       const auto segment_size = std::distance(segment_it, segment_end);
       dense_values.reserve(segment_size);  // potentially overallocate for segments with NULLs
@@ -49,9 +46,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
           const auto segment_value = segment_item.value();
           dense_values.push_back(segment_value);
 
-          if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-            if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
-          }
         } else {
           null_values[current_position] = true;
         }
@@ -88,19 +82,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
                           allocator, {max_value_id}));
     };
 
-    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
-      auto fixed_string_dictionary =
-          std::make_shared<FixedStringVector>(temp_dictionary->cbegin(), temp_dictionary->cend(), max_string_length);
-      const auto compressed_attribute_vector = create_compressed_attribute_vector(fixed_string_dictionary);
-      return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, fixed_string_dictionary,
-                                                                   compressed_attribute_vector, ValueID{null_value_id});
-    } else {
-      // Encode a segment with a pmr_vector<T> as dictionary
-      const auto compressed_attribute_vector = create_compressed_attribute_vector(temp_dictionary);
-      return std::allocate_shared<DictionarySegment<T>>(allocator, temp_dictionary, compressed_attribute_vector,
-                                                        ValueID{null_value_id});
-    }
+    // Encode a segment with a pmr_vector<T> as dictionary
+    const auto compressed_attribute_vector = create_compressed_attribute_vector(temp_dictionary);
+    return std::allocate_shared<DictionarySegment<T>>(allocator, temp_dictionary, compressed_attribute_vector,
+                                                      ValueID{null_value_id});
   }
 
  private:

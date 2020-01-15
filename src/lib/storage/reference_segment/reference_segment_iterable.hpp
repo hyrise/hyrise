@@ -7,10 +7,7 @@
 
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/frame_of_reference_segment.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/run_length_segment.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -52,23 +49,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 #ifdef HYRISE_ERASE_DICTIONARY
           if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
 #endif
-
-#ifdef HYRISE_ERASE_RUNLENGTH
-          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
-#endif
-
-#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
-#endif
-
-#ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-          if constexpr (std::is_same_v<T, int32_t>) {
-            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
-          }
-#endif
-
-          // Always erase LZ4Segment accessors
-          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
 
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
             const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
@@ -138,26 +118,32 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     std::ptrdiff_t distance_to(const SingleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
-    SegmentPosition<T> dereference() const {
+    SegmentPosition<T>& dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
+      if (_pos_list_it->is_null()) {
+        tmp = SegmentPosition<T>{T{}, true, pos_list_offset};
+        return tmp;
+      }
 
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
       const auto typed_value = _accessor->access(chunk_offset);
 
       if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
+        tmp = SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
       } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
+        tmp = SegmentPosition<T>{T{}, true, pos_list_offset};
       }
+      return tmp;
     }
 
    private:
     PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
     std::shared_ptr<Accessor> _accessor;
+
+    mutable SegmentPosition<T> tmp{T{}, false, ChunkOffset{0}};
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
@@ -192,10 +178,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
-    SegmentPosition<T> dereference() const {
+    SegmentPosition<T>& dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
+      if (_pos_list_it->is_null()) {
+        tmp = SegmentPosition<T>{T{}, true, pos_list_offset};
+        return tmp;
+      }
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
@@ -206,10 +195,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto typed_value = (*_accessors)[chunk_id]->access(chunk_offset);
 
       if (typed_value) {
-        return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
+        tmp = SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
       } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
+        tmp = SegmentPosition<T>{T{}, true, pos_list_offset};
       }
+      return tmp;
     }
 
     void _create_accessor(const ChunkID chunk_id) const {
@@ -227,6 +217,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     // PointAccessIterators share vector with one Accessor per Chunk
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
+
+    mutable SegmentPosition<T> tmp{T{}, false, ChunkOffset{0}};
   };
 };
 

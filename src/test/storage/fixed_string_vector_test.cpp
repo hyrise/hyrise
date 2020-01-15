@@ -206,4 +206,17 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
   EXPECT_EQ(*(fixed_string_vector->data() + 17), '\0');
 }
 
+TEST_F(FixedStringVectorTest, Foo) {
+  std::vector<pmr_string> v = {"abc", "x", "ghi"};
+  auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
+
+
+  const auto& fs_lower_bound = *std::lower_bound(fs_vector.cbegin(), fs_vector.cend(), "def");
+  const auto& v_lower_bound = *std::lower_bound(v.cbegin(), v.cend(), "def");
+
+  std::cout << fs_lower_bound << std::endl;
+  std::cout << v_lower_bound << std::endl;
+  EXPECT_EQ(fs_lower_bound, v_lower_bound);
+}
+
 }  // namespace opossum

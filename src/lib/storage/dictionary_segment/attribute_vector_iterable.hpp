@@ -80,13 +80,16 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
-      return {value_id, is_null, _chunk_offset};
+      tmp = {value_id, is_null, _chunk_offset};
+      return tmp;
     }
 
    private:
     const ValueID _null_value_id;
     ZsIteratorType _attribute_it;
     ChunkOffset _chunk_offset;
+
+    mutable SegmentPosition<ValueID> tmp{ValueID{0}, false, ChunkOffset{0}};
   };
 
   template <typename ZsDecompressorType>

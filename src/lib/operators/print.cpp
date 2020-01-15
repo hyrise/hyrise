@@ -203,22 +203,6 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) {
         segment_type += "Dic";
         break;
       }
-      case EncodingType::RunLength: {
-        segment_type += "RLE";
-        break;
-      }
-      case EncodingType::FixedStringDictionary: {
-        segment_type += "FSD";
-        break;
-      }
-      case EncodingType::FrameOfReference: {
-        segment_type += "FoR";
-        break;
-      }
-      case EncodingType::LZ4: {
-        segment_type += "LZ4";
-        break;
-      }
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {

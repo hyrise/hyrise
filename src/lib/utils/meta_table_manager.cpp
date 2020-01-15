@@ -6,7 +6,6 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -26,10 +25,6 @@ size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
     // For dictionary segments, an early (and much faster) exit is possible by using the dictionary size
     if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
       distinct_value_count = dictionary_segment->dictionary()->size();
-      return;
-    } else if (const auto fs_dictionary_segment =
-                   std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
-      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
       return;
     }
 

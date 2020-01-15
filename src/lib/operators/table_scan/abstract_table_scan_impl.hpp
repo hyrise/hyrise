@@ -53,13 +53,13 @@ class AbstractTableScanImpl {
     // Do the remainder the easy way. If we did not use the optimization above, left_it was not yet touched, so we
     // iterate over the entire input data.
     for (; left_it != left_end; ++left_it) {
-      const auto left = *left_it;
+      const auto& left = *left_it;
       if constexpr (std::is_same_v<RightIterator, std::false_type>) {
         if ((!CheckForNull || !left.is_null()) && func(left)) {
           matches_out.emplace_back(RowID{chunk_id, left.chunk_offset()});
         }
       } else {
-        const auto right = *right_it;
+        const auto& right = *right_it;
         if ((!CheckForNull || (!left.is_null() && !right.is_null())) && func(left, right)) {
           matches_out.emplace_back(RowID{chunk_id, left.chunk_offset()});
         }

@@ -38,7 +38,7 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value> {};
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag> {};
 
 /**
  * Mapping between chunk offset into a reference segment and

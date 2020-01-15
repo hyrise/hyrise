@@ -4,9 +4,6 @@
 #include <memory>
 
 #include "storage/dictionary_segment/dictionary_encoder.hpp"
-#include "storage/frame_of_reference_segment/frame_of_reference_encoder.hpp"
-#include "storage/lz4_segment/lz4_encoder.hpp"
-#include "storage/run_length_segment/run_length_encoder.hpp"
 
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
@@ -21,11 +18,7 @@ namespace {
  * Add your segment encoder here!
  */
 const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegmentEncoder>>{
-    {EncodingType::Dictionary, std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>()},
-    {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
-    {EncodingType::FixedStringDictionary, std::make_shared<DictionaryEncoder<EncodingType::FixedStringDictionary>>()},
-    {EncodingType::FrameOfReference, std::make_shared<FrameOfReferenceEncoder>()},
-    {EncodingType::LZ4, std::make_shared<LZ4Encoder>()}};
+    {EncodingType::Dictionary, std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>()}};
 
 }  // namespace
 

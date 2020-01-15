@@ -133,17 +133,6 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
       return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
     case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
-    case EncodingType::RunLength:
-      return _import_run_length_segment<ColumnDataType>(file, row_count);
-    case EncodingType::FrameOfReference:
-      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FrameOfReference>,
-                                                hana::type_c<ColumnDataType>)) {
-        return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
-      } else {
-        Fail("Unsupported data type for FOR encoding");
-      }
-    case EncodingType::LZ4:
-      return _import_lz4_segment<ColumnDataType>(file, row_count);
     default:
       // This case happens if the read column type is not a valid EncodingType.
       Fail("Cannot import column: invalid column type");
@@ -177,88 +166,6 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
-}
-
-template <typename T>
-std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(std::ifstream& file,
-                                                                              ChunkOffset row_count) {
-  const auto size = _read_value<uint32_t>(file);
-  const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
-  const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
-  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
-
-  return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
-}
-
-template <typename T>
-std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
-                                                                                             ChunkOffset row_count) {
-  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
-  const auto block_count = _read_value<uint32_t>(file);
-  const auto block_minima = pmr_vector<T>(_read_values<T>(file, block_count));
-  const auto size = _read_value<uint32_t>(file);
-  const auto null_values = pmr_vector<bool>(_read_values<bool>(file, size));
-  auto offset_values = _import_offset_value_vector(file, row_count, attribute_vector_width);
-
-  return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
-}
-
-template <typename T>
-std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
-  const auto num_elements = _read_value<uint32_t>(file);
-  const auto block_count = _read_value<uint32_t>(file);
-
-  uint32_t block_size;
-  uint32_t last_block_size;
-  if (block_count > 1) {
-    block_size = _read_value<uint32_t>(file);
-    last_block_size = _read_value<uint32_t>(file);
-  } else {
-    last_block_size = _read_value<uint32_t>(file);
-    block_size = last_block_size;
-  }
-
-  const size_t compressed_size = (block_count - 1) * block_size + last_block_size;
-
-  pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
-
-  pmr_vector<pmr_vector<char>> lz4_blocks(block_count);
-  for (uint32_t block_index = 0; block_index < block_count; ++block_index) {
-    lz4_blocks[block_index] = pmr_vector<char>(_read_values<char>(file, lz4_block_sizes[block_index]));
-  }
-
-  const auto null_values_size = _read_value<uint32_t>(file);
-  std::optional<pmr_vector<bool>> null_values;
-  if (null_values_size != 0) {
-    null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
-  } else {
-    null_values = std::nullopt;
-  }
-
-  const auto dictionary_size = _read_value<uint32_t>(file);
-  auto dictionary = pmr_vector<char>(_read_values<char>(file, dictionary_size));
-
-  const auto string_offsets_size = _read_value<uint32_t>(file);
-
-  if (string_offsets_size > 0) {
-    const auto string_offsets_data_size = _read_value<uint32_t>(file);
-
-    // so far, only SimdBp128 compression is supported
-    auto string_offsets =
-        std::make_unique<SimdBp128Vector>(_read_values<uint128_t>(file, string_offsets_data_size), string_offsets_size);
-
-    return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-                                           std::move(string_offsets), block_size, last_block_size, compressed_size,
-                                           num_elements);
-  } else {
-    if (std::is_same<T, pmr_string>::value) {
-      return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-                                             nullptr, block_size, last_block_size, compressed_size, num_elements);
-    } else {
-      return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-                                             block_size, last_block_size, compressed_size, num_elements);
-    }
-  }
 }
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
