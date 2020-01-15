@@ -159,8 +159,9 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           size_t output_idx = matches.size();
+          auto result_size = std::distance(begin, end);
 
-          matches.resize(matches.size() + std::distance(begin, end));
+          matches.resize(matches.size() + result_size);
 
           /**
              * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
@@ -173,11 +174,10 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
               matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
             }
           } else {
-            const auto distance = std::distance(begin, end);
-            if (distance > 0) {
+            if (result_size > 0) {
               const auto first_offset = begin->chunk_offset();
 
-              for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+              for (auto chunk_offset = 0; chunk_offset < result_size; ++chunk_offset) {
                 matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
               }
             }
