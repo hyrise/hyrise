@@ -63,64 +63,42 @@ namespace opossum {
       const auto column_data_types = table->get_table()->column_data_types();
 
       for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        //Column specfic values
+        const auto column_reference = stored_table_node->get_column(column_names.at(column_id));
         const auto distribution = table->get_column_data_distribution(column_id);
+        const auto step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
 
-        switch (column_data_types.at(column_id)) {
-          case DataType::Null:
-            break;
-          case DataType::String:
-          {
-            // TODO check distribution
-            auto column = stored_table_node->get_column(column_names.at(column_id));
-            const int step_size = static_cast<int>(table->get_table()->row_count() / selectivity_resolution);
-            for (int selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) {
-              const auto predicate_string =  SyntheticTableGenerator::generate_value<pmr_string>(selectivity_step*step_size);
-              generated_lpqs.emplace_back(PredicateNode::make(greater_than_(column, predicate_string), stored_table_node));
-            }
-          } break;
-          case DataType::Int:
-          case DataType::Long:
-          case DataType::Double:
-          case DataType::Float:
-            if (distribution.distribution_type == DataDistributionType::Uniform) {
-              // change selectivity in steps
-              double step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
-              for (int selectivity_step = 0; selectivity_step < selectivity_resolution + 1; selectivity_step++) {
-                double lower_bound = distribution.min_value + step_size * selectivity_step;
-                _add_lqps_with_reference_scans(generated_lpqs, lower_bound, distribution.max_value, stored_table_node, column_names.at(column_id));
+        for (int selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) { //TODO Check this for loop
+
+          resolve_data_type(column_data_types[column_id], [&](const auto column_data_type) {
+              using ColumnDataType = typename decltype(column_data_type)::type;
+
+              // Get value
+              const auto step_point = selectivity_step * step_size;
+              ColumnDataType value = SyntheticTableGenerator::generate_value<ColumnDataType>(step_point);
+
+              // COLUMN_SCAN
+              const auto _predicate_node = PredicateNode::make(greater_than_(column_reference, value), stored_table_node);
+
+
+
+              const double step_size = (upper_bound - lower_bound_predicate) / reference_scan_resolution;
+
+              const double step_size = (upper_bound - lower_bound_predicate) / reference_scan_resolution;
+
+              for (int step = 0; step < reference_scan_resolution; step++) {
+                list.emplace_back(get_predicate(PredicateNode::make(less_than_(column, step*step_size), table)));
               }
-            } else {
-              // for non uniform distributions: 100% selectivity
-              _add_lqps_with_reference_scans(generated_lpqs, distribution.min_value, distribution.max_value, stored_table_node, column_names.at(column_id));
-            }
-            break;
+
+              // own predicate
+              generated_lpqs.emplace_back(get_predicate(std::shared_ptr<AbstractLQPNode>(table)));
+              // full pos list in reference segment
+              generated_lpqs.emplace_back(get_predicate(PredicateNode::make(is_not_null_(column), table)));
+              // empty pos list in reference segment
+              generated_lpqs.emplace_back(get_predicate(PredicateNode::make(is_null_(column), table)));
+          });
         }
       }
       return generated_lpqs;
     }
-
-    void LQPGenerator::_add_lqps_with_reference_scans(std::vector<std::shared_ptr<AbstractLQPNode>> &list,
-                                                      const double lower_bound_predicate, const double upper_bound,
-                                                      std::shared_ptr<StoredTableNode> table,
-                                                      const std::string &column_name) const {
-
-      const int reference_scan_resolution = 10;
-
-      auto column = table->get_column(column_name);
-      auto get_predicate = [column,lower_bound_predicate](const std::shared_ptr<AbstractLQPNode>& base)
-              { return PredicateNode::make(greater_than_(column, lower_bound_predicate), base); };
-      const double step_size = (upper_bound - lower_bound_predicate) / reference_scan_resolution;
-
-      for (int step = 0; step < reference_scan_resolution; step++) {
-        list.emplace_back(get_predicate(PredicateNode::make(less_than_(column, step*step_size), table)));
-      }
-
-      // own predicate
-      list.emplace_back(get_predicate(std::shared_ptr<AbstractLQPNode>(table)));
-      // full pos list in reference segment
-      list.emplace_back(get_predicate(PredicateNode::make(is_not_null_(column), table)));
-      // empty pos list in reference segment
-      list.emplace_back(get_predicate(PredicateNode::make(is_null_(column), table)));
-    }
-
 }
