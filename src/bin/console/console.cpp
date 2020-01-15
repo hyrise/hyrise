@@ -399,7 +399,7 @@ int Console::_help(const std::string&) {
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
+  out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
   out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
@@ -450,11 +450,11 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto num_warehouses = std::stoi(arguments[1]);
+  auto num_warehouses = std::stoull(arguments.at(0));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -475,11 +475,11 @@ int Console::_generate_tpch(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto scale_factor = std::stof(arguments[0]);
+  auto scale_factor = std::stof(arguments.at(0));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -499,11 +499,11 @@ int Console::_generate_tpcds(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
+  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -521,8 +521,8 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto filepath = std::filesystem::path{arguments[0]};
-  const auto tablename = arguments.size() >= 2 ? arguments[1] : std::string{filepath.stem()};
+  const auto filepath = std::filesystem::path{arguments.at(0)};
+  const auto tablename = arguments.size() >= 2 ? arguments.at(1) : std::string{filepath.stem()};
 
   out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
@@ -538,7 +538,7 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string encoding = arguments.size() == 3 ? arguments[2] : "Unencoded";
+  const std::string encoding = arguments.size() == 3 ? arguments.at(2) : "Unencoded";
 
   const auto encoding_type = encoding_type_to_string.right.find(encoding);
   if (encoding_type == encoding_type_to_string.right.end()) {
@@ -582,8 +582,8 @@ int Console::_export_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& tablename = arguments[0];
-  const std::string& filepath = arguments[1];
+  const std::string& tablename = arguments.at(0);
+  const std::string& filepath = arguments.at(1);
 
   auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
@@ -923,7 +923,7 @@ int Console::_load_plugin(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_path_str = arguments[0];
+  const std::string& plugin_path_str = arguments.at(0);
 
   const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
@@ -944,7 +944,7 @@ int Console::_unload_plugin(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_name = arguments[0];
+  const std::string& plugin_name = arguments.at(0);
 
   Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 
