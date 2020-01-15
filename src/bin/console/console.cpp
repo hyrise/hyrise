@@ -450,7 +450,7 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto num_warehouses = std::stoi(arguments[0]);
+  auto num_warehouses = std::stoull(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
