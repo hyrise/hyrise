@@ -60,7 +60,8 @@ struct ColumnDataDistribution {
 
 struct ColumnSpecification {
   ColumnSpecification(const ColumnDataDistribution& data_distribution, const DataType& data_type,
-                   const std::optional<std::string> name = std::nullopt, const std::optional<float> null_ratio = std::nullopt)
+                      const std::optional<std::string> name = std::nullopt,
+                      const std::optional<float> null_ratio = std::nullopt)
       : data_distribution(data_distribution), data_type(data_type), name(name), null_ratio(null_ratio) {}
 
   const ColumnDataDistribution data_distribution;
@@ -80,7 +81,8 @@ class SyntheticTableGenerator {
 
   static std::shared_ptr<Table> generate_table(
       const std::vector<ColumnSpecification>& column_definitions, const size_t num_rows, const ChunkOffset chunk_size,
-      const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+      const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
+      const UseMvcc use_mvcc = UseMvcc::No);
 
   /**
     * Function to create a typed value from an integer. The data generation creates integers with the requested
