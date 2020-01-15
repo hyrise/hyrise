@@ -399,7 +399,7 @@ int Console::_help(const std::string&) {
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
+  out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
   out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
@@ -450,7 +450,7 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto num_warehouses = std::stoi(arguments[1]);
+  auto num_warehouses = std::stoi(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
