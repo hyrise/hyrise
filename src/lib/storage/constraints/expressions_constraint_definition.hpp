@@ -46,6 +46,6 @@ struct ExpressionsConstraintDefinitionEqual final {
 
 using ExpressionsConstraintDefinitions =
     std::unordered_set<ExpressionsConstraintDefinition, ExpressionsConstraintDefinitionHash,
-                       ExpressionsConstraintDefinitionEqual>;
+                       ExpressionsConstraintDefinitionEqual>; // TODO analog ändern
 
 }  // namespace opossum

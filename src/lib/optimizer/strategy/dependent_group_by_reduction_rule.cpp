@@ -34,6 +34,8 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
   std::set_intersection(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
                         group_by_columns.end(), std::inserter(intersection, intersection.begin()));
 
+  // Info: Expressions lassen sich printen!
+  // std::cout << *column_expr;
   // TODO(Julian) 2020-01-14 01:30 Continue here: Why is there no intersection being found? DependentGroupByReductionRuleTest.SingleKeyReduction
 
   // Skip the current constraint as the primary key/unique constraint is not completely present.

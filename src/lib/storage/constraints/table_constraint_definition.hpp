@@ -22,7 +22,7 @@ struct TableConstraintDefinition final {
   }
   bool operator!=(const TableConstraintDefinition& rhs) const { return !(rhs == *this); }
 
-  size_t hash() const {
+  size_t hash() const { // TODO namespace std {
     auto hash = boost::hash_value(is_primary_key);
     for (const auto& column_id : columns) {
       boost::hash_combine(hash, boost::hash_value(column_id.t));
@@ -35,12 +35,12 @@ struct TableConstraintDefinition final {
 };
 
 // Wrapper-structs for enabling hash based containers containing TableConstraintDefinition
-struct TableConstraintDefinitionHash final {
+struct TableConstraintDefinitionHash final { // TODO würde mit hash() in namespace std zusammenfallen
   size_t operator()(const TableConstraintDefinition& table_constraint_definition) const {
     return table_constraint_definition.hash();
   }
 };
-struct TableConstraintDefinitionEqual final {
+struct TableConstraintDefinitionEqual final { // TODO "komplett über"
   size_t operator()(const TableConstraintDefinition& constraint_a,
                     const TableConstraintDefinition& constraint_b) const {
     return constraint_a == constraint_b;
@@ -48,6 +48,6 @@ struct TableConstraintDefinitionEqual final {
 };
 
 using TableConstraintDefinitions =
-    std::unordered_set<TableConstraintDefinition, TableConstraintDefinitionHash, TableConstraintDefinitionEqual>;
+    std::unordered_set<TableConstraintDefinition, TableConstraintDefinitionHash, TableConstraintDefinitionEqual>; // TODO     std::unordered_set<TableConstraintDefinition>
 
 }  // namespace opossum
