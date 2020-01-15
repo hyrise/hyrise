@@ -10,15 +10,21 @@ namespace opossum {
 
 class ExportNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _export_node = ExportNode::make("tablename", "filename", FileType::Csv); }
+  void SetUp() override {
+  	_mock_node = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+
+  	_export_node = ExportNode::make("tablename", "filename", FileType::Csv, _mock_node);
+  }
 
   std::shared_ptr<ExportNode> _export_node;
+  std::shared_ptr<MockNode> _mock_node;
 };
 
 TEST_F(ExportNodeTest, Description) { EXPECT_EQ(_export_node->description(), "[Export] Name: 'tablename'"); }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
-  const auto another_export_node = ExportNode::make("tablename", "filename", FileType::Csv);
+  const auto another_export_node = ExportNode::make("tablename", "filename", FileType::Csv, _mock_node);
   EXPECT_EQ(*_export_node, *another_export_node);
 
   EXPECT_EQ(_export_node->hash(), another_export_node->hash());
