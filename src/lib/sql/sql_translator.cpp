@@ -1217,9 +1217,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
                           import_type_to_file_type(import_statement.type));
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
+  // Make sure the table exists
+  AssertInput(Hyrise::get().storage_manager.has_table(export_statement.tableName), "There is no table '" + export_statement->tableName + "'.");
+
+  // Create a ValidateNode
+  auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
+  auto lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+
   return ExportNode::make(export_statement.tableName, export_statement.filePath,
-                          import_type_to_file_type(export_statement.type));
+                          import_type_to_file_type(export_statement.type), _current_lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

@@ -501,13 +501,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
-  AssertInput(Hyrise::get().storage_manager.has_table(export_node->tablename),
-              "There is no table '" + export_node->tablename + "'");
   auto export_table = std::make_shared<GetTable>(export_node->tablename);
-  export_table->execute();
-  auto validated_table = std::make_shared<Validate>(export_table);
-  validated_table->execute();
-  return std::make_shared<Export>(validated_table, export_node->filename, export_node->filetype);
+
+  return std::make_shared<Export>(export_table, export_node->filename, export_node->filetype);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
