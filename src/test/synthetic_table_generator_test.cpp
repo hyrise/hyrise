@@ -24,9 +24,12 @@ TEST_F(SyntheticTableGeneratorTest, StringGeneration) {
 
 TEST_F(SyntheticTableGeneratorTest, ThrowOnParameterLengthMismatch) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
+  auto uniform_distribution_0_1 = ColumnDataDistribution::make_uniform_config(0.0, 1.0);
+  std::vector<ColumnSpecification> column_specs = {size_t{5}, {uniform_distribution_0_1, DataType::Double}};
+  std::vector<SegmentEncodingSpec> chunk_encoding_specs = {size_t{2}, {EncodingType::Dictionary}};
 
   // vector storing the column properties ist expected to have the same length as vector storing the encoding
-  ASSERT_THROW(table_generator->generate_table(size_t{5}, 15, 10, {}),
+  ASSERT_THROW(table_generator->generate_table(column_specs, size_t{100}, size_t{10}, chunk_encoding_specs),
                std::logic_error);
 }
 
