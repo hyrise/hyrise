@@ -184,32 +184,34 @@ class SortNullBenchmark : public SortBenchmark {
   }
 };
 
-BENCHMARK_F(SortBenchmark, BM_Sort)(benchmark::State& state) { BM_Sort(state); }
-
-BENCHMARK_F(SortBenchmark, BM_SortSingleColumnSQL)(benchmark::State& state) { BM_SortSingleColumnSQL(state); }
-
-BENCHMARK_F(SortBenchmark, BM_SortMultiColumnSQL)(benchmark::State& state) { BM_SortMultiColumnSQL(state); }
 
 BENCHMARK_F(SortPicoBenchmark, BM_SortPico)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortSmallBenchmark, BM_SortSmall)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortLargeBenchmark, BM_SortLarge)(benchmark::State& state) { BM_Sort(state); }
+BENCHMARK_F(SortBenchmark, BM_Sort)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortReferenceBenchmark, BM_SortReference)(benchmark::State& state) { BM_Sort(state); }
+BENCHMARK_F(SortLargeBenchmark, BM_SortLarge)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortReferencePicoBenchmark, BM_SortReferencePico)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortReferenceSmallBenchmark, BM_SortReferenceSmall)(benchmark::State& state) { BM_Sort(state); }
 
+BENCHMARK_F(SortReferenceBenchmark, BM_SortReference)(benchmark::State& state) { BM_Sort(state); }
+
 BENCHMARK_F(SortReferenceLargeBenchmark, BM_SortReferenceLarge)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortStringBenchmark, BM_SortString)(benchmark::State& state) { BM_Sort(state); }
-
 BENCHMARK_F(SortStringSmallBenchmark, BM_SortStringSmall)(benchmark::State& state) { BM_Sort(state); }
+
+BENCHMARK_F(SortStringBenchmark, BM_SortString)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortStringLargeBenchmark, BM_SortStringLarge)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortNullBenchmark, BM_SortNullBenchmark)(benchmark::State& state) { BM_Sort(state); }
+
+BENCHMARK_F(SortBenchmark, BM_SortSingleColumnSQL)(benchmark::State& state) { BM_SortSingleColumnSQL(state); }
+
+BENCHMARK_F(SortBenchmark, BM_SortMultiColumnSQL)(benchmark::State& state) { BM_SortMultiColumnSQL(state); }
+
 
 }  // namespace opossum
