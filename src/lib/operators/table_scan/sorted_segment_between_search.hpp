@@ -100,57 +100,8 @@ class SortedSegmentBetweenSearch {
     }
   }
 
-  IteratorType _find_middle_element() {
-    DebugAssert(_left_value <= _right_value, "_left_value must be less than or equal to _right_value");
-    // find an element with value in range [_left_value, _right_value] as a starting point for the searches
-    // also update _begin and _end accordingly
-    typename std::iterator_traits<IteratorType>::difference_type count, step;
-    count = std::distance(_begin, _end);
-
-    while (count > 0) {
-      auto it = _begin;
-      step = count / 2;
-      std::advance(it, step);
-      auto value = it->value();
-      if (_is_ascending) {
-        // if ascending, check if value is smaller than left_value
-        if (_left_value > value) {
-          // there are no larger values left of the current iterator position
-          // continue search from the next position
-          _begin = ++it;
-          count -= step + 1;
-          // otherwise, check if value is larger than right_value
-        } else if (value > _right_value) {
-          // there are no smaller values right of the current iterator position
-          // continue search up to this point
-          _end = it;
-          count = step;
-        }
-        else  // iterator value is in range [_left_value, _right_value]
-          return it;
-      } else {  // descending
-        if (_left_value > value) {
-          // there are no larger values right of the current iterator position
-          // continue search up to this point
-          _end = it;
-          count = step;
-        } else if (value > _right_value) {
-          // there are no smaller values left of the current iterator position
-          // continue search from the next position
-          _begin = ++it;
-          count -= step + 1;
-        }
-        else // iterator value is in range [_left_value, _right_value]
-          return it;
-      }
-    }
-    return _begin;
-  }
-
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end() {
-    const IteratorType& middle = _find_middle_element();
-
     if (_begin == _end) return;
 
     if (_is_ascending) {
