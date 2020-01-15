@@ -28,6 +28,9 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "operators/print.hpp"
+#include "operators/get_table.hpp"
+
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -221,6 +224,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
       auto scan = create_table_scan(in, ColumnID{1}, predicate_condition, NULL_VALUE);
       scan->execute();
+
+      auto pr = std::make_shared<Print>(scan);
+      pr->execute();
 
       const auto expected_result = std::vector<AllTypeVariant>{{12, 123}};
       ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
@@ -645,10 +651,9 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
-  const int chunk_count = 2;
-  auto table = load_table("resources/test_data/tbl/int_float_null_sorted_asc_2.tbl", chunk_count);
+  auto table = load_table("resources/test_data/tbl/int_float_null_sorted_asc_2.tbl", 4);
   table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
-  table->get_chunk(ChunkID{1})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
+  //table->get_chunk(ChunkID{1})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
