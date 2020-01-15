@@ -60,21 +60,21 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
     const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
     const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
     segment_with_iterators(segment, [&](auto begin, auto end) {
-      if (predicate_is_null) {
-        if (is_nulls_first) {
-          end = std::lower_bound(begin, end, false,
-                                   [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
-        } else {  // nulls last
-          begin = std::lower_bound(begin, end, true,
-                                 [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+      if (is_nulls_first) {
+        const auto first_not_null = std::lower_bound(begin, end, false,
+                               [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+        if (predicate_is_null) {
+          end = first_not_null;
+        } else {
+          begin = first_not_null;
         }
-      } else {  // not null
-        if (is_nulls_first) {
-          begin = std::lower_bound(begin, end, false,
-                                   [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
-        } else {  // nulls last
-          end = std::lower_bound(begin, end, true,
+      } else {  // nulls last
+        const auto first_null = std::lower_bound(begin, end, true,
                                  [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+        if (predicate_is_null) {
+          begin = first_null;
+        } else {
+          end = first_null;
         }
       }
 
