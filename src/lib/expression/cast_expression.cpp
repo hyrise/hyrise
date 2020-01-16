@@ -13,9 +13,9 @@ std::shared_ptr<AbstractExpression> CastExpression::deep_copy() const {
   return std::make_shared<CastExpression>(argument()->deep_copy(), _data_type);
 }
 
-std::string CastExpression::as_column_name() const {
+std::string CastExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "CAST(" << argument()->as_column_name() << " AS " << _data_type << ")";
+  stream << "CAST(" << argument()->description(mode) << " AS " << _data_type << ")";
   return stream.str();
 }
 

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/counting_quotient_filter.hpp"
@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class AttributeStatisticsTest : public ::testing::Test {};
+class AttributeStatisticsTest : public BaseTest {};
 
 TEST_F(AttributeStatisticsTest, SetStatisticsObject) {
   AttributeStatistics<int32_t> attribute_statistics;

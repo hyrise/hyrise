@@ -1,13 +1,12 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "operators/alias_operator.hpp"
 #include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-class AliasOperatorTest : public ::testing::Test {
+class AliasOperatorTest : public BaseTest {
  public:
   void SetUp() override {
     const auto table_wrapper =

@@ -21,37 +21,47 @@ std::shared_ptr<const AbstractLQPNode> LQPColumnReference::original_node() const
 ColumnID LQPColumnReference::original_column_id() const { return _original_column_id; }
 
 bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
-  return original_node() == rhs.original_node() && _original_column_id == rhs._original_column_id;
+  return _original_column_id == rhs._original_column_id && original_node() == rhs.original_node();
 }
 
-std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
-  const auto original_node = column_reference.original_node();
-  Assert(original_node, "OriginalNode has expired");
+std::string LQPColumnReference::description(AbstractExpression::DescriptionMode mode) const {
+  const auto locked_original_node = original_node();
+  Assert(locked_original_node, "OriginalNode has expired");
 
-  if (column_reference.original_column_id() == INVALID_COLUMN_ID) {
-    os << "INVALID_COLUMN_ID";
-    return os;
+  std::stringstream output;
+  if (mode == AbstractExpression::DescriptionMode::Detailed) {
+    output << locked_original_node << ".";
   }
 
-  switch (original_node->type) {
+  if (_original_column_id == INVALID_COLUMN_ID) {
+    output << "INVALID_COLUMN_ID";
+    return output.str();
+  }
+
+  switch (locked_original_node->type) {
     case LQPNodeType::StoredTable: {
-      const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
+      const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(locked_original_node);
       const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      os << table->column_name(column_reference.original_column_id());
+      output << table->column_name(_original_column_id);
     } break;
     case LQPNodeType::Mock: {
-      const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
-      os << mock_node->column_definitions().at(column_reference.original_column_id()).second;
+      const auto mock_node = std::static_pointer_cast<const MockNode>(locked_original_node);
+      output << mock_node->column_definitions().at(_original_column_id).second;
     } break;
     case LQPNodeType::StaticTable: {
-      const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(column_reference.original_node());
+      const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(locked_original_node);
       const auto& table = static_table_node->table;
-      os << table->column_name(column_reference.original_column_id());
+      output << table->column_name(_original_column_id);
     } break;
     default:
       Fail("Unexpected original_node for LQPColumnReference");
   }
 
+  return output.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
+  os << column_reference.description(AbstractExpression::DescriptionMode::Detailed);
   return os;
 }
 }  // namespace opossum

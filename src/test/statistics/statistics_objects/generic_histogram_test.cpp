@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"

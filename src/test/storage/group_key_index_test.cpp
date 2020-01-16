@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"

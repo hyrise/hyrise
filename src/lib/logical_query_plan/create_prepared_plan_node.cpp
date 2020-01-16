@@ -10,7 +10,7 @@ CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& name,
                                                const std::shared_ptr<PreparedPlan>& prepared_plan)
     : BaseNonQueryNode(LQPNodeType::CreatePreparedPlan), name(name), prepared_plan(prepared_plan) {}
 
-std::string CreatePreparedPlanNode::description() const {
+std::string CreatePreparedPlanNode::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "[CreatePreparedPlan] '" << name << "' {\n";
   stream << *prepared_plan;
@@ -19,7 +19,7 @@ std::string CreatePreparedPlanNode::description() const {
   return stream.str();
 }
 
-size_t CreatePreparedPlanNode::_shallow_hash() const {
+size_t CreatePreparedPlanNode::_on_shallow_hash() const {
   auto hash = prepared_plan->hash();
   boost::hash_combine(hash, name);
   return hash;

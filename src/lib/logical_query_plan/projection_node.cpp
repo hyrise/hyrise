@@ -11,10 +11,12 @@ namespace opossum {
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractLQPNode(LQPNodeType::Projection, expressions) {}
 
-std::string ProjectionNode::description() const {
+std::string ProjectionNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
+
   std::stringstream stream;
 
-  stream << "[Projection] " << expression_column_names(node_expressions);
+  stream << "[Projection] " << expression_descriptions(node_expressions, expression_mode);
 
   return stream.str();
 }

@@ -14,7 +14,7 @@ namespace opossum {
 class CachePolicyTest : public BaseTest {};
 
 // LRU Strategy
-TEST(CachePolicyTest, LRUCacheTest) {
+TEST_F(CachePolicyTest, LRUCacheTest) {
   LRUCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -50,7 +50,7 @@ TEST(CachePolicyTest, LRUCacheTest) {
 }
 
 // LRU-K (K = 2)
-TEST(CachePolicyTest, LRU2CacheTest) {
+TEST_F(CachePolicyTest, LRU2CacheTest) {
   LRUKCache<2, int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -86,7 +86,7 @@ TEST(CachePolicyTest, LRU2CacheTest) {
 }
 
 // GDS Strategy
-TEST(CachePolicyTest, GDSCacheTest) {
+TEST_F(CachePolicyTest, GDSCacheTest) {
   GDSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -137,7 +137,7 @@ TEST(CachePolicyTest, GDSCacheTest) {
 }
 
 // GDFS Strategy
-TEST(CachePolicyTest, GDFSCacheTest) {
+TEST_F(CachePolicyTest, GDFSCacheTest) {
   GDFSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -191,7 +191,7 @@ TEST(CachePolicyTest, GDFSCacheTest) {
 }
 
 // Random Replacement Strategy
-TEST(CachePolicyTest, RandomCacheTest) {
+TEST_F(CachePolicyTest, RandomCacheTest) {
   RandomCache<int, int> cache(3);
 
   ASSERT_FALSE(cache.has(1));
@@ -235,7 +235,7 @@ TEST(CachePolicyTest, RandomCacheTest) {
 }
 
 // Test the default cache (uses GDFS).
-TEST(CachePolicyTest, Iterators) {
+TEST_F(CachePolicyTest, Iterators) {
   Cache<int, int> cache(2);
 
   cache.set(0, 100);
@@ -246,7 +246,8 @@ TEST(CachePolicyTest, Iterators) {
   auto element_count = size_t{0};
   auto value_sum = size_t{0};
 
-  for (const auto& [key, value] : cache) {
+  for (auto it = cache.unsafe_begin(); it != cache.unsafe_end(); ++it) {
+    const auto& [key, value] = *it;
     ++element_count;
     value_sum += value;
     ASSERT_EQ(value, 100);

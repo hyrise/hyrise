@@ -4,6 +4,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()
 
+# Multiple third-party libraries are not written with unity builds in minds, so we disable
+# unity builds for this folder, even if the user manually activated it.
+set(CMAKE_UNITY_BUILD "OFF")
+
 # Build google benchmark
 add_library(
     benchmark
@@ -174,6 +178,13 @@ if (APPLE)
     set(JEMALLOC_LIB_PATH ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.dylib)
 else()
     set(JEMALLOC_LIB_PATH ${CMAKE_CURRENT_BINARY_DIR}/jemalloc/lib/libjemalloc.so)
+endif()
+
+if(CMAKE_CURRENT_SOURCE_DIR MATCHES "[ \t\r\n]" OR CMAKE_CURRENT_BINARY_DIR MATCHES "[ \t\r\n]")
+  # It looks like `--prefix=<...>` does not work too well if the prefix has a whitespace. We did not spend too long
+  # trying to get this to work as (1) this is easy to fix by the user, (2) it has only come up once in a long time, and
+  # (3) Makefiles are notoriously bad with spaces: http://savannah.gnu.org/bugs/?712
+  message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
 endif()
 
 include(ExternalProject)

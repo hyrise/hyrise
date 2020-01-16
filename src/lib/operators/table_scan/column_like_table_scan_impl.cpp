@@ -20,9 +20,9 @@
 namespace opossum {
 
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                                 const PredicateCondition predicate_condition,
+                                                 const PredicateCondition init_predicate_condition,
                                                  const pmr_string& pattern)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition},
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
@@ -78,7 +78,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     result = _find_matches_in_dictionary(*typed_segment.dictionary());
   } else {
     const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.dictionary());
+    result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
   }
 
   const auto& match_count = result.first;
@@ -110,8 +110,8 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   });
 }
 
-std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(
-    const pmr_vector<pmr_string>& dictionary) const {
+template <typename D>
+std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(const D& dictionary) const {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;
@@ -121,11 +121,22 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   dictionary_matches.reserve(dictionary.size());
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
+#ifdef __clang__
+// For the loop through the dictionary, we want to use const auto& for DictionaySegments. However,
+// FixedStringVector iterators return an std::string_view value. Thus, we disable clang's -Wrange-loop-analysis
+// error about a potential copy for the loop value.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrange-loop-analysis"
+#endif
     for (const auto& value : dictionary) {
       const auto matches = matcher(value);
       count += static_cast<size_t>(matches);
       dictionary_matches.push_back(matches);
     }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   });
 
   return result;

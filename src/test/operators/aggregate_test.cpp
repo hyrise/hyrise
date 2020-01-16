@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate_hash.hpp"
@@ -16,6 +15,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -28,6 +28,14 @@ template <typename T>
 class OperatorsAggregateTest : public BaseTest {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
+    _table_wrapper_1_0 = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input.tbl", 2));
+    _table_wrapper_1_0->execute();
+
+    _table_wrapper_1_0_null = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 2));
+    _table_wrapper_1_0_null->execute();
+
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
@@ -131,11 +139,12 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_1_large,
-      _table_wrapper_join_1, _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
-      _table_wrapper_2_0_null, _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict,
-      _table_wrapper_2_0_a, _table_wrapper_2_o_b, _table_wrapper_int_int;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_0, _table_wrapper_1_0_null, _table_wrapper_1_1,
+      _table_wrapper_1_1_null, _table_wrapper_1_1_large, _table_wrapper_join_1, _table_wrapper_join_2,
+      _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_3_1,
+      _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
+      _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a, _table_wrapper_2_o_b,
+      _table_wrapper_int_int;
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
@@ -175,6 +184,44 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
       std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::StandardDeviationSample}},
       std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
+}
+
+// The ANY aggregation is a special case which is used to obtain "any value" of a group of which we know that each
+// value in this group is the same (for most cases, the group will have a size of one). This can be the case, when
+// the aggregated column is functionally dependent on the group-by columns.
+TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+  filtered->execute();
+
+  auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  aggregate->execute();
+
+  // Column 2 stores the value 20 twice for the remaining group.
+  EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
+}
+
+// For debug builds, we DebugAssert that all values are the same within a group.
+TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+  filtered->execute();
+
+  // Column 3 stores different values for the tuples of the remaining group.
+  auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
+}
+
+// Use ANY() on a column with NULL values.
+TYPED_TEST(OperatorsAggregateTest, AnyAndNulls) {
+  this->test_output(this->_table_wrapper_1_0_null, {{ColumnID{0}, AggregateFunction::Any}}, {ColumnID{1}},
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CanCountStringColumns) {
@@ -502,7 +549,7 @@ TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateCount) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregate) {
-  this->test_output(this->_table_wrapper_1_1, {}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_0, {}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result.tbl", 1);
 }
 
@@ -557,13 +604,18 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateCountWithNull) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_0_null, {}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStar) {
+  this->test_output(this->_table_wrapper_1_1, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl", 1, false);
+}
+
+TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStarWithNull) {
   this->test_output(this->_table_wrapper_1_1_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
-                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyCountStar) {
@@ -696,6 +748,16 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
+}
+
+TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_1_1_dict,
+      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  filtered->execute();
+
+  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/any_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleOnRef) {

@@ -2,9 +2,9 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
+#include "utils/assert.hpp"
+
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -15,7 +15,6 @@
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
