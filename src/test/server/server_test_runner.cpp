@@ -161,6 +161,23 @@ TEST_F(ServerTestRunner, TestInvalidCopyExport) {
   EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
+TEST_F(ServerTestRunner, TestCopyIntegration) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  // We delete a tuple of a table, export and re-import it.
+  transaction.exec("DELETE FROM table_a WHERE table_a.a = 123;");
+  transaction.exec("COPY table_a TO '" + _export_filename + "';");
+  transaction.exec("COPY table_b FROM '" + _export_filename + "';");
+
+  // Check that we did not export the deleted row
+  auto stored_table = Hyrise::get().storage_manager.get_table("table_b");
+  EXPECT_EQ(stored_table->row_count(), _table_a->row_count() - 1);
+}
+
 TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::connection connection{_connection_string};
 
