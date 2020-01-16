@@ -454,4 +454,6 @@ SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_i
 --  * EXTRACT
 --  * CONCAT
 --  * PREPARE/EXECUTE
+--  * COPY
+--  * IMPORT
 --  rename columns in FROM clause
