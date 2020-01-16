@@ -2657,7 +2657,6 @@ TEST_F(SQLTranslatorTest, ImportStatement) {
   const auto actual_lqp_c = compile_query("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
   const auto actual_lqp_d = compile_query("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
 
-
   const auto expected_lqp_a = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
   const auto expected_lqp_b = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
   const auto expected_lqp_c = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
