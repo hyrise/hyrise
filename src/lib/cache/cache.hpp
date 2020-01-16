@@ -16,13 +16,13 @@ namespace opossum {
 inline constexpr size_t DefaultCacheCapacity = 1024;
 
 // Per-default, uses the GDFS cache as underlying storage.
-template <typename Value, typename Key = std::string>
+template <typename Value, typename Key = std::string, class Hash = std::hash<Key>, class KeyEqual = std::equal_to<Key>>
 class Cache {
  public:
-  using Iterator = typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using Iterator = typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
   explicit Cache(size_t capacity = DefaultCacheCapacity)
-      : _impl(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
+      : _impl(std::move(std::make_unique<GDFSCache<Key, Value, Hash, KeyEqual>>(capacity))) {}
 
   // Adds or refreshes the cache entry [query, value].
   void set(const Key& query, const Value& value) {
@@ -99,7 +99,7 @@ class Cache {
 
  protected:
   // Underlying cache eviction strategy.
-  std::unique_ptr<AbstractCacheImpl<Key, Value>> _impl;
+  std::unique_ptr<AbstractCacheImpl<Key, Value, Hash, KeyEqual>> _impl;
 
   mutable std::shared_mutex _mutex;
 };
