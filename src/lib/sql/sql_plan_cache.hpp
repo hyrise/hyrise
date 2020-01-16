@@ -12,6 +12,6 @@ class AbstractOperator;
 class AbstractLQPNode;
 
 using SQLPhysicalPlanCache = Cache<std::shared_ptr<AbstractOperator>, std::string>;
-using SQLLogicalPlanCache = Cache<std::shared_ptr<PreparedPlan>, int>;
+using SQLLogicalPlanCache = Cache<std::shared_ptr<PreparedPlan>, size_t>;
 
 }  // namespace opossum
