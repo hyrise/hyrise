@@ -41,7 +41,7 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_access_statistics.hpp"
+#include "storage/segment_access_counter.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"

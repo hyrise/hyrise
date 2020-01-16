@@ -478,8 +478,8 @@ set(
     storage/run_length_segment/run_length_segment_iterable.hpp
     storage/segment_accessor.cpp
     storage/segment_accessor.hpp
-    storage/segment_access_statistics.cpp
-    storage/segment_access_statistics.hpp
+    storage/segment_access_counter.cpp
+    storage/segment_access_counter.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
     storage/segment_iterables/any_segment_iterable.cpp

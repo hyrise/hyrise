@@ -9,7 +9,7 @@
 #include "boost/format.hpp"
 #include "hyrise.hpp"
 #include "knapsack_solver.hpp"
-#include <storage/segment_access_statistics.hpp>
+#include <storage/segment_access_counter.hpp>
 
 namespace opossum {
 
@@ -179,7 +179,7 @@ std::vector<SegmentInfo> AntiCachingPlugin::_fetch_current_statistics() {
     access_statistics.emplace_back(segment_id_segment_ptr_pair.first,
                                    segment_id_segment_ptr_pair.second->estimate_memory_usage(),
                                    segment_id_segment_ptr_pair.second->size(),
-                                   segment_id_segment_ptr_pair.second->access_statistics.counter());
+                                   segment_id_segment_ptr_pair.second->access_counter.counter());
   }
   return access_statistics;
 }
@@ -193,7 +193,7 @@ void AntiCachingPlugin::export_access_statistics(const std::string& path_to_meta
   std::unordered_map<SegmentID, uint32_t, anticaching::SegmentIDHasher> segment_id_entry_id_map;
 
   meta_file << "entry_id,table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage\n";
-  output_file << "entry_id," + SegmentAccessCounter<uint64_t>::HEADERS + "\n";
+  output_file << "entry_id," + SegmentAccessCounter::Counter<uint64_t>::HEADERS + "\n";
 
   for (const auto& timestamp_segment_info_pair : _access_statistics) {
     const auto& timestamp = timestamp_segment_info_pair.first;

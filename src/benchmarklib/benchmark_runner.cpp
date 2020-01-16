@@ -13,7 +13,7 @@
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
-#include "storage/segment_access_statistics.hpp"
+#include "storage/segment_access_counter.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/sqlite_wrapper.hpp"
@@ -194,7 +194,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
-  SegmentAccessStatisticsTools::reset_all(Hyrise::get().storage_manager.tables());
+  SegmentAccessCounter::reset(Hyrise::get().storage_manager.tables());
   for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
 

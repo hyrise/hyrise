@@ -176,6 +176,7 @@ set(
     storage/multi_segment_index_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
+    storage/segment_access_counter_test.cpp
     storage/segment_accessor_test.cpp
     storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
@@ -199,7 +200,6 @@ set(
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     utils/column_ids_after_pruning_test.cpp
-    utils/segment_access_counter_test.cpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
 )

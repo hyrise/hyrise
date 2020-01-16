@@ -35,14 +35,14 @@ struct SegmentIDHasher {
 
 struct SegmentInfo {
   SegmentInfo(SegmentID segment_id, const size_t memory_usage, const ChunkOffset size,
-              SegmentAccessCounter<uint64_t> access_counter)
+              SegmentAccessCounter::Counter<uint64_t> access_counter)
     : segment_id{std::move(segment_id)}, memory_usage{memory_usage}, size{size},
       access_counter{std::move(access_counter)} {}
 
   const SegmentID segment_id;
   const size_t memory_usage;
   const ChunkOffset size;
-  const SegmentAccessCounter<uint64_t> access_counter;
+  const SegmentAccessCounter::Counter<uint64_t> access_counter;
 };
 }
 
@@ -70,8 +70,6 @@ class AntiCachingPlugin : public AbstractPlugin {
   size_t memory_budget = 25ul * 1024ul * 1024ul;
 
  private:
-  using SegmentIDAccessCounterPair = std::pair<const SegmentID, const SegmentAccessCounter<uint64_t>>;
-
   static std::vector<std::pair<SegmentID, std::shared_ptr<BaseSegment>>> _fetch_segments();
 
   std::vector<SegmentInfo> _fetch_current_statistics();

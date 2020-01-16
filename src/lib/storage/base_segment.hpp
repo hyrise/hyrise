@@ -5,7 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
-#include "segment_access_statistics.hpp"
+#include "segment_access_counter.hpp"
 
 namespace opossum {
 
@@ -34,7 +34,7 @@ class BaseSegment : private Noncopyable {
   // such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
 
-  mutable SegmentAccessStatistics access_statistics;
+  mutable SegmentAccessCounter access_counter;
 
  private:
   const DataType _data_type;
