@@ -76,6 +76,12 @@ set(
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 
+if (APPLE)
+    set_property(TARGET hyriseBenchmarkLib PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyriseBenchmarkLib>)
+else()
+    set_property(TARGET hyriseBenchmarkLib PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive,$<TARGET_FILE:hyriseBenchmarkLib>,--no-whole-archive)
+endif()
+
 target_link_libraries(
     hyriseBenchmarkLib
     hyrise
