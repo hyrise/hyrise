@@ -110,26 +110,14 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   std::vector<std::shared_ptr<AbstractExpression>> values;
   ParameterID parameter_id(0);
 
-  std::cerr << "replaced a val=++++++++++++++++++++++++++++++++++++++++++++++=ue" << std::endl;
-
-
   visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
     if (node) {
-      std::cerr << "have a node===========================================================================================================ue" << std::endl;
-
       for (auto& root_expression : node->node_expressions) {
         visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-          std::cerr << "have an expression of type "<< static_cast<size_t>(expression->type) <<"===========================================================================================================ue" << std::endl;
-
           if (expression->type == ExpressionType::Value) {
-            std::cerr << "have a value expression===========================================================================================================ue" << std::endl;
             values.push_back(expression);
             expression = std::make_shared<PlaceholderExpression>(parameter_id);
             parameter_id++;
-            std::cerr << "replaced a val==============================================================================================================ue" << std::endl;
-          }
-          if (expression->type == ExpressionType::Placeholder) {
-            std::cerr << "OH NO IT IS ALREADY A PLACEHOLDER===========================================================================================================ue" << std::endl;
           }
           return ExpressionVisitation::VisitArguments;
         });
@@ -139,19 +127,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   });
 
 
-
+  const auto started = std::chrono::high_resolution_clock::now();
   // Handle logical query plan if statement has been cached
-  std::cout << unoptimized_lqp->hash() << std::endl;
-
-  std::cout << *unoptimized_lqp << std::endl;
-  
-  std::cout << "LQP CACHE SIZE IS -------------------------------------- " << lqp_cache->size() << std::endl;
-
-  for (auto &e : *lqp_cache) {
-    std::cout << "KEYYYYYY " << e.first << std::endl;
-    std::cout << "VALUEEEE " << *(e.second) << std::endl;
-  }
-  
   if (lqp_cache) {
     if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp->hash())) {
       const auto plan = (*cached_plan)->lqp;
@@ -161,12 +138,12 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
         _optimized_logical_plan = (*cached_plan)->instantiate(values);
+        const auto done = std::chrono::high_resolution_clock::now();
+        _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
         return _optimized_logical_plan;
       }
     }
   }
-
-  const auto started = std::chrono::high_resolution_clock::now();
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
