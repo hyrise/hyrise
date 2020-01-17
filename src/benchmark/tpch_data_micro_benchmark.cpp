@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "cert-err58-cpp"
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
@@ -303,3 +305,5 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
 }
 
 }  // namespace opossum
+
+#pragma clang diagnostic pop
