@@ -9,12 +9,15 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "types.hpp"
+
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -186,6 +189,32 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
   for (auto _ : state) {
     auto reference_table_scan = std::make_shared<TableScan>(table_scan, _int_predicate);
     reference_table_scan->execute();
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanJoinAggregate)(benchmark::State& state) {
+  // Take e.g. TPC-H LineItem (biggest table in dataset)
+  std::shared_ptr<TableWrapper>& line_item = _table_wrapper_map.at("lineitem");
+  // Between Scan on primary key (l_orderkey) with ~50% selectivity
+  // values in sf-0.01 go from 1 to 60000
+  const auto l_orderkey_id = ColumnID{0};
+  const auto l_partkey_id = ColumnID{1};
+  const auto between_orderkey_predicate = std::make_shared<BetweenExpression>(
+          PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
+  for (auto _ : state) {
+    const auto table_scan = std::make_shared<TableScan>(line_item, between_orderkey_predicate);
+    table_scan->execute();
+    // Self-Semi-join on primary key (makes no practical sense in the real world but interesting for us)
+    auto join = std::make_shared<JoinHash>(
+        table_scan, table_scan, JoinMode::Semi,
+        OperatorJoinPredicate{ColumnIDPair(l_orderkey_id, l_orderkey_id), PredicateCondition::Equals});
+    join->execute();
+    // Sort-based aggregate (with GROUP BY)
+    // again, a non-sensical aggregate (smallest part key id per order line item - there is always just one)
+    std::vector<AggregateColumnDefinition> aggregates = {{l_partkey_id, AggregateFunction::Min}};
+    std::vector<ColumnID> groupby = {l_orderkey_id};
+    auto aggregate = std::make_shared<AggregateHash>(join, aggregates, groupby);
+    aggregate->execute();
   }
 }
 
