@@ -32,7 +32,8 @@ std::shared_ptr<AbstractLQPNode> ExportNode::_on_shallow_copy(LQPNodeMapping& no
 
 bool ExportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& export_node = static_cast<const ExportNode&>(rhs);
-  return table_name == export_node.table_name && file_name == export_node.file_name && file_type == export_node.file_type;
+  return table_name == export_node.table_name && file_name == export_node.file_name &&
+         file_type == export_node.file_type;
 }
 
 }  // namespace opossum

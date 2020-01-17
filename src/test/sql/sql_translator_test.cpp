@@ -2610,9 +2610,9 @@ TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
 
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
   {
-   const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl';");
-   const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
-   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl';");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
