@@ -1219,7 +1219,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
-  // Get validated table as input
+  // Get stored table as input (validated if MVCC is enabled)
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
 

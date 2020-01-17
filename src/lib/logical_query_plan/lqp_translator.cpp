@@ -493,8 +493,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
-  return std::make_shared<Import>(import_node->filename, import_node->tablename, Chunk::DEFAULT_SIZE,
-                                  import_node->filetype);
+  return std::make_shared<Import>(import_node->file_name, import_node->table_name, Chunk::DEFAULT_SIZE,
+                                  import_node->file_type);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
@@ -502,7 +502,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
-  return std::make_shared<Export>(input_operator, export_node->filename, export_node->file_type);
+  return std::make_shared<Export>(input_operator, export_node->file_name, export_node->file_type);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

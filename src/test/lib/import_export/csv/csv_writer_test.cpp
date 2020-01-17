@@ -25,6 +25,9 @@ class CsvWriterTest : public BaseTest {
     column_definitions.emplace_back("c", DataType::Float, false);
 
     table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
+    std::remove(test_filename.c_str());
+    std::remove(test_meta_filename.c_str());
   }
 
   void TearDown() override {

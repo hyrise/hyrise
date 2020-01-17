@@ -970,7 +970,11 @@ TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
 }
 
 TEST_F(LQPTranslatorTest, Export) {
-  const auto lqp = ExportNode::make("a_table", "a_file.tbl", FileType::Auto, ValidateNode::make(int_float_node));
+  // clang-format off
+  const auto lqp =
+  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
+    ValidateNode::make(int_float_node));
+  // clang-format on
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
   const auto exporter = std::dynamic_pointer_cast<Export>(pqp);

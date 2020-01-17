@@ -19,7 +19,7 @@ namespace opossum {
 
 class BinaryWriterTest : public BaseTest {
  protected:
-  void SetUp() override {}
+  void SetUp() override { std::remove(filename.c_str()); }
 
   void TearDown() override { std::remove(filename.c_str()); }
 

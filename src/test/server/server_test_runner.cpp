@@ -33,6 +33,7 @@ class ServerTestRunner : public BaseTest {
 
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
+    std::remove(_export_filename.c_str());
   }
 
   void TearDown() override {
@@ -43,6 +44,30 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
 
     std::remove(_export_filename.c_str());
+  }
+
+  bool file_exists(const std::string& name) {
+    std::ifstream file{name};
+    return file.good();
+  }
+
+  bool compare_files(const std::string& original_file, const std::string& created_file) {
+    std::ifstream original(original_file);
+    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
+
+    std::ifstream created(created_file);
+    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
+
+    std::istreambuf_iterator<char> iterator_original(original);
+    std::istreambuf_iterator<char> iterator_created(created);
+    std::istreambuf_iterator<char> end;
+
+    while (iterator_original != end && iterator_created != end) {
+      if (*iterator_original != *iterator_created) return false;
+      ++iterator_original;
+      ++iterator_created;
+    }
+    return ((iterator_original == end) && (iterator_created == end));
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
@@ -100,7 +125,7 @@ TEST_F(ServerTestRunner, TestCopyImport) {
   // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
-  const auto result = transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
+  transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
 
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("another_table"));
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
@@ -134,10 +159,10 @@ TEST_F(ServerTestRunner, TestCopyExport) {
   // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
-  const auto result = transaction.exec("COPY table_a TO '" + _export_filename + "';");
+  transaction.exec("COPY table_a TO '" + _export_filename + "';");
 
-  std::ifstream file{_export_filename};
-  EXPECT_TRUE(file.good());
+  EXPECT_TRUE(file_exists(_export_filename));
+  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float.bin"));
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyExport) {
@@ -169,13 +194,16 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   pqxx::nontransaction transaction{connection};
 
   // We delete a tuple of a table, export and re-import it.
-  transaction.exec("DELETE FROM table_a WHERE table_a.a = 123;");
+  transaction.exec("DELETE FROM table_a WHERE a = 123;");
   transaction.exec("COPY table_a TO '" + _export_filename + "';");
   transaction.exec("COPY table_b FROM '" + _export_filename + "';");
 
   // Check that we did not export the deleted row
   auto stored_table = Hyrise::get().storage_manager.get_table("table_b");
   EXPECT_EQ(stored_table->row_count(), _table_a->row_count() - 1);
+
+  EXPECT_TRUE(file_exists(_export_filename));
+  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float_deleted.bin"));
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {

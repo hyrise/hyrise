@@ -14,13 +14,13 @@ namespace opossum {
  */
 class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
  public:
-  ImportNode(const std::string& init_tablename, const std::string& init_filename, const FileType init_filetype);
+  ImportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  const std::string tablename;
-  const std::string filename;
-  const FileType filetype;
+  const std::string table_name;
+  const std::string file_name;
+  const FileType file_type;
 
  protected:
   size_t _on_shallow_hash() const override;

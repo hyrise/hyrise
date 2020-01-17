@@ -2609,62 +2609,91 @@ TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
 }
 
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
-  const auto actual_lqp_a = compile_query("COPY a_table FROM 'a_file.tbl';");
-  const auto actual_lqp_b = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
-  const auto actual_lqp_c = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT CSV;");
-  const auto actual_lqp_d = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT BINARY;");
-  const auto actual_lqp_e = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT BIN;");
-
-  const auto expected_lqp_a = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
-  const auto expected_lqp_b = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
-  const auto expected_lqp_c = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
-  const auto expected_lqp_d = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
-
-  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
-  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
-  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
-  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_d);
-  EXPECT_LQP_EQ(actual_lqp_e, expected_lqp_d);
+  {
+   const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl';");
+   const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT TBL;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT CSV;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT BINARY;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY a_table FROM 'a_file.tbl' WITH FORMAT BIN;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 TEST_F(SQLTranslatorTest, CopyStatementExport) {
-  const auto actual_lqp_a = compile_query("COPY int_float TO 'a_file.tbl';");
-  const auto actual_lqp_b = compile_query("COPY int_float TO 'a_file.tbl';", UseMvcc::Yes);
-  const auto actual_lqp_c = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT TBL;");
-  const auto actual_lqp_d = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT CSV;");
-  const auto actual_lqp_e = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT BINARY;");
-  const auto actual_lqp_f = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT BIN;");
-
   // clang-format off
-  const auto expected_lqp_a = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float);
-  const auto expected_lqp_b = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, ValidateNode::make(stored_table_node_int_float));  // NOLINT
-  const auto expected_lqp_c = ExportNode::make("int_float", "a_file.tbl", FileType::Tbl, stored_table_node_int_float);
-  const auto expected_lqp_d = ExportNode::make("int_float", "a_file.tbl", FileType::Csv, stored_table_node_int_float);
-  const auto expected_lqp_e = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
+  {
+    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl';");
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); //NOLINT
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl';", UseMvcc::Yes);
+    const auto expected_lqp =
+      ExportNode::make("int_float", "a_file.tbl", FileType::Auto,
+        ValidateNode::make(stored_table_node_int_float));
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT TBL;");
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Tbl, stored_table_node_int_float);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT CSV;");
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Csv, stored_table_node_int_float);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT BINARY;");
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("COPY int_float TO 'a_file.tbl' WITH FORMAT BIN;");
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
   // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
-  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
-  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
-  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_d);
-  EXPECT_LQP_EQ(actual_lqp_e, expected_lqp_e);
-  EXPECT_LQP_EQ(actual_lqp_f, expected_lqp_e);
 }
 
 TEST_F(SQLTranslatorTest, ImportStatement) {
-  const auto actual_lqp_a = compile_query("IMPORT FROM TBL FILE 'a_file.tbl' INTO a_table;");
-  const auto actual_lqp_b = compile_query("IMPORT FROM CSV FILE 'a_file.tbl' INTO a_table;");
-  const auto actual_lqp_c = compile_query("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
-  const auto actual_lqp_d = compile_query("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
-
-  const auto expected_lqp_a = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
-  const auto expected_lqp_b = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
-  const auto expected_lqp_c = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
-
-  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
-  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
-  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
-  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_c);
+  {
+    const auto actual_lqp = compile_query("IMPORT FROM TBL FILE 'a_file.tbl' INTO a_table;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Tbl);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("IMPORT FROM CSV FILE 'a_file.tbl' INTO a_table;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Csv);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("IMPORT FROM BINARY FILE 'a_file.tbl' INTO a_table;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    const auto actual_lqp = compile_query("IMPORT FROM BIN FILE 'a_file.tbl' INTO a_table;");
+    const auto expected_lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Binary);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 }  // namespace opossum
