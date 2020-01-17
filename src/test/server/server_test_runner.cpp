@@ -199,8 +199,8 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   transaction.exec("COPY table_b FROM '" + _export_filename + "';");
 
   // Check that we did not export the deleted row
-  auto stored_table = Hyrise::get().storage_manager.get_table("table_b");
-  EXPECT_EQ(stored_table->row_count(), _table_a->row_count() - 1);
+  auto table_b = Hyrise::get().storage_manager.get_table("table_b");
+  EXPECT_EQ(table_b->row_count(), _table_a->row_count() - 1);
 
   EXPECT_TRUE(file_exists(_export_filename));
   EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float_deleted.bin"));
