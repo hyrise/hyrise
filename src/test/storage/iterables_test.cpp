@@ -219,6 +219,7 @@ INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedStringSegmentIterablesTest,
 
 TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
   std::shared_ptr<Table> test_table = table_strings;
+
   auto encoding_spec = std::get<0>(GetParam());
   auto with_position_filter = std::get<1>(GetParam());
 
@@ -273,6 +274,7 @@ INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedSegmentChunkOffsetTest,
 
 TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
   auto test_table = table;
+
   auto encoding_spec = GetParam();
   auto chunk_encoding_spec = ChunkEncodingSpec{test_table->column_count(), EncodingType::Unencoded};
   for (auto column_id = ColumnID{0}; column_id < test_table->column_count(); ++column_id) {
@@ -292,7 +294,7 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
 
     iterable.with_iterators([&](auto begin, auto end) {
       while (begin != end) {
-        end--;
+        --end;
       }
       EXPECT_EQ(end->chunk_offset(), 0u);
     });

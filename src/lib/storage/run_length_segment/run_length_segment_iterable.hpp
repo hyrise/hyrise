@@ -17,10 +17,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin =
-        Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(), _segment.end_positions()->cbegin(), 0u};
+    auto begin = Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(),
+                          _segment.end_positions()->cbegin(), _segment.end_positions()->cbegin(), 0u};
     auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(),
-                        static_cast<ChunkOffset>(_segment.size())};
+                        _segment.end_positions()->cbegin(), static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }
@@ -52,11 +52,12 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
    public:
     explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
-                      const EndPositionIterator& end_position_it, const ChunkOffset chunk_offset)
+                      const EndPositionIterator& end_position_it, const EndPositionIterator& end_position_begin_it,
+                      const ChunkOffset chunk_offset)
         : _value_it{value_it},
           _null_value_it{null_value_it},
           _end_position_it{end_position_it},
-          _end_position_it_begin{end_position_it},
+          _end_position_it_begin{end_position_begin_it},
           _chunk_offset{chunk_offset} {}
 
    private:
