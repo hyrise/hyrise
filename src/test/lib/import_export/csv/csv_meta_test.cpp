@@ -1,7 +1,6 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
-#include "import_export/csv_meta.hpp"
+#include "import_export/csv/csv_meta.hpp"
 
 namespace opossum {
 

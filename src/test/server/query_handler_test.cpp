@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "server/query_handler.hpp"
 

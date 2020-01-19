@@ -7,6 +7,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -62,9 +63,13 @@ std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-size_t DictionarySegment<T>::estimate_memory_usage() const {
-  return sizeof(*this) + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
-         _attribute_vector->data_size();
+size_t DictionarySegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+  const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
+
+  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+    return common_elements_size + string_vector_memory_usage(*_dictionary, mode);
+  }
+  return common_elements_size + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type);
 }
 
 template <typename T>

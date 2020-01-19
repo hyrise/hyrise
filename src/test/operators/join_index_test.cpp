@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
 #include "operators/join_index.hpp"

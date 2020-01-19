@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -12,9 +12,6 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
-
-#include "strategy_base_test.hpp"
-#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

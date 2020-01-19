@@ -1,7 +1,7 @@
 # There are multiple data races identified in the uninstrumented libtbb (probably false positives)
 # However, be aware of concurrent_vector entries being potentially uninitialized:
 #   https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly
-race:^tbb::*
+race:tbb::*
 
 # "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
 # https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg

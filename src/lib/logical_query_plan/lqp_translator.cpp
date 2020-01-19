@@ -25,6 +25,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_node.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -32,6 +33,7 @@
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
@@ -125,6 +127,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
+    case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
       // clang-format on
 
@@ -481,6 +484,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
+  return std::make_shared<Import>(import_node->filename, import_node->tablename, Chunk::DEFAULT_SIZE,
+                                  import_node->filetype);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

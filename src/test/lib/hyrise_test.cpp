@@ -1,7 +1,5 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
-#include "./utils/plugin_test_utils.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"
 #include "operators/delete.hpp"
@@ -11,6 +9,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/plugin_manager.hpp"
+#include "utils/plugin_test_utils.hpp"
 
 namespace opossum {
 

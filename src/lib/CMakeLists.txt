@@ -88,14 +88,20 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
-    import_export/csv_converter.cpp
-    import_export/csv_converter.hpp
-    import_export/csv_meta.cpp
-    import_export/csv_meta.hpp
-    import_export/csv_parser.cpp
-    import_export/csv_parser.hpp
-    import_export/csv_writer.cpp
-    import_export/csv_writer.hpp
+    import_export/binary/binary_parser.cpp
+    import_export/binary/binary_parser.hpp
+    import_export/binary/binary_writer.cpp
+    import_export/binary/binary_writer.hpp
+    import_export/csv/csv_converter.cpp
+    import_export/csv/csv_converter.hpp
+    import_export/csv/csv_meta.cpp
+    import_export/csv/csv_meta.hpp
+    import_export/csv/csv_parser.cpp
+    import_export/csv/csv_parser.hpp
+    import_export/csv/csv_writer.cpp
+    import_export/csv/csv_writer.hpp
+    import_export/file_type.cpp
+    import_export/file_type.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
@@ -119,6 +125,8 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/import_node.cpp
+    logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -178,16 +186,12 @@ set(
     operators/delete.hpp
     operators/difference.cpp
     operators/difference.hpp
-    operators/export_binary.cpp
-    operators/export_binary.hpp
-    operators/export_csv.cpp
-    operators/export_csv.hpp
+    operators/export.cpp
+    operators/export.hpp
     operators/get_table.cpp
     operators/get_table.hpp
-    operators/import_binary.cpp
-    operators/import_binary.hpp
-    operators/import_csv.cpp
-    operators/import_csv.hpp
+    operators/import.hpp
+    operators/import.cpp
     operators/index_scan.cpp
     operators/index_scan.hpp
     operators/insert.cpp
@@ -285,6 +289,8 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/dependent_group_by_reduction_rule.cpp
+    optimizer/strategy/dependent_group_by_reduction_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
@@ -338,6 +344,7 @@ set(
     server/ring_buffer_iterator.hpp
     server/server.cpp
     server/server.hpp
+    server/server_types.hpp
     server/session.cpp
     server/session.hpp
     server/write_buffer.cpp
@@ -568,6 +575,7 @@ set(
     utils/sqlite_add_indices.hpp
     utils/sqlite_wrapper.cpp
     utils/sqlite_wrapper.hpp
+    utils/size_estimation_utils.hpp
     utils/string_utils.cpp
     utils/string_utils.hpp
     utils/template_type.hpp
@@ -588,13 +596,11 @@ set(
 
 set(
     LIBRARIES
-    pthread
     sqlparser
     cqf
     uninitialized_vector
     lz4
     zstd
-    custom_jemalloc
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
@@ -604,7 +610,7 @@ set(
 )
 
 if (NOT APPLE)
-    set(LIBRARIES ${LIBRARIES} atomic)
+    set(LIBRARIES ${LIBRARIES} atomic pthread)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
@@ -635,7 +641,7 @@ add_custom_target (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ${ENABLE_COVERAGE} AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
+if(NOT ENABLE_COVERAGE AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
@@ -650,12 +656,28 @@ set_source_files_properties(
     utils/list_directory.cpp
     PROPERTIES
     COMPILE_FLAGS -O0
+    SKIP_PRECOMPILE_HEADERS TRUE
 )
 
+# Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise_impl ${LIBRARIES} -rdynamic)
-target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
+target_link_libraries_system_private(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
+
+# Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
+# of negatively affecting the build time.
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
+endif()
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    target_precompile_headers(hyrise_impl PRIVATE
+      all_parameter_variant.hpp
+      storage/create_iterable_from_segment.hpp
+      storage/table.hpp
+      types.hpp
+    )
+endif()
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise_impl PRIVATE -fPIC)

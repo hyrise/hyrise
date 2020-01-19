@@ -45,6 +45,7 @@ if (${ENABLE_ADDR_UB_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
     add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 endif()
 
@@ -54,6 +55,7 @@ if (${ENABLE_THREAD_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
     add_compile_options(-fsanitize=thread -O1)
+    add_link_options(-fsanitize=thread)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
@@ -82,6 +84,19 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_REL
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
+# Check for unity builds
+if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    if(DEFINED CMAKE_UNITY_BUILD)
+        message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
+    endif()
+endif()
+
+# On Linux, use the lld linker, which is twice as fast for incremental debug builds
+if (NOT APPLE)
+    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
+    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
+endif()
+
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
@@ -92,17 +107,17 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
 # Dependencies
-find_package(Numa)
+find_package(Numa QUIET)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container system thread)
+find_package(Boost REQUIRED COMPONENTS container system)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
-if(DEFINED CI_BUILD)
+if(CI_BUILD)
     if(NOT ${NUMA_FOUND})
         message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
     endif()

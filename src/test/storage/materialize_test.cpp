@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "encoding_test.hpp"
 #include "expression/expression_functional.hpp"

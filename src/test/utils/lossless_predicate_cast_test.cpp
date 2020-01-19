@@ -1,10 +1,10 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "utils/lossless_predicate_cast.hpp"
 
 namespace opossum {
 
-class LosslessPredicateCastTest : public ::testing::Test {};
+class LosslessPredicateCastTest : public BaseTest {};
 
 TEST_F(LosslessPredicateCastTest, NextFloatTowards) {
   // 3 is directly representable as a float

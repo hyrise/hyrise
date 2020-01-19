@@ -3,26 +3,24 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
-#include "operators/import_binary.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {
 
-class OperatorsImportBinaryTest : public BaseTest {
+class BinaryParserTest : public BaseTest {
  protected:
-  const std::string reference_filepath = "resources/test_data/bin/";
+  const std::string _reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {}; /* #1367 */
+class DISABLED_BinaryParserTest : public BinaryParserTest {}; /* #1367 */
 
-class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
-                                               public ::testing::WithParamInterface<EncodingType> {};
+class BinaryParserMultiEncodingTest : public BinaryParserTest, public ::testing::WithParamInterface<EncodingType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto import_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -32,12 +30,12 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
+INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryParserMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
-                         formatter);
+                         import_binary_formatter);
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
+TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
   expected_table->append({5.5f});
@@ -45,14 +43,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   expected_table->append({16.2f});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
+TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
@@ -61,15 +58,17 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   expected_table->append({16.2f});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_EQ(importer->get_output()->chunk_count(), 2u);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+  EXPECT_EQ(table->chunk_count(), 2u);
+  // The binary importer finalizes all chunks
+  EXPECT_FALSE(table->get_chunk(ChunkID{0})->is_mutable());
+  EXPECT_FALSE(table->get_chunk(ChunkID{1})->is_mutable());
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
+TEST_P(BinaryParserMultiEncodingTest, StringSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
@@ -79,14 +78,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
   expected_table->append({"test"});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
+TEST_P(BinaryParserMultiEncodingTest, AllTypesSegmentSorted) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -101,14 +99,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
+TEST_P(BinaryParserMultiEncodingTest, AllTypesSegmentUnsorted) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -123,14 +120,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesMixColumn) {
+TEST_P(BinaryParserMultiEncodingTest, AllTypesMixColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -145,14 +141,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesMixColumn) {
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
+TEST_P(BinaryParserMultiEncodingTest, EmptyStringsSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -165,14 +160,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
   expected_table->append({""});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
+TEST_P(BinaryParserMultiEncodingTest, AllTypesNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::Float, true);
@@ -189,14 +183,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
   expected_table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesAllNullValues) {
+TEST_P(BinaryParserMultiEncodingTest, AllTypesAllNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::Float, true);
@@ -215,14 +208,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   expected_table->append(null_values);
 
   std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
-  importer->execute();
+      _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  auto table = BinaryParser::parse(reference_filename);
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, RepeatedInt) {
+TEST_P(BinaryParserMultiEncodingTest, RepeatedInt) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -235,14 +227,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RepeatedInt) {
   expected_table->append({2});
   expected_table->append({1});
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_P(OperatorsImportBinaryMultiEncodingTest, RunNullValues) {
+TEST_P(BinaryParserMultiEncodingTest, RunNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
@@ -257,14 +248,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RunNullValues) {
   expected_table->append({2});
   expected_table->append({opossum::NULL_VALUE});
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, LZ4MultipleBlocks) {
+TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -281,14 +271,13 @@ TEST_F(OperatorsImportBinaryTest, LZ4MultipleBlocks) {
     expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
   }
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
+TEST_F(DISABLED_BinaryParserTest, FixedStringDictionarySingleChunk) {  // #1367
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -298,14 +287,13 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+TEST_F(DISABLED_BinaryParserTest, FixedStringDictionaryMultipleChunks) {  // #1367
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -315,32 +303,13 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) 
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
-  TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Int, false);
-
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
-  expected_table->append({1});
-  expected_table->append({1});
-  expected_table->append({2});
-  expected_table->append({4});
-  expected_table->append({5});
-
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
-
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-}
-
-TEST_F(OperatorsImportBinaryTest, NullValuesFrameOfReferenceSegment) {
+TEST_F(BinaryParserTest, NullValuesFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
@@ -351,14 +320,13 @@ TEST_F(OperatorsImportBinaryTest, NullValuesFrameOfReferenceSegment) {
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({5});
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, AllNullFrameOfReferenceSegment) {
+TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
@@ -369,61 +337,35 @@ TEST_F(OperatorsImportBinaryTest, AllNullFrameOfReferenceSegment) {
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({opossum::NULL_VALUE});
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
-  auto importer = std::make_shared<opossum::ImportBinary>("not_existing_file");
-  EXPECT_THROW(importer->execute(), std::exception);
+TEST_F(BinaryParserTest, InvalidColumnType) {
+  auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_THROW(BinaryParser::parse(filename), std::exception);
 }
 
-TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
+TEST_F(BinaryParserTest, InvalidAttributeVectorWidth) {
+  auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_THROW(BinaryParser::parse(filename), std::exception);
+}
+
+TEST_F(BinaryParserTest, FileDoesNotExist) { EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception); }
+
+TEST_F(BinaryParserTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("FirstColumn", DataType::Int, false);
   column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
 
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
-  importer->execute();
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
 
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-}
-
-TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filepath + "float.bin", std::string("float_table"));
-  importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), expected_table);
-}
-
-TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>(reference_filepath + "float.bin", std::string("float_table"));
-  importer->execute();
-  auto retriever = std::make_shared<opossum::ImportBinary>("not_existing_file", std::string("float_table"));
-  retriever->execute();
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
-  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
-}
-
-TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin",
-      std::string("float_table"));
-  EXPECT_THROW(importer->execute(), std::exception);
-}
-
-TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
-  auto importer = std::make_shared<opossum::ImportBinary>(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin",
-      std::string("float_table"));
-  EXPECT_THROW(importer->execute(), std::exception);
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
 }  // namespace opossum

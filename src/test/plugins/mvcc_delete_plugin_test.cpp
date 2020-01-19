@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "../utils/plugin_test_utils.hpp"

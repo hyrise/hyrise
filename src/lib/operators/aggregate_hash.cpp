@@ -454,6 +454,9 @@ void AggregateHash::_aggregate() {
               _aggregate_segment<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>(
                   chunk_id, column_index, *base_segment, keys_per_chunk);
               break;
+            case AggregateFunction::Any:
+              _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(chunk_id, column_index,
+                                                                                       *base_segment, keys_per_chunk);
           }
         });
 
@@ -531,9 +534,10 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 The following template functions write the aggregated values for the different aggregate functions.
 They are separate and templated to avoid compiler errors for invalid type/function combinations.
 */
-// MIN, MAX, SUM write the current aggregated value
+// MIN, MAX, SUM, ANY write the current aggregated value
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum,
+std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum ||
+                     func == AggregateFunction::Any,
                  void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
@@ -725,6 +729,9 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
     case AggregateFunction::StandardDeviationSample:
       write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(column_index);
       break;
+    case AggregateFunction::Any:
+      write_aggregate_output<ColumnDataType, AggregateFunction::Any>(column_index);
+      break;
   }
 }
 
@@ -834,6 +841,11 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
         context = std::make_shared<AggregateContext<
             ColumnDataType,
             typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType,
+            AggregateKey>>();
+        break;
+      case AggregateFunction::Any:
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType,
             AggregateKey>>();
         break;
     }
