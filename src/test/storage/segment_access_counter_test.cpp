@@ -6,6 +6,7 @@
 #include <string>
 
 #include "base_test.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/segment_access_counter.hpp"
@@ -96,11 +97,16 @@ TYPED_TEST(SegmentAccessCounterCounterTest, reset) {
 
 TYPED_TEST_SUITE_P(SegmentAccessCounterTest);
 
-TEST(SegmentAccessCounter, ManualIncrease) {
-  ValueSegment<int32_t> vs{false};
-//  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessType::Other));
-//  vs.access_statistics().on_other_access(1);
-//  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessType::Other));
+
+// hier jetzt bitte für divere segmentarten
+TEST_F(SegmentAccessCounterTest, iterator_seq_access) {
+  ValueSegment<int> vs{std::vector<int>{1,2,3,4,5,6,7,8,9,10}};
+  EXPECT_EQ(vs.size(), 10);
+  EXPECT_EQ(0, vs.access_counter.counter().sum());
+  auto value_segment_iterable = create_iterable_from_segment(vs);
+  int i = 0;
+  value_segment_iterable.for_each([&i](const auto& value){++i;});
+  EXPECT_EQ(i, vs.access_counter.counter().iterator_seq_access);
 }
 
 TEST(SegmentAccessCounter, ValueSegmentAppend) {
@@ -155,9 +161,9 @@ TEST_F(SegmentAccessCounterTest, IteratorAccessPatternIncreasing) {
   auto positions = std::make_shared<PosList>();
   EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(AccessPattern::SeqInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(AccessPattern::SeqInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
   EXPECT_EQ(AccessPattern::SeqInc, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
@@ -171,13 +177,13 @@ TEST_F(SegmentAccessCounterTest, IteratorAccessPatternDecreasing) {
   auto positions = std::make_shared<PosList>();
   EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::SeqInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::SeqInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{665}});
   EXPECT_EQ(AccessPattern::SeqDec, _iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{665}});
-  EXPECT_EQ(AccessPattern::RndDec,_iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::SeqDec,_iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{660}});
   EXPECT_EQ(AccessPattern::RndDec,_iterator_access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});

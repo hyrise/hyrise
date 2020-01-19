@@ -75,13 +75,17 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<PosList> create_sequential_position_filter() {
+    return create_sequential_position_filter(row_count());
+  }
+
+  static std::shared_ptr<PosList> create_sequential_position_filter(size_t row_count) {
     auto list = std::make_shared<PosList>();
     list->guarantee_single_chunk();
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count(); ++offset_in_referenced_chunk) {
+    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count; ++offset_in_referenced_chunk) {
       if (bernoulli_dist(engine)) {
         list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
@@ -91,7 +95,11 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<PosList> create_random_access_position_filter() {
-    auto list = create_sequential_position_filter();
+    return create_random_access_position_filter(row_count());
+  }
+
+  static std::shared_ptr<PosList> create_random_access_position_filter(size_t row_count) {
+    auto list = create_sequential_position_filter(row_count);
 
     auto random_device = std::random_device{};
     std::default_random_engine engine{random_device()};
@@ -273,30 +281,137 @@ TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
   });
 }
 
+TEST_F(EncodedSegmentTest, ValueSegmentCountersAfterInitialization) {
+  const auto row_count = 666u;
+  auto value_segment = create_int_value_segment(row_count);
+  EXPECT_EQ(0, value_segment->access_counter.counter().sum());
+}
+
+TEST_P(EncodedSegmentTest, SegmentCountersAfterInitialization) {
+  auto value_segment = create_int_value_segment();
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  EXPECT_EQ(0, base_encoded_segment->access_counter.counter().sum());
+}
+
+TEST_P(EncodedSegmentTest, IteratorCreateAccessSegmentCounters) {
+  auto value_segment = create_int_value_segment();
+  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_create);
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  EXPECT_EQ(1, value_segment->access_counter.counter().iterator_create);
+  const auto pos_filter = create_sequential_position_filter();
+
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto iterable = create_iterable_from_segment(encoded_segment);
+    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_create);
+    iterable.for_each([](const auto) {});
+    EXPECT_EQ(1, encoded_segment.access_counter.counter().iterator_create);
+    iterable.for_each(pos_filter, [](const auto) {});
+    EXPECT_EQ(2, encoded_segment.access_counter.counter().iterator_create);
+  });
+}
+
+TEST_F(EncodedSegmentTest, SeqIncreasingAccessValueSegmentCounters) {
+  const auto row_count = 666u;
+  auto value_segment = create_int_value_segment(row_count);
+
+  auto iterable = create_iterable_from_segment(*value_segment);
+  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_seq_access);
+  iterable.for_each([](const auto) {});
+  EXPECT_EQ(value_segment->size(), value_segment->access_counter.counter().iterator_seq_access);
+}
+
+TEST_P(EncodedSegmentTest, SeqIncreasingAccessSegmentCounters) {
+  auto value_segment = create_int_value_segment();
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto iterable = create_iterable_from_segment(encoded_segment);
+    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_seq_access);
+    iterable.for_each([](const auto) {});
+    EXPECT_EQ(encoded_segment.size(), encoded_segment.access_counter.counter().iterator_seq_access);
+  });
+}
+
+TEST_P(EncodedSegmentTest, IncreasingSegmentAccessCountersWithPosList) {
+  auto value_segment = create_int_value_segment();
+  const auto pos_filter = create_sequential_position_filter();
+
+  auto iterable = create_iterable_from_segment(*value_segment);
+  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_increasing_access);
+  iterable.for_each(pos_filter, [](const auto) {});
+  EXPECT_EQ(pos_filter->size(), value_segment->access_counter.counter().iterator_increasing_access);
+
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto iterable = create_iterable_from_segment(encoded_segment);
+    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_increasing_access);
+    iterable.for_each(pos_filter, [](const auto) {});
+    EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter.counter().iterator_increasing_access);
+  });
+}
+
+TEST_P(EncodedSegmentTest, RandomSegmentAccessCountersWithPosList) {
+  auto value_segment = create_int_value_segment();
+  const auto pos_filter = create_random_access_position_filter();
+
+  auto iterable = create_iterable_from_segment(*value_segment);
+  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_random_access);
+  iterable.for_each(pos_filter, [](const auto) {});
+  EXPECT_EQ(pos_filter->size(), value_segment->access_counter.counter().iterator_random_access);
+
+  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+    auto iterable = create_iterable_from_segment(encoded_segment);
+    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_random_access);
+    iterable.for_each(pos_filter, [](const auto) {});
+    EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter.counter().iterator_random_access);
+  });
+}
+
+TEST_F(EncodedSegmentTest, DictionaryAccessCounters) {
+  const auto row_count = 666u;
+  auto value_segment = create_int_value_segment(row_count);
+  const auto pos_filter = create_random_access_position_filter(row_count);
+  auto dictionary_encoded_segment = dynamic_pointer_cast<DictionarySegment<int32_t>>(
+    this->encode_segment(value_segment, DataType::Int,SegmentEncodingSpec{EncodingType::Dictionary}));
+
+  EXPECT_EQ(0, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  auto iterable = create_iterable_from_segment(*dictionary_encoded_segment);
+  // The iterator requests a reference to the dictionary of the DictionarySegment.
+  // This increases the dictionary_access access count by one.
+  EXPECT_EQ(1, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  dictionary_encoded_segment->dictionary();
+  EXPECT_EQ(2, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  dictionary_encoded_segment->lower_bound(42);
+  EXPECT_EQ(3, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  dictionary_encoded_segment->lower_bound(42);
+  EXPECT_EQ(4, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+}
+
 TEST_F(EncodedSegmentTest, SegmentReencoding) {
   // Use the row_count used for frame of reference segments.
   auto value_segment = create_int_with_null_value_segment(row_count(EncodingType::FrameOfReference));
 
   auto encoded_segment =
-      this->encode_segment(value_segment, DataType::Int,
-                           SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
+    this->encode_segment(value_segment, DataType::Int,
+                         SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment =
-      this->encode_segment(value_segment, DataType::Int,
-                           SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
+    this->encode_segment(value_segment, DataType::Int,
+                         SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment =
-      this->encode_segment(value_segment, DataType::Int,
-                           SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
+    this->encode_segment(value_segment, DataType::Int,
+                         SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = this->encode_segment(
-      value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
+    value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = this->encode_segment(
-      value_segment, DataType::Int,
-      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
+    value_segment, DataType::Int,
+    SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
   encoded_segment = this->encode_segment(value_segment, DataType::Int,
                                          SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128});
@@ -314,7 +429,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingMonotonicallyIncreasing) {
 
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
   const auto encoded_segment =
-      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+    this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
 
   const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
   ASSERT_TRUE(run_length_segment);
@@ -331,7 +446,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingVaryingRuns) {
   constexpr auto long_value_runs = 8;
   constexpr auto long_value_element_repititions = 10;
   constexpr auto single_value_runs_increasing =
-      row_count - single_value_runs_decreasing - long_value_runs * long_value_element_repititions;
+    row_count - single_value_runs_decreasing - long_value_runs * long_value_element_repititions;
   auto values = pmr_concurrent_vector<int32_t>(row_count);
 
   // fill first ten values with decreasing values
@@ -356,7 +471,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingVaryingRuns) {
 
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
   const auto encoded_segment =
-      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+    this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
 
   const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
   ASSERT_TRUE(run_length_segment);
@@ -420,7 +535,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
 
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   const auto encoded_segment =
-      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+    this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
 
   const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
   ASSERT_TRUE(run_length_segment);
@@ -480,7 +595,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
 
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   const auto encoded_segment =
-      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+    this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
 
   const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
   ASSERT_TRUE(run_length_segment);
@@ -524,7 +639,7 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
   auto null_values_copy = null_values;
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   const auto encoded_segment =
-      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::FrameOfReference});
+    this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::FrameOfReference});
 
   const auto for_segment = std::dynamic_pointer_cast<const FrameOfReferenceSegment<int32_t>>(encoded_segment);
   ASSERT_TRUE(for_segment);

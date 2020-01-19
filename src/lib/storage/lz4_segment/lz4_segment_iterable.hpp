@@ -43,7 +43,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using ValueIterator = typename std::vector<T>::const_iterator;
 
     const auto position_filter_size = position_filter->size();
-    _segment.access_counter.on_iterator_create(position_filter_size);
+    _segment.access_counter.on_iterator_create(position_filter);
 
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
