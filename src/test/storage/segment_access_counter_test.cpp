@@ -47,12 +47,12 @@ class SegmentAccessCounterTest : public BaseTest {
 typedef ::testing::Types <uint64_t, std::atomic_uint64_t> CounterTypes;
 TYPED_TEST_SUITE(SegmentAccessCounterCounterTest, CounterTypes);
 
-TYPED_TEST(SegmentAccessCounterCounterTest, zero_on_construction) {
+TYPED_TEST(SegmentAccessCounterCounterTest, ZeroOnConstruction) {
   SegmentAccessCounter::Counter<TypeParam> counter;
   EXPECT_EQ(0, counter.sum());
 }
 
-TYPED_TEST(SegmentAccessCounterCounterTest, sum_36) {
+TYPED_TEST(SegmentAccessCounterCounterTest, Sum36) {
   SegmentAccessCounter::Counter<TypeParam> counter;
   EXPECT_EQ(0, counter.sum());
   counter.other = 1;
@@ -66,7 +66,7 @@ TYPED_TEST(SegmentAccessCounterCounterTest, sum_36) {
   EXPECT_EQ(36, counter.sum());
 }
 
-TYPED_TEST(SegmentAccessCounterCounterTest, to_string) {
+TYPED_TEST(SegmentAccessCounterCounterTest, ToString) {
   SegmentAccessCounter::Counter<TypeParam> counter;
   counter.other = 1;
   counter.iterator_create = 20;
@@ -80,7 +80,7 @@ TYPED_TEST(SegmentAccessCounterCounterTest, to_string) {
   EXPECT_EQ(expected_str, counter.to_string());
 }
 
-TYPED_TEST(SegmentAccessCounterCounterTest, reset) {
+TYPED_TEST(SegmentAccessCounterCounterTest, Reset) {
   SegmentAccessCounter::Counter<TypeParam> counter;
   counter.other = 1;
   counter.iterator_create = 20;
@@ -95,59 +95,7 @@ TYPED_TEST(SegmentAccessCounterCounterTest, reset) {
   EXPECT_EQ(0, counter.sum());
 }
 
-TYPED_TEST_SUITE_P(SegmentAccessCounterTest);
-
-
-// hier jetzt bitte für divere segmentarten
-TEST_F(SegmentAccessCounterTest, iterator_seq_access) {
-  ValueSegment<int> vs{std::vector<int>{1,2,3,4,5,6,7,8,9,10}};
-  EXPECT_EQ(vs.size(), 10);
-  EXPECT_EQ(0, vs.access_counter.counter().sum());
-  auto value_segment_iterable = create_iterable_from_segment(vs);
-  int i = 0;
-  value_segment_iterable.for_each([&i](const auto& value){++i;});
-  EXPECT_EQ(i, vs.access_counter.counter().iterator_seq_access);
-}
-
-TEST(SegmentAccessCounter, ValueSegmentAppend) {
-  ValueSegment<int32_t> vs{false};
-//  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessType::Other));
-  vs.append(42);
-//  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessType::Other));
-  vs.append(66);
-//  EXPECT_EQ(2, vs.access_statistics().count(SegmentAccessType::Other));
-}
-
-TEST(SegmentAccessCounter, ValueSegmentWithIterators) {
-  ValueSegment<int32_t> vs{false};
-  vs.append(42);
-  vs.append(66);
-  vs.append(666);
-//  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessType::Other));
-
-  const auto iterable = ValueSegmentIterable{vs};
-  iterable.for_each([](const auto& value) { /* do nothing. We just want to increase the access counter */ });
-//  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessType::IteratorAccess));
-}
-
-TEST(SegmentAccessCounter, ExportStatistics) {
-  std::map<std::string, std::shared_ptr<Table>> tables;
-  auto table_ptr = std::make_shared<Table>(
-    TableColumnDefinitions{TableColumnDefinition{"zip", DataType::Int, false},
-                           TableColumnDefinition{"city", DataType::String, false}},
-    TableType::Data);
-
-  table_ptr->append({14480, "Potsdam"});
-  table_ptr->append({30625, "Hannover"});
-  table_ptr->append({49076, "Osnabrück"});
-
-  tables["addresses"] = std::move(table_ptr);
-
-//  SegmentAccessStatistics_T::save_to_csv(tables, "segment_access_statistics_test_meta.csv",
-//    "segment_access_statistics_test.csv");
-}
-
-TEST(SegmentAccessCounter, counter_reset) {
+TEST_F(SegmentAccessCounterTest, CounterReset) {
   ValueSegment<int32_t> vs{false};
   vs.append(42);
   vs.append(66);
