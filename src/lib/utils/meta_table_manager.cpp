@@ -270,9 +270,14 @@ std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
   unsigned long long kernel_time;
   std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time);
 
+  std::cout << kernel_time_ref << std::endl;
+  std::cout << kernel_time << std::endl;
+  std::cout << user_time_ref << std::endl;
+  std::cout << user_time << std::endl;
+  std::cout << time_window.count() << std::endl;
+  float process_cpu_usage = 100.0 * ((kernel_time - kernel_time_ref) + (user_time - user_time_ref)) / (time_window.count() / 10);
 
-
-  output_table->append({system_cpu_usage, float{0}, int32_t{0}, int32_t{0}, int32_t{0}});
+  output_table->append({system_cpu_usage, process_cpu_usage, int32_t{0}, int32_t{0}, int32_t{0}});
   return output_table;
 
 #else 
