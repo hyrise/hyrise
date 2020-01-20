@@ -65,7 +65,8 @@ void OperatorTask::_on_execute() {
         break;
 
       case TransactionPhase::Aborted:
-      case TransactionPhase::RolledBack:
+      case TransactionPhase::ExplicitlyRolledBack:
+      case TransactionPhase::ErrorRolledBack:
         // The transaction already failed. No need to execute this.
         if (auto read_write_operator = std::dynamic_pointer_cast<AbstractReadWriteOperator>(_op)) {
           // Essentially a noop, because no modifications are recorded yet. Better be on the safe side though.

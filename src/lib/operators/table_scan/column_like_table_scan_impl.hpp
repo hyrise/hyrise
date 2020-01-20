@@ -32,7 +32,7 @@ class Table;
 class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                          const PredicateCondition predicate_condition, const pmr_string& pattern);
+                          const PredicateCondition init_predicate_condition, const pmr_string& pattern);
 
   std::string description() const override;
 
@@ -49,7 +49,8 @@ class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
    * Used for dictionary segments
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<pmr_string>& dictionary) const;
+  template <typename D>
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const D& dictionary) const;
 
   const LikeMatcher _matcher;
 

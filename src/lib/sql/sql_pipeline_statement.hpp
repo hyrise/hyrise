@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "SQLParserResult.h"
@@ -7,6 +8,9 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/operator_task.hpp"
 #include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
 
@@ -23,11 +27,11 @@ struct SQLPipelineStatementMetrics {
 };
 
 enum class SQLPipelineStatus {
-  NotExecuted,  // The pipeline or the pipeline statement has been not been executed yet.
+  NotExecuted,  // The pipeline or the pipeline statement has not been executed yet.
   Success,      // The pipeline or the pipeline statement has been executed successfully. If use_mvcc is set but no
                 //     transaction_context was supplied, the statement has been auto-committed. If a context was
                 //     supplied, that context continues to be active (i.e., is not yet committed).
-  RolledBack    // The pipeline or the pipeline statement caused a transaction conflict and has been rolled back.
+  Failure       // The pipeline or the pipeline statement caused a transaction conflict and has been rolled back.
 };
 
 /**
@@ -54,6 +58,9 @@ class SQLPipelineStatement : public Noncopyable {
                        const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                        const CleanupTemporaries cleanup_temporaries);
 
+  // Set the transaction context.
+  void set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
+
   // Returns the raw SQL string.
   const std::string& get_sql_string();
 
@@ -72,7 +79,7 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<AbstractOperator>& get_physical_plan();
 
   // Returns all tasks that need to be executed for this query.
-  const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
+  const std::vector<std::shared_ptr<AbstractTask>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns
   //   - {Success, table}       if the statement was successful and returned a table
@@ -92,6 +99,8 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
+  void set_transaction_exception(std::runtime_error);
+
  private:
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
   // table that already exists).
@@ -100,9 +109,6 @@ class SQLPipelineStatement : public Noncopyable {
 
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
-
-  // Perform MVCC commit right after the Statement was executed
-  const bool _auto_commit;
 
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
@@ -114,7 +120,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
   std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
   std::shared_ptr<AbstractOperator> _physical_plan;
-  std::vector<std::shared_ptr<OperatorTask>> _tasks;
+  std::vector<std::shared_ptr<AbstractTask>> _tasks;
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output{true};
@@ -123,6 +129,8 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;
+
+  std::optional<std::runtime_error> _transaction_exception;
 };
 
 }  // namespace opossum

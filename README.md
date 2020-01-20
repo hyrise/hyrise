@@ -57,8 +57,11 @@ Subsequent calls to CMake, e.g., when adding files to the build will not be nece
 CMake will default to your system's default compiler.
 To use a different one, call `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory. See [dependencies](DEPENDENCIES.md) for supported compiler versions.
 
+### Unity Builds
+Starting with cmake 3.16, you can use `-DCMAKE_UNITY_BUILD=On` to perform unity builds. For a complete (re-)build or when multiple files have to be rebuilt, these are usually faster, as the relative cost of starting a compiler process and loading the most common headers is reduced. However, this only makes sense for debug builds. See our [blog post](https://medium.com/hyrise/reducing-hyrises-build-time-8523135aed72) on reducing the compilation time for details.
+
 ### ccache
-For development, we strongly suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, simply add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call.
+For development, we suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this works for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
 
 ### Build
 Simply call `make -j*`, where `*` denotes the number of threads to use.

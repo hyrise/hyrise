@@ -61,6 +61,7 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
   // Causes undefined behavior if the key is not in the cache.
   Value& get(const Key& key) {
     auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "key not present");
     _list.splice(_list.begin(), _list, it->second);
     return it->second->second;
   }

@@ -27,9 +27,9 @@ TransactionManager& TransactionManager::operator=(TransactionManager&& transacti
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
-std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
+std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(bool is_auto_commit) {
   const TransactionID snapshot_commit_id = _last_commit_id;
-  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id);
+  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id, is_auto_commit);
 }
 
 void TransactionManager::_register_transaction(const CommitID snapshot_commit_id) {

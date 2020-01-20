@@ -1,11 +1,11 @@
 #include <memory>
 #include <string>
 #include <utility>
+
 #include "base_test.hpp"
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
-#include "gtest/gtest.h"
 
 #include "cache/cache.hpp"
 #include "hyrise.hpp"
@@ -96,9 +96,11 @@ class SQLPipelineStatementTest : public BaseTest {
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
 
-  static bool _contains_validate(const std::vector<std::shared_ptr<OperatorTask>>& tasks) {
+  static bool _contains_validate(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
     for (const auto& task : tasks) {
-      if (std::dynamic_pointer_cast<Validate>(task->get_operator())) return true;
+      if (auto op_task = std::dynamic_pointer_cast<OperatorTask>(task)) {
+        if (std::dynamic_pointer_cast<Validate>(op_task->get_operator())) return true;
+      }
     }
     return false;
   }
@@ -530,7 +532,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
   const auto verify_table_contents = []() {
@@ -544,7 +546,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
 
   // Check that this doesn't crash. This should not modify the table a second time.
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
   verify_table_contents();
 }
@@ -570,12 +572,12 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransac
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
   // Retrieving it again should give us the same result
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
 
   EXPECT_TRUE(transaction_context->aborted());
@@ -589,12 +591,12 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
   // Retrieving it again should give us the same result
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
 }
 

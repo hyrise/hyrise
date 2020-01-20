@@ -1,11 +1,8 @@
 #pragma once
 
-#include <boost/asio.hpp>
-
 #include "ring_buffer_iterator.hpp"
+#include "server_types.hpp"
 #include "types.hpp"
-
-using Socket = boost::asio::ip::tcp::socket;
 
 namespace opossum {
 

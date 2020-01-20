@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/value_segment.hpp"
 
@@ -88,14 +87,14 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto empty_usage_int = vs_int.estimate_memory_usage();
-  const auto empty_usage_double = vs_double.estimate_memory_usage();
-  const auto empty_usage_str = vs_str.estimate_memory_usage();
+  const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_double = vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
+  const auto empty_usage_str = vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
 
   vs_int.append(1);
   vs_int.append(2);
 
-  const auto short_str = "Hello";
+  const auto short_str = pmr_string{"Hello"};
   const auto longer_str = pmr_string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
 
   vs_str.append(short_str);
@@ -103,9 +102,13 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
 
   vs_double.append(42.1337);
 
-  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.estimate_memory_usage());
-  EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.estimate_memory_usage());
-  EXPECT_GE(vs_str.estimate_memory_usage(), empty_usage_str + 2 * sizeof(pmr_string));
+  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
+
+  const auto min_expected_size = empty_usage_str + 2 * sizeof(pmr_string);
+  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), min_expected_size);
+  // The short string will fit within the SSO capacity of a string and the long string will be placed on the heap.
+  EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), min_expected_size + longer_str.capacity() + 1);
 }
 
 }  // namespace opossum

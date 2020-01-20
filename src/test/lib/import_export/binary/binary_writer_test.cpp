@@ -6,9 +6,8 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
-#include "operators/export_binary.hpp"
+#include "import_export/binary/binary_writer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -18,7 +17,7 @@
 
 namespace opossum {
 
-class OperatorsExportBinaryTest : public BaseTest {
+class BinaryWriterTest : public BaseTest {
  protected:
   void SetUp() override {}
 
@@ -53,12 +52,11 @@ class OperatorsExportBinaryTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_OperatorsExportBinaryTest : public OperatorsExportBinaryTest {}; /* #1367 */
+class DISABLED_BinaryWriterTest : public BinaryWriterTest {}; /* #1367 */
 
-class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
-                                               public ::testing::WithParamInterface<EncodingType> {};
+class BinaryWriterMultiEncodingTest : public BinaryWriterTest, public ::testing::WithParamInterface<EncodingType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -68,30 +66,25 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsExportBinaryMultiEncodingTest,
+INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
-                         formatter);
+                         export_binary_formatter);
 
-TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
+TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("FirstColumn", DataType::Int, false);
   column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
   table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
+  BinaryWriter::write(*table, filename);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
-
-  std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filename, filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
+TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 */
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -103,19 +96,14 @@ TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) { /
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  BinaryWriter::write(*table, filename);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
-
-  std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filename, filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -127,22 +115,17 @@ TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) 
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  BinaryWriter::write(*table, filename);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
-
-  std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filename, filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
 // A table with reference segments is materialized while exporting. The content of the export file should not be
 // different from a exported table with ValueSegments and the same content.
 // It assumes that the TableScan produces one output segment per input segment.
-TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
+TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -163,16 +146,14 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   auto scan = create_table_scan(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
   scan->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);
-  ex->execute();
+  BinaryWriter::write(*(scan->get_output()), filename);
 
-  std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filename, filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, SingleChunkFrameOfReferenceSegment) {
+TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -185,12 +166,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkFrameOfReferenceSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -198,7 +174,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkFrameOfReferenceSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
+TEST_F(BinaryWriterTest, MultipleChunksFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -211,12 +187,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -224,7 +195,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, AllNullFrameOfReferenceSegment) {
+TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
@@ -237,12 +208,7 @@ TEST_F(OperatorsExportBinaryTest, AllNullFrameOfReferenceSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -250,7 +216,7 @@ TEST_F(OperatorsExportBinaryTest, AllNullFrameOfReferenceSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, LZ4MultipleBlocks) {
+TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   // Export more rows than minimum block size of 16384
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -270,12 +236,7 @@ TEST_F(OperatorsExportBinaryTest, LZ4MultipleBlocks) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -285,7 +246,7 @@ TEST_F(OperatorsExportBinaryTest, LZ4MultipleBlocks) {
 
 // TEST_P for all supported encoding types
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, RepeatedInt) {
+TEST_P(BinaryWriterMultiEncodingTest, RepeatedInt) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -299,19 +260,14 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, RepeatedInt) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
+  BinaryWriter::write(*table, filename);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
-
-  std::string reference_filename =
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filename, filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
+TEST_P(BinaryWriterMultiEncodingTest, SingleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float, false);
 
@@ -322,11 +278,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -334,7 +286,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
+TEST_P(BinaryWriterMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float, false);
 
@@ -343,10 +295,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   table->append({13.0f});
   table->append({16.2f});
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -354,7 +303,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
+TEST_P(BinaryWriterMultiEncodingTest, StringSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -366,11 +315,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -378,7 +323,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
+TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -395,12 +340,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -408,7 +348,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
+TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -425,12 +365,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -438,7 +373,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
+TEST_P(BinaryWriterMultiEncodingTest, AllTypesMixColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -454,11 +389,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -466,7 +397,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
+TEST_P(BinaryWriterMultiEncodingTest, EmptyStringsSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -479,12 +410,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -492,7 +418,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
+TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::Float, true);
@@ -510,12 +436,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -523,7 +444,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
+TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
   column_definitions.emplace_back("b", DataType::Float, true);
@@ -543,12 +464,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -556,7 +472,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, RunNullValues) {
+TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
@@ -572,12 +488,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, RunNullValues) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
+  BinaryWriter::write(*table, filename);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";

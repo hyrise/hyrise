@@ -1,6 +1,6 @@
 #include <unordered_map>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_functional.hpp"
@@ -31,7 +31,7 @@ class MockCostEstimator : public AbstractCostEstimator {
 
 namespace opossum {
 
-class AbstractCostEstimatorTest : public ::testing::Test {
+class AbstractCostEstimatorTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");

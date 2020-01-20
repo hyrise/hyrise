@@ -7,7 +7,9 @@
 
 namespace opossum {
 
-TEST(SyntheticTableGeneratorTest, StringGeneration) {
+class SyntheticTableGeneratorTest : public BaseTest {};
+
+TEST_F(SyntheticTableGeneratorTest, StringGeneration) {
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(0), "          ");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(1), "         1");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(2), "         2");
@@ -20,7 +22,7 @@ TEST(SyntheticTableGeneratorTest, StringGeneration) {
   ASSERT_THROW(SyntheticTableGenerator::generate_value<pmr_string>(-17), std::logic_error);
 }
 
-TEST(SyntheticTableGeneratorTest, ThrowOnParameterLengthMismatch) {
+TEST_F(SyntheticTableGeneratorTest, ThrowOnParameterLengthMismatch) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
   const auto uniform_distribution = ColumnDataDistribution::make_uniform_config(0.0, 1.0);
 
@@ -31,7 +33,7 @@ TEST(SyntheticTableGeneratorTest, ThrowOnParameterLengthMismatch) {
                std::logic_error);
 }
 
-TEST(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
+TEST_F(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
   constexpr auto row_count = size_t{100};
   constexpr auto chunk_size = size_t{10};
   auto table_generator = std::make_shared<SyntheticTableGenerator>();

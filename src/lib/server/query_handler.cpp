@@ -6,16 +6,18 @@
 
 namespace opossum {
 
-ExecutionInformation QueryHandler::execute_pipeline(const std::string& query,
-                                                    const SendExecutionInfo send_execution_info) {
+std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
+    const std::string& query, const SendExecutionInfo send_execution_info,
+    const std::shared_ptr<TransactionContext>& transactionContext) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
-  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transactionContext).create_pipeline();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
+
   if (pipeline_status == SQLPipelineStatus::Success) {
     execution_info.result_table = result_table;
     execution_info.root_operator = sql_pipeline.get_physical_plans().back()->type();
@@ -25,14 +27,14 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& query,
       stream << sql_pipeline.metrics();
       execution_info.pipeline_metrics = stream.str();
     }
-  } else if (pipeline_status == SQLPipelineStatus::RolledBack) {
+  } else if (pipeline_status == SQLPipelineStatus::Failure) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
     execution_info.error_message = {
         {PostgresMessageType::HumanReadableError,
          "Transaction conflict, transaction was rolled back. Failed statement: " + failed_statement},
         {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
   }
-  return execution_info;
+  return std::make_pair(execution_info, sql_pipeline.transaction_context());
 }
 
 void QueryHandler::setup_prepared_plan(const std::string& statement_name, const std::string& query) {

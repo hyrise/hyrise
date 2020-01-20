@@ -28,7 +28,7 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
 
-  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+  if (pipeline_status == SQLPipelineStatus::Failure) {
     return {pipeline_status, nullptr};
   }
   Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
@@ -51,7 +51,8 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
   if (transaction_context) {
     Assert(transaction_context->phase() == TransactionPhase::Committed ||
-               transaction_context->phase() == TransactionPhase::RolledBack,
+               transaction_context->phase() == TransactionPhase::ExplicitlyRolledBack ||
+               transaction_context->phase() == TransactionPhase::ErrorRolledBack,
            "Explicitly created transaction context should have been explicitly committed or rolled back");
   }
 
@@ -75,7 +76,7 @@ void BenchmarkSQLExecutor::commit() {
 void BenchmarkSQLExecutor::rollback() {
   Assert(transaction_context, "Can only explicitly roll back transaction if auto-commit is disabled");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
-  transaction_context->rollback();
+  transaction_context->rollback(true);
   if (_sqlite_connection) {
     _sqlite_transaction_open = false;
     _sqlite_connection->raw_execute_query("ROLLBACK TRANSACTION");
