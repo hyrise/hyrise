@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_scan.hpp"
@@ -57,7 +56,7 @@ class DISABLED_BinaryWriterTest : public BinaryWriterTest {}; /* #1367 */
 
 class BinaryWriterMultiEncodingTest : public BinaryWriterTest, public ::testing::WithParamInterface<EncodingType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -70,7 +69,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
-                         formatter);
+                         export_binary_formatter);
 
 TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;

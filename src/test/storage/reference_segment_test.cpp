@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
@@ -119,8 +118,8 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
   ReferenceSegment reference_segment_a(_test_table, ColumnID{0}, pos_list_a);
   ReferenceSegment reference_segment_b(_test_table, ColumnID{0}, pos_list_b);
 
-  EXPECT_EQ(reference_segment_a.estimate_memory_usage(),
-            reference_segment_b.estimate_memory_usage() + 2 * sizeof(RowID));
+  EXPECT_EQ(reference_segment_a.memory_usage(MemoryUsageCalculationMode::Sampled),
+            reference_segment_b.memory_usage(MemoryUsageCalculationMode::Sampled) + 2 * sizeof(RowID));
 }
 
 }  // namespace opossum

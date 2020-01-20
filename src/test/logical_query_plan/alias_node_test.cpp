@@ -1,18 +1,17 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class AliasNodeTest : public ::testing::Test {
+class AliasNodeTest : public BaseTest {
  public:
   void SetUp() override {
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});

@@ -89,6 +89,19 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
   }
 }
 
+TEST_F(ServerTestRunner, TestCopyImport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  const auto result = transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
+
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("another_table"));
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
+}
+
 TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::connection connection{_connection_string};
 

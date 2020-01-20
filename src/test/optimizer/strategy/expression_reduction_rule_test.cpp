@@ -11,7 +11,6 @@
 #include "optimizer/strategy/expression_reduction_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "storage/table_column_definition.hpp"
-#include "testing_assert.hpp"
 #include "types.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

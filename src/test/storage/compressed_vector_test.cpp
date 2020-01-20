@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
@@ -71,7 +70,7 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
+auto compressed_vector_test_formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   const auto type = info.param;
   auto string = vector_compression_type_to_string.left.at(type);
   string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
@@ -81,7 +80,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
                          ::testing::Values(VectorCompressionType::SimdBp128,
                                            VectorCompressionType::FixedSizeByteAligned),
-                         formatter);
+                         compressed_vector_test_formatter);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);

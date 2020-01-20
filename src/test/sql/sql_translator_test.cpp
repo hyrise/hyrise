@@ -1,4 +1,5 @@
 #include "base_test.hpp"
+
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -28,7 +29,6 @@
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
