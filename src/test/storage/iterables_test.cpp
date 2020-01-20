@@ -118,7 +118,7 @@ class EncodedSegmentIterablesTest : public IterablesTest,
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<std::tuple<SegmentEncodingSpec, bool, bool>> info) {
+auto formatter_iterables = [](const ::testing::TestParamInfo<std::tuple<SegmentEncodingSpec, bool, bool>> info) {
   auto stream = std::stringstream{};
   stream << std::get<0>(info.param) << (std::get<1>(info.param) ? "WithNulls" : "")
          << (std::get<2>(info.param) ? "WithFilter" : "");
@@ -139,7 +139,7 @@ INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedSegmentIterablesTest,
                          ::testing::Combine(::testing::ValuesIn(all_segment_encoding_specs),
                                             ::testing::Bool(),   // nullable
                                             ::testing::Bool()),  // position filter
-                         formatter);
+                         formatter_iterables);
 
 TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
   const auto encoding_spec = std::get<0>(GetParam());
@@ -198,7 +198,7 @@ class EncodedStringSegmentIterablesTest : public IterablesTest,
   }
 };
 
-auto formatter_string = [](const ::testing::TestParamInfo<std::tuple<SegmentEncodingSpec, bool>> info) {
+auto formatter_iterables_string = [](const ::testing::TestParamInfo<std::tuple<SegmentEncodingSpec, bool>> info) {
   auto stream = std::stringstream{};
   stream << std::get<0>(info.param) << "String" << (std::get<1>(info.param) ? "WithFilter" : "");
 
@@ -217,7 +217,7 @@ auto formatter_string = [](const ::testing::TestParamInfo<std::tuple<SegmentEnco
 INSTANTIATE_TEST_SUITE_P(SegmentEncoding, EncodedStringSegmentIterablesTest,
                          ::testing::Combine(::testing::ValuesIn(all_segment_encoding_specs),
                                             ::testing::Bool()),  // position filter
-                         formatter_string);
+                         formatter_iterables_string);
 
 TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
   std::shared_ptr<Table> test_table = table_strings;
