@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index)
+SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, const size_t size, const size_t absolute_index)
     : _data{data},
       _size{size},
       _data_index{absolute_index},

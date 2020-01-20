@@ -17,7 +17,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   using Packing = SimdBp128Packing;
 
  public:
-  SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index = 0u);
+  SimdBp128Iterator(const pmr_vector<uint128_t>* data, const size_t size, const size_t absolute_index = 0u);
 
   SimdBp128Iterator(const SimdBp128Iterator& other);
   SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
