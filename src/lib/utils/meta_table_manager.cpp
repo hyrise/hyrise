@@ -134,30 +134,65 @@ std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
+  // delay between two cpu time measurements
+  auto time_window = std::chrono::milliseconds(1000);
+
 #if defined(__unix__) || defined(__unix) || defined(unix)
   // Linux
-  
-  uint32_t time_window = 1000;
 
-  FILE* stat_file;
-  stat_file = fopen("/proc/stat", "r");
-  unsigned long long total_user_ref, total_user_low_ref, total_system_ref, total_idle_ref;
-  std::fscanf(stat_file, "cpu %llu %llu %llu %llu", &total_user_ref, &total_user_low_ref, &total_system_ref, &total_idle_ref);
-  fclose(stat_file);
-  
-  std::this_thread::sleep_for(std::chrono::milliseconds(time_window));
-  
-  stat_file = fopen("/proc/stat", "r");
-  unsigned long long total_user, total_user_low, total_system, total_idle;
-  std::fscanf(stat_file, "cpu %llu %llu %llu %llu", &total_user, &total_user_low, &total_system, &total_idle);
-  fclose(stat_file);
+  // get system wide cpu usage
+  std::ifstream stat_file;
+  std::string cpu_line;
 
-  auto used = (total_user - total_user_ref) + (total_user_low - total_user_low_ref) + (total_system - total_system_ref);
+  stat_file.open("/proc/stat", std::ifstream::in);
+  std::getline(stat_file, cpu_line);
+  unsigned long long total_user_ref, total_user_nice_ref, total_system_ref, total_idle_ref;
+  std::sscanf(cpu_line.c_str(), "cpu %llu %llu %llu %llu", &total_user_ref, &total_user_nice_ref, &total_system_ref, &total_idle_ref);
+  stat_file.close();
+  
+  std::this_thread::sleep_for(time_window);
+  
+  stat_file.open("/proc/stat", std::ifstream::in);
+  std::getline(stat_file, cpu_line);
+  unsigned long long total_user, total_user_nice, total_system, total_idle;
+  std::sscanf(cpu_line.c_str(), "cpu %llu %llu %llu %llu", &total_user, &total_user_nice, &total_system, &total_idle);
+  stat_file.close();
+
+  auto used = (total_user - total_user_ref) + (total_user_nice - total_user_nice_ref) + (total_system - total_system_ref);
   auto total = used + (total_idle - total_idle_ref);
 
-  float total_percent_usage = used / total;
+  float system_cpu_usage = 100.0 * used / total;
 
-  output_table->append({total_percent_usage, 0.0, 0, 0, 0});
+  // get process cpu usage
+  std::ifstream self_stat_file;
+  std::string self_stat_token;
+  self_stat_file.open("/proc/self/stat", std::ifstream::in);
+  for (int field_index = 0; field_index < 13; ++field_index) {
+    std::getline(self_stat_file, self_stat_token, ' ');
+  }
+  unsigned long long user_time_ref;
+  std::sscanf(self_stat_token.c_str(), "%llu", &user_time_ref);
+
+  std::getline(self_stat_file, self_stat_token, ' ');
+  unsigned long long kernel_time_ref;
+  std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time_ref);
+
+  std::this_thread::sleep_for(time_window);
+
+  self_stat_file.open("/proc/self/stat", std::ifstream::in);
+  for (int field_index = 0; field_index < 13; ++field_index) {
+    std::getline(self_stat_file, self_stat_token, ' ');
+  }
+  unsigned long long user_time;
+  std::sscanf(self_stat_token.c_str(), "%llu", &user_time);
+
+  std::getline(self_stat_file, self_stat_token, ' ');
+  unsigned long long kernel_time;
+  std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time);
+
+
+
+  output_table->append({system_cpu_usage, float{0}, int32_t{0}, int32_t{0}, int32_t{0}});
   return output_table;
 
 #else 
