@@ -35,11 +35,6 @@ class CsvWriterTest : public BaseTest {
     std::remove(test_meta_filename.c_str());
   }
 
-  bool file_exists(const std::string& name) {
-    std::ifstream file{name};
-    return file.good();
-  }
-
   bool compare_file(const std::string& filename, const std::string& expected_content) {
     std::ifstream file(filename);
     Assert(file.is_open(), "compare_file: Could not find file " + filename);

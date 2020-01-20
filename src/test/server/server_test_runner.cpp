@@ -46,30 +46,6 @@ class ServerTestRunner : public BaseTest {
     std::remove(_export_filename.c_str());
   }
 
-  bool file_exists(const std::string& name) {
-    std::ifstream file{name};
-    return file.good();
-  }
-
-  bool compare_files(const std::string& original_file, const std::string& created_file) {
-    std::ifstream original(original_file);
-    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
-
-    std::ifstream created(created_file);
-    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
-
-    std::istreambuf_iterator<char> iterator_original(original);
-    std::istreambuf_iterator<char> iterator_created(created);
-    std::istreambuf_iterator<char> end;
-
-    while (iterator_original != end && iterator_created != end) {
-      if (*iterator_original != *iterator_created) return false;
-      ++iterator_original;
-      ++iterator_created;
-    }
-    return ((iterator_original == end) && (iterator_created == end));
-  }
-
   std::unique_ptr<Server> _server = std::make_unique<Server>(
       boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
   std::unique_ptr<std::thread> _server_thread;

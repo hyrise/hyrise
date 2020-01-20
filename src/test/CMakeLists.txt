@@ -1,5 +1,6 @@
 set(
     SHARED_SOURCES
+    base_test.cpp
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
