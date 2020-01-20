@@ -244,40 +244,58 @@ std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
   float system_cpu_usage = 100.0 * used / total;
 
   // get process cpu usage
-  std::ifstream self_stat_file;
+  std::ifstream self_stat_file;  
   std::string self_stat_token;
   self_stat_file.open("/proc/self/stat", std::ifstream::in);
-  for (int field_index = 0; field_index < 13; ++field_index) {
+  
+  std::getline(self_stat_file, self_stat_token);
+  std::cout << self_stat_token << std::endl;
+  self_stat_file.seekg(0, self_stat_file.beg);
+  
+  for (int field_index = 0; field_index < 14; ++field_index) {
     std::getline(self_stat_file, self_stat_token, ' ');
   }
+  std::cout << self_stat_token << std::endl;
   unsigned long long user_time_ref;
   std::sscanf(self_stat_token.c_str(), "%llu", &user_time_ref);
 
   std::getline(self_stat_file, self_stat_token, ' ');
+  std::cout << self_stat_token << std::endl;
   unsigned long long kernel_time_ref;
   std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time_ref);
+  self_stat_file.close();
 
   std::this_thread::sleep_for(time_window);
 
   self_stat_file.open("/proc/self/stat", std::ifstream::in);
-  for (int field_index = 0; field_index < 13; ++field_index) {
+  
+  std::getline(self_stat_file, self_stat_token);
+  std::cout << self_stat_token << std::endl;
+  self_stat_file.seekg(0, self_stat_file.beg);
+
+  for (int field_index = 0; field_index < 14; ++field_index) {
     std::getline(self_stat_file, self_stat_token, ' ');
   }
+  std::cout << self_stat_token << std::endl;
   unsigned long long user_time;
   std::sscanf(self_stat_token.c_str(), "%llu", &user_time);
 
   std::getline(self_stat_file, self_stat_token, ' ');
+  std::cout << self_stat_token << std::endl;
   unsigned long long kernel_time;
   std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time);
+  self_stat_file.close();
 
   std::cout << kernel_time_ref << std::endl;
   std::cout << kernel_time << std::endl;
   std::cout << user_time_ref << std::endl;
   std::cout << user_time << std::endl;
   std::cout << time_window.count() << std::endl;
-  float process_cpu_usage = 100.0 * ((kernel_time - kernel_time_ref) + (user_time - user_time_ref)) / (time_window.count() / 10);
+  float process_cpu_usage = 100.0 * ((kernel_time - kernel_time_ref) + (user_time - user_time_ref)) / (time_window.count() / 10.0);
 
   output_table->append({system_cpu_usage, process_cpu_usage, int32_t{0}, int32_t{0}, int32_t{0}});
+
+  //
   return output_table;
 
 #else 
