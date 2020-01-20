@@ -64,7 +64,7 @@ void AbstractAggregateOperator::_validate_aggregates() const {
       Assert(aggregate->aggregate_function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
     } else {
       DebugAssert(column_id < input_table->column_count(), "Aggregate column index out of bounds");
-      DebugAssert(pqp_column->data_type() == input_table->column_data_type(column_id), "Mismatching column_data_type");
+      DebugAssert(pqp_column->data_type() == input_table->column_data_type(column_id), "Mismatching column_data_type for input column");
       Assert(input_table->column_data_type(column_id) != DataType::String ||
                  (aggregate->aggregate_function != AggregateFunction::Sum &&
                   aggregate->aggregate_function != AggregateFunction::Avg &&
