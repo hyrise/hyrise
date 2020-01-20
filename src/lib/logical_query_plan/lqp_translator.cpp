@@ -368,7 +368,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   }
 
   // Create GroupByColumns from the GroupBy expressions. For now, we expect all GroupBy expressions to be already
-  // present, i.e., we do not calculate them on the fly
+  // present, i.e., we do not calculate them on the fly.
   std::vector<ColumnID> group_by_column_ids;
   group_by_column_ids.reserve(aggregate_node->node_expressions.size() -
                               aggregate_node->aggregate_expressions_begin_idx);
