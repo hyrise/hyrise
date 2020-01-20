@@ -3,7 +3,6 @@
 #include <thread>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"

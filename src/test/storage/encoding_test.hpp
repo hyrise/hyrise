@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -12,7 +12,7 @@
 namespace opossum {
 
 // Base Class for tests that should be run with various encodings
-class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
+class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path,
                                                   ChunkOffset max_chunk_size = Chunk::MAX_SIZE) {

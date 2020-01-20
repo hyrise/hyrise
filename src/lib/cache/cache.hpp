@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,22 +24,23 @@ class Cache {
   explicit Cache(size_t capacity = DefaultCacheCapacity)
       : _impl(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
-  virtual ~Cache() {}
-
   // Adds or refreshes the cache entry [query, value].
   void set(const Key& query, const Value& value) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+
     if (_impl->capacity() == 0) return;
 
-    std::lock_guard<std::mutex> lock(_mutex);
     _impl->set(query, value);
   }
 
-  // Tries to fetch the cache entry for the query into the result object.
-  // Returns true if the entry was found, false otherwise.
+  // Tries to fetch the cache entry for the query into the result object. Returns true if the entry was found, false
+  // otherwise. This needs a write lock to be acquired as most implementation update some type of access count when
+  // retrieving an entry.
   std::optional<Value> try_get(const Key& query) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+
     if (_impl->capacity() == 0) return {};
 
-    std::lock_guard<std::mutex> lock(_mutex);
     if (!_impl->has(query)) {
       return {};
     }
@@ -47,46 +48,60 @@ class Cache {
   }
 
   // Checks whether an entry for the query exists.
-  bool has(const Key& query) const { return _impl->has(query); }
+  bool has(const Key& query) const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _impl->has(query);
+  }
 
-  // Returns and refreshes the cache entry for the given query.
-  // Causes undefined behavior if the query is not in the cache.
+  // Returns and refreshes the cache entry for the given query. Causes undefined behavior if the query is not in the
+  // cache. This needs a write lock to be acquired as most implementation update some type of access count when
+  // retrieving an entry.
   Value get_entry(const Key& query) {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     return _impl->get(query);
   }
 
   // Purges all entries from the cache.
-  void clear() { _impl->clear(); }
+  void clear() {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+    _impl->clear();
+  }
 
-  void resize(size_t capacity) { _impl->resize(capacity); }
+  void resize(size_t capacity) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+    _impl->resize(capacity);
+  }
 
-  // Returns the access frequency of a cached item (=1 for set(), +1 for each get()).
-  // Returns 0 for keys not being cache-resident.
-  size_t size() const { return _impl->size(); }
+  size_t size() const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _impl->size();
+  }
 
-  // Returns a reference to the underlying cache.
-  AbstractCacheImpl<Key, Value>& cache() { return *_impl; }
-  const AbstractCacheImpl<Key, Value>& cache() const { return *_impl; }
-
-  // Replaces the underlying cache by creating a new object
-  // of the given cache type.
+  // Replaces the underlying cache by creating a new object of the given cache type.
   template <class cache_t>
   void replace_cache_impl(size_t capacity) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     _impl = std::make_unique<cache_t>(capacity);
   }
 
-  Iterator begin() { return _impl->begin(); }
+  // These methods are named "unsafe_" (similar to tbb's naming) because iterator does not hold a mutex. As such,
+  // modifications to the cache invalidate the iterators. While this is also true for begin()/end() in other data
+  // structures, the Cache class usually deals with concurrency.
+  Iterator unsafe_begin() { return _impl->begin(); }
+  Iterator unsafe_end() { return _impl->end(); }
 
-  Iterator end() { return _impl->end(); }
-
-  size_t frequency(const Key& key) { return _impl->frequency(key); }
+  // Returns the access frequency of a cached item (=1 for set(), +1 for each get()). Returns 0 for keys not being
+  // cache-resident.
+  size_t frequency(const Key& key) {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _impl->frequency(key);
+  }
 
  protected:
   // Underlying cache eviction strategy.
   std::unique_ptr<AbstractCacheImpl<Key, Value>> _impl;
 
-  std::mutex _mutex;
+  mutable std::shared_mutex _mutex;
 };
 
 }  // namespace opossum

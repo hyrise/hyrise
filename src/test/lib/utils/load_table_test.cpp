@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"

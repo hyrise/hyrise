@@ -108,7 +108,7 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
   EXPECT_NE(join_operator_copy->input_right(), nullptr);
 }
 
-TEST(OperatorsJoinHashTestStatic, RadixBitCalculation) {
+TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
   // Simple cases: handle minimal inputs and very large inputs
   EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 1), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits<int>(0, 1), 0ul);
