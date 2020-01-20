@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -38,11 +37,11 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressSegmentString) {
   EXPECT_EQ(dict_segment->unique_values_count(), 4u);
 
   // Test sorting
-  auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], "Alexander");
-  EXPECT_EQ((*dict)[1], "Bill");
-  EXPECT_EQ((*dict)[2], "Hasso");
-  EXPECT_EQ((*dict)[3], "Steve");
+  auto dict = dict_segment->fixed_string_dictionary();
+  EXPECT_EQ(*(dict->begin()), "Alexander");
+  EXPECT_EQ(*(dict->begin() + 1), "Bill");
+  EXPECT_EQ(*(dict->begin() + 2), "Hasso");
+  EXPECT_EQ(*(dict->begin() + 3), "Steve");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
@@ -73,31 +72,10 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   // Test sorting
-  auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], "QuiteShort");
-  EXPECT_EQ((*dict)[1], "Short");
-  EXPECT_EQ((*dict)[2], "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
-}
-
-TEST_F(StorageFixedStringDictionarySegmentTest, CopyUsingAlloctor) {
-  vs_str->append("Bill");
-  vs_str->append("Steve");
-  vs_str->append("Alexander");
-
-  auto segment =
-      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
-
-  auto alloc = dict_segment->dictionary()->get_allocator();
-  auto base_segment = dict_segment->copy_using_allocator(alloc);
-  auto dict_segment_copy = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(base_segment);
-
-  EXPECT_EQ(dict_segment->dictionary()->get_allocator(), dict_segment_copy->dictionary()->get_allocator());
-  auto dict = dict_segment_copy->dictionary();
-
-  EXPECT_EQ((*dict)[0], "Alexander");
-  EXPECT_EQ((*dict)[1], "Bill");
-  EXPECT_EQ((*dict)[2], "Steve");
+  auto dict = dict_segment->fixed_string_dictionary();
+  EXPECT_EQ(*(dict->begin()), "QuiteShort");
+  EXPECT_EQ(*(dict->begin() + 1), "Short");
+  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {
@@ -147,7 +125,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
       encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   const auto empty_dictionary_segment =
       std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(empty_compressed_segment);
-  const auto empty_memory_usage = empty_dictionary_segment->estimate_memory_usage();
+  const auto empty_memory_usage = empty_dictionary_segment->memory_usage();
 
   vs_str->append("A");
   vs_str->append("B");
@@ -161,8 +139,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   static constexpr auto size_of_dictionary = 3u;
 
   // We have to substract 1 since the empty FixedStringSegment actually contains one null terminator
-  EXPECT_EQ(dictionary_segment->estimate_memory_usage(),
-            empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
+  EXPECT_EQ(dictionary_segment->memory_usage(), empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 
 }  // namespace opossum

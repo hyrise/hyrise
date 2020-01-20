@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/aggregate_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"

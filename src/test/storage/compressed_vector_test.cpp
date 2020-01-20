@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"

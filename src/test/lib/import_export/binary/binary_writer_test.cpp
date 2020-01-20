@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "import_export/binary/binary_writer.hpp"
 #include "operators/table_scan.hpp"

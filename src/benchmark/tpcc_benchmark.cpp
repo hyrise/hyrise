@@ -31,7 +31,7 @@ using namespace opossum;  // NOLINT
  */
 
 namespace {
-void check_consistency(const int num_warehouses);
+void check_consistency(const size_t num_warehouses);
 }
 
 int main(int argc, char* argv[]) {
@@ -40,12 +40,12 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
-    ("s,scale", "Scale factor (warehouses)", cxxopts::value<int>()->default_value("1")) // NOLINT
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<size_t>()->default_value("1")) // NOLINT
     ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
-  int num_warehouses;
+  size_t num_warehouses;
   bool consistency_checks;
 
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 
     if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
-    num_warehouses = cli_parse_result["scale"].as<int>();
+    num_warehouses = cli_parse_result["scale"].as<size_t>();
     consistency_checks = cli_parse_result["consistency_checks"].as<bool>();
 
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
@@ -99,7 +99,7 @@ bool floats_near(T a, T b) {
   return std::max(a, b) / std::min(a, b) <= 1.001;
 }
 
-void check_consistency(const int num_warehouses) {
+void check_consistency(const size_t num_warehouses) {
   // new_order_counts[5-1][2-1] will hold the number of new_orders for W_ID 5, D_ID 2.
   // Filled as a byproduct of check 2, validated in check 3.
   std::vector<std::vector<int64_t>> new_order_counts(num_warehouses, std::vector<int64_t>(NUM_DISTRICTS_PER_WAREHOUSE));
@@ -126,7 +126,7 @@ void check_consistency(const int num_warehouses) {
 
   {
     std::cout << "  -> Running consistency check 2" << std::endl;
-    for (auto w_id = 1; w_id <= num_warehouses; ++w_id) {
+    for (size_t w_id = 1; w_id <= num_warehouses; ++w_id) {
       auto district_pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID - 1 FROM DISTRICT WHERE D_W_ID = "} +
                                                   std::to_string(w_id) + " ORDER BY D_ID"}
                                    .create_pipeline();
