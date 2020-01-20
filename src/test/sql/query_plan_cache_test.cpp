@@ -158,9 +158,9 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   // frequency of query is as expected.
   auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline_statement();
   new_sql_pipeline.get_result_table();
-  auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(SQLPipelineBuilder::default_pqp_cache->unsafe_cache());
+  auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
+      SQLPipelineBuilder::default_pqp_cache->unsafe_cache());
   EXPECT_EQ(1, gdfs_cache.frequency(Q1));
 }
-
 
 }  // namespace opossum
