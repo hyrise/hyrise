@@ -41,14 +41,15 @@ namespace opossum {
     }
 
     std::string TableExport::_get_segment_meta_header() const {
-      std::stringstream chunk_meta_header;
+      std::stringstream segment_meta_header;
 
-      chunk_meta_header << "TABLE_NAME" << _separator;
-      chunk_meta_header << "COLUMN_NAME" << _separator;
-      chunk_meta_header << "CHUNK_ID" << _separator;
-      chunk_meta_header << "ENCODING_TYPE" << "\n";
+      segment_meta_header << "TABLE_NAME" << _separator;
+      segment_meta_header << "COLUMN_NAME" << _separator;
+      segment_meta_header << "CHUNK_ID" << _separator;
+      segment_meta_header << "ENCODING_TYPE" << _separator;
+      segment_meta_header << "ENCODING_TYPE" << "\n";
 
-      return chunk_meta_header.str();
+      return segment_meta_header.str();
     }
 
     //TODO Rewrite this
