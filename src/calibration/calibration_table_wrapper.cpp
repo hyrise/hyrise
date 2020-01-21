@@ -16,6 +16,14 @@ namespace opossum {
     assert(table->column_count() == column_data_distribution_collection.size());
   }
 
+  CalibrationTableWrapper::CalibrationTableWrapper(const std::shared_ptr<Table> table,
+                                                   const std::string &table_name) :
+                                                   _table(table),
+                                                   _name(table_name),
+                                                   _column_data_distribution_collection(){
+
+  }
+
   const std::shared_ptr<Table> CalibrationTableWrapper::get_table() const {
     return _table;
   }

@@ -15,6 +15,7 @@
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 #include <synthetic_table_generator.hpp>
+#include "storage/vector_compression/compressed_vector_type.hpp"
 
 namespace opossum {
 
@@ -32,6 +33,7 @@ extern const boost::bimap<FileType, std::string> file_type_to_string;
 extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
 extern const boost::bimap<DataDistributionType, std::string> data_distribution_type_to_string;
 extern const boost::bimap<OperatorType, std::string> operator_type_to_string;
+extern const boost::bimap<CompressedVectorType, std::string> compressed_vector_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);
@@ -41,7 +43,8 @@ std::ostream& operator<<(std::ostream& stream, const FileType file_type);
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
 std::ostream& operator<<(std::ostream& stream, OperatorType operator_type);
+std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_data_distribution);
+std::ostream& operator<<(std::ostream& stream, CompressedVectorType compressed_vector_type);
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
-std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution);
 
 }  // namespace opossum
