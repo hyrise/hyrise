@@ -218,9 +218,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
     // information so that following operators (currently, the Validate operator) can use it for optimizations.
-    output_chunks[chunk_id] =
-        std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
-    output_chunks[chunk_id]->increase_invalid_row_count(input_chunk->invalid_row_count());
+    const auto chunk = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
+    chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
+
+    // Set ordered_by flag
+    const auto ordered_by = input_chunk->ordered_by();
+    if (ordered_by) {
+      chunk->set_ordered_by(ordered_by.value());
+    }
+
+    output_chunks[chunk_id] = chunk;
   }
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
