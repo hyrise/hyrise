@@ -1,4 +1,4 @@
-#include "import_binary.hpp"
+#include "binary_parser.hpp"
 
 #include <cstdint>
 #include <fstream>
@@ -16,24 +16,14 @@
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "storage/vector_compression/simd_bp128/oversized_types.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-ImportBinary::ImportBinary(const std::string& filename, const std::optional<std::string>& tablename)
-    : AbstractReadOnlyOperator(OperatorType::ImportBinary), _filename(filename), _tablename(tablename) {}
-
-const std::string& ImportBinary::name() const {
-  static const auto name = std::string{"ImportBinary"};
-  return name;
-}
-
-std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
+std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
   file.open(filename, std::ios::binary);
-
-  Assert(file.is_open(), "ImportBinary: Could not open file " + filename);
-
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);
@@ -45,7 +35,7 @@ std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
 }
 
 template <typename T>
-pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+pmr_vector<T> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<T> values(count);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
   return values;
@@ -53,19 +43,19 @@ pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count
 
 // specialized implementation for string values
 template <>
-pmr_vector<pmr_string> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   return _read_string_values(file, count);
 }
 
 // specialized implementation for bool values
 template <>
-pmr_vector<bool> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<BoolAsByteType> readable_bools(count);
   file.read(reinterpret_cast<char*>(readable_bools.data()), readable_bools.size() * sizeof(BoolAsByteType));
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
-pmr_vector<pmr_string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
+pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, const size_t count) {
   const auto string_lengths = _read_values<size_t>(file, count);
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
@@ -82,35 +72,13 @@ pmr_vector<pmr_string> ImportBinary::_read_string_values(std::ifstream& file, co
 }
 
 template <typename T>
-T ImportBinary::_read_value(std::ifstream& file) {
+T BinaryParser::_read_value(std::ifstream& file) {
   T result;
   file.read(reinterpret_cast<char*>(&result), sizeof(T));
   return result;
 }
 
-std::shared_ptr<const Table> ImportBinary::_on_execute() {
-  if (_tablename && Hyrise::get().storage_manager.has_table(*_tablename)) {
-    return Hyrise::get().storage_manager.get_table(*_tablename);
-  }
-
-  const auto table = read_binary(_filename);
-
-  if (_tablename) {
-    Hyrise::get().storage_manager.add_table(*_tablename, table);
-  }
-
-  return table;
-}
-
-std::shared_ptr<AbstractOperator> ImportBinary::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<ImportBinary>(_filename, _tablename);
-}
-
-void ImportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstream& file) {
+std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstream& file) {
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto column_count = _read_value<ColumnID>(file);
@@ -130,7 +98,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   return std::make_pair(table, chunk_count);
 }
 
-void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
+void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
   Segments output_segments;
@@ -141,9 +109,10 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
 
   const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
   table->append_chunk(output_segments, mvcc_data);
+  table->last_chunk()->finalize();
 }
 
-std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
+std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            DataType data_type, bool is_nullable) {
   std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
@@ -155,7 +124,7 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
+std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            bool is_nullable) {
   const auto column_type = _read_value<EncodingType>(file);
 
@@ -181,36 +150,8 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
   }
 }
 
-std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
-    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
-  switch (attribute_vector_width) {
-    case 1:
-      return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
-    case 2:
-      return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
-    case 4:
-      return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
-    default:
-      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
-  }
-}
-
-std::unique_ptr<const BaseCompressedVector> ImportBinary::_import_offset_value_vector(
-    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
-  switch (attribute_vector_width) {
-    case 1:
-      return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
-    case 2:
-      return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
-    case 4:
-      return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
-    default:
-      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
-  }
-}
-
 template <typename T>
-std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
+std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
   // TODO(unknown): Ideally _read_values would directly write into a pmr_concurrent_vector so that no conversion is
   // needed
@@ -226,7 +167,7 @@ std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstre
 }
 
 template <typename T>
-std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(std::ifstream& file,
+std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(std::ifstream& file,
                                                                                ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
@@ -239,7 +180,7 @@ std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(s
 }
 
 template <typename T>
-std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(std::ifstream& file,
+std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(std::ifstream& file,
                                                                               ChunkOffset row_count) {
   const auto size = _read_value<uint32_t>(file);
   const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
@@ -250,7 +191,7 @@ std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(st
 }
 
 template <typename T>
-std::shared_ptr<FrameOfReferenceSegment<T>> ImportBinary::_import_frame_of_reference_segment(std::ifstream& file,
+std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                              ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto block_count = _read_value<uint32_t>(file);
@@ -263,7 +204,7 @@ std::shared_ptr<FrameOfReferenceSegment<T>> ImportBinary::_import_frame_of_refer
 }
 
 template <typename T>
-std::shared_ptr<LZ4Segment<T>> ImportBinary::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
+std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
   const auto num_elements = _read_value<uint32_t>(file);
   const auto block_count = _read_value<uint32_t>(file);
 
@@ -317,6 +258,34 @@ std::shared_ptr<LZ4Segment<T>> ImportBinary::_import_lz4_segment(std::ifstream& 
       return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
                                              block_size, last_block_size, compressed_size, num_elements);
     }
+  }
+}
+
+std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
+    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
+  switch (attribute_vector_width) {
+    case 1:
+      return std::make_shared<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+    case 2:
+      return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+    case 4:
+      return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    default:
+      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+  }
+}
+
+std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
+    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
+  switch (attribute_vector_width) {
+    case 1:
+      return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+    case 2:
+      return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+    case 4:
+      return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    default:
+      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
 }
 

@@ -67,7 +67,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
       _visualize_subqueries(op, limit->row_count_expression(), visualized_ops);
     } break;
 
-    default: {}  // OperatorType has no expressions
+    default: {
+    }  // OperatorType has no expressions
   }
 }
 
@@ -99,7 +100,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
 
     stream << std::to_string(output->row_count()) + " row(s)/";
     stream << std::to_string(output->chunk_count()) + " chunk(s)/";
-    stream << format_bytes(output->estimate_memory_usage());
+    stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
 
     info.label = stream.str();
 

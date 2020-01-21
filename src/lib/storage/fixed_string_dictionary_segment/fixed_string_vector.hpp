@@ -81,9 +81,6 @@ class FixedStringVector {
   // Return the calculated size of FixedStringVector in main memory
   size_t data_size() const;
 
-  // Return the underlying dictionary as a vector of string
-  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
-
  protected:
   const size_t _string_length;
   pmr_vector<char> _chars;

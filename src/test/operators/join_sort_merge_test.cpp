@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class OperatorsJoinSortMergeTest : public ::testing::Test {
+class OperatorsJoinSortMergeTest : public BaseTest {
  public:
   void SetUp() override {
     const auto dummy_table =

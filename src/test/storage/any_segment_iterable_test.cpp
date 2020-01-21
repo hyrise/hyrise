@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -69,7 +68,7 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+auto any_segment_iterable_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   const auto spec = info.param;
 
   auto stream = std::stringstream{};
@@ -86,5 +85,5 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 
 INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
                          ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, true)),
-                         formatter);
+                         any_segment_iterable_test_formatter);
 }  // namespace opossum

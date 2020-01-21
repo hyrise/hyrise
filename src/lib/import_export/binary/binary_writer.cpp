@@ -1,4 +1,4 @@
-#include "export_binary.hpp"
+#include "binary_writer.hpp"
 
 #include <cstring>
 #include <fstream>
@@ -93,10 +93,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 namespace opossum {
 
-ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename)
-    : AbstractReadOnlyOperator(OperatorType::ExportBinary, in), _filename(filename) {}
-
-void ExportBinary::write_binary(const Table& table, const std::string& filename) {
+void BinaryWriter::write(const Table& table, const std::string& filename) {
   std::ofstream ofstream;
   ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   ofstream.open(filename, std::ios::binary);
@@ -108,25 +105,7 @@ void ExportBinary::write_binary(const Table& table, const std::string& filename)
   }
 }
 
-const std::string& ExportBinary::name() const {
-  static const auto name = std::string{"ExportBinary"};
-  return name;
-}
-
-std::shared_ptr<const Table> ExportBinary::_on_execute() {
-  write_binary(*input_table_left(), _filename);
-  return _input_left->get_output();
-}
-
-std::shared_ptr<AbstractOperator> ExportBinary::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<ExportBinary>(copied_input_left, _filename);
-}
-
-void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
+void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkOffset>(table.max_chunk_size()));
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
@@ -146,7 +125,7 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
   export_string_values(ofstream, column_names);
 }
 
-void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
+void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
   Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
@@ -159,12 +138,12 @@ void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 }
 
-void ExportBinary::_write_segment(const BaseSegment& base_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const BaseSegment& base_segment, std::ofstream& ofstream) {
   Fail("Binary export for segment type is not supported yet.");
 }
 
 template <typename T>
-void ExportBinary::_write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Unencoded);
 
   if (value_segment.is_nullable()) {
@@ -174,7 +153,7 @@ void ExportBinary::_write_segment(const ValueSegment<T>& value_segment, std::ofs
   export_values(ofstream, value_segment.values());
 }
 
-void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream) {
   // We materialize reference segments and save them as value segments
   export_value(ofstream, EncodingType::Unencoded);
 
@@ -205,7 +184,7 @@ void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std
 }
 
 template <typename T>
-void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream) {
   Assert(dictionary_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
   Assert(is_fixed_size_byte_aligned(*dictionary_segment.compressed_vector_type()),
@@ -228,7 +207,7 @@ void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment
 }
 
 template <typename T>
-void ExportBinary::_write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::RunLength);
 
   // Write size and values
@@ -242,14 +221,8 @@ void ExportBinary::_write_segment(const RunLengthSegment<T>& run_length_segment,
   export_values(ofstream, *run_length_segment.end_positions());
 }
 
-template <typename T>
-void ExportBinary::_write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment,
-                                  std::ofstream& ofstream) {
-  Fail("FrameOfReferenceSegments not implemented for data type");
-}
-
 template <>
-void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
+void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
@@ -275,7 +248,7 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
   // Write num elements (rows in segment)
@@ -338,7 +311,7 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 }
 
 template <typename T>
-uint32_t ExportBinary::_compressed_vector_width(const BaseEncodedSegment& base_encoded_segment) {
+uint32_t BinaryWriter::_compressed_vector_width(const BaseEncodedSegment& base_encoded_segment) {
   uint32_t vector_width = 0u;
   resolve_encoded_segment_type<T>(base_encoded_segment, [&vector_width](auto& typed_segment) {
     Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
@@ -359,7 +332,7 @@ uint32_t ExportBinary::_compressed_vector_width(const BaseEncodedSegment& base_e
   return vector_width;
 }
 
-void ExportBinary::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
+void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                              const BaseCompressedVector& compressed_vector) {
   switch (type) {
     case CompressedVectorType::FixedSize4ByteAligned:
@@ -380,12 +353,13 @@ void ExportBinary::_export_compressed_vector(std::ofstream& ofstream, const Comp
 }
 
 template <typename T>
-size_t ExportBinary::_size(const T& object) {
+size_t BinaryWriter::_size(const T& object) {
   return sizeof(object);
 }
 
 template <>
-size_t ExportBinary::_size(const pmr_string& object) {
+size_t BinaryWriter::_size(const pmr_string& object) {
   return object.length();
 }
+
 }  // namespace opossum

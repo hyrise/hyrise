@@ -1,13 +1,12 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "operators/alias_operator.hpp"
 #include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
 
-class AliasOperatorTest : public ::testing::Test {
+class AliasOperatorTest : public BaseTest {
  public:
   void SetUp() override {
     const auto table_wrapper =
@@ -26,7 +25,7 @@ class AliasOperatorTest : public ::testing::Test {
 TEST_F(AliasOperatorTest, Name) {
   EXPECT_EQ(alias_operator->name(), "Alias");
   EXPECT_EQ(alias_operator->description(DescriptionMode::SingleLine), "Alias [z, x, y]");
-  EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias [z\nx\ny]");
+  EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias\n[z\nx\ny]");
 }
 
 TEST_F(AliasOperatorTest, OutputColumnNames) {

@@ -82,7 +82,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t estimate_memory_usage() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode) const final;
 
   /**@}*/
 

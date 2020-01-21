@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "abstract_read_only_operator.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
@@ -18,36 +17,11 @@ namespace opossum {
 class BaseCompressedVector;
 enum class CompressedVectorType : uint8_t;
 
-/**
- * Note: ExportBinary does not support null values at the moment
- */
-class ExportBinary : public AbstractReadOnlyOperator {
+class BinaryWriter {
  public:
-  explicit ExportBinary(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
-
-  static void write_binary(const Table& table, const std::string& filename);
-
-  /**
-   * Executes the export operator
-   * @return The table that was also the input
-   */
-  std::shared_ptr<const Table> _on_execute() final;
-
-  /**
-   * Name of the operator is ExportBinary
-   */
-  const std::string& name() const final;
-
- protected:
-  std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+  static void write(const Table& table, const std::string& filename);
 
  private:
-  // Path of the binary file
-  const std::string _filename;
-
   /**
    * This methods writes the header of this table into the given ofstream.
    *
@@ -116,7 +90,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Encoding Type         | EncodingType                          |   1
+   * Column Type           | ColumnType                            |   1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
@@ -137,7 +111,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Encoding Type         | EncodingType                          |   1
+   * Column Type           | ColumnType                            |   1
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
@@ -162,7 +136,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Encoding Type          | EncodingType                          |   1
+   * Column Type            | ColumnType                            |   1
    * Run count              | uint32_t                              |   4
    * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
    * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
@@ -236,7 +210,6 @@ class ExportBinary : public AbstractReadOnlyOperator {
   template <typename T>
   static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
 
- private:
   template <typename T>
   static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_encoded_segment);
 
