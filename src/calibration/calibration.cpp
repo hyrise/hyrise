@@ -1,3 +1,7 @@
+#include <benchmark_config.hpp>
+#include <tpch/tpch_benchmark_item_runner.hpp>
+#include <tpch/tpch_table_generator.hpp>
+#include <sql/sql_pipeline_builder.hpp>
 #include "hyrise.hpp"
 #include "types.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -10,7 +14,43 @@
 #include "table_generator.hpp"
 #include "table_export.hpp"
 
+#include "benchmark_config.hpp"
+#include "benchmark_runner.hpp"
+
 using namespace opossum;  // NOLINT
+
+void export_tcph(){
+  constexpr auto USE_PREPARED_STATEMENTS = false;
+  const auto measurement_export = MeasurementExport("./.data/test");
+  const auto table_export = TableExport("./.data/test");
+
+  auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+  config->max_runs = 1;
+  config->enable_visualization = false;
+  config->chunk_size = 100'000;
+  config->cache_binary_tables = true;
+
+  auto const SCALE_FACTOR = 0.01f;
+  // const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{5}};
+  // auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR, tpch_query_ids_benchmark);
+  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR);
+  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+          *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, config), BenchmarkRunner::create_context(*config));
+  Hyrise::get().benchmark_runner = benchmark_runner;
+  benchmark_runner->run();
+
+  for (const auto& [query_string, physical_query_plan] : *SQLPipelineBuilder::default_pqp_cache) {
+    measurement_export.export_to_csv(physical_query_plan);
+    //std::cout << *physical_query_plan << std::endl;
+  }
+
+
+  const std::vector<std::string> table_names = Hyrise::get().storage_manager.table_names();
+  for (const auto &table_name : table_names){
+    auto table = Hyrise::get().storage_manager.get_table(table_name);
+    table_export.export_table(std::make_shared<CalibrationTableWrapper>(CalibrationTableWrapper(table, table_name)));
+  }
+}
 
 int main() {
   auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
@@ -23,10 +63,14 @@ int main() {
   auto table_generator = TableGenerator(table_config);
   const auto tables = table_generator.generate();
 
-  const auto lqp_generator = LQPGenerator();
-
-  auto const path = ".";
+  auto const path = "./.data/train";
   const auto measurement_export = MeasurementExport(path);
+
+  export_tcph();
+
+  /*
+
+  const auto lqp_generator = LQPGenerator();
   const auto table_export = TableExport(path);
 
   for (const auto &table : tables){
@@ -46,5 +90,5 @@ int main() {
     table_export.export_table(table);
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
-
+  */
 }

@@ -22,11 +22,9 @@ namespace opossum {
         //Export current operator
         _export_typed_operator(op);
 
-        // Recursion on left & right operator
-        while (op->input_left() != nullptr && op->input_right() != nullptr){
-          export_to_csv(op->input_left());
-          export_to_csv(op->input_right());
-        }
+        export_to_csv(op->input_left());
+        export_to_csv(op->input_right());
+
       }
     }
 
