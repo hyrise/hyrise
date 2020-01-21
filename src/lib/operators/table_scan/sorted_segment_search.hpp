@@ -9,6 +9,55 @@
 #include "constant_mappings.hpp"
 #include "types.hpp"
 
+namespace {
+
+// https://github.com/gcc-mirror/gcc/blob/51e010b5f75c1fff06425a72702c1bf82a3ab053/libstdc%2B%2B-v3/include/bits/stl_algobase.h#L1337
+template<typename Iterator, typename SearchType, typename Functor>
+Iterator hyrise_lower_bound(Iterator __first, Iterator __last, const SearchType& __val, Functor __comp) {
+  typedef typename std::iterator_traits<Iterator>::difference_type DistanceType;
+
+  DistanceType __len = __last - __first;
+
+  while (__len > 0) {
+    DistanceType __half = __len >> 1;
+    Iterator __middle = __first;
+    __middle += __half;
+    if (__comp(*__middle, __val)) {
+      __first = __middle;
+      ++__first;
+      __len = __len - __half - 1;
+    } else {
+      __len = __half;
+    }
+  }
+
+  return __first;
+}
+
+// https://github.com/gcc-mirror/gcc/blob/51e010b5f75c1fff06425a72702c1bf82a3ab053/libstdc%2B%2B-v3/include/bits/stl_algo.h#L2115
+template<typename Iterator, typename SearchType, typename Functor>
+Iterator hyrise_upper_bound(Iterator __first, Iterator __last, const SearchType& __val, Functor __comp) {
+  typedef typename std::iterator_traits<Iterator>::difference_type DistanceType;
+
+  DistanceType __len = __last - __first;
+
+  while (__len > 0) {
+    DistanceType __half = __len >> 1;
+    Iterator __middle = __first;
+    __middle += __half;
+    if (__comp(__val, *__middle)) {
+      __len = __half;
+    } else {
+      __first = __middle;
+      ++__first;
+      __len = __len - __half - 1;
+    }
+  }
+  return __first;
+}
+
+} // namespace
+
 namespace opossum {
 
 // Generic class which handles the actual scanning of a sorted segment
@@ -36,25 +85,41 @@ class SortedSegmentSearch {
    */
   IteratorType _get_first_bound() const {
     if (_is_ascending) {
-      return std::lower_bound(_begin, _end, _search_value, [](const auto& segment_position, const auto& search_value) {
+      // TODO: make segment iterators random access iterators
+      return hyrise_lower_bound(_begin, _end, _search_value, [](const auto& segment_position, const auto& search_value) {
         return segment_position.value() < search_value;
       });
+      // return std::lower_bound(_begin, _end, _search_value, [](const auto& segment_position, const auto& search_value) {
+      //   return segment_position.value() < search_value;
+      // });
     } else {
-      return std::lower_bound(_begin, _end, _search_value, [](const auto& segment_position, const auto& search_value) {
+      // TODO: make segment iterators random access iterators
+      return hyrise_lower_bound(_begin, _end, _search_value, [](const auto& segment_position, const auto& search_value) {
         return segment_position.value() > search_value;
       });
+      // return std::lower_bound(_begin, _end, _search_value, [](const auto& segment_position, const auto& search_value) {
+      //   return segment_position.value() > search_value;
+      // });
     }
   }
 
   IteratorType _get_last_bound() const {
     if (_is_ascending) {
-      return std::upper_bound(_begin, _end, _search_value, [](const auto& search_value, const auto& segment_position) {
+      // TODO: make segment iterators random access iterators
+      return hyrise_upper_bound(_begin, _end, _search_value, [](const auto& search_value, const auto& segment_position) {
         return segment_position.value() > search_value;
       });
+      // return std::upper_bound(_begin, _end, _search_value, [](const auto& search_value, const auto& segment_position) {
+      //   return segment_position.value() > search_value;
+      // });
     } else {
-      return std::upper_bound(_begin, _end, _search_value, [](const auto& search_value, const auto& segment_position) {
+      // TODO: make segment iterators random access iterators
+      return hyrise_upper_bound(_begin, _end, _search_value, [](const auto& search_value, const auto& segment_position) {
         return segment_position.value() < search_value;
       });
+      // return std::upper_bound(_begin, _end, _search_value, [](const auto& search_value, const auto& segment_position) {
+      //   return segment_position.value() < search_value;
+      // });
     }
   }
 
@@ -138,11 +203,17 @@ class SortedSegmentSearch {
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
     // decrease the effective sort range by excluding null values based on their ordering
     if (_is_nulls_first) {
-      _begin = std::lower_bound(_begin, _end, false,
+      // TODO: make segment iterators random access iterators
+      _begin = hyrise_lower_bound(_begin, _end, false,
                                 [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+      // _begin = std::lower_bound(_begin, _end, false,
+      //                           [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
     } else {
-      _end = std::lower_bound(_begin, _end, true,
+      // TODO: make segment iterators random access iterators
+      _end = hyrise_lower_bound(_begin, _end, true,
                               [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+      // _end = std::lower_bound(_begin, _end, true,
+      //                         [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
     }
 
     if (_predicate_condition == PredicateCondition::NotEquals) {
