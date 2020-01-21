@@ -31,6 +31,8 @@
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
+#include "operators/begin_transaction_operator.hpp"
+#include "operators/commit_transaction_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import.hpp"
@@ -49,6 +51,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
+#include "operators/rollback_transaction_operator.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -122,18 +125,42 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Union:              return _translate_union_node(node);
 
-      // Maintenance operators
+    // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
     case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
+    // clang-format on
+
+    // Transaction operators
+    case LQPNodeType::BeginTransaction:
+      return _translate_begin_transaction_node(node);
+    case LQPNodeType::CommitTransaction:
+      return _translate_commit_transaction_node(node);
+    case LQPNodeType::RollbackTransaction:
+      return _translate_rollback_transaction_node(node);
       // clang-format on
 
     default:
       Fail("Unknown node type encountered.");
   }
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_begin_transaction_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  return std::make_shared<BeginTransactionOperator>();
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_commit_transaction_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  return std::make_shared<CommitTransactionOperator>();
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_rollback_transaction_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  return std::make_shared<RollbackTransactionOperator>();
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

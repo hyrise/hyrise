@@ -7,7 +7,7 @@ namespace opossum {
 
 class BeginTransactionOperator : public AbstractReadOnlyOperator {
  public:
-  explicit BeginTransactionOperator();
+  BeginTransactionOperator();
 
   const std::string& name() const override;
 

@@ -21,8 +21,6 @@ std::shared_ptr<AbstractOperator> BeginTransactionOperator::_on_deep_copy(
 
 void BeginTransactionOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<const Table> BeginTransactionOperator::_on_execute() {
-  return nullptr;
-}
+std::shared_ptr<const Table> BeginTransactionOperator::_on_execute() { return nullptr; }
 
 }  // namespace opossum

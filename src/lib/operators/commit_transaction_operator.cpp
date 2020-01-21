@@ -19,8 +19,6 @@ std::shared_ptr<AbstractOperator> CommitTransactionOperator::_on_deep_copy(
 
 void CommitTransactionOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<const Table> CommitTransactionOperator::_on_execute() {
-  return nullptr;
-}
+std::shared_ptr<const Table> CommitTransactionOperator::_on_execute() { return nullptr; }
 
 }  // namespace opossum

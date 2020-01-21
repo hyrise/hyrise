@@ -7,7 +7,7 @@ namespace opossum {
 
 class CommitTransactionOperator : public AbstractReadOnlyOperator {
  public:
-  explicit CommitTransactionOperator();
+  CommitTransactionOperator();
 
   const std::string& name() const override;
 

@@ -7,7 +7,7 @@ namespace opossum {
 
 class RollbackTransactionOperator : public AbstractReadOnlyOperator {
  public:
-  explicit RollbackTransactionOperator();
+  RollbackTransactionOperator();
 
   const std::string& name() const override;
 

@@ -21,8 +21,6 @@ std::shared_ptr<AbstractOperator> RollbackTransactionOperator::_on_deep_copy(
 void RollbackTransactionOperator::_on_set_parameters(
     const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<const Table> RollbackTransactionOperator::_on_execute() {
-  return nullptr;
-}
+std::shared_ptr<const Table> RollbackTransactionOperator::_on_execute() { return nullptr; }
 
 }  // namespace opossum
