@@ -1,14 +1,15 @@
 #include "abstract_aggregate_operator.hpp"
+
 #include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
-
+#include "expression/pqp_column_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
-                                                     const std::vector<AggregateColumnDefinition>& aggregates,
-                                                     const std::vector<ColumnID>& groupby_column_ids)
+AbstractAggregateOperator::AbstractAggregateOperator(
+    const std::shared_ptr<AbstractOperator>& in, const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+    const std::vector<ColumnID>& groupby_column_ids)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in),
       _aggregates{aggregates},
       _groupby_column_ids{groupby_column_ids} {
@@ -21,7 +22,9 @@ AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<Abstr
          "Neither aggregate nor groupby columns have been specified");
 }
 
-const std::vector<AggregateColumnDefinition>& AbstractAggregateOperator::aggregates() const { return _aggregates; }
+const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperator::aggregates() const {
+  return _aggregates;
+}
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
 std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
@@ -39,14 +42,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
   desc << " Aggregates: ";
   for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
     const auto& aggregate = _aggregates[expression_idx];
-    desc << aggregate.function;
-
-    if (aggregate.column != INVALID_COLUMN_ID) {
-      desc << "(Column #" << aggregate.column << ")";
-    } else {
-      // COUNT(*) does not use a column
-      desc << "(*)";
-    }
+    desc << aggregate->as_column_name();
 
     if (expression_idx + 1 < _aggregates.size()) desc << ", ";
   }
@@ -60,13 +56,20 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
 void AbstractAggregateOperator::_validate_aggregates() const {
   const auto input_table = input_table_left();
   for (const auto& aggregate : _aggregates) {
-    if (aggregate.column == INVALID_COLUMN_ID) {
-      Assert(aggregate.function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
+    const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->argument());
+    DebugAssert(pqp_column,
+                "Aggregate operators can currently only handle physical columns, no complicated expressions");
+    const auto column_id = pqp_column->column_id;
+    if (column_id == INVALID_COLUMN_ID) {
+      Assert(aggregate->aggregate_function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
     } else {
-      DebugAssert(aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
-      Assert(input_table->column_data_type(aggregate.column) != DataType::String ||
-                 (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg &&
-                  aggregate.function != AggregateFunction::StandardDeviationSample),
+      DebugAssert(column_id < input_table->column_count(), "Aggregate column index out of bounds");
+      DebugAssert(pqp_column->data_type() == input_table->column_data_type(column_id),
+                  "Mismatching column_data_type for input column");
+      Assert(input_table->column_data_type(column_id) != DataType::String ||
+                 (aggregate->aggregate_function != AggregateFunction::Sum &&
+                  aggregate->aggregate_function != AggregateFunction::Avg &&
+                  aggregate->aggregate_function != AggregateFunction::StandardDeviationSample),
              "Aggregate: Cannot calculate SUM, AVG or STDDEV_SAMP on string column");
     }
   }
