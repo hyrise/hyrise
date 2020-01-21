@@ -244,12 +244,15 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       // Check that the node has the expected number of inputs
       auto num_expected_inputs = size_t{0};
       switch (node->type) {
+        case LQPNodeType::BeginTransaction:
+        case LQPNodeType::CommitTransaction:
         case LQPNodeType::CreatePreparedPlan:
         case LQPNodeType::CreateView:
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
         case LQPNodeType::DropTable:
         case LQPNodeType::Import:
+        case LQPNodeType::RollbackTransaction:
         case LQPNodeType::StaticTable:
         case LQPNodeType::StoredTable:
         case LQPNodeType::Mock:

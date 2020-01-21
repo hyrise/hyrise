@@ -110,6 +110,10 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/begin_transaction_node.hpp
+    logical_query_plan/begin_transaction_node.cpp
+    logical_query_plan/commit_transaction_node.hpp
+    logical_query_plan/commit_transaction_node.cpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
@@ -147,6 +151,8 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
+    logical_query_plan/rollback_transaction_node.hpp
+    logical_query_plan/rollback_transaction_node.cpp
     logical_query_plan/sort_node.cpp
     logical_query_plan/sort_node.hpp
     logical_query_plan/static_table_node.cpp
@@ -182,6 +188,10 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/begin_transaction_operator.hpp
+    operators/begin_transaction_operator.cpp
+    operators/commit_transaction_operator.hpp
+    operators/commit_transaction_operator.cpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -236,6 +246,8 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
+    operators/rollback_transaction_operator.hpp
+    operators/rollback_transaction_operator.cpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp

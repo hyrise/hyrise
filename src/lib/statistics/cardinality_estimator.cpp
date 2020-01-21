@@ -200,6 +200,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     // These Node types should not be relevant during query optimization. Return an empty TableStatistics object for
     // them
+    case LQPNodeType::BeginTransaction:
+    case LQPNodeType::CommitTransaction:
     case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
@@ -209,7 +211,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
-    case LQPNodeType::DummyTable: {
+    case LQPNodeType::DummyTable:
+    case LQPNodeType::RollbackTransaction: {
       auto empty_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>();
       output_table_statistics = std::make_shared<TableStatistics>(std::move(empty_column_statistics), Cardinality{0});
     } break;
