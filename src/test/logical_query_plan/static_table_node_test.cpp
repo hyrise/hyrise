@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/static_table_node.hpp"
@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class StaticTableNodeTest : public ::testing::Test {
+class StaticTableNodeTest : public BaseTest {
  public:
   void SetUp() override {
     column_definitions.emplace_back("a", DataType::Int, false);

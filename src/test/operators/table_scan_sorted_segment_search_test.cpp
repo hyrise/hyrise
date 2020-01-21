@@ -1,5 +1,5 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+
 #include "operators/table_scan/sorted_segment_search.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -14,7 +14,7 @@ struct TestData {
 
 using Params = std::tuple<TestData, opossum::OrderByMode, bool>;
 
-auto formatter = [](const ::testing::TestParamInfo<Params> info) {
+auto table_scan_sorted_segment_search_test_formatter = [](const ::testing::TestParamInfo<Params> info) {
   return opossum::order_by_mode_to_string.left.at(std::get<1>(info.param)) +
          std::get<0>(info.param).predicate_condition_string + (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
 };
@@ -118,7 +118,7 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
                           OrderByMode::DescendingNullsLast),
         ::testing::Bool()),  // nullable
-    formatter);
+    table_scan_sorted_segment_search_test_formatter);
 // clang-format on
 
 TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {

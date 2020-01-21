@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/join_nested_loop.hpp"
@@ -52,13 +51,13 @@ class OperatorsSortTest : public BaseTestWithParam<EncodingType> {
   EncodingType _encoding_type;
 };
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto sort_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
 // As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
 INSTANTIATE_TEST_SUITE_P(DictionaryEncodingTypes, OperatorsSortTest, ::testing::Values(EncodingType::Dictionary),
-                         formatter);
+                         sort_test_formatter);
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);

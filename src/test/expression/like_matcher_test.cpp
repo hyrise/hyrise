@@ -1,6 +1,6 @@
 #include <string>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/evaluation/like_matcher.hpp"
 
@@ -8,7 +8,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class LikeMatcherTest : public ::testing::Test {
+class LikeMatcherTest : public BaseTest {
  public:
   bool match(const std::string& value, const std::string& pattern) const {
     auto result = false;

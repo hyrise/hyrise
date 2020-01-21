@@ -5,12 +5,10 @@
 #include <boost/hana/pair.hpp>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
@@ -64,11 +62,11 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
   uint32_t _max;
 };
 
-auto formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
+auto simd_bp128_test_formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_SUITE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
+INSTANTIATE_TEST_SUITE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), simd_bp128_test_formatter);
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
   const auto sequence = generate_sequence(420);

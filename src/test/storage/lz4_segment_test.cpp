@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"

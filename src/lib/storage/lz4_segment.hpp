@@ -98,6 +98,10 @@ class LZ4Segment : public BaseEncodedSegment {
   const std::optional<pmr_vector<bool>>& null_values() const;
   std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
+  const pmr_vector<pmr_vector<char>>& lz4_blocks() const;
+  size_t block_size() const;
+  size_t last_block_size() const;
+  const std::optional<std::unique_ptr<const BaseCompressedVector>>& string_offsets() const;
 
   /**
    * @defgroup BaseSegment interface
@@ -151,7 +155,7 @@ class LZ4Segment : public BaseEncodedSegment {
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t estimate_memory_usage() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
   /**@}*/
 

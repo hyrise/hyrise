@@ -142,6 +142,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto sql_metrics = json_config.value("sql_metrics", false);
   if (sql_metrics) {
+    Assert(!output_file_string.empty(), "--sql_metrics only makes sense when an output file is set.");
     std::cout << "- Tracking SQL metrics" << std::endl;
   } else {
     std::cout << "- Not tracking SQL metrics" << std::endl;

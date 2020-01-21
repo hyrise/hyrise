@@ -90,6 +90,26 @@ ChunkOffset LZ4Segment<T>::size() const {
 }
 
 template <typename T>
+const pmr_vector<pmr_vector<char>>& LZ4Segment<T>::lz4_blocks() const {
+  return _lz4_blocks;
+}
+
+template <typename T>
+size_t LZ4Segment<T>::block_size() const {
+  return _block_size;
+}
+
+template <typename T>
+size_t LZ4Segment<T>::last_block_size() const {
+  return _last_block_size;
+}
+
+template <typename T>
+const std::optional<std::unique_ptr<const BaseCompressedVector>>& LZ4Segment<T>::string_offsets() const {
+  return _string_offsets;
+}
+
+template <typename T>
 std::vector<T> LZ4Segment<T>::decompress() const {
   auto decompressed_data = std::vector<T>(size());
 
@@ -422,13 +442,18 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
 }
 
 template <typename T>
-size_t LZ4Segment<T>::estimate_memory_usage() const {
+size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode) const {
+  // MemoryUsageCalculationMode can be ignored since all relevant information can be either obtained directly (e.g.,
+  // size of NULL values vector) or the actual size is already stored (e.g., data_size()).
+
   // The null value vector is only stored if there is at least 1 null value in the segment.
-  auto bool_size = size_t{0u};
+  auto null_value_vector_size = size_t{0u};
   if (_null_values) {
-    bool_size = _null_values->size() * sizeof(bool);
-    // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
-    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+    null_value_vector_size = _null_values->size() * sizeof(bool);
+    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
+    null_value_vector_size =
+        sizeof(_null_values) +
+        (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
   }
 
   // The overhead of storing each block in a separate vector.
@@ -442,7 +467,8 @@ size_t LZ4Segment<T>::estimate_memory_usage() const {
   if (_string_offsets && *_string_offsets) {
     offset_size = (*_string_offsets)->data_size();
   }
-  return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size() + block_vector_size;
+  return sizeof(*this) + _compressed_size + null_value_vector_size + offset_size + _dictionary.size() +
+         block_vector_size;
 }
 
 template <typename T>

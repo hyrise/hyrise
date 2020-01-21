@@ -173,11 +173,11 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
 
 const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
 
-size_t Chunk::estimate_memory_usage() const {
+size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
 
   for (const auto& segment : _segments) {
-    bytes += segment->estimate_memory_usage();
+    bytes += segment->memory_usage(mode);
   }
 
   // TODO(anybody) Index memory usage missing
