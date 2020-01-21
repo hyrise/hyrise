@@ -10,13 +10,13 @@ namespace opossum {
       //TODO Check if file already exists;
       _create_table_meta_file();
       _create_column_meta_file();
-      _create_chunk_meta_file();
+      _create_segment_meta_file();
     }
 
     void TableExport::export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
         _append_to_file(_get_table_meta_relative_path(), _export_table_meta_data(table_wrapper));
         _append_to_file(_get_column_meta_relative_path(), _export_column_meta_data(table_wrapper));
-        _append_to_file(_get_chunk_meta_relative_path(), _export_chunk_meta_data(table_wrapper));
+        _append_to_file(_get_segment_meta_relative_path(), _export_segment_meta_data(table_wrapper));
     }
 
     std::string TableExport::_get_table_meta_header() const {
@@ -40,7 +40,7 @@ namespace opossum {
       return column_meta_header.str();
     }
 
-    std::string TableExport::_get_chunk_meta_header() const {
+    std::string TableExport::_get_segment_meta_header() const {
       std::stringstream chunk_meta_header;
 
       chunk_meta_header << "TABLE_NAME" << _separator;
@@ -60,8 +60,8 @@ namespace opossum {
       _append_to_file(_get_column_meta_relative_path(), _get_column_meta_header());
     }
 
-    void TableExport::_create_chunk_meta_file() const {
-      _append_to_file(_get_chunk_meta_relative_path(), _get_chunk_meta_header());
+    void TableExport::_create_segment_meta_file() const {
+      _append_to_file(_get_segment_meta_relative_path(), _get_segment_meta_header());
     }
 
     void TableExport::_append_to_file(const std::string& path,const std::string& str) const {
@@ -80,8 +80,8 @@ namespace opossum {
       return _path_to_dir + "/" + _column_meta_file_name + ".csv";
     }
 
-    const std::string TableExport::_get_chunk_meta_relative_path() const {
-      return _path_to_dir + "/" + _chunk_meta_file_name + ".csv";
+    const std::string TableExport::_get_segment_meta_relative_path() const {
+      return _path_to_dir + "/" + _segment_meta_file_name + ".csv";
     }
 
 
@@ -117,7 +117,7 @@ namespace opossum {
       return ss.str();
     }
 
-    std::string TableExport::_export_chunk_meta_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
+    std::string TableExport::_export_segment_meta_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
       std::stringstream ss;
       const auto table = table_wrapper->get_table();
       const auto table_name = table_wrapper->get_name();
