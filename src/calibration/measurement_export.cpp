@@ -85,21 +85,23 @@ namespace opossum {
     void MeasurementExport::_export_table_scan(std::shared_ptr<const AbstractOperator> op) const {
       std::stringstream ss;
 
-      // INPUT_ROWS_LEFT TODO this does not extract anything
-      ss << std::to_string(op->input_left() != nullptr ? op->input_table_left()->row_count() : 0) << _delimiter;
-
-      // OUTPUT_ROWS
-      ss << std::to_string(op->get_output() != nullptr ? op->get_output()->row_count() : 0) << _delimiter;
-
-      // RUNTIME_NS
-      ss << std::to_string(op->performance_data().walltime.count()) << _delimiter;
-
       const auto node = op->lqp_node;
       // const auto predicate_node = std::dynamic_pointer_cast<const PredicateNode>(node);
 
       for (const auto& el : node->node_expressions) {
+
         visit_expression(el, [&](const auto& expression) {
             if (expression->type == ExpressionType::LQPColumn) {
+
+              // INPUT_ROWS_LEFT TODO this does not extract anything
+              ss << (op->input_left() != nullptr ? std::to_string(op->input_table_left()->row_count()) : "null") << _delimiter;
+
+              // OUTPUT_ROWS
+              ss << (op->get_output() != nullptr ? std::to_string(op->get_output()->row_count()) : "null") << _delimiter;
+
+              // RUNTIME_NS
+              ss << std::to_string(op->performance_data().walltime.count()) << _delimiter;
+
               const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
               const auto column_reference = column_expression->column_reference;
               const auto original_node = column_reference.original_node();

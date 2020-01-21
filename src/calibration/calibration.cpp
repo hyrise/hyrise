@@ -68,8 +68,6 @@ int main() {
 
   export_tcph();
 
-  /*
-
   const auto lqp_generator = LQPGenerator();
   const auto table_export = TableExport(path);
 
@@ -90,5 +88,4 @@ int main() {
     table_export.export_table(table);
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
-  */
 }

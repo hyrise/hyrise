@@ -145,14 +145,10 @@ namespace opossum {
             } else {
               ss << "null" << "\n";
             }
-
           // if segment is not encoded write default values for chunk;
           } else {
-            // Encoding Type
-            ss << EncodingType::Unencoded << _separator;
-
-            // Compressed Vector Type
-            ss << "null" << "\n";  //FixedSize4ByteAligned is uncompressed
+            ss << EncodingType::Unencoded << _separator;  // Encoding Type
+            ss << "null" << "\n";                         // Compressed Vector Type
           }
         }
       }
