@@ -133,8 +133,15 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
 
 TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
   auto aggregate = std::make_shared<AggregateHash>(
-      _table_wrapper, std::initializer_list<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Min}},
+      _table_wrapper, std::vector<std::shared_ptr<AggregateExpression>>{
+      min_(pqp_column_(ColumnID{0}, _table->column_data_type(ColumnID{0}),
+                       _table->column_is_nullable(ColumnID{0}),
+                       _table->column_name(ColumnID{0})))},
       std::initializer_list<ColumnID>{ColumnID{1}});
+
+  
+
+
   aggregate->execute();
 
   auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(*aggregate->performance_data);

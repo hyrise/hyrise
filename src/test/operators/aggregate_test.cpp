@@ -9,6 +9,7 @@
 
 #include "base_test.hpp"
 
+#include "expression/aggregate_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
@@ -113,12 +114,26 @@ class OperatorsAggregateTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
+  void test_output(const std::shared_ptr<AbstractOperator> in,
+                   const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_aggregate_on_reference_table = true) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
+
+    auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{};
+    const auto& table = in->get_output();
+    for (const auto& [column_id, aggregate_function] : aggregate_definitions) {
+      if (column_id != INVALID_COLUMN_ID) {
+        aggregates.emplace_back(std::make_shared<AggregateExpression>(
+            aggregate_function, pqp_column_(column_id, table->column_data_type(column_id),
+                                            table->column_is_nullable(column_id), table->column_name(column_id))));
+      } else {
+        aggregates.emplace_back(std::make_shared<AggregateExpression>(
+            aggregate_function, pqp_column_(column_id, DataType::Long, false, "*")));
+      }
+    }
 
     {
       // Test the Aggregate on stored table data
@@ -151,9 +166,12 @@ using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
 TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_is_nullable(ColumnID{1}),
+                       table->column_name(ColumnID{1})))};
+  auto aggregate =
+      std::make_shared<TypeParam>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
 
   if constexpr (std::is_same_v<TypeParam, AggregateHash>) {
     EXPECT_EQ(aggregate->name(), "AggregateHash");
@@ -165,24 +183,32 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotSumStringColumns) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1_string->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      sum_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_is_nullable(ColumnID{0}),
+                       table->column_name(ColumnID{0})))};
+  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                               std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotAvgStringColumns) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1_string->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      avg_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_is_nullable(ColumnID{0}),
+                       table->column_name(ColumnID{0})))};
+  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                               std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1_string,
-      std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::StandardDeviationSample}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1_string->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      standard_deviation_sample_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}),
+                                             table->column_is_nullable(ColumnID{0}), table->column_name(ColumnID{0})))};
+  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                               std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
@@ -194,9 +220,13 @@ TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
       this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
-  auto aggregate = std::make_shared<TypeParam>(
-      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
-      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  const auto table = this->_table_wrapper_2_2->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      any_(pqp_column_(ColumnID{2}, table->column_data_type(ColumnID{2}), table->column_is_nullable(ColumnID{2}),
+                       table->column_name(ColumnID{2})))};
+
+  auto aggregate =
+      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   aggregate->execute();
 
   // Column 2 stores the value 20 twice for the remaining group.
@@ -212,9 +242,13 @@ TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
   filtered->execute();
 
   // Column 3 stores different values for the tuples of the remaining group.
-  auto aggregate = std::make_shared<TypeParam>(
-      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
-      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  const auto table = this->_table_wrapper_2_2->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      any_(pqp_column_(ColumnID{3}, table->column_data_type(ColumnID{3}), table->column_is_nullable(ColumnID{3}),
+                       table->column_name(ColumnID{3})))};
+
+  auto aggregate =
+      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
@@ -559,9 +593,10 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
-  EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{},
-                                           std::vector<ColumnID>{}),
-               std::logic_error);
+  EXPECT_THROW(
+      std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, std::vector<std::shared_ptr<AggregateExpression>>{},
+                                  std::vector<ColumnID>{}),
+      std::logic_error);
 }
 
 /**
