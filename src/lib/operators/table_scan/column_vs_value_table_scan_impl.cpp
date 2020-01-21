@@ -161,7 +161,9 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
 
           size_t output_idx = matches.size();
 
-          matches.resize(matches.size() + std::distance(begin, end));
+          // TODO: make segment iterators random access iterators
+          matches.resize(matches.size() + (end - begin));
+          // matches.resize(matches.size() + std::distance(begin, end));
 
           /**
            * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
@@ -176,7 +178,9 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             }
           } else {
             const auto first_offset = begin->chunk_offset();
-            const auto distance = std::distance(begin, end);
+            // TODO: make segment iterators random access iterators
+            const auto distance = end - begin;
+            // const auto distance = std::distance(begin, end);
 
             for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
               matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
