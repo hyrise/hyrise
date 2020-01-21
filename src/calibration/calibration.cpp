@@ -39,12 +39,10 @@ void export_tcph(){
   Hyrise::get().benchmark_runner = benchmark_runner;
   benchmark_runner->run();
 
-  // TODO fix issue in range expression
-  // hyrise/src/calibration/calibration.cpp:42:56: error: invalid range expression of type 'opossum::Cache<std::shared_ptr<opossum::AbstractOperator>, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >'; no viable 'begin' function available
-//  for (const auto& [query_string, physical_query_plan] : *SQLPipelineBuilder::default_pqp_cache) {
-//    measurement_export.export_to_csv(physical_query_plan);
-//    //std::cout << *physical_query_plan << std::endl;
-//  }
+  for (const auto& [query_string, physical_query_plan] : *SQLPipelineBuilder::default_pqp_cache) {
+    measurement_export.export_to_csv(physical_query_plan);
+    //std::cout << *physical_query_plan << std::endl;
+  }
 
 
   const std::vector<std::string> table_names = Hyrise::get().storage_manager.table_names();
