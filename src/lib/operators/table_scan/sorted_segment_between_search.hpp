@@ -31,6 +31,15 @@ class SortedSegmentBetweenSearch {
 
  private:
   void _exponential_search_for_nulls(IteratorType it_first, IteratorType it_last) {
+    // Uses exponential search to find lower_bound of null values to exclude them from further scanning
+    //
+    // This version of exponential search reduces the range that the search key (Null values in this case)
+    // reside in and performing a binary search within this range afterwards.
+    //
+    // Because the null values are either in the beginning or the end of each segment (depending on
+    // how they are ordered) and there are typically very few null values, the amount of steps
+    // used in exponential_search are typically less than the amount of steps taken using only
+    // binary search
     if (it_first == it_last) return;
     // If no null values are present
     if (_is_nulls_first && !it_first->is_null()) {
@@ -41,23 +50,24 @@ class SortedSegmentBetweenSearch {
     }
 
     using difference_type = typename std::iterator_traits<IteratorType>::difference_type;
-    difference_type size = std::distance(it_first, it_last), bound = 1;
+    const difference_type segment_size = std::distance(it_first, it_last);
+    difference_type step_size = 1;
 
     if (_is_nulls_first) {
-      while (bound < size && (it_first + bound)->is_null()) {
-        bound *= 2;
+      while (step_size < segment_size && (it_first + step_size)->is_null()) {
+        step_size *= 2;
       }
 
-      auto end = it_first + std::min(bound, size);
-      _begin = std::lower_bound(it_first + (bound / 2), end, false,
+      auto end = it_first + std::min(step_size, segment_size);
+      _begin = std::lower_bound(it_first + (step_size / 2), end, false,
                                 [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
     } else {
-      while (bound < size && (it_first + (size - bound))->is_null()) {
-        bound *= 2;
+      while (step_size < segment_size && (it_first + (segment_size - step_size))->is_null()) {
+        step_size *= 2;
       }
 
-      auto start = it_first + (size - std::min(bound, size));
-      _end = std::lower_bound(start, it_first + (size - bound / 2), true,
+      auto start = it_first + (segment_size - std::min(step_size, segment_size));
+      _end = std::lower_bound(start, it_first + (segment_size - step_size / 2), true,
                               [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
     }
   }
