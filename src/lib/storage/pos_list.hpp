@@ -52,7 +52,7 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
-  PosList& operator=(PosList&& other) = default;
+  PosList& operator=(PosList&& other);
 
   // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
   // to enable some optimizations.
@@ -125,12 +125,19 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
-  friend bool operator==(const AbstractPosList& other) {
+  // TODO: Proper support for comparison
+  bool operator==(const AbstractPosList& other) {
     return false;
   }
+
+  friend bool operator==(const PosList& lhs, const PosList& rhs) { return false; }
+
+  // Kept for testing
+  friend bool operator==(const PosList& lhs, const pmr_vector<RowID>& rhs) { return false; }
 
  private:
   bool _references_single_chunk = false;
 };
+
 
 }  // namespace opossum

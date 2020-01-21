@@ -10,9 +10,14 @@ namespace opossum {
 
 class AbstractPosList {
  public:
-  virtual AbstractPosList& operator=(AbstractPosList&& other) = 0;
 
-  virtual ~AbstractPosList();
+  AbstractPosList() noexcept {};
+  virtual ~AbstractPosList() = default;
+  AbstractPosList(AbstractPosList&&) = delete;
+  AbstractPosList(const AbstractPosList&) = delete;
+  AbstractPosList& operator=(const AbstractPosList&&) = delete;
+
+
 
   // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
   virtual bool references_single_chunk() const = 0;
