@@ -17,11 +17,9 @@ namespace opossum {
         case OperatorType::Alias:               break;
         case OperatorType::Delete:              break;
         case OperatorType::Difference:          break;
-        case OperatorType::ExportBinary:        break;
-        case OperatorType::ExportCsv:           break;
+        case OperatorType::Export:              break;
         case OperatorType::GetTable:            break;
-        case OperatorType::ImportBinary:        break;
-        case OperatorType::ImportCsv:           break;
+        case OperatorType::Import:              break;
         case OperatorType::IndexScan:           break;
         case OperatorType::Insert:              break;
         case OperatorType::JoinHash:            break;

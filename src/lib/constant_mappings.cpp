@@ -66,11 +66,9 @@ const boost::bimap<OperatorType, std::string> operator_type_to_string =
         {OperatorType::Alias, "Alias" },
         {OperatorType::Delete, "Delete" },
         {OperatorType::Difference, "Difference" },
-        {OperatorType::ExportBinary, "ExportBinary" },
-        {OperatorType::ExportCsv, "ExportCSV" },
+        {OperatorType::Export, "Export" },
         {OperatorType::GetTable, "GetTable" },
-        {OperatorType::ImportBinary, "ImportBinary" },
-        {OperatorType::ImportCsv, "ImportCSV" },
+        {OperatorType::Import, "Import" },
         {OperatorType::IndexScan, "IndexScan" },
         {OperatorType::Insert, "Insert" },
         {OperatorType::JoinHash, "JoinHash" },
@@ -107,6 +105,10 @@ const boost::bimap<CompressedVectorType, std::string> compressed_vector_type_to_
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
+}
+
+std::ostream& operator<<(std::ostream& stream, const OperatorType opt) {
+  return stream << operator_type_to_string.left.at(opt);
 }
 
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {
@@ -153,7 +155,7 @@ std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compre
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution& column_data_distribution) {
+std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution) {
     stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
     switch (column_data_distribution.distribution_type){
         case DataDistributionType::Uniform:
@@ -173,7 +175,7 @@ std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution& col
     return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
+std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec spec) {
   stream << spec.encoding_type;
   if (spec.vector_compression_type) {
     stream << "-" << *spec.vector_compression_type;
@@ -182,7 +184,4 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) 
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, CompressedVectorType compressed_vector_type) {
-  return stream << compressed_vector_type_to_string.left.at(compressed_vector_type);
-}
 }  // namespace opossum

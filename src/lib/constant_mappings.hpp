@@ -42,9 +42,9 @@ std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type)
 std::ostream& operator<<(std::ostream& stream, const FileType file_type);
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
-std::ostream& operator<<(std::ostream& stream, OperatorType operator_type);
-std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_data_distribution);
-std::ostream& operator<<(std::ostream& stream, CompressedVectorType compressed_vector_type);
-std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
+std::ostream& operator<<(std::ostream& stream, const OperatorType operator_type);
+std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution);
+std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
+std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec spec);
 
 }  // namespace opossum
