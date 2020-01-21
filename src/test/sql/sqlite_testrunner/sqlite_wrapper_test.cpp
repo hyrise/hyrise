@@ -1,14 +1,13 @@
 #include <optional>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
 namespace opossum {
 
-class SQLiteWrapperTest : public ::testing::Test {
+class SQLiteWrapperTest : public BaseTest {
  public:
   void SetUp() override { sqlite_wrapper.emplace(); }
 

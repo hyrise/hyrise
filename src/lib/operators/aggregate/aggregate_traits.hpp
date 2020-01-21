@@ -26,11 +26,13 @@ struct AggregateTraits<ColumnType, AggregateFunction::CountDistinct> {
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
 };
 
-// MIN/MAX on all types
+// MIN/MAX/ANY on all types
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max, void>> {
+    typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max ||
+                                  function == AggregateFunction::Any,
+                              void>> {
   typedef ColumnType AggregateType;
   static constexpr DataType AGGREGATE_DATA_TYPE = data_type_from_type<ColumnType>();
 };

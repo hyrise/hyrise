@@ -101,12 +101,4 @@ void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_len
 
 size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.size(); }
 
-std::shared_ptr<const pmr_vector<pmr_string>> FixedStringVector::dictionary() const {
-  pmr_vector<pmr_string> string_values;
-  for (auto it = cbegin(); it != cend(); ++it) {
-    string_values.emplace_back(*it);
-  }
-  return std::make_shared<pmr_vector<pmr_string>>(std::move(string_values));
-}
-
 }  // namespace opossum

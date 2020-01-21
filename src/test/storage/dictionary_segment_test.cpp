@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -21,7 +20,7 @@ class StorageDictionarySegmentTest : public BaseTestWithParam<VectorCompressionT
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
 
-auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
+auto dictionary_segment_test_formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   const auto vector_compression = info.param;
 
   auto stream = std::stringstream{};
@@ -35,7 +34,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          ::testing::Values(VectorCompressionType::SimdBp128,
                                            VectorCompressionType::FixedSizeByteAligned),
-                         formatter);
+                         dictionary_segment_test_formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vs_int->append(i);
@@ -204,7 +203,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
       encode_and_compress_segment(
           vs_int, DataType::Int,
           SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})
-          ->estimate_memory_usage();
+          ->memory_usage(MemoryUsageCalculationMode::Sampled);
 
   vs_int->append(0);
   vs_int->append(1);
@@ -216,7 +215,8 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
 
   static constexpr auto size_of_attribute = 1u;
 
-  EXPECT_GE(dictionary_segment->estimate_memory_usage(), empty_memory_usage + 3 * size_of_attribute);
+  EXPECT_GE(dictionary_segment->memory_usage(MemoryUsageCalculationMode::Sampled),
+            empty_memory_usage + 3 * size_of_attribute);
 }
 
 }  // namespace opossum

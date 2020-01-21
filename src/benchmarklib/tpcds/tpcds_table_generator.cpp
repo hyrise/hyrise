@@ -37,7 +37,7 @@ extern "C" {
 }
 
 #include "benchmark_config.hpp"
-#include "operators/import_binary.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "table_builder.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
@@ -279,7 +279,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       auto timer = Timer{};
       std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
-      table_info_by_name[table_name].table = ImportBinary::read_binary(table_file);
+      table_info_by_name[table_name].table = BinaryParser::parse(table_file);
       table_info_by_name[table_name].loaded_from_binary = true;
 
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
