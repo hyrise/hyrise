@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include "expression/between_expression.hpp"
-#include "sorted_segment_between_search.hpp"
+#include "sorted_segment_search.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -151,7 +151,7 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        auto sorted_segment_search = SortedSegmentBetweenSearch(
+        auto sorted_segment_search = SortedSegmentSearch(
             segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
             boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
 

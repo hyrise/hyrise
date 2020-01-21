@@ -495,7 +495,6 @@ set(
     storage/segment_iterables.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
-    operators/table_scan/sorted_segment_between_search.hpp
     operators/table_scan/sorted_segment_search.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp

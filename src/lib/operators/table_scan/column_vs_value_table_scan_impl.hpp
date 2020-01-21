@@ -81,6 +81,8 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
     }
   }
   /**@}*/
+ private:
+  const bool _column_is_nullable;
 };
 
 }  // namespace opossum
