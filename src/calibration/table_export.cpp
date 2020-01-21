@@ -34,8 +34,7 @@ namespace opossum {
 
       column_meta_header << "TABLE_NAME" << _separator;
       column_meta_header << "COLUMN_NAME" << _separator;
-      column_meta_header << "COLUMN_DATA_TYPE" << _separator;
-      column_meta_header << "ENCODING_TYPE" << "\n";
+      column_meta_header << "COLUMN_DATA_TYPE" << _separator
 
       return column_meta_header.str();
     }
@@ -47,7 +46,7 @@ namespace opossum {
       segment_meta_header << "COLUMN_NAME" << _separator;
       segment_meta_header << "CHUNK_ID" << _separator;
       segment_meta_header << "ENCODING_TYPE" << _separator;
-      segment_meta_header << "ENCODING_TYPE" << "\n";
+      segment_meta_header << "COMPRESSION_TYPE" << "\n";
 
       return segment_meta_header.str();
     }
@@ -106,13 +105,7 @@ namespace opossum {
       for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         ss << table_wrapper->get_name() << _separator;
         ss << table->column_name(column_id) << _separator;
-        ss << table->column_data_type(column_id) << _separator;
-
-        auto const segment =  table->get_chunk(ChunkID {0})->get_segment(column_id);
-        auto const encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment);
-
-        auto const encoded_type_string = encoded_segment != nullptr ? encoded_segment->encoding_type() : EncodingType::Unencoded; //TODO remove this as soon we know how to use encoding
-        ss << encoded_type_string << "\n";
+        ss << table->column_data_type(column_id) << "\n";
       }
 
       return ss.str();
