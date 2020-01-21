@@ -141,7 +141,13 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Only add chunk if it would contain any tuples
     if (!output_segments.empty() && output_segments[0]->size() > 0) {
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      // Set ordered_by flag
+      const auto chunk = std::make_shared<Chunk>(output_segments);
+      const auto ordered_by = in_chunk->ordered_by();
+      if (ordered_by) {
+        chunk->set_ordered_by(ordered_by.value());
+      }
+      output_chunks.emplace_back(chunk);
     }
   }
 
