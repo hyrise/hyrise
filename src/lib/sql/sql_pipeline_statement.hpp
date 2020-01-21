@@ -99,7 +99,8 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
-  void set_transaction_exception(std::runtime_error);
+  void set_warning_message(std::string);
+  std::optional<std::string> warning_message();
 
  private:
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
@@ -130,7 +131,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;
 
-  std::optional<std::runtime_error> _transaction_exception;
+  std::optional<std::string> _warning_message;
 };
 
 }  // namespace opossum

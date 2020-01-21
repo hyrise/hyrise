@@ -16,6 +16,7 @@ struct ExecutionInformation {
   OperatorType root_operator;
   std::string pipeline_metrics;
   ErrorMessage error_message;
+  std::vector<WarningMessage> warning_messages;
 };
 
 // This class manages the interaction between the server and the database component. Furthermore, most of the SQL-based
