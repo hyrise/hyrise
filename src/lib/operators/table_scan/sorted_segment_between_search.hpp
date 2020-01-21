@@ -30,18 +30,19 @@ class SortedSegmentBetweenSearch {
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
+    /**
+     * Uses exponential search to find lower_bound of null values to exclude them from further scanning.
+     * This version of exponential search first reduces the range where the search for NULL values will be performed
+     * and performs a binary search for the exact bound within this range afterwards.
+
+     * Since the null values are either in the beginning or the end of each segment (depending on
+     * how they are ordered) and there are typically very few null values, the amount of steps
+     * used in exponential_search are typically less than the amount of steps taken using only
+     * binary search.
+     */
   void _exponential_search_for_nulls(IteratorType it_first, IteratorType it_last) {
-    // Uses exponential search to find lower_bound of null values to exclude them from further scanning
-    //
-    // This version of exponential search reduces the range that the search key (Null values in this case)
-    // reside in and performing a binary search within this range afterwards.
-    //
-    // Because the null values are either in the beginning or the end of each segment (depending on
-    // how they are ordered) and there are typically very few null values, the amount of steps
-    // used in exponential_search are typically less than the amount of steps taken using only
-    // binary search
     if (it_first == it_last) return;
-    // If no null values are present
+    // early return if no null values are present
     if (_is_nulls_first && !it_first->is_null()) {
       return;
     }
