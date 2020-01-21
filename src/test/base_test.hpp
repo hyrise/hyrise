@@ -74,8 +74,6 @@ class BaseTestWithParam
    */
   ~BaseTestWithParam() {
     Hyrise::reset();
-    SQLPipelineBuilder::default_pqp_cache = nullptr;
-    SQLPipelineBuilder::default_lqp_cache = nullptr;
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,

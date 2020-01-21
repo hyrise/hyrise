@@ -24,6 +24,9 @@ Hyrise::Hyrise() {
 void Hyrise::reset() {
   Hyrise::get().scheduler()->finish();
   get() = Hyrise{};
+
+  SQLPipelineBuilder::default_pqp_cache = nullptr;
+  SQLPipelineBuilder::default_lqp_cache = nullptr;
 }
 
 const std::shared_ptr<AbstractScheduler>& Hyrise::scheduler() const { return _scheduler; }
