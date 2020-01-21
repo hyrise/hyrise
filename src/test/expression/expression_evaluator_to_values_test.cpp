@@ -1,6 +1,6 @@
 #include <optional>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -22,14 +22,13 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ExpressionEvaluatorToValuesTest : public ::testing::Test {
+class ExpressionEvaluatorToValuesTest : public BaseTest {
  public:
   void SetUp() override {
     // Load table_a

@@ -1,10 +1,12 @@
-#include "gtest/gtest.h"
+#include "../base_test.hpp"
 
 #include "utils/format_bytes.hpp"
 
 namespace opossum {
 
-TEST(Format, Bytes) {
+class FormatBytesTest : public BaseTest {};
+
+TEST_F(FormatBytesTest, Bytes) {
   EXPECT_EQ(format_bytes(0), "0B");
   EXPECT_EQ(format_bytes(11), "11B");
   EXPECT_EQ(format_bytes(1'234), "1.234KB");

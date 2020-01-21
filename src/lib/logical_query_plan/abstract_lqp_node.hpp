@@ -20,6 +20,7 @@ enum class LQPNodeType {
   DropView,
   DropTable,
   DummyTable,
+  Import,
   Insert,
   Join,
   Limit,

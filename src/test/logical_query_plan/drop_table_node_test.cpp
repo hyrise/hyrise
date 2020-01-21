@@ -1,10 +1,10 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "logical_query_plan/drop_table_node.hpp"
 
 namespace opossum {
 
-class DropTableNodeTest : public ::testing::Test {
+class DropTableNodeTest : public BaseTest {
  public:
   void SetUp() override { drop_table_node = DropTableNode::make("some_table", false); }
 

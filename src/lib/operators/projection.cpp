@@ -12,7 +12,10 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -86,35 +89,107 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         // The current column will be returned without any logical modifications. As other columns do get modified (and
         // returned as a ValueSegment), all segments (including this one) need to become ValueSegments. This segment is
         // not yet a ValueSegment (otherwise forward_columns would be true); thus we need to materialize it.
+
+        // TODO(jk): Once we have a smart pos list that knows that a single chunk is referenced in its entirety, we can
+        //           simply forward that chunk here instead of materializing it.
+
         const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression);
         const auto segment = input_chunk->get_segment(pqp_column_expression->column_id);
 
         resolve_data_type(expression->data_type(), [&](const auto data_type) {
           using ColumnDataType = typename decltype(data_type)::type;
-          bool has_null = false;
-          auto values = pmr_concurrent_vector<ColumnDataType>(segment->size());
-          auto null_values = pmr_concurrent_vector<bool>(segment->size());
 
-          auto chunk_offset = ChunkOffset{0};
-          segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-            if (position.is_null()) {
-              has_null = true;
-              null_values[chunk_offset] = true;
-            } else {
-              values[chunk_offset] = position.value();
-            }
-            ++chunk_offset;
-          });
+          const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+          DebugAssert(reference_segment, "Expected ReferenceSegment");
 
-          auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
-          if (has_null) {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
-          } else {
-            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+          // If the ReferenceSegment references a single (FixedString)DictionarySegment, do not materialize it as a
+          // ValueSegment, but re-use its dictionary and only copy the value ids.
+          auto referenced_dictionary_segment = std::shared_ptr<BaseDictionarySegment>{};
+
+          const auto& pos_list = reference_segment->pos_list();
+          if (pos_list->references_single_chunk()) {
+            const auto& referenced_table = reference_segment->referenced_table();
+            const auto& referenced_chunk = referenced_table->get_chunk(pos_list->common_chunk_id());
+            const auto& referenced_segment = referenced_chunk->get_segment(pqp_column_expression->column_id);
+            referenced_dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(referenced_segment);
           }
 
-          output_segments[column_id] = std::move(value_segment);
-          column_is_nullable[column_id] = has_null;
+          if (referenced_dictionary_segment) {
+            // Resolving the BaseDictionarySegment so that we can handle both regular and fixed-string dictionaries
+            resolve_encoded_segment_type<ColumnDataType>(
+                *referenced_dictionary_segment, [&](const auto& typed_segment) {
+                  using DictionarySegmentType = std::decay_t<decltype(typed_segment)>;
+
+                  // Write new a attribute vector containing only positions given from the input_pos_list.
+                  [[maybe_unused]] auto materialize_filtered_attribute_vector = [](const auto& dictionary_segment,
+                                                                                   const auto& input_pos_list) {
+                    auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
+                    auto iterable = create_iterable_from_attribute_vector(dictionary_segment);
+                    auto chunk_offset = ChunkOffset{0};
+                    iterable.with_iterators(input_pos_list, [&](auto it, auto end) {
+                      while (it != end) {
+                        filtered_attribute_vector[chunk_offset] = it->value();
+                        ++it;
+                        ++chunk_offset;
+                      }
+                    });
+                    // DictionarySegments take BaseCompressedVectors, not an std::vector<ValueId> for the attribute
+                    // vector. But the latter can be wrapped into a FixedSizeByteAligned<uint32_t> without copying.
+                    return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(std::move(filtered_attribute_vector));
+                  };
+
+                  if constexpr (std::is_same_v<DictionarySegmentType, DictionarySegment<ColumnDataType>>) {  // NOLINT
+                    const auto compressed_attribute_vector =
+                        materialize_filtered_attribute_vector(typed_segment, pos_list);
+                    const auto& dictionary = typed_segment.dictionary();
+
+                    output_segments[column_id] = std::make_shared<DictionarySegment<ColumnDataType>>(
+                        dictionary, std::move(compressed_attribute_vector),
+                        referenced_dictionary_segment->null_value_id());
+                  } else if constexpr (std::is_same_v<DictionarySegmentType,  // NOLINT - lint.sh wants {} on same line
+                                                      FixedStringDictionarySegment<ColumnDataType>>) {
+                    const auto compressed_attribute_vector =
+                        materialize_filtered_attribute_vector(typed_segment, pos_list);
+                    const auto& dictionary = typed_segment.fixed_string_dictionary();
+
+                    output_segments[column_id] = std::make_shared<FixedStringDictionarySegment<ColumnDataType>>(
+                        dictionary, std::move(compressed_attribute_vector),
+                        referenced_dictionary_segment->null_value_id());
+                  } else {
+                    Fail("Referenced segment was dynamically casted to BaseDictionarySegment, but resolve failed");
+                  }
+                  // clang-format on
+                });
+          } else {
+            // End of dictionary segment shortcut - handle all other referenced segments and ReferenceSegments that
+            // reference more than a single chunk by materializing themm into a ValueSegment
+            bool has_null = false;
+            auto values = pmr_concurrent_vector<ColumnDataType>(segment->size());
+            auto null_values = pmr_concurrent_vector<bool>(
+                input_table.column_is_nullable(pqp_column_expression->column_id) ? segment->size() : 0);
+
+            auto chunk_offset = ChunkOffset{0};
+            segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+              if (position.is_null()) {
+                DebugAssert(!null_values.empty(), "Mismatching NULL information");
+                has_null = true;
+                null_values[chunk_offset] = true;
+              } else {
+                values[chunk_offset] = position.value();
+              }
+              ++chunk_offset;
+            });
+
+            auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
+            if (has_null) {
+              value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+            } else {
+              value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+            }
+
+            output_segments[column_id] = std::move(value_segment);
+            column_is_nullable[column_id] = has_null;
+          }
         });
       } else {
         auto output_segment = evaluator.evaluate_expression_to_segment(*expression);

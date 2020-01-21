@@ -10,6 +10,7 @@
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
+#include "strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
@@ -90,6 +91,8 @@ namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
+
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -219,7 +222,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
           if (other_lqp == lqp) continue;
           Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
-                                                       node->description() + "` found in different LQP");
+                                            node->description() + "` found in different LQP");
         }
       }
 
@@ -246,6 +249,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
         case LQPNodeType::DropTable:
+        case LQPNodeType::Import:
         case LQPNodeType::StaticTable:
         case LQPNodeType::StoredTable:
         case LQPNodeType::Mock:

@@ -1,7 +1,4 @@
-#include "gtest/gtest.h"
-
 #include "strategy_base_test.hpp"
-#include "testing_assert.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"

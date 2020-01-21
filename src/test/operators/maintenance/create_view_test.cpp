@@ -1,7 +1,7 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "utils/assert.hpp"
 
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -9,8 +9,6 @@
 #include "operators/maintenance/create_view.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
 
 namespace opossum {
 
