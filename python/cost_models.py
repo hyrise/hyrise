@@ -51,6 +51,10 @@ def generate_model_plot(model, test_data, method, data_type, encoding):
     pred_y = model.predict(ohe_data)
 
     plt.scatter(real_y, pred_y, c='b')
+    abline_values = range(int(max(np.amax(pred_y), np.amax(real_y)) + 1000000))
+
+    # Plot the best fit line over the actual values
+    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
     plt.title('{}_{}_{}'.format(data_type, encoding, method))
     plt.ylim([0, max(np.amax(pred_y), np.amax(real_y)) + 1000000])
     plt.xlim([0, max(np.amax(pred_y), np.amax(real_y)) + 1000000])
