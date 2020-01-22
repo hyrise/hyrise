@@ -148,18 +148,18 @@ TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
 TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   // Create pipeline and pass pqp cache. Verify that this does not change default_pqp_cache.
   auto sql_pipeline = SQLPipelineBuilder{Q1}.with_pqp_cache(cache).create_pipeline_statement();
-  EXPECT_EQ(SQLPipelineBuilder::default_pqp_cache, nullptr);
+  EXPECT_EQ(Hyrise::get().default_pqp_cache, nullptr);
 
   // Setting default_pqp_cache and verify it's set.
-  SQLPipelineBuilder::default_pqp_cache = cache;
-  EXPECT_NE(SQLPipelineBuilder::default_pqp_cache, nullptr);
+  Hyrise::get().default_pqp_cache = cache;
+  EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
 
   // Create new pipeline, without setting a cache (default cache set previously). Execute pipeline and check if
   // frequency of query is as expected.
   auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline_statement();
   new_sql_pipeline.get_result_table();
   auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
-      SQLPipelineBuilder::default_pqp_cache->unsafe_cache());
+      Hyrise::get().default_pqp_cache->unsafe_cache());
   EXPECT_EQ(1, gdfs_cache.frequency(Q1));
 }
 
