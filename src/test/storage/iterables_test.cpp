@@ -385,11 +385,12 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   const auto segment = chunk->get_segment(ColumnID{0u});
-  const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
+  const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
 
-  const auto iterable = ValueSegmentIterable<int>{*int_segment};
+  const auto iterable = ValueSegmentIterable<int32_t>{*int_segment};
 
-  auto sum = uint32_t{0};
+  auto sum = int32_t{0};
+
   iterable.for_each(SumUp{sum});
 
   EXPECT_EQ(sum, 13'702u);
