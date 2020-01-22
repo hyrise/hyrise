@@ -43,7 +43,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
-        : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
+      : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -73,9 +73,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     explicit PointAccessIterator(const NullValueVector& null_values,
                                  const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
-                                                                                     std::move(position_filter_it)},
-          _null_values{null_values} {}
+      : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
+                                                                                   std::move(position_filter_it)},
+        _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

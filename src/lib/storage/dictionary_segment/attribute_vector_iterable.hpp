@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
@@ -11,11 +12,12 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
  public:
   using ValueType = ValueID;
 
-  explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
-      : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
+  explicit AttributeVectorIterable(const BaseDictionarySegment& segment)
+    : _segment{segment}, _attribute_vector{*segment.attribute_vector()}, _null_value_id{segment.null_value_id()} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    _segment.access_counter.on_iterator_create(_segment.size());
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
@@ -28,6 +30,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    _segment.access_counter.on_iterator_create(position_filter);
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
@@ -42,7 +45,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
   size_t _on_size() const { return _attribute_vector.size(); }
 
+  const BaseDictionarySegment& segment() const {return _segment; }
+
  private:
+  const BaseDictionarySegment& _segment;
   const BaseCompressedVector& _attribute_vector;
   const ValueID _null_value_id;
 
@@ -79,7 +85,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     SegmentPosition<ValueID> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
-
       return {value_id, is_null, _chunk_offset};
     }
 
@@ -107,11 +112,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
     SegmentPosition<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
       const auto value_id =
-          static_cast<ValueID>(_attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk));
+        static_cast<ValueID>(_attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
-
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 

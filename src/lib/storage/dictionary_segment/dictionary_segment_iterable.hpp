@@ -2,11 +2,10 @@
 
 #include <type_traits>
 
-#include "storage/segment_iterables.hpp"
-
+#include "storage/base_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
-
+#include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
@@ -24,6 +23,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    _segment.access_counter.on_iterator_create(_segment.size());
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
@@ -39,6 +39,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    _segment.access_counter.on_iterator_create(position_filter);
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
@@ -54,6 +55,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   }
 
   size_t _on_size() const { return _segment.size(); }
+
+  const BaseDictionarySegment& segment() const { return _segment; }
 
  private:
   template <typename ZsIteratorType, typename DictionaryIteratorType>

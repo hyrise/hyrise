@@ -57,6 +57,7 @@ class BaseAnySegmentIterableWrapper {
   virtual void with_iterators(const std::shared_ptr<const PosList>& position_filter,
                               const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
   virtual size_t size() const = 0;
+  virtual const BaseSegment& segment() const = 0;
 };
 
 template <typename ValueType, typename IterableT>
@@ -90,6 +91,8 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
   }
 
   size_t size() const override { return iterable._on_size(); }
+
+  const BaseSegment& segment() const override { return iterable.segment(); }
 
   IterableT iterable;
 };
@@ -133,6 +136,8 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   }
 
   size_t _on_size() const { return _iterable_wrapper->size(); }
+
+  const BaseSegment& segment() const { return _iterable_wrapper->segment(); }
 
  private:
   std::shared_ptr<BaseAnySegmentIterableWrapper<ValueType>> _iterable_wrapper;
