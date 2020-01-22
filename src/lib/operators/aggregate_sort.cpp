@@ -296,6 +296,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
                                             input_table->column_data_type(column_id),
                                             input_table->column_is_nullable(column_id));
+    // TODO include sortedness in output?
   }
 
   // Create aggregate column definitions
@@ -361,9 +362,25 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * However, we did not benchmark it, so we cannot prove it.
    */
 
+  // check if there's a common chunk ordering
+  auto all_chunks_ordered_by = input_table->get_chunk(ChunkID{0})->ordered_by();
+  if (all_chunks_ordered_by) {
+    for(auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
+      if (input_table->get_chunk(chunk_id)->ordered_by() != all_chunks_ordered_by) {
+        all_chunks_ordered_by = std::nullopt;
+        std::cout << "Some chunk not sorted: Chunk " << chunk_id << std::endl;
+        break;
+      }
+    }
+  }
+
   // Sort input table consecutively by the group by columns (stable sort)
   auto sorted_table = input_table;
   for (const auto& column_id : _groupby_column_ids) {
+    if (all_chunks_ordered_by && all_chunks_ordered_by->first == column_id) {
+      std::cout << "Skipping sort because column already sorted" << column_id << std::endl;
+      continue;
+    }
     const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
     sorted_wrapper->execute();
     Sort sort = Sort(sorted_wrapper, column_id);
