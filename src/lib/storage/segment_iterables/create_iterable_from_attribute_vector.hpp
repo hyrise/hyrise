@@ -20,7 +20,7 @@ namespace opossum {
 
 inline auto create_iterable_from_attribute_vector(const BaseDictionarySegment& segment) {
   return erase_type_from_iterable_if_debug(
-    AttributeVectorIterable{*segment.attribute_vector(), segment.null_value_id()});
+      AttributeVectorIterable{*segment.attribute_vector(), segment.null_value_id()});
 }
 
 /**@}*/
