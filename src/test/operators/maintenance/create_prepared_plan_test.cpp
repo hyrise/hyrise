@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
@@ -26,9 +25,10 @@ class CreatePreparedPlanTest : public BaseTest {
 TEST_F(CreatePreparedPlanTest, OperatorName) { EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan"); }
 
 TEST_F(CreatePreparedPlanTest, OperatorDescription) {
-  EXPECT_EQ(create_prepared_plan->description(DescriptionMode::SingleLine), R"(CreatePreparedPlan 'prepared_plan_a' {
+  EXPECT_EQ(replace_addresses(create_prepared_plan->description(DescriptionMode::SingleLine)),
+            R"(CreatePreparedPlan 'prepared_plan_a' {
 ParameterIDs: []
-[0] [DummyTable]
+[0] [DummyTable] @ 0x00000000
 })");
 }
 

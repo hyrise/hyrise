@@ -25,9 +25,6 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                         const ValueID null_value_id);
 
-  // returns the dictionary as pmr_vector
-  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
-
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 
@@ -44,7 +41,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t estimate_memory_usage() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode = MemoryUsageCalculationMode::Full) const final;
   /**@}*/
 
   /**

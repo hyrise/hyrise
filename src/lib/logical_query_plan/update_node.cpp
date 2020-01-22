@@ -12,7 +12,7 @@ namespace opossum {
 
 UpdateNode::UpdateNode(const std::string& table_name) : BaseNonQueryNode(LQPNodeType::Update), table_name(table_name) {}
 
-std::string UpdateNode::description() const {
+std::string UpdateNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Update] Table: '" << table_name << "'";
@@ -31,7 +31,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& UpdateNode::column_expre
   return empty_vector;
 }
 
-size_t UpdateNode::_shallow_hash() const { return boost::hash_value(table_name); }
+size_t UpdateNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& update_node_rhs = static_cast<const UpdateNode&>(rhs);

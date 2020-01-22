@@ -10,7 +10,7 @@ namespace opossum {
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& table)
     : BaseNonQueryNode(LQPNodeType::StaticTable), table(table) {}
 
-std::string StaticTableNode::description() const {
+std::string StaticTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
 
   stream << "[StaticTable]:"
@@ -47,7 +47,7 @@ bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-size_t StaticTableNode::_shallow_hash() const {
+size_t StaticTableNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());

@@ -1,9 +1,9 @@
 #include <memory>
 #include <string_view>
 
-#include "all_type_variant.hpp"
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+
+#include "all_type_variant.hpp"
 #include "null_value.hpp"
 
 namespace opossum {

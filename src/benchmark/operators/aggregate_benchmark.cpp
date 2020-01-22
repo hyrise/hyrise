@@ -3,16 +3,20 @@
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+#include "expression/expression_functional.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+using namespace opossum::expression_functional;  // NOLINT
+
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
   _clear_cache();
 
-  std::vector<AggregateColumnDefinition> aggregates = {{ColumnID{1} /* "b" */, AggregateFunction::Min}};
+  auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{
+      std::static_pointer_cast<AggregateExpression>(min_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
 
   std::vector<ColumnID> groupby = {ColumnID{0} /* "a" */};
 

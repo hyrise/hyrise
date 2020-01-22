@@ -49,8 +49,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    */
   BinID bin_count() const override;
 
-  T bin_minimum(const BinID index) const override;
-  T bin_maximum(const BinID index) const override;
+  const T& bin_minimum(const BinID index) const override;
+  const T& bin_maximum(const BinID index) const override;
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
 

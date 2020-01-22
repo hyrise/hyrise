@@ -53,7 +53,10 @@ struct MvccData {
    * writes up to eight bytes are atomic on x64, which C++ and tsan do not know about. These helper methods were added
    * to .tsan-ignore.txt and can be used (carefully) to avoid those false positives.
    */
+  CommitID get_begin_cid(const ChunkOffset offset) const;
   void set_begin_cid(const ChunkOffset offset, const CommitID commit_id);
+
+  CommitID get_end_cid(const ChunkOffset offset) const;
   void set_end_cid(const ChunkOffset offset, const CommitID commit_id);
 
  private:

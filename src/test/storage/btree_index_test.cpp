@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
@@ -272,7 +271,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +    0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +    1 SegmentIndexType
   // = 1047
-  EXPECT_EQ(index->memory_consumption(), 1047u);
+  EXPECT_EQ(index->memory_consumption(), 1147u);
 #else
   // libc++ Only one string exceeds the reserved space (22 characters) for small strings:
   //   264 (reported by cpp_btree implementation)
@@ -283,7 +282,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 370
-  EXPECT_EQ(index->memory_consumption(), 370u);
+  EXPECT_EQ(index->memory_consumption(), 441u);
 #endif
 }
 

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class CreateViewNodeTest : public ::testing::Test {
+class CreateViewNodeTest : public BaseTest {
  public:
   void SetUp() override {
     _view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
@@ -21,15 +21,16 @@ class CreateViewNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreateViewNodeTest, Description) {
-  EXPECT_EQ(_create_view_node->description(),
+  // Use short description mode as addresses are non-deterministic
+  EXPECT_EQ(replace_addresses(_create_view_node->description(AbstractLQPNode::DescriptionMode::Short)),
             "[CreateView] Name: some_view, Columns: a FROM (\n"
-            "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns\n"
+            "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000\n"
             ")");
 
   const auto _create_view_node_2 = CreateViewNode::make("some_view", _view, true);
-  EXPECT_EQ(_create_view_node_2->description(),
+  EXPECT_EQ(replace_addresses(_create_view_node_2->description(AbstractLQPNode::DescriptionMode::Short)),
             "[CreateView] IfNotExists Name: some_view, Columns: a FROM (\n"
-            "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns\n"
+            "[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000\n"
             ")");
 }
 
