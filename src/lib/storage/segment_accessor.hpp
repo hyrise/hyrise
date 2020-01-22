@@ -4,9 +4,9 @@
 #include <optional>
 #include <type_traits>
 
-#include "types.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "types.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -52,9 +52,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
     return _segment.get_typed_value(offset);
   }
 
-  ~SegmentAccessor() {
-    _segment.access_counter.on_accessor_access(_accesses, 0);
-  }
+  ~SegmentAccessor() { _segment.access_counter.on_accessor_access(_accesses, 0); }
 
  protected:
   mutable uint64_t _accesses;
@@ -116,9 +114,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
     return _segment.get_typed_value(referenced_chunk_offset);
   }
 
-  ~SingleChunkReferenceSegmentAccessor() {
-    _segment.access_counter.on_accessor_access(_accesses, 0);
-  }
+  ~SingleChunkReferenceSegmentAccessor() { _segment.access_counter.on_accessor_access(_accesses, 0); }
 
  protected:
   mutable uint64_t _accesses;

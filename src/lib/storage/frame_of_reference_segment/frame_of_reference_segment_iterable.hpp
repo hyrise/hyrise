@@ -75,8 +75,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
           _chunk_offset{0u} {}
 
     // End iterator
-    explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it,
-                                                                                                   {}} {}
+    explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it, {}} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

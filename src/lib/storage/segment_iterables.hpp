@@ -2,10 +2,9 @@
 
 #include <type_traits>
 
-#include "types.hpp"
 #include "storage/segment_iterables/base_segment_iterators.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
-
 
 namespace opossum {
 

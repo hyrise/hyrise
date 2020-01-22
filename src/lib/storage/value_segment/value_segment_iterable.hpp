@@ -13,7 +13,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
  public:
   using ValueType = T;
 
-  explicit ValueSegmentIterable(const ValueSegment<T>& segment) : _segment{segment} { }
+  explicit ValueSegmentIterable(const ValueSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -87,9 +87,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     std::ptrdiff_t distance_to(const NonNullIterator& other) const { return other._value_it - _value_it; }
 
-    NonNullSegmentPosition<T> dereference() const {
-      return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
-    }
+    NonNullSegmentPosition<T> dereference() const { return NonNullSegmentPosition<T>{*_value_it, _chunk_offset}; }
 
    private:
     ValueIterator _value_it;
@@ -135,9 +133,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._value_it - _value_it; }
 
-    SegmentPosition<T> dereference() const {
-      return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset};
-    }
+    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
 
    private:
     ValueIterator _value_it;

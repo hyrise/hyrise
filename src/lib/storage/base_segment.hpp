@@ -4,8 +4,8 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "types.hpp"
 #include "segment_access_counter.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

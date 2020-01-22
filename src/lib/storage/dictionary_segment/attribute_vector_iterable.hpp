@@ -13,7 +13,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   using ValueType = ValueID;
 
   explicit AttributeVectorIterable(const BaseDictionarySegment& segment)
-    : _segment{segment}, _attribute_vector{*segment.attribute_vector()}, _null_value_id{segment.null_value_id()} {}
+      : _segment{segment}, _attribute_vector{*segment.attribute_vector()}, _null_value_id{segment.null_value_id()} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -45,7 +45,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
   size_t _on_size() const { return _attribute_vector.size(); }
 
-  const BaseDictionarySegment& segment() const {return _segment; }
+  const BaseDictionarySegment& segment() const { return _segment; }
 
  private:
   const BaseDictionarySegment& _segment;
@@ -113,7 +113,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     SegmentPosition<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
       const auto value_id =
-        static_cast<ValueID>(_attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk));
+          static_cast<ValueID>(_attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
       return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
