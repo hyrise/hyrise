@@ -5,6 +5,7 @@
 #endif
 
 #include <array>
+#include <atomic>
 
 #include "operators/operator_performance_data.hpp"
 #include "storage/pos_list.hpp"
