@@ -335,16 +335,16 @@ TEST_P(EncodedSegmentTest, IncreasingSegmentAccessCountersWithPosList) {
   auto value_segment = create_int_value_segment();
   const auto pos_filter = create_sequential_position_filter();
 
-  auto iterable = create_iterable_from_segment(*value_segment);
+  auto value_segment_iterable = create_iterable_from_segment(*value_segment);
   EXPECT_EQ(0, value_segment->access_counter.counter().iterator_increasing_access);
-  iterable.for_each(pos_filter, [](const auto) {});
+  value_segment_iterable.for_each(pos_filter, [](const auto) {});
   EXPECT_EQ(pos_filter->size(), value_segment->access_counter.counter().iterator_increasing_access);
 
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto iterable = create_iterable_from_segment(encoded_segment);
+    auto base_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
     EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_increasing_access);
-    iterable.for_each(pos_filter, [](const auto) {});
+    base_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
     EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter.counter().iterator_increasing_access);
   });
 }
@@ -353,16 +353,16 @@ TEST_P(EncodedSegmentTest, RandomSegmentAccessCountersWithPosList) {
   auto value_segment = create_int_value_segment();
   const auto pos_filter = create_random_access_position_filter();
 
-  auto iterable = create_iterable_from_segment(*value_segment);
+  auto value_segment_iterable = create_iterable_from_segment(*value_segment);
   EXPECT_EQ(0, value_segment->access_counter.counter().iterator_random_access);
-  iterable.for_each(pos_filter, [](const auto) {});
+  value_segment_iterable.for_each(pos_filter, [](const auto) {});
   EXPECT_EQ(pos_filter->size(), value_segment->access_counter.counter().iterator_random_access);
 
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto iterable = create_iterable_from_segment(encoded_segment);
+    auto base_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
     EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_random_access);
-    iterable.for_each(pos_filter, [](const auto) {});
+    base_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
     EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter.counter().iterator_random_access);
   });
 }
