@@ -85,11 +85,6 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} $
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
 # Check for unity builds
-if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    if(DEFINED CMAKE_UNITY_BUILD)
-        message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
-    endif()
-endif()
 
 # On Linux, use the lld linker, which is twice as fast for incremental debug builds
 if (NOT APPLE)
