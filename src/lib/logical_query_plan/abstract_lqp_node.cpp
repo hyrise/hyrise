@@ -246,6 +246,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
+  if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 

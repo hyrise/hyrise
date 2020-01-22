@@ -201,13 +201,19 @@ template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     const std::vector<size_t>& chunk_offsets,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+  // Retrieve input row_count as it might change during execution if we work on a non-reference table
+  auto row_count = in_table->row_count();
+
+  // Do not use in_table->chunk_count() as that might have increased since chunk_offsets was built
+  auto chunk_count = chunk_offsets.size();
+
   const std::hash<HashedType> hash_function;
   // list of all elements that will be partitioned
-  auto elements = std::make_shared<Partition<T>>(in_table->row_count());
+  auto elements = std::make_shared<Partition<T>>(row_count);
 
   [[maybe_unused]] auto null_value_bitvector = std::make_shared<std::vector<bool>>();
   if constexpr (retain_null_values) {
-    null_value_bitvector->resize(in_table->row_count());
+    null_value_bitvector->resize(row_count);
   }
 
   // fan-out
@@ -218,12 +224,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // create histograms per chunk
-  histograms.resize(chunk_offsets.size());
+  histograms.resize(chunk_count);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(in_table->chunk_count());
+  jobs.reserve(chunk_count);
 
-  const auto chunk_count = in_table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     if (!in_table->get_chunk(chunk_id)) continue;
 
@@ -286,6 +291,14 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               const Hash radix = hashed_value & mask;
               ++histogram[radix];
             }
+
+            if (output_iterator == elements->end() && it != end) {
+              // The last chunk has changed its size since we allocated elements. This is due to a concurrent insert
+              // into that chunk. In any case, those inserts will not be visible to our current transaction, so we can
+              // ignore them.
+              Assert(in_table->row_count() > row_count, "Iterator out-of-bounds but table size has not changed");
+              break;
+            }
           }
           // reference_chunk_offset is only used for ReferenceSegments
           if constexpr (is_reference_segment_iterable_v<IterableType>) {
@@ -297,7 +310,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
         // Because the vector is uninitialized, we need to manually fill up all slots that we did not use because the
         // input values were NULL.
+
+        Assert(output_iterator <= elements->end(), "output_iterator has written past the end");
         auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
+        Assert(elements->begin() + output_offset_end <= elements->end(), "Corrupt pointer calculation");
+
         while (output_iterator != elements->begin() + output_offset_end) {
           *(output_iterator++) = PartitionedElement<T>{};
         }
@@ -763,12 +780,13 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
       } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
         // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
+        const auto build_table_is_empty = build_table.row_count() == 0;
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& probe_column_element = partition[partition_offset];
           // A NULL on the probe side never gets emitted, except when the build table is empty.
           // This is because `NULL NOT IN <empty list>` is actually true
-          if ((*probe_column_null_values)[partition_offset] && build_table.row_count() > 0) {
+          if ((*probe_column_null_values)[partition_offset] && !build_table_is_empty) {
             continue;
           }
           pos_list_local.emplace_back(probe_column_element.row_id);

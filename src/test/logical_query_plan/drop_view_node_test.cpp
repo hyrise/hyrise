@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class DropViewNodeTest : public ::testing::Test {
+class DropViewNodeTest : public BaseTest {
  public:
   void SetUp() override { _drop_view_node = DropViewNode::make("some_view", false); }
 

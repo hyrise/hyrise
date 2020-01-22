@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -113,7 +112,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+auto encoded_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   const auto spec = info.param;
 
   auto stream = std::stringstream{};
@@ -130,7 +129,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
                          ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, false)),
-                         formatter);
+                         encoded_segment_test_formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
