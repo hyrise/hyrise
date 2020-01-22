@@ -119,7 +119,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
     const std::string& mode, const bool is_between_scan,
-    std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)> table_creator) {
+    const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)> table_creator) {
   micro_benchmark_clear_cache();
 
   // The benchmarks all run with different selectivities (ratio of values in the output to values in the input).
