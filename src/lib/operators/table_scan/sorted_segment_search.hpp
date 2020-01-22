@@ -1,8 +1,8 @@
 #pragma once
 
 #include <functional>
-#include <type_traits>
 #include <optional>
+#include <type_traits>
 
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
@@ -42,8 +42,9 @@ class SortedSegmentSearch {
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending},
         _is_between_scan{true} {}
+
  private:
-    /**
+  /**
      * Uses exponential search to find lower_bound of null values to exclude them from further scanning.
      * This version of exponential search first reduces the range where the search for NULL values will be performed
      * and performs a binary search for the exact bound within this range afterwards.
@@ -95,7 +96,8 @@ class SortedSegmentSearch {
    * first offset will always point to an entry matching the search value, whereas last offset points to the entry
    * behind the last matching one.
    */
-  IteratorType _get_first_bound(const SearchValueType& search_value, const IteratorType begin, const IteratorType end) const {
+  IteratorType _get_first_bound(const SearchValueType& search_value, const IteratorType begin,
+                                const IteratorType end) const {
     if (_is_ascending) {
       return std::lower_bound(begin, end, search_value, [](const auto& segment_position, const auto& value) {
         return segment_position.value() < value;
@@ -107,7 +109,8 @@ class SortedSegmentSearch {
     }
   }
 
-  IteratorType _get_last_bound(const SearchValueType& search_value, const IteratorType begin, const IteratorType end) const {
+  IteratorType _get_last_bound(const SearchValueType& search_value, const IteratorType begin,
+                               const IteratorType end) const {
     if (_is_ascending) {
       return std::upper_bound(begin, end, search_value, [](const auto& value, const auto& segment_position) {
         return segment_position.value() > value;
@@ -130,7 +133,7 @@ class SortedSegmentSearch {
     // clang-format off
     if (_is_ascending) {
       switch (_predicate_condition) {
-        case PredicateCondition::GreaterThanEquals: _begin = _get_first_bound(_first_search_value, _begin, _end); return;
+        case PredicateCondition::GreaterThanEquals: _begin = _get_first_bound(_first_search_value, _begin, _end); return; // NOLINT
         case PredicateCondition::GreaterThan: _begin = _get_last_bound(_first_search_value, _begin, _end); return;
         case PredicateCondition::LessThanEquals: _end = _get_last_bound(_first_search_value, _begin, _end); return;
         case PredicateCondition::LessThan: _end = _get_first_bound(_first_search_value, _begin, _end); return;
@@ -284,11 +287,13 @@ class SortedSegmentSearch {
     } else {
       // decrease the effective sort range by excluding null values based on their ordering
       if (_is_nulls_first) {
-        _begin = std::lower_bound(_begin, _end, false,
-                                  [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+        _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
+          return segment_position.is_null();
+        });
       } else {
-        _end = std::lower_bound(_begin, _end, true,
-                                [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+        _end = std::lower_bound(_begin, _end, true, [](const auto& segment_position, const auto& _) {
+          return !segment_position.is_null();
+        });
       }
 
       if (_predicate_condition == PredicateCondition::NotEquals) {
