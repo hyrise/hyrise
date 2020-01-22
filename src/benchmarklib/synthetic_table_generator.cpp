@@ -83,9 +83,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    const auto column_name = column_specifications[column_id].name
-                                 ? column_specifications[column_id].name.value()
-                                 : "column_" + std::to_string(column_id + 1);
+    const auto column_name = column_specifications[column_id].name ? column_specifications[column_id].name.value()
+                                                                   : "column_" + std::to_string(column_id + 1);
     column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
