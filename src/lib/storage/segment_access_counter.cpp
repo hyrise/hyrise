@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "boost/format.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -14,10 +15,19 @@ SegmentAccessCounter::Counter<T>::Counter()
 
 template<typename T>
 std::string SegmentAccessCounter::Counter<T>::to_string() const {
-  std::ostringstream stream;
-  stream << other << ',' << iterator_create << ',' << iterator_seq_access << ',' << iterator_increasing_access << ','
-         << iterator_random_access << ',' << accessor_create << ',' << accessor_access << ',' << dictionary_access;
-  return stream.str();
+//  std::ostringstream stream;
+//  stream << other << ',' << iterator_create << ',' << iterator_seq_access << ',' << iterator_increasing_access << ','
+//         << iterator_random_access << ',' << accessor_create << ',' << accessor_access << ',' << dictionary_access;
+//  return stream.str();
+  return (boost::format("%d,%d,%d,%d,%d,%d,%d,%d") %
+    other %
+    iterator_create %
+    iterator_seq_access %
+    iterator_increasing_access %
+    iterator_random_access %
+    accessor_create %
+    accessor_access %
+    dictionary_access).str();
 }
 
 template<typename T>

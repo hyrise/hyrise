@@ -177,7 +177,7 @@ std::vector<SegmentInfo> AntiCachingPlugin::_fetch_current_statistics() {
   access_statistics.reserve(segments.size());
   for (const auto& segment_id_segment_ptr_pair : segments) {
     access_statistics.emplace_back(segment_id_segment_ptr_pair.first,
-                                   segment_id_segment_ptr_pair.second->estimate_memory_usage(),
+                                   segment_id_segment_ptr_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled),
                                    segment_id_segment_ptr_pair.second->size(),
                                    segment_id_segment_ptr_pair.second->access_counter.counter());
   }
