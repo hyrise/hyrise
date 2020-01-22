@@ -5,7 +5,7 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "abstract_poslist.hpp"
+#include "abstract_pos_list.hpp"
 
 namespace opossum {
 
@@ -126,14 +126,20 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::swap;
 
   // TODO: Proper support for comparison
-  bool operator==(const AbstractPosList& other) {
-    return false;
+  bool operator==(const AbstractPosList& other) const {
+    return other == *this;
   }
 
-  friend bool operator==(const PosList& lhs, const PosList& rhs) { return false; }
+  bool operator==(const PosList& other) const {
+    return static_cast<const pmr_vector<RowID>&>(*this) == static_cast<const pmr_vector<RowID>&>(other);
+  }
 
   // Kept for testing
-  friend bool operator==(const PosList& lhs, const pmr_vector<RowID>& rhs) { return false; }
+  bool operator==(const pmr_vector<RowID>& other) const {
+    return static_cast<const pmr_vector<RowID>&>(*this) == other;
+  }
+
+   
 
  private:
   bool _references_single_chunk = false;

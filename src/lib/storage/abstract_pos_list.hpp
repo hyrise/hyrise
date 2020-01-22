@@ -13,7 +13,8 @@ class AbstractPosList {
 
   virtual ~AbstractPosList() = default;
 
-  // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
+  // Returns whether it is guaranteed that the PosList references a single ChunkID.
+  // However, it may be false even if this is the case.
   virtual bool references_single_chunk() const = 0;
 
   // For chunks that share a common ChunkID, returns that ID.
@@ -23,7 +24,9 @@ class AbstractPosList {
   virtual bool empty() const = 0;
   virtual size_t size() const = 0;
 
-  virtual bool operator==(const AbstractPosList& other) = 0;
+  virtual bool operator==(const AbstractPosList& other) const {
+    return false;
+  }
 };
 
 }  // namespace opossum
