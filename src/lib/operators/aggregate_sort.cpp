@@ -574,6 +574,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Append output to result table
   result_table->append_chunk(_output_segments);
 
+  // Set order_by flag
+  const auto chunk = result_table->last_chunk();
+  const auto ordered_by_mode = sorted_table->get_chunk(ChunkID{0})->ordered_by()->second;
+  const auto ordered_by_column_id = _groupby_column_ids.back();
+  chunk->set_ordered_by(std::make_pair(ordered_by_column_id, ordered_by_mode));
+
   return result_table;
 }
 

@@ -239,7 +239,13 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
 
     if (!pos_list_out->empty() > 0) {
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      // Set ordered_by flag
+      const auto chunk = std::make_shared<Chunk>(output_segments);
+      const auto ordered_by = chunk_in->ordered_by();
+      if (ordered_by) {
+        chunk->set_ordered_by(ordered_by.value());
+      }
+      output_chunks.emplace_back(chunk);
     }
   }
 }
