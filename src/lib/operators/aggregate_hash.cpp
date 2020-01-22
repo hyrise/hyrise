@@ -252,9 +252,9 @@ void AggregateHash::_aggregate() {
           using ColumnDataType = typename decltype(type)::type;
 
           if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
-            // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an AggregateKeyEntry.
-            // We cannot do this for types with the same size as AggregateKeyEntry as we need to have a special NULL
-            // value. By using the value itself, we can save us the effort of building the id_map.
+            // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an
+            // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
+            // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto base_segment = chunk_in->get_segment(groupby_column_id);
