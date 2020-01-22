@@ -85,6 +85,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void advance(std::ptrdiff_t n) {
+      PerformanceWarning("using repeated increment/decrement for random access");
       // The easy way for now
       if (n < 0) {
         for (std::ptrdiff_t i = n; i < 0; ++i) {
