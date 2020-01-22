@@ -191,7 +191,7 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
 // the aggregated column is functionally dependent on the group-by columns.
 TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+      this->_table_wrapper_2_2, equals_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
   auto aggregate = std::make_shared<TypeParam>(
@@ -208,7 +208,7 @@ TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+      this->_table_wrapper_2_2, equals_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
   // Column 3 stores different values for the tuples of the remaining group.
@@ -667,7 +667,7 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
@@ -678,7 +678,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTable) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
@@ -694,7 +694,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1, less_than_(this->get_column_expression(this->_table_wrapper_1_1, ColumnID{0}), "100"));
+      this->_table_wrapper_1_1, less_than_(get_column_expression(this->_table_wrapper_1_1, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
@@ -703,7 +703,7 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, less_than_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), "100"));
+      this->_table_wrapper_2_2, less_than_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
@@ -713,7 +713,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbySumOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_1, less_than_(this->get_column_expression(this->_table_wrapper_2_1, ColumnID{0}), "100"));
+      this->_table_wrapper_2_1, less_than_(get_column_expression(this->_table_wrapper_2_1, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
@@ -722,7 +722,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbySumOnRef) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
@@ -732,7 +732,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(
@@ -741,9 +741,9 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleAvgOnRef) 
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
-      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  auto filtered =
+      std::make_shared<TableScan>(this->_table_wrapper_1_1_dict,
+                                  less_than_(get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
@@ -751,9 +751,9 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
-      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  auto filtered =
+      std::make_shared<TableScan>(this->_table_wrapper_1_1_dict,
+                                  less_than_(get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
@@ -761,9 +761,9 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
-      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  auto filtered =
+      std::make_shared<TableScan>(this->_table_wrapper_1_1_dict,
+                                  less_than_(get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},

@@ -103,8 +103,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
           right_casted = static_cast<ColumnDataType>(boost::get<double>(right));
         }
 
-        auto scan = BaseTest::create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted,
-                                                        predicate_condition);
+        auto scan =
+            create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted, predicate_condition);
         scan->execute();
 
         const auto result_table = scan->get_output();

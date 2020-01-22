@@ -19,10 +19,9 @@
 
 namespace opossum {
 
-template <typename ParamType>
 template <typename T>
-std::shared_ptr<DictionarySegment<T>> BaseTestWithParam<ParamType>::create_dict_segment_by_type(
-    DataType data_type, const std::vector<std::optional<T>>& values) {
+std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
+                                                                  const std::vector<std::optional<T>>& values) {
   auto value_segment = std::make_shared<ValueSegment<T>>(true);
 
   for (const auto& value : values) {
@@ -39,16 +38,29 @@ std::shared_ptr<DictionarySegment<T>> BaseTestWithParam<ParamType>::create_dict_
   return std::static_pointer_cast<DictionarySegment<T>>(dict_segment);
 }
 
-template <typename ParamType>
-void BaseTestWithParam<ParamType>::_execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
+template std::shared_ptr<DictionarySegment<int32_t>> create_dict_segment_by_type(
+    DataType data_type, const std::vector<std::optional<int32_t>>& values);
+
+template std::shared_ptr<DictionarySegment<int64_t>> create_dict_segment_by_type(
+    DataType data_type, const std::vector<std::optional<int64_t>>& values);
+
+template std::shared_ptr<DictionarySegment<pmr_string>> create_dict_segment_by_type(
+    DataType data_type, const std::vector<std::optional<pmr_string>>& values);
+
+template std::shared_ptr<DictionarySegment<float>> create_dict_segment_by_type(
+    DataType data_type, const std::vector<std::optional<float>>& values);
+
+template std::shared_ptr<DictionarySegment<double>> create_dict_segment_by_type(
+    DataType data_type, const std::vector<std::optional<double>>& values);
+
+void execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
   for (auto& op : operators) {
     op->execute();
   }
 }
 
-template <typename ParamType>
-std::shared_ptr<AbstractExpression> BaseTestWithParam<ParamType>::get_column_expression(const std::shared_ptr<AbstractOperator>& op,
-                                                                    const ColumnID column_id) {
+std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,
+                                                          const ColumnID column_id) {
   Assert(op->get_output(), "Expected Operator to be executed");
   const auto output_table = op->get_output();
   const auto& column_definition = output_table->column_definitions().at(column_id);
@@ -56,12 +68,9 @@ std::shared_ptr<AbstractExpression> BaseTestWithParam<ParamType>::get_column_exp
   return pqp_column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
 }
 
-template <typename ParamType>
-std::shared_ptr<TableScan> BaseTestWithParam<ParamType>::create_table_scan(const std::shared_ptr<AbstractOperator>& in,
-                                                       const ColumnID column_id,
-                                                       const PredicateCondition predicate_condition,
-                                                       const AllTypeVariant& value,
-                                                       const std::optional<AllTypeVariant>& value2) {
+std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id,
+                                             const PredicateCondition predicate_condition, const AllTypeVariant& value,
+                                             const std::optional<AllTypeVariant>& value2) {
   const auto column_expression = get_column_expression(in, column_id);
 
   auto predicate = std::shared_ptr<AbstractExpression>{};
@@ -76,10 +85,8 @@ std::shared_ptr<TableScan> BaseTestWithParam<ParamType>::create_table_scan(const
   return std::make_shared<TableScan>(in, predicate);
 }
 
-template <typename ParamType>
-void BaseTestWithParam<ParamType>::set_statistics_for_mock_node(
-    const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
-    const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
+void set_statistics_for_mock_node(const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
+                                  const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
   const auto& column_definitions = mock_node->column_definitions();
   auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
 
@@ -97,8 +104,7 @@ void BaseTestWithParam<ParamType>::set_statistics_for_mock_node(
   mock_node->set_table_statistics(table_statistics);
 }
 
-template <typename ParamType>
-std::shared_ptr<MockNode> BaseTestWithParam<ParamType>::create_mock_node_with_statistics(
+std::shared_ptr<MockNode> create_mock_node_with_statistics(
     const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
     const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
   Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
@@ -110,10 +116,10 @@ std::shared_ptr<MockNode> BaseTestWithParam<ParamType>::create_mock_node_with_st
   return mock_node;
 }
 
-template <typename ParamType>
-std::shared_ptr<TableScan> BaseTestWithParam<ParamType>::create_between_table_scan(
-    const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id, const AllTypeVariant& value,
-    const std::optional<AllTypeVariant>& value2, const PredicateCondition predicate_condition) {
+std::shared_ptr<TableScan> create_between_table_scan(const std::shared_ptr<AbstractOperator>& in,
+                                                     const ColumnID column_id, const AllTypeVariant& value,
+                                                     const std::optional<AllTypeVariant>& value2,
+                                                     const PredicateCondition predicate_condition) {
   const auto column_expression = get_column_expression(in, column_id);
   const auto predicate =
       std::make_shared<BetweenExpression>(predicate_condition, column_expression, value_(value), value_(*value2));
@@ -121,9 +127,8 @@ std::shared_ptr<TableScan> BaseTestWithParam<ParamType>::create_between_table_sc
   return std::make_shared<TableScan>(in, predicate);
 }
 
-template <typename ParamType>
-ChunkEncodingSpec BaseTestWithParam<ParamType>::create_compatible_chunk_encoding_spec(const Table& table,
-                                                                  const SegmentEncodingSpec& desired_segment_encoding) {
+ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
+                                                        const SegmentEncodingSpec& desired_segment_encoding) {
   auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
 
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
@@ -135,8 +140,7 @@ ChunkEncodingSpec BaseTestWithParam<ParamType>::create_compatible_chunk_encoding
   return chunk_encoding_spec;
 }
 
-template <typename ParamType>
-void BaseTestWithParam<ParamType>::assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
+void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
   const auto column_count = chunk->column_count();
   for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
     const auto segment = chunk->get_segment(column_id);
@@ -159,9 +163,8 @@ void BaseTestWithParam<ParamType>::assert_chunk_encoding(const std::shared_ptr<C
   }
 }
 
-template <typename ParamType>
-std::vector<SegmentEncodingSpec> BaseTestWithParam<ParamType>::get_supporting_segment_encodings_specs(const DataType data_type,
-                                                                                  const bool include_unencoded) {
+std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(const DataType data_type,
+                                                                        const bool include_unencoded) {
   std::vector<SegmentEncodingSpec> segment_encodings;
   for (const auto& spec : all_segment_encoding_specs) {
     // Add all encoding types to the returned vector if they support the given data type. As some test cases work on
@@ -176,27 +179,27 @@ std::vector<SegmentEncodingSpec> BaseTestWithParam<ParamType>::get_supporting_se
 }
 
 bool file_exists(const std::string& name) {
-    std::ifstream file{name};
-    return file.good();
+  std::ifstream file{name};
+  return file.good();
+}
+
+bool compare_files(const std::string& original_file, const std::string& created_file) {
+  std::ifstream original(original_file);
+  Assert(original.is_open(), "compare_file: Could not find file " + original_file);
+
+  std::ifstream created(created_file);
+  Assert(created.is_open(), "compare_file: Could not find file " + created_file);
+
+  std::istreambuf_iterator<char> iterator_original(original);
+  std::istreambuf_iterator<char> iterator_created(created);
+  std::istreambuf_iterator<char> end;
+
+  while (iterator_original != end && iterator_created != end) {
+    if (*iterator_original != *iterator_created) return false;
+    ++iterator_original;
+    ++iterator_created;
   }
-
-  bool compare_files(const std::string& original_file, const std::string& created_file) {
-    std::ifstream original(original_file);
-    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
-
-    std::ifstream created(created_file);
-    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
-
-    std::istreambuf_iterator<char> iterator_original(original);
-    std::istreambuf_iterator<char> iterator_created(created);
-    std::istreambuf_iterator<char> end;
-
-    while (iterator_original != end && iterator_created != end) {
-      if (*iterator_original != *iterator_created) return false;
-      ++iterator_original;
-      ++iterator_created;
-    }
-    return ((iterator_original == end) && (iterator_created == end));
-  }
+  return ((iterator_original == end) && (iterator_created == end));
+}
 
 }  // namespace opossum

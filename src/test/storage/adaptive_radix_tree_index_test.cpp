@@ -51,7 +51,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   void _search_elements(std::vector<std::optional<int32_t>>& values) {
     std::uniform_int_distribution<int32_t> uni_integer(0, std::numeric_limits<int32_t>::max());
 
-    auto segment = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, values);
+    auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
     auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
@@ -164,7 +164,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
 
   std::shuffle(ints.begin(), ints.end(), _rng);
 
-  auto segment = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, ints);
+  auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, ints);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
   for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
@@ -198,7 +198,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
   std::vector<std::optional<int32_t>> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
 
-  auto segment = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, values);
+  auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
   // We check whether the index answer (i.e., position(s) for a search value) is correct
