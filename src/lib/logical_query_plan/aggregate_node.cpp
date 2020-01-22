@@ -80,6 +80,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
   return _column_expressions;
 }
 
+const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
+  return {};
+}
+
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
   Assert(left_input(), "Need left input to determine nullability");

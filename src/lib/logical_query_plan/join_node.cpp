@@ -69,6 +69,36 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   return _column_expressions;
 }
 
+const std::shared_ptr<const ExpressionsConstraintDefinitions> JoinNode::constraints() const {
+  switch(join_mode) {
+  case JoinMode::Inner: {
+      return {};
+    }
+    case JoinMode::Left: {
+      return {};
+    }
+    case JoinMode::Right: {
+      return {};
+    }
+    case JoinMode::FullOuter: {
+      return {};
+    }
+    case JoinMode::Cross: {
+      return {};
+    }
+    case JoinMode::Semi: {
+      return forward_constraints();
+    }
+    case JoinMode::AntiNullAsTrue: {
+      return {};
+    }
+    case JoinMode::AntiNullAsFalse: {
+      return {};
+    }
+  }
+  Fail("Unhandled JoinMode");
+}
+
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 
