@@ -42,7 +42,7 @@ class SegmentAccessCounterTest : public BaseTest {
 };
 
 typedef ::testing::Types<uint64_t, std::atomic_uint64_t> CounterTypes;
-TYPED_TEST_SUITE(SegmentAccessCounterCounterTest, CounterTypes);
+TYPED_TEST_SUITE(SegmentAccessCounterCounterTest, CounterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(SegmentAccessCounterCounterTest, ZeroOnConstruction) {
   SegmentAccessCounter::Counter<TypeParam> counter;
