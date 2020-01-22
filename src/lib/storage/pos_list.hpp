@@ -52,7 +52,7 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
-  PosList& operator=(PosList&& other);
+  PosList& operator=(PosList&& other) = default;
 
   // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
   // to enable some optimizations.
