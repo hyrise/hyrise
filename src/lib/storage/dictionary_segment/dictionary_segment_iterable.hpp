@@ -56,8 +56,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   size_t _on_size() const { return _segment.size(); }
 
-  const BaseDictionarySegment& segment() const { return _segment; }
-
  private:
   template <typename ZsIteratorType, typename DictionaryIteratorType>
   class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType, DictionaryIteratorType>, SegmentPosition<T>> {

@@ -79,7 +79,7 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 
     const auto chunk_id = row_id.chunk_id;
 
-    // Grow the _accessors vector faster than linear if the chunk_id is out of its current bounds
+    // Grow the _accessor's vector faster than linear if the chunk_id is out of its current bounds
     if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
       _accessors.resize(static_cast<size_t>(chunk_id + _accessors.size()));
     }

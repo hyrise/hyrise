@@ -40,8 +40,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   size_t _on_size() const { return _segment.size(); }
 
-  const RunLengthSegment<T>& segment() const { return _segment; }
-
  private:
   const RunLengthSegment<T>& _segment;
 

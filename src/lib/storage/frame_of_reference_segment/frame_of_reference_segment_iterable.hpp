@@ -50,8 +50,6 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   size_t _on_size() const { return _segment.size(); }
 
-  const FrameOfReferenceSegment<T>& segment() const { return _segment; }
-
  private:
   const FrameOfReferenceSegment<T>& _segment;
 

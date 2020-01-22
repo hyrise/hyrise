@@ -80,8 +80,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
   size_t _on_size() const { return _segment.size(); }
 
-  const LZ4Segment<T>& segment() const { return _segment; }
-
  private:
   const LZ4Segment<T>& _segment;
   mutable std::vector<char> cached_block;
