@@ -80,8 +80,8 @@ class SyntheticTableGenerator {
                                         const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
   static std::shared_ptr<Table> generate_table(
-      const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows, const ChunkOffset chunk_size,
-      const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
+      const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows,
+      const ChunkOffset chunk_size, const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
       const UseMvcc use_mvcc = UseMvcc::No);
 
   /**
