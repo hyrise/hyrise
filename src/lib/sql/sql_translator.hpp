@@ -111,6 +111,8 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
 
+  std::shared_ptr<AbstractLQPNode> _translate_transaction(const hsql::TransactionStatement& select);
+
   void _translate_hsql_with_description(hsql::WithDescription& desc);
   TableSourceState _translate_table_ref(const hsql::TableRef& hsql_table_ref);
   TableSourceState _translate_table_origin(const hsql::TableRef& hsql_table_ref);

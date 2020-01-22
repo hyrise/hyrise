@@ -13,6 +13,8 @@ namespace opossum {
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  BeginTransaction,
+  CommitTransaction,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
@@ -26,6 +28,7 @@ enum class LQPNodeType {
   Limit,
   Predicate,
   Projection,
+  RollbackTransaction,
   Root,
   Sort,
   StaticTable,
