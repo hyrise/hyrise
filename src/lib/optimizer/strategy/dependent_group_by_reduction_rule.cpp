@@ -30,23 +30,18 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
   const auto& constraint_columns = constraint.column_expressions;
 
   // Intersect primary key/unique columns and non-nullable group-by columns.
-  ExpressionUnorderedSet intersection;
-  std::set_intersection(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
-                        group_by_columns.end(), std::inserter(intersection, intersection.begin()));
-
-  // Info: Expressions lassen sich printen!
-  // std::cout << *column_expr;
-  // TODO(Julian) 2020-01-14 01:30 Continue here: Why is there no intersection being found? DependentGroupByReductionRuleTest.SingleKeyReduction
-
-  // Skip the current constraint as the primary key/unique constraint is not completely present.
-  if (intersection.size() != constraint_columns.size()) {
+  ExpressionUnorderedSet difference;
+  std::set_difference(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
+                        group_by_columns.end(), std::inserter(difference, difference.begin()));
+  if (difference.size() > 0) {
+    // Skip the current constraint as the primary key/unique constraint is not completely present.
     return false;
   }
 
   // Every column that is part of the input table but not part of the primary key/unique constraint is going to be moved from
   // the group-by list to the list of aggregates wrapped in an ANY().
   for (const auto& group_by_column : group_by_columns) {
-    if (intersection.contains(group_by_column)) {
+    if (constraint_columns.contains(group_by_column)) {
       // Do not touch primary key/unique columns of constraint.
       continue;
     }
