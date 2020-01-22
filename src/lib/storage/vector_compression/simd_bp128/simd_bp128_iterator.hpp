@@ -9,6 +9,7 @@
 #include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

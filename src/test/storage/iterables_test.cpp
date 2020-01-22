@@ -54,6 +54,7 @@ struct CountNullsWithIterator {
   std::vector<ChunkOffset>& _accessed_offsets;
 };
 
+template <typename DataType>
 struct SumUp {
   template <typename T>
   void operator()(const T& position) const {
@@ -61,7 +62,7 @@ struct SumUp {
     _sum += position.value();
   }
 
-  uint32_t& _sum;
+  DataType& _sum;
 };
 
 struct AppendWithIterator {
@@ -321,11 +322,11 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   const auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  const auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
+  const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
-  auto sum = int{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator<int>{sum, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
   EXPECT_EQ(accessed_offsets,
@@ -339,7 +340,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
   const auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  const auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
+  const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
   auto nulls_found = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
@@ -356,7 +357,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
   const auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  const auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::Yes>{*reference_segment};
+  const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::Yes>{*reference_segment};
 
   auto nulls_found = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
@@ -372,12 +373,12 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   const auto chunk = table->get_chunk(ChunkID{0u});
 
   const auto segment = chunk->get_segment(ColumnID{0u});
-  const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
+  const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
 
   const auto iterable = ValueSegmentIterable<int>{*int_segment};
 
-  auto sum = uint32_t{0};
-  iterable.for_each(SumUp{sum});
+  auto sum = int32_t{0};
+  iterable.for_each(SumUp<int32_t>{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
@@ -392,7 +393,7 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
 
   auto sum = int32_t{0};
 
-  iterable.for_each(SumUp{sum});
+  iterable.for_each(SumUp<int32_t>{sum});
 
   EXPECT_EQ(sum, 13'702u);
 }
