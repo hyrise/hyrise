@@ -176,6 +176,10 @@ class SortedSegmentSearch {
       }
     }
 
+    // This implementation uses behaviour which resembles std::equal_range's
+    // behaviour. However, std::equal_range returns all elements in range
+    // [first, last), which describes only the PredicateCondition::BetweenInclusive case.
+    // For the other PredicateConditions, different borders are required.
     if (_is_ascending) {
       switch (_predicate_condition) {
         case PredicateCondition::BetweenInclusive:
