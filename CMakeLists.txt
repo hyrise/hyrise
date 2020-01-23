@@ -92,6 +92,12 @@ if (NOT APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
 endif()
 
+if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
+  if(DEFINED CMAKE_UNITY_BUILD)
+      message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
+  endif()
+endif()
+
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
