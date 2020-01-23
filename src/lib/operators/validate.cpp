@@ -149,7 +149,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
-    auto pos_list_out = std::make_shared<const PosList>();
+    std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const PosList>();
     PosList temp_pos_list;
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
@@ -174,6 +174,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           pos_list_out = pos_list_in;
         } else {
           temp_pos_list.guarantee_single_chunk();
+          // TODO
           for (auto row_id : *pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);

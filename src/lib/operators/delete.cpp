@@ -43,10 +43,11 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
         const auto segment_pos_list = std::dynamic_pointer_cast<const ReferenceSegment>(segment)->pos_list();
         // We could additionally check for `*segment_pos_list == *pos_list`, but for now, comparing pointers is enough
         Assert(segment_pos_list == pos_list,
-               "All segments of a Chunk in _referencing_table must have the same PosList");
+               "All segments of a Chunk in _referencing_table must have the same AbstractPosList");
       }
     }
 
+    // TODO
     for (auto row_id : *pos_list) {
       const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
       Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers");

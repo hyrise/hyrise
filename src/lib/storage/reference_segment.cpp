@@ -10,7 +10,7 @@
 namespace opossum {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
-                                   const ColumnID referenced_column_id, const std::shared_ptr<const PosList>& pos)
+                                   const ColumnID referenced_column_id, const std::shared_ptr<const AbstractPosList>& pos)
     : BaseSegment(referenced_table->column_data_type(referenced_column_id)),
       _referenced_table(referenced_table),
       _referenced_column_id(referenced_column_id),
@@ -23,12 +23,13 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
   // of the operator to make sure that, once a ReferenceSegment is full, the next one is started. So far, most
   // operators ignore this, simply because we have not experienced the issue and have not considered it to be a
   // priority. This assert makes sure that we become aware of it becoming relevant.
-  Assert(pos->size() <= Chunk::MAX_SIZE, "PosList exceeds Chunk::MAX_SIZE");
+  Assert(pos->size() <= Chunk::MAX_SIZE, "AbstractPosList exceeds Chunk::MAX_SIZE");
 }
 
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
+  // TODO: Operator implementieren
   const auto row_id = (*_pos_list)[chunk_offset];
 
   if (row_id.is_null()) return NULL_VALUE;
@@ -38,7 +39,7 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
   return (*chunk->get_segment(_referenced_column_id))[row_id.chunk_offset];
 }
 
-const std::shared_ptr<const PosList>& ReferenceSegment::pos_list() const { return _pos_list; }
+const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const { return _pos_list; }
 const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const { return _referenced_table; }
 ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
 

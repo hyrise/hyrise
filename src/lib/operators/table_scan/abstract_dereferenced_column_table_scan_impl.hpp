@@ -39,7 +39,7 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
   // referenced segments of a single ReferenceSegment should result in only one PosList. Storing it as a member is
   // no option because it would break multithreading.
   virtual void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                           const std::shared_ptr<const PosList>& position_filter) const = 0;
+                                           const std::shared_ptr<const AbstractPosList>& position_filter) const = 0;
 
   const std::shared_ptr<const Table> _in_table;
   const ColumnID _column_id;

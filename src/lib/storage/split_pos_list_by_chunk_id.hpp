@@ -19,13 +19,13 @@ struct SubPosList {
 
 using PosListsByChunkID = std::vector<SubPosList>;
 
-// Splits a PosList that references multiple chunks into several PosLists that reference only one chunk each.
-// The returned structs contains one of those PosList as well as the position of an entry within the original PosList.
+// Splits a AbstractPosList that references multiple chunks into several PosLists that reference only one chunk each.
+// The returned structs contains one of those PosList as well as the position of an entry within the original AbstractPosList.
 // For example, splitting [(1,3), (0,2), (1,2)] gives us two PosLists [(0,2)] and [(1,3), (1,2)] as well as the
 // original positions [1] and [0, 2]. These original positions are needed to reassemble the result.
 // The returned PosListsByChunkID has a guaranteed size of `number_of_chunks`, but the entries might be empty.
 
-PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList>& input_pos_list,
+PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
                                              const size_t number_of_chunks);
 
 }  // namespace opossum

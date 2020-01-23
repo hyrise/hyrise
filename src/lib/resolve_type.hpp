@@ -217,7 +217,7 @@ template<typename Functor>
 void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functor& func) {
   using PosListPtr = const PosList*;
 
-  if (auto pos_list = dynamic_cast<PosListPtr>(untyped_pos_list)) {
+  if (auto pos_list = dynamic_cast<PosListPtr>(&untyped_pos_list)) {
     func(*pos_list);
   } else {
     Fail("Unrecoqgnized PosList type encountered");

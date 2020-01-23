@@ -118,7 +118,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (in_table->type() == TableType::References) {
-        auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
+        auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<PosList>>{};
 
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
           auto segment_in = chunk_in->get_segment(column_id);
@@ -141,6 +141,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
             size_t offset = 0;
             for (const auto& match : *matches_out) {
+              // TODO
               const auto row_id = (*pos_list_in)[match.chunk_offset];
               (*filtered_pos_list)[offset] = row_id;
               ++offset;

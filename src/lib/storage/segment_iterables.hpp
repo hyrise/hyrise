@@ -133,7 +133,7 @@ class SegmentIterable {
  *
  * Extends the interface of SegmentIterable by two variants of
  * with_iterators and for_each. In addition to the generic lambda,
- * these methods accept a PosList, which is used to filter the results.
+ * these methods accept a AbstractPosList, which is used to filter the results.
  * The list is expected to use only that single chunk. When such a list is
  * passed, the used iterators only iterate over the chunk offsets that
  * were included in the pos_list; everything else is skipped.
@@ -144,11 +144,11 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
-  void with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     if (!position_filter) {
       _self()._on_with_iterators(functor);
     } else {
-      DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
+      DebugAssert(position_filter->references_single_chunk(), "Expected AbstractPosList to reference single chunk");
       _self()._on_with_iterators(position_filter, functor);
     }
   }
@@ -156,9 +156,9 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
-  void for_each(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void for_each(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     DebugAssert(!position_filter || position_filter->references_single_chunk(),
-                "Expected PosList to reference single chunk");
+                "Expected AbstractPosList to reference single chunk");
     with_iterators(position_filter, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);

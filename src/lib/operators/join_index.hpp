@@ -67,7 +67,7 @@ class JoinIndex : public AbstractJoinOperator {
   void _reference_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                 const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
                                                 const std::shared_ptr<AbstractIndex>& index,
-                                                const std::shared_ptr<const PosList>& reference_segment_pos_list);
+                                                const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
   std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,

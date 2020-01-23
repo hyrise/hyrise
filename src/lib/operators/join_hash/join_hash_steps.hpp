@@ -801,7 +801,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 }
 
-using PosLists = std::vector<std::shared_ptr<const PosList>>;
+using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 
 /**

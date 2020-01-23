@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList>& input_pos_list,
+PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
                                              const size_t number_of_chunks) {
   DebugAssert(!input_pos_list->references_single_chunk() || input_pos_list->empty(),
               "No need to split a reference segment that references a single chunk");
@@ -11,6 +11,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList
   // shared_ptr<const PosList>, we first create regular PosLists, add the values to them, and then convert these.
 
   // Create PosLists and set them as `references_single_chunk`
+  // // TODO
   auto pos_lists_by_chunk_id = PosListsByChunkID{number_of_chunks};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < number_of_chunks; ++chunk_id) {

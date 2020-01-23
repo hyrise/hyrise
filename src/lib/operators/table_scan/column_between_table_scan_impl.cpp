@@ -34,7 +34,7 @@ std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetw
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-    const std::shared_ptr<const PosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) const {
   // Select optimized or generic scanning implementation based on segment type
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
@@ -45,7 +45,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 
 void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
-                                                       const std::shared_ptr<const PosList>& position_filter) const {
+                                                       const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 
@@ -71,7 +71,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
-                                                          const std::shared_ptr<const PosList>& position_filter) const {
+                                                          const std::shared_ptr<const AbstractPosList>& position_filter) const {
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
     lower_bound_value_id = segment.lower_bound(left_value);

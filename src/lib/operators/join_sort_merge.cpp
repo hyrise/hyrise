@@ -868,7 +868,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
                                                  const std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
-    auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+    auto input_pos_lists = std::vector<std::shared_ptr<const AbstractPosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       auto base_segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
       auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
@@ -881,6 +881,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {
+        // TODO
         new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
       }
     }

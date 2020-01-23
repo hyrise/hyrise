@@ -27,8 +27,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
   const std::string& name() const override;
 
   struct JoinParams {
-    PosList& pos_list_left;
-    PosList& pos_list_right;
+    AbstractPosList& pos_list_left;
+    AbstractPosList& pos_list_right;
     std::vector<bool>& left_matches;
     std::vector<bool>& right_matches;
     bool track_left_matches{};

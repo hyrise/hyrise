@@ -275,7 +275,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto verify_column_clusters_in_all_chunks = [&](const auto& table) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto current_pos_list = std::shared_ptr<const PosList>();
+      std::shared_ptr<const AbstractPosList> current_pos_list = std::shared_ptr<const PosList>();
       size_t next_cluster_id = 0;
       const auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -331,6 +331,7 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 
       auto& out_pos_list = reference_matrix[cluster_id];
       auto in_pos_list = ref_segment->pos_list();
+      // TODO
       std::copy(in_pos_list->begin(), in_pos_list->end(), std::back_inserter(out_pos_list));
     }
   }
