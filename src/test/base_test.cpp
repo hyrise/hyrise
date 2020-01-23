@@ -38,20 +38,11 @@ std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_
   return std::static_pointer_cast<DictionarySegment<T>>(dict_segment);
 }
 
-template std::shared_ptr<DictionarySegment<int32_t>> create_dict_segment_by_type(
-    DataType data_type, const std::vector<std::optional<int32_t>>& values);
+#define INSTANTIATE_CREATE_DICT_SEGMENT(r, data, type)                           \
+  template std::shared_ptr<DictionarySegment<type>> create_dict_segment_by_type( \
+      DataType data_type, const std::vector<std::optional<type>>& values);
 
-template std::shared_ptr<DictionarySegment<int64_t>> create_dict_segment_by_type(
-    DataType data_type, const std::vector<std::optional<int64_t>>& values);
-
-template std::shared_ptr<DictionarySegment<pmr_string>> create_dict_segment_by_type(
-    DataType data_type, const std::vector<std::optional<pmr_string>>& values);
-
-template std::shared_ptr<DictionarySegment<float>> create_dict_segment_by_type(
-    DataType data_type, const std::vector<std::optional<float>>& values);
-
-template std::shared_ptr<DictionarySegment<double>> create_dict_segment_by_type(
-    DataType data_type, const std::vector<std::optional<double>>& values);
+BOOST_PP_SEQ_FOR_EACH(INSTANTIATE_CREATE_DICT_SEGMENT, _, DATA_TYPES)
 
 void execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
   for (auto& op : operators) {
