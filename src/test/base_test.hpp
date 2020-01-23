@@ -43,11 +43,7 @@ class BaseTestWithParam
    * safely without preventing the BaseTest-cleanup from happening.
    * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
    */
-  ~BaseTestWithParam() {
-    Hyrise::reset();
-    SQLPipelineBuilder::default_pqp_cache = nullptr;
-    SQLPipelineBuilder::default_lqp_cache = nullptr;
-  }
+  ~BaseTestWithParam() { Hyrise::reset(); }
 };
 
 using BaseTest = BaseTestWithParam<void>;
