@@ -211,7 +211,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
-  AssertInput(!select.unionSelect, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
   // Translate WITH clause
   if (select.withDescriptions) {
@@ -277,7 +276,79 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _current_lqp = AliasNode::make(_unwrap_elements(_inflated_select_list_elements), aliases, _current_lqp);
   }
 
+  if (select.setOperators) {
+    for (const auto set_operator : *select.setOperators) {
+      AssertInput(!(set_operator->setType == hsql::kSetUnion), "Union Operations are currently not supported");
+      _translate_set_operation(*set_operator);
+      if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
+      if (set_operator->resultLimit) _translate_limit(*set_operator->resultLimit);
+    }
+  }
+
   return _current_lqp;
+}
+
+void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operator) {
+
+  const auto left_input_lqp = _current_lqp;
+
+  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
+  const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
+
+
+  const auto left_sql_identifier_resolver = _sql_identifier_resolver;
+  const auto right_sql_identifier_resolver = nested_set_translator._sql_identifier_resolver;
+
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(), "The size of tables connected via set operators needs to match");
+
+  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size(); ++column_expression_idx) {
+    const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
+    const auto& right_expression = right_input_lqp->column_expressions()[column_expression_idx];
+
+    join_predicates.emplace_back(
+          std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
+
+  }
+
+/*  // a) Find matching columns and create JoinPredicates from them
+  // b) Add columns from right input to the output when they have no match in the left input
+  for (const auto& left_expression : left_input_lqp->column_expressions()) {
+    const auto& right_expression = right_element.expression;
+    const auto& right_identifiers = right_element.identifiers;
+
+    if (!right_identifiers.empty()) {
+      // Ignore previous names if there is an alias
+      const auto right_identifier = right_identifiers.back();
+
+      const auto left_expression =
+          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+
+      AssertInput(left_expression, "The tables you are trying to union do not match");
+      // Two columns match, let's join on them.
+      join_predicates.emplace_back(
+            std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
+    } else {
+      AssertInput(true, "Identifiers should not be empty for set operations");
+    }
+  } */
+
+  auto lqp = std::shared_ptr<AbstractLQPNode>();
+
+  lqp = JoinNode::make(JoinMode::AntiNullAsFalse, join_predicates, left_input_lqp, right_input_lqp);
+
+  if (!join_predicates.empty()) {
+    // Projection Node to remove duplicate columns
+    lqp = ProjectionNode::make(_unwrap_elements(_inflated_select_list_elements), lqp);
+  }
+
+  if (!set_operator.isAll) {
+    lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
+                                       std::vector<std::shared_ptr<AbstractExpression>>{}, lqp);
+  }
+
+  _current_lqp = lqp;
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
