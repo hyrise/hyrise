@@ -42,7 +42,7 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
   // the group-by list to the list of aggregates wrapped in an ANY().
   for (const auto& group_by_column : group_by_columns) {
     if (constraint_columns.contains(group_by_column)) {
-      // Do not touch primary key/unique columns of constraint.
+      // Do not touch primary key/unique colhumns of constraint.
       continue;
     }
 
