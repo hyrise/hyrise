@@ -22,32 +22,26 @@ struct TableConstraintDefinition final {
   }
   bool operator!=(const TableConstraintDefinition& rhs) const { return !(rhs == *this); }
 
-  size_t hash() const {
-    auto hash = boost::hash_value(is_primary_key);
-    for (const auto& column_id : columns) {
-      boost::hash_combine(hash, boost::hash_value(column_id.t));
-    }
-    return hash;
-  }
-
   std::unordered_set<ColumnID> columns;
   IsPrimaryKey is_primary_key;
 };
 
-// Wrapper-structs for enabling hash based containers containing TableConstraintDefinition
-struct TableConstraintDefinitionHash final {
-  size_t operator()(const TableConstraintDefinition& table_constraint_definition) const {
-    return table_constraint_definition.hash();
-  }
-};
-struct TableConstraintDefinitionEqual final {
-  size_t operator()(const TableConstraintDefinition& constraint_a,
-                    const TableConstraintDefinition& constraint_b) const {
-    return constraint_a == constraint_b;
-  }
-};
-
-using TableConstraintDefinitions =
-    std::unordered_set<TableConstraintDefinition, TableConstraintDefinitionHash, TableConstraintDefinitionEqual>;
+using TableConstraintDefinitions = std::unordered_set<TableConstraintDefinition>;
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::TableConstraintDefinition> {
+  size_t operator()(const opossum::TableConstraintDefinition& table_constraint) const {
+    auto hash = boost::hash_value(table_constraint.is_primary_key);
+    for (const auto& column_id : table_constraint.columns) {
+      boost::hash_combine(hash, boost::hash_value(column_id.t));
+    }
+    return hash;
+  }
+};
+
+}  // namespace std
+

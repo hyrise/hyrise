@@ -27,7 +27,7 @@ bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
-  if (this == &other) return true;  //TODO Vermessen, Performance-Vorteil, TPC-C oder TPC-H ganz kurz
+  if (this == &other) return true;
   if (type != other.type) return false;
   if (!expressions_equal(arguments, other.arguments)) return false;
   return _shallow_equals(other);

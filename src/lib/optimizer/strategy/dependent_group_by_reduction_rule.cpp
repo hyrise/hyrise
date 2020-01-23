@@ -24,46 +24,35 @@ using namespace opossum;  // NOLINT
  *
  * @returns   Boolean value denoting whether at the group-by list of @param aggregate_node changed.
  */
-bool reduce_group_by_columns_for_constraint(const TableConstraintDefinition& table_constraint,
-                                            const std::set<ColumnID>& group_by_columns,
-                                            const std::shared_ptr<const StoredTableNode>& stored_table_node,
+bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinition& constraint, ExpressionUnorderedSet& group_by_columns,
                                             AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
-  const auto& constraint_columns = table_constraint.columns;
+  const auto& constraint_columns = constraint.column_expressions;
 
-  // Intersect primary key/unique columns and group-by columns. In case a primary key/unique constraint covers
-  // multiple columns, we need to check that all columns are present in order to later remove dependent columns.
-  std::vector<ColumnID> intersection;
-  std::set_intersection(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
-                        group_by_columns.end(), std::back_inserter(intersection));
-
-  // Skip the current constraint as the primary key/unique constraint is not completely present.
-  if (intersection.size() != constraint_columns.size()) {
+  // Intersect primary key/unique columns and non-nullable group-by columns.
+  ExpressionUnorderedSet difference;
+  std::set_difference(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
+                        group_by_columns.end(), std::inserter(difference, difference.begin()));
+  if (difference.size() > 0) {
+    // Skip the current constraint as the primary key/unique constraint is not completely present.
     return false;
   }
 
-  // Every column that is part of the table but not of the primary key/unique constraint is going to be moved from
+  // Every column that is part of the input table but not part of the primary key/unique constraint is going to be moved from
   // the group-by list to the list of aggregates wrapped in an ANY().
   for (const auto& group_by_column : group_by_columns) {
-    if (std::find(constraint_columns.begin(), constraint_columns.end(), group_by_column) != constraint_columns.end()) {
-      // Do not touch primary key/unique constraint columns.
+    if (constraint_columns.contains(group_by_column)) {
+      // Do not touch primary key/unique colhumns of constraint.
       continue;
     }
 
-    // Remove node expression if it is a column reference and references the given stored table node.
+    // Remove column from group-by list.
     // Further, decrement the aggregate's index which denotes the end of group-by expressions.
+    const auto begin_idx_before = aggregate_node.aggregate_expressions_begin_idx;
     aggregate_node.node_expressions.erase(
-        std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
-                       [&, stored_table_node = stored_table_node](const auto expression) {
-                         const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                         if (!column_expression) return false;
-
-                         const auto& expression_stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(
-                             column_expression->column_reference.original_node());
-                         if (!expression_stored_table_node) return false;
-
-                         const auto column_id = column_expression->column_reference.original_column_id();
-                         if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
+    std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
+                       [&](const auto node_expression) {
+                         if (*node_expression == *group_by_column) {
                            // Adjust the number of group by expressions.
                            --aggregate_node.aggregate_expressions_begin_idx;
                            group_by_list_changed = true;
@@ -72,14 +61,16 @@ bool reduce_group_by_columns_for_constraint(const TableConstraintDefinition& tab
                          return false;
                        }),
         aggregate_node.node_expressions.end());
+      Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before, "Failed to remove column from group-by list.");
 
-    // Add the ANY() aggregate to the list of aggregate columns.
-    const auto aggregate_any_expression = any_(lqp_column_({stored_table_node, group_by_column}));
-    aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
-  }
+      // Add the ANY() aggregate to the list of aggregate columns.
+      const auto aggregate_any_expression = any_(group_by_column);
+      aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+    }
 
   return group_by_list_changed;
 }
+
 }  // namespace
 
 namespace opossum {
@@ -93,72 +84,51 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     }
     auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-    std::unordered_map<std::shared_ptr<const StoredTableNode>, std::set<ColumnID>> group_by_columns_per_table;
-    // Collect the group-by columns for each table in the aggregate node
+    // Early exit if no constraints are set
+    const auto input_constraints = aggregate_node.left_input()->constraints();
+    if(input_constraints->empty()) return LQPVisitation::VisitInputs;
+
+    // Preparation:
+    // Store copy of the aggregate's column expressions to later check if this order is the query's final column order
+    const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
+    auto group_by_list_changed = false;
+
+    // Collect non-nullable group-by columns
+    ExpressionUnorderedSet group_by_columns_non_nullable;
+    group_by_columns_non_nullable.reserve(aggregate_node.aggregate_expressions_begin_idx + 1);
     for (auto expression_idx = size_t{0}; expression_idx < aggregate_node.aggregate_expressions_begin_idx;
          ++expression_idx) {
       const auto& expression = aggregate_node.node_expressions[expression_idx];
-
       // Check that group by columns are not nullable. Unique columns can generally store NULLs while previous
       // operators (e.g., outer joins) might have added NULLs to a primary key column. For now, we take the safe route
       // and ignore all cases where group-by columns are nullable.
       if (expression->is_nullable_on_lqp(aggregate_node)) {
         continue;
       }
-
-      const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (!column_expression) {
-        // In case the group-by column is not a column expression (e.g., grouping by `a+1`), we take the safe route and
-        // continue even though constraints often hold for such simple expression.
-        continue;
-      }
-
-      const auto& stored_table_node =
-          std::dynamic_pointer_cast<const StoredTableNode>(column_expression->column_reference.original_node());
-      // If column is not a physical column skip
-      if (!stored_table_node) continue;
-
-      const auto column_id = column_expression->column_reference.original_column_id();
-      group_by_columns_per_table[stored_table_node].insert(column_id);
+      group_by_columns_non_nullable.insert(expression);
     }
 
-    // Store copy of the aggregate's column expressions to later check if this order is the query's final column order
-    const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
-    auto group_by_list_changed = false;
+    // Sort constraints to start with the shortest constraint (either unique or primary key) in hope that the shorter
+    // one will later form the group-by clause.
+    auto input_constraints_sorted = std::vector<ExpressionsConstraintDefinition>{input_constraints->cbegin(), input_constraints->cend()};
+    std::sort(input_constraints_sorted.begin(), input_constraints_sorted.end(),
+              [](const auto& left, const auto& right) {
+                return left.column_expressions.size() < right.column_expressions.size();
+    });
 
-    // Main loop. Iterate over the tables and its group-by columns, get table constraints, and try to reduce for each
-    // constraint.
-    for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
-      auto unique_columns = std::set<ColumnID>();
+    // Main:
+    // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
+    // constraints (e.g., a primary key and a unique column constraint) might result in different group-by lists
+    // (depending on the number of columns of the constraint), but we stop as soon as one constraint successfully
+    // reduced the group-by list. The reason is that there is no advantage in a second reduction if the first
+    // reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
+    // place, we can ignore the remaining constraints.
+    for(size_t constraint_idx{0}; constraint_idx < input_constraints_sorted.size(); ++constraint_idx) {
+      const auto& constraint = input_constraints_sorted[constraint_idx];
 
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      const auto& table_constraints = table->get_soft_unique_constraints();
-      if (table_constraints.empty()) {
-        // early exit for current table if no constraints are set
-        continue;
-      }
-
-      // Gather sizes of table constraints (i.e., the number of columns) to start with the shortest constraint (either
-      // unique or primary key) in hope that the shorter one will later form the group-by clause.
-      std::vector<std::pair<TableConstraintDefinition, size_t>> constraints_position_and_size;
-      constraints_position_and_size.reserve(table_constraints.size());
-      for (const auto& table_constraint : table_constraints) {
-        constraints_position_and_size.emplace_back(table_constraint, table_constraint.columns.size());
-      }
-      std::sort(constraints_position_and_size.begin(), constraints_position_and_size.end(),
-                [](const auto& left, const auto& right) { return left.second < right.second; });
-
-      // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
-      // constraints (e.g., a primary key and a unique column constraint) might result in different group-by lists
-      // (depending on the number of columns of the constraint), but we stop as soon as one constraint successfully
-      // reduced the group-by list. The reason is that there is no advantage in a second reduction if the first
-      // reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
-      // place, we can ignore the remaining constraints.
-      for (const auto& [table_constraint, size] : constraints_position_and_size) {
-        group_by_list_changed |= reduce_group_by_columns_for_constraint(table_constraint, group_by_columns,
-                                                                        stored_table_node, aggregate_node);
-        if (group_by_list_changed) break;
-      }
+      group_by_list_changed |= reduce_group_by_columns_for_constraint(constraint, group_by_columns_non_nullable,
+          aggregate_node);
+      if (group_by_list_changed) break;
     }
 
     // In case the initial query plan root returned the same columns in the same column order and was not a projection,
