@@ -212,6 +212,18 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
   }
 }
 
+// TODO: Comment, const magic like resolve_segment_type
+template<typename Functor>
+void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functor& func) {
+  using PosListPtr = const PosList*;
+
+  if (auto pos_list = dynamic_cast<PosListPtr>(untyped_pos_list)) {
+    func(*pos_list);
+  } else {
+    Fail("Unrecoqgnized PosList type encountered");
+  }
+}
+
 /**
  * Resolves a data type by passing a hana::type object and the downcasted segment on to a generic lambda
  *
