@@ -295,10 +295,6 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
 
-
-  const auto left_sql_identifier_resolver = _sql_identifier_resolver;
-  const auto right_sql_identifier_resolver = nested_set_translator._sql_identifier_resolver;
-
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(), "The size of tables connected via set operators needs to match");
@@ -306,6 +302,8 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
   for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size(); ++column_expression_idx) {
     const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
     const auto& right_expression = right_input_lqp->column_expressions()[column_expression_idx];
+
+    AssertInput(left_expression->data_type() == right_expression->data_type(), "The data type of both columns needs to match");
 
     join_predicates.emplace_back(
           std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
@@ -336,7 +334,13 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
-  lqp = JoinNode::make(JoinMode::AntiNullAsFalse, join_predicates, left_input_lqp, right_input_lqp);
+  if (set_operator.setType == hsql::kSetExcept) {
+    lqp = JoinNode::make(JoinMode::AntiNullAsFalse, join_predicates, left_input_lqp, right_input_lqp);
+  } else if (set_operator.setType == hsql::kSetIntersect) {
+//    lqp = JoinNode::make(JoinMode::Inner, join_predicates, left_input_lqp, right_input_lqp);
+//    const auto subquery = std::make_shared<LQPSubqueryExpression>(lqp, parameter_ids, parameter_expressions)
+//    lqp = PredicateNode::make(exists_(subquery), _current_lqp);
+  }
 
   if (!join_predicates.empty()) {
     // Projection Node to remove duplicate columns
