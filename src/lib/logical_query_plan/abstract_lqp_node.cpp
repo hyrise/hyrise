@@ -78,7 +78,7 @@ size_t AbstractLQPNode::hash() const {
         boost::hash_combine(hash, expression->hash());
       }
       boost::hash_combine(hash, node->type);
-      boost::hash_combine(hash, node->_shallow_hash());
+      boost::hash_combine(hash, node->_on_shallow_hash());
       return LQPVisitation::VisitInputs;
     } else {
       return LQPVisitation::DoNotVisitInputs;
@@ -88,7 +88,7 @@ size_t AbstractLQPNode::hash() const {
   return hash;
 }
 
-size_t AbstractLQPNode::_shallow_hash() const { return 0; }
+size_t AbstractLQPNode::_on_shallow_hash() const { return 0; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 
@@ -246,13 +246,15 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
+  if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 
 bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
-  std::shared_ptr<AbstractLQPNode> copied_left_input, copied_right_input;
+  std::shared_ptr<AbstractLQPNode> copied_left_input;
+  std::shared_ptr<AbstractLQPNode> copied_right_input;
 
   if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
   if (right_input()) copied_right_input = right_input()->_deep_copy_impl(node_mapping);
@@ -307,6 +309,16 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
+AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {
+  switch (mode) {
+    case DescriptionMode::Short:
+      return AbstractExpression::DescriptionMode::ColumnName;
+    case DescriptionMode::Detailed:
+      return AbstractExpression::DescriptionMode::Detailed;
+  }
+  Fail("Unhandled DescriptionMode");
+}
+
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
   // then print them
@@ -322,10 +334,11 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
     };
 
     const auto node_print_fn = [](const auto& node2, auto& stream2) {
-      stream2 << node2->description();
+      stream2 << node2->description(AbstractLQPNode::DescriptionMode::Detailed);
       if (!node2->comment.empty()) {
         stream2 << " (" << node2->comment << ")";
       }
+      stream2 << " @ " << node2;
     };
 
     print_directed_acyclic_graph<const AbstractLQPNode>(root.shared_from_this(), get_inputs_fn, node_print_fn, stream);

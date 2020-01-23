@@ -59,7 +59,7 @@ FixedString FixedStringVector::at(const size_t pos) {
   return FixedString(&_chars.at(pos * _string_length), _string_length);
 }
 
-const pmr_string FixedStringVector::get_string_at(const size_t pos) const {
+pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   const auto string_start = &_chars[pos * _string_length];
   // String end checks if the string length is zero to avoid reading the data directly "in front" of `chars`.
   // If the string length is > 0, it is the position of the last char.
@@ -100,13 +100,5 @@ PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() { return _c
 void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_length); }
 
 size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.size(); }
-
-std::shared_ptr<const pmr_vector<pmr_string>> FixedStringVector::dictionary() const {
-  pmr_vector<pmr_string> string_values;
-  for (auto it = cbegin(); it != cend(); ++it) {
-    string_values.emplace_back(*it);
-  }
-  return std::make_shared<pmr_vector<pmr_string>>(std::move(string_values));
-}
 
 }  // namespace opossum

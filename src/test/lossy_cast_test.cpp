@@ -1,10 +1,10 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "lossy_cast.hpp"
 
 namespace opossum {
 
-class LossyCastTest : public ::testing::Test {};
+class LossyCastTest : public BaseTest {};
 
 TEST_F(LossyCastTest, LossyVariantCast) {
   EXPECT_EQ(lossy_variant_cast<int32_t>(int32_t(5)), int32_t(5));

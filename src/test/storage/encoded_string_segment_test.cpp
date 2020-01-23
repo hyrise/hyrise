@@ -1,5 +1,3 @@
-#include <boost/hana/at_key.hpp>
-
 #include <algorithm>
 #include <cctype>
 #include <memory>
@@ -7,10 +5,8 @@
 #include <sstream>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
@@ -18,7 +14,6 @@
 #include "storage/value_segment.hpp"
 
 #include "types.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
@@ -116,7 +111,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+auto encoded_string_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   const auto spec = info.param;
 
   auto stream = std::stringstream{};
@@ -133,7 +128,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
                          ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::String, false)),
-                         formatter);
+                         encoded_string_segment_test_formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_value_segment();

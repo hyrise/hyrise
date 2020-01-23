@@ -43,7 +43,7 @@ class FixedStringVector {
 
   FixedString at(const size_t pos);
 
-  const pmr_string get_string_at(const size_t pos) const;
+  pmr_string get_string_at(const size_t pos) const;
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
   FixedStringIterator<false> begin() noexcept;
@@ -80,9 +80,6 @@ class FixedStringVector {
 
   // Return the calculated size of FixedStringVector in main memory
   size_t data_size() const;
-
-  // Return the underlying dictionary as a vector of string
-  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
 
  protected:
   const size_t _string_length;

@@ -18,18 +18,17 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
-std::string LQPColumnExpression::as_column_name() const {
+std::string LQPColumnExpression::description(const DescriptionMode mode) const {
   // Even if the LQP is invalid, we still want to be able to print it as good as possible
   const auto original_node = column_reference.original_node();
   if (!original_node) return "<Expired Column>";
+  if (column_reference.original_column_id() == INVALID_COLUMN_ID) return "INVALID_COLUMN_ID";
 
   if (original_node->type == LQPNodeType::StoredTable) {
-    std::stringstream stream;
-    stream << column_reference;
-    return stream.str();
-
+    return column_reference.description(mode);
   } else if (original_node->type == LQPNodeType::Mock) {
     const auto mock_node = std::static_pointer_cast<const MockNode>(original_node);
+
     Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
     return mock_node->column_definitions()[column_reference.original_column_id()].second;
 
@@ -43,7 +42,10 @@ std::string LQPColumnExpression::as_column_name() const {
 
 DataType LQPColumnExpression::data_type() const {
   const auto original_node = column_reference.original_node();
-  if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
+  if (column_reference.original_column_id() == INVALID_COLUMN_ID) {
+    // Handle COUNT(*). Note: This is the input data type.
+    return DataType::Long;
+  } else if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
     const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     return table->column_data_type(column_reference.original_column_id());

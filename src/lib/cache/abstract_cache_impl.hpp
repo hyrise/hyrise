@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/iterator/iterator_facade.hpp>
-
 #include <utility>
+
+#include <boost/iterator/iterator_facade.hpp>
 
 namespace opossum {
 

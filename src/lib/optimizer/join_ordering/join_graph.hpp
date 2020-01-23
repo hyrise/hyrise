@@ -37,7 +37,6 @@ class JoinGraph final {
    */
   static std::vector<JoinGraph> build_all_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 
-  JoinGraph() = default;
   JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, const std::vector<JoinGraphEdge>& edges);
 
   /**

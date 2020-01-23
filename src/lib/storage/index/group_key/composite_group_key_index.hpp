@@ -51,7 +51,6 @@ class CompositeGroupKeyIndex : public AbstractIndex {
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
-  CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
   ~CompositeGroupKeyIndex() = default;
 
   explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);

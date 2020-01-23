@@ -37,3 +37,18 @@ target_compile_definitions(
     #-DRNG_TEST
     -D_FILE_OFFSET_BITS=64
 )
+
+target_compile_options(
+    tpch_dbgen
+    PRIVATE
+    -Wno-unused-result
+)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  target_compile_options(
+    tpch_dbgen
+    PRIVATE
+
+    -Wno-string-plus-int
+  )
+endif()

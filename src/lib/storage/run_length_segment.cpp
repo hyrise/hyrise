@@ -5,6 +5,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -33,7 +34,7 @@ std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthSegment<T>::end_position
 }
 
 template <typename T>
-const AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
@@ -43,7 +44,7 @@ const AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
-size_t RunLengthSegment<T>::size() const {
+ChunkOffset RunLengthSegment<T>::size() const {
   if (_end_positions->empty()) return 0u;
   return _end_positions->back() + 1u;
 }
@@ -62,12 +63,15 @@ std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-size_t RunLengthSegment<T>::estimate_memory_usage() const {
-  static const auto bits_per_byte = 8u;
+size_t RunLengthSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+  const auto common_elements_size =
+      sizeof(*this) + _null_values->size() / CHAR_BIT +
+      _end_positions->size() * sizeof(typename decltype(_end_positions)::element_type::value_type);
 
-  return sizeof(*this) + _values->size() * sizeof(typename decltype(_values)::element_type::value_type) +
-         _null_values->size() / bits_per_byte +
-         _end_positions->size() * sizeof(typename decltype(_end_positions)::element_type::value_type);
+  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+    return common_elements_size + string_vector_memory_usage(*_values, mode);
+  }
+  return common_elements_size + _values->size() * sizeof(typename decltype(_values)::element_type::value_type);
 }
 
 template <typename T>

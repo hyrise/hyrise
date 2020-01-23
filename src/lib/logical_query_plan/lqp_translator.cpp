@@ -1,12 +1,11 @@
 #include "lqp_translator.hpp"
 
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/tuple.hpp>
-
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/tuple.hpp>
 
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
@@ -17,20 +16,16 @@
 #include "delete_node.hpp"
 #include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
-#include "dummy_table_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/list_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_node.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -38,6 +33,7 @@
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
@@ -67,7 +63,6 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "validate_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -96,7 +91,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
     return operator_iter->second;
   }
 
-  const auto pqp = _translate_by_node_type(node->type, node);
+  auto pqp = _translate_by_node_type(node->type, node);
+
+  // Adding the actual LQP node that led to the creation of the PQP node.  Note, the LQP needs to be set in
+  // _translate_predicate_node_to_index_scan() as well, because the function creates two scans operators and returns
+  // only the merging union node (all three PQP nodes share the same originating LQP node).
+  pqp->lqp_node = node;
   _operator_by_lqp_node.emplace(node, pqp);
 
   return pqp;
@@ -127,6 +127,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
+    case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
       // clang-format on
 
@@ -135,6 +136,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
   }
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
@@ -155,7 +157,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
@@ -217,6 +219,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   index_scan->included_chunk_ids = indexed_chunks;
   table_scan->excluded_chunk_ids = indexed_chunks;
+
+  // set lqp node
+  index_scan->lqp_node = node;
+  table_scan->lqp_node = node;
 
   return std::make_shared<UnionAll>(index_scan, table_scan);
 }
@@ -334,7 +340,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
   });
-
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
 
   return join_operator;
@@ -346,32 +351,24 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   const auto input_operator = translate_node(node->left_input());
 
-  // Create AggregateColumnDefinitions from AggregateExpressions
-  // All aggregate_pqp_expressions have to be AggregateExpressions and their argument() has to be a PQPColumnExpression
-  std::vector<AggregateColumnDefinition> aggregate_column_definitions;
-  aggregate_column_definitions.reserve(aggregate_node->aggregate_expressions_begin_idx);
+  std::vector<std::shared_ptr<AggregateExpression>> pqp_aggregate_expressions;
+  pqp_aggregate_expressions.reserve(aggregate_node->node_expressions.size() -
+                                    aggregate_node->aggregate_expressions_begin_idx);
   for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
        expression_idx < aggregate_node->node_expressions.size(); ++expression_idx) {
-    const auto& expression = aggregate_node->node_expressions[expression_idx];
+    const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
-    Assert(
-        expression->type == ExpressionType::Aggregate,
-        "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");
+    Assert(lqp_expression->type == ExpressionType::Aggregate,
+           "Expression '" + lqp_expression->as_column_name() +
+               "' used as AggregateExpression is not an AggregateExpression");
 
-    const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
-
-    // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
-    // arguments
-    if (aggregate_expression->argument()) {
-      const auto argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
-      aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
-
-    } else {
-      aggregate_column_definitions.emplace_back(std::nullopt, aggregate_expression->aggregate_function);
-    }
+    const auto pqp_expression = _translate_expression(lqp_expression, node->left_input());
+    const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
+    pqp_aggregate_expressions.emplace_back(aggregate_expression);
   }
 
-  // Create GroupByColumns from the GroupBy expressions
+  // Create GroupByColumns from the GroupBy expressions. For now, we expect all GroupBy expressions to be already
+  // present, i.e., we do not calculate them on the fly.
   std::vector<ColumnID> group_by_column_ids;
   group_by_column_ids.reserve(aggregate_node->node_expressions.size() -
                               aggregate_node->aggregate_expressions_begin_idx);
@@ -384,7 +381,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
@@ -432,7 +429,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     case UnionMode::All:
       return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
@@ -441,6 +438,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
   return std::make_shared<Validate>(input_operator);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
@@ -448,12 +446,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
                                       create_view_node->if_not_exists);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
   return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
@@ -462,18 +462,29 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
                                        translate_node(input_node));
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_static_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(node);
   return std::make_shared<TableWrapper>(static_table_node->table);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
+  return std::make_shared<Import>(import_node->filename, import_node->tablename, Chunk::DEFAULT_SIZE,
+                                  import_node->filetype);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
     const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
@@ -481,6 +492,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan
                                               create_prepared_plan_node->prepared_plan);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());
@@ -503,6 +515,13 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
           std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
                                                 node->is_column_nullable(node->get_column_id(*referenced_expression)),
                                                 referenced_expression->as_column_name());
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    // Resolve COUNT(*)
+    if (AggregateExpression::is_count_star(*expression)) {
+      const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
+      expression = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }
 

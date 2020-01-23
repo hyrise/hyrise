@@ -140,20 +140,14 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_prepare(const hsql::PrepareStatement& prepare_statement);
   std::shared_ptr<AbstractLQPNode> _translate_execute(const hsql::ExecuteStatement& execute_statement);
 
+  std::shared_ptr<AbstractLQPNode> _translate_import(const hsql::ImportStatement& import_statement);
+
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
       const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
-
-  std::shared_ptr<AbstractLQPNode> _prune_expressions(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
-
-  std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
@@ -164,8 +158,16 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
-      const std::vector<SelectListElement>& select_list_elements) const;
+  static std::shared_ptr<AbstractLQPNode> _prune_expressions(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+
+  static std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+
+  static std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
+      const std::vector<SelectListElement>& select_list_elements);
 
  private:
   const UseMvcc _use_mvcc;

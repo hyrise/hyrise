@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
@@ -67,6 +66,26 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
 
   auto base_segment = chunk->get_segment(ColumnID{0});
   EXPECT_EQ(base_segment->size(), 4u);
+}
+
+TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
+  chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}));
+  chunk->append({2, "two"});
+
+  chunk->finalize();
+
+  EXPECT_THROW(chunk->finalize(), std::logic_error);
+}
+
+TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
+  auto mvcc_data = std::make_shared<MvccData>(3, 0);
+  mvcc_data->begin_cids = {1, 2, 3};
+
+  chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
+  chunk->finalize();
+
+  auto mvcc_data_chunk = chunk->get_scoped_mvcc_data_lock();
+  EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
 }
 
 TEST_F(StorageChunkTest, UnknownColumnType) {

@@ -5,7 +5,9 @@
 
 #include "attribute_statistics.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
@@ -18,6 +20,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
@@ -65,6 +68,8 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 }  // namespace
 
 namespace opossum {
+
+using namespace opossum::expression_functional;  // NOLINT
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -157,12 +162,29 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       output_table_statistics = left_input_table_statistics;
     } break;
 
+    case LQPNodeType::StaticTable: {
+      const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(lqp);
+      output_table_statistics = static_table_node->table->table_statistics();
+      Assert(output_table_statistics, "This StaticTableNode has no statistics");
+    } break;
+
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
+
       const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
-      output_table_statistics =
-          prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+
+      if (stored_table_node->table_statistics) {
+        // TableStatistics have changed from the original table's statistics
+        Assert(stored_table_node->table_statistics->column_statistics.size() ==
+                   static_cast<size_t>(stored_table->column_count()),
+               "Statistics in StoredTableNode should have same number of columns as original table");
+        output_table_statistics =
+            prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());
+      } else {
+        output_table_statistics =
+            prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+      }
     } break;
 
     case LQPNodeType::Validate: {
@@ -183,10 +205,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::CreateView:
     case LQPNodeType::Update:
     case LQPNodeType::Insert:
+    case LQPNodeType::Import:
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
-    case LQPNodeType::StaticTable:
     case LQPNodeType::DummyTable: {
       auto empty_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>();
       output_table_statistics = std::make_shared<TableStatistics>(std::move(empty_column_statistics), Cardinality{0});
@@ -290,6 +312,49 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
   const auto predicate = predicate_node.predicate();
 
+  if (const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate)) {
+    if (logical_expression->logical_operator == LogicalOperator::Or) {
+      // For now, we handle OR by assuming that predicates do not overlap, i.e., by adding the selectivities.
+
+      const auto left_predicate_node =
+          PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
+      const auto left_statistics = estimate_predicate_node(*left_predicate_node, input_table_statistics);
+
+      const auto right_predicate_node =
+          PredicateNode::make(logical_expression->right_operand(), predicate_node.left_input());
+      const auto right_statistics = estimate_predicate_node(*right_predicate_node, input_table_statistics);
+
+      const auto row_count = Cardinality{
+          std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
+
+      const auto selectivity = row_count / input_table_statistics->row_count;
+
+      auto output_column_statistics =
+          std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
+
+      for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+        output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+      }
+
+      const auto output_table_statistics =
+          std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+
+      return output_table_statistics;
+    } else if (logical_expression->logical_operator == LogicalOperator::And) {
+      // Estimate AND by splitting it up into two consecutive predicate nodes
+
+      const auto first_predicate_node =
+          PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
+      const auto first_predicate_statistics = estimate_predicate_node(*first_predicate_node, input_table_statistics);
+
+      const auto second_predicate_node = PredicateNode::make(logical_expression->right_operand(), first_predicate_node);
+      const auto second_predicate_statistics =
+          estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
+
+      return second_predicate_statistics;
+    }
+  }
+
   // Estimating correlated parameters is tricky. Example:
   //   SELECT c_custkey, (SELECT AVG(o_totalprice) FROM orders WHERE o_custkey = c_custkey) FROM customer
   // If the subquery was executed for each customer row, assuming that the predicate has a selectivity matching that
@@ -309,6 +374,25 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
     const auto row_count = Cardinality{input_table_statistics->row_count * PLACEHOLDER_SELECTIVITY_HIGH};
     return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+  }
+
+  if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(predicate)) {
+    // Estimate `x IN (1, 2, 3)` by treating it as `x = 1 OR x = 2 ...`
+    if (in_expression->set()->type != ExpressionType::List) {
+      // Cannot handle subqueries
+      return input_table_statistics;
+    }
+
+    const auto& list_expression = static_cast<const ListExpression&>(*in_expression->set());
+    auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+    expressions.reserve(list_expression.elements().size());
+    for (const auto& list_element : list_expression.elements()) {
+      expressions.emplace_back(equals_(in_expression->value(), list_element));
+    }
+
+    const auto disjunction = inflate_logical_expressions(expressions, LogicalOperator::Or);
+    const auto new_predicate_node = PredicateNode::make(disjunction, predicate_node.left_input());
+    return estimate_predicate_node(*new_predicate_node, input_table_statistics);
   }
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
@@ -376,7 +460,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
             case PredicateCondition::IsNotNull:
               Fail("IS NULL is an invalid join predicate");
           }
-          Fail("GCC thinks this is reachable");
+          Fail("Invalid enum value");
 
         case JoinMode::Cross:
           // Should have been forwarded to estimate_cross_join()
@@ -397,7 +481,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     }
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
@@ -514,8 +598,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
         const auto right_data_type = input_table_statistics->column_data_type(*right_column_id);
 
-        if (left_data_type != right_data_type) {
+        if (left_data_type != right_data_type || left_data_type == DataType::String) {
           // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
+          // Also, as split_at_bin_bounds is not yet supported for strings, we cannot properly estimate string
+          // comparisons, either.
           selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
@@ -697,8 +783,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_column_vs_co
   GenericHistogramBuilder<T> builder;
 
   for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
-    const auto left_min = left_histogram.bin_minimum(left_idx);
-    const auto right_min = right_histogram.bin_minimum(right_idx);
+    const auto& left_min = left_histogram.bin_minimum(left_idx);
+    const auto& right_min = right_histogram.bin_minimum(right_idx);
 
     if (left_min < right_min) {
       ++left_idx;
@@ -949,8 +1035,8 @@ std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_inner_equi_j
 
   // Iterate over both unified histograms and find overlapping bins
   for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
-    const auto left_min = unified_left_histogram->bin_minimum(left_idx);
-    const auto right_min = unified_right_histogram->bin_minimum(right_idx);
+    const auto& left_min = unified_left_histogram->bin_minimum(left_idx);
+    const auto& right_min = unified_right_histogram->bin_minimum(right_idx);
 
     if (left_min < right_min) {
       ++left_idx;

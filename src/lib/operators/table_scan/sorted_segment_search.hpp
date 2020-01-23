@@ -1,8 +1,9 @@
 #pragma once
 
+#include <type_traits>
+
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
-#include <type_traits>
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
@@ -127,8 +128,8 @@ class SortedSegmentSearch {
       return;
     }
 
-    const auto range =
-        boost::join(boost::make_iterator_range(_begin, first_bound), boost::make_iterator_range(last_bound, _end));
+    const auto range = boost::range::join(boost::make_iterator_range(_begin, first_bound),
+                                          boost::make_iterator_range(last_bound, _end));
     result_consumer(range.begin(), range.end());
   }
 

@@ -4,6 +4,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
@@ -12,7 +13,6 @@
 namespace opossum {
 
 class AbstractScheduler;
-class JitRepository;
 class BenchmarkRunner;
 
 // This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the
@@ -36,7 +36,10 @@ class Hyrise : public Singleton<Hyrise> {
   MetaTableManager meta_table_manager;
   Topology topology;
 
-  std::shared_ptr<JitRepository> jit_repository;
+  // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
+  // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
+  std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
   // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
   // result JSON.

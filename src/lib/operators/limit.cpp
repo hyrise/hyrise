@@ -17,7 +17,10 @@ Limit::Limit(const std::shared_ptr<const AbstractOperator>& in,
              const std::shared_ptr<AbstractExpression>& row_count_expression)
     : AbstractReadOnlyOperator(OperatorType::Limit, in), _row_count_expression(row_count_expression) {}
 
-const std::string Limit::name() const { return "Limit"; }
+const std::string& Limit::name() const {
+  static const auto name = std::string{"Limit"};
+  return name;
+}
 
 std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
@@ -62,7 +65,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   const auto chunk_count = input_table->chunk_count();
   for (size_t i = 0; i < num_rows && chunk_id < chunk_count; chunk_id++) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
 
@@ -82,7 +85,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         std::copy(begin, begin + output_chunk_row_count, output_pos_list->begin());
       } else {
         referenced_table = input_table;
-        for (ChunkOffset chunk_offset = 0; chunk_offset < output_chunk_row_count; chunk_offset++) {
+        for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(output_chunk_row_count);
+             chunk_offset++) {
           (*output_pos_list)[chunk_offset] = RowID{chunk_id, chunk_offset};
         }
       }

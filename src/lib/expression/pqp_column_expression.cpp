@@ -29,7 +29,7 @@ std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
   return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable, _column_name);
 }
 
-std::string PQPColumnExpression::as_column_name() const { return _column_name; }
+std::string PQPColumnExpression::description(const DescriptionMode mode) const { return _column_name; }
 
 DataType PQPColumnExpression::data_type() const { return _data_type; }
 

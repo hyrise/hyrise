@@ -6,6 +6,7 @@
 
 #include "abstract_cache_impl.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -95,6 +96,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
   Value& get(const Key& key) {
     auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "key not present");
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;
@@ -131,6 +133,17 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
 
   ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
+
+  size_t frequency(const Key& key) {
+    const auto it = _map.find(key);
+    if (it == _map.end()) {
+      return size_t{0};
+    }
+
+    Handle handle = it->second;
+    GDFSCacheEntry& entry = (*handle);
+    return entry.frequency;
+  }
 
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.

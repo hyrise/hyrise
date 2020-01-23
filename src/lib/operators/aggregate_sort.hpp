@@ -1,8 +1,5 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/container/scoped_allocator.hpp>
-#include <boost/functional/hash.hpp>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -13,11 +10,14 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
+#include <boost/functional/hash.hpp>
+
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
@@ -61,10 +61,11 @@ namespace opossum {
  */
 class AggregateSort : public AbstractAggregateOperator {
  public:
-  AggregateSort(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
+  AggregateSort(const std::shared_ptr<AbstractOperator>& in,
+                const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   /**
    * Creates the aggregate column definitions and appends it to <code>_output_column_definitions</code>

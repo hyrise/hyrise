@@ -1,17 +1,16 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
-#include <boost/container/pmr/memory_resource.hpp>
-
-// the linter wants this to be above everything else
-#include <shared_mutex>
 
 #include <algorithm>
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <vector>
+
+#include <boost/container/pmr/memory_resource.hpp>
 
 #include "all_type_variant.hpp"
 #include "index/segment_index_type.hpp"
@@ -51,19 +50,17 @@ class Chunk : private Noncopyable {
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 
-  // returns whether new rows can be appended to this Chunk
+  // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
   bool is_mutable() const;
-
-  void mark_immutable();
 
   // Atomically replaces the current segment at column_id with the passed segment
   void replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment);
 
   // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
-  uint16_t column_count() const;
+  ColumnCount column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
-  uint32_t size() const;
+  ChunkOffset size() const;
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -80,8 +77,6 @@ class Chunk : private Noncopyable {
    *       the return type might have changed.
    */
   std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
-
-  const Segments& segments() const;
 
   bool has_mvcc_data() const;
 
@@ -149,7 +144,7 @@ class Chunk : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
@@ -161,25 +156,33 @@ class Chunk : private Noncopyable {
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
+   * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
+   * the current transaction.
    */
-  uint64_t invalid_row_count() const { return _invalid_row_count.load(); }
+  ChunkOffset invalid_row_count() const { return _invalid_row_count.load(); }
 
   /**
-     * Atomically increases the counter of deleted/invalidated rows within this chunk.
-     * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
-     */
-  void increase_invalid_row_count(uint64_t count) const;
+   * Atomically increases the counter of deleted/invalidated rows within this chunk.
+   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+   */
+  void increase_invalid_row_count(ChunkOffset count) const;
 
   /**
-      * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
-      * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
-      * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
-      * have to look at this chunk anymore.
-      * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
-      */
-  const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
+   * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+   * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+   * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+   * have to look at this chunk anymore.
+   * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+   */
+  std::optional<CommitID> get_cleanup_commit_id() const;
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
+
+  /**
+   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
+   * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   */
+  void finalize();
 
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
@@ -192,8 +195,11 @@ class Chunk : private Noncopyable {
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
-  mutable std::atomic_uint64_t _invalid_row_count = 0;
-  std::optional<CommitID> _cleanup_commit_id;
+  mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+
+  // Default value of zero means "not set"
+  std::atomic<CommitID> _cleanup_commit_id{0};
+  static_assert(std::is_same<uint32_t, CommitID>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
 }  // namespace opossum

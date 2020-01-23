@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
 #include "operators/maintenance/drop_table.hpp"
@@ -27,9 +26,9 @@ class DropTableTest : public BaseTest {
 };
 
 TEST_F(DropTableTest, NameAndDescription) {
-  EXPECT_EQ(drop_table->name(), "Drop Table");
-  EXPECT_EQ(drop_table->description(DescriptionMode::SingleLine), "Drop Table 't'");
-  EXPECT_EQ(drop_table->description(DescriptionMode::MultiLine), "Drop Table 't'");
+  EXPECT_EQ(drop_table->name(), "DropTable");
+  EXPECT_EQ(drop_table->description(DescriptionMode::SingleLine), "DropTable 't'");
+  EXPECT_EQ(drop_table->description(DescriptionMode::MultiLine), "DropTable 't'");
 }
 
 TEST_F(DropTableTest, Execute) {

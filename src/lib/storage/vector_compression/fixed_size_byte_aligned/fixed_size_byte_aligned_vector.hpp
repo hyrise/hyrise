@@ -1,9 +1,10 @@
 #pragma once
 
+#include <memory>
+
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
-#include <memory>
 
 #include "fixed_size_byte_aligned_decompressor.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"

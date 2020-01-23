@@ -64,7 +64,11 @@ class ExpressionResult : public BaseExpressionResult {
 
   explicit ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
       : values(std::move(values)), nulls(std::move(nulls)) {
-    DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
+    // Allowed size of nulls: 0 (not nullable)
+    //                        1 (nullable, all values are NULL or NOT NULL, depending on the value)
+    //                        n (same as values, 1:1 mapping)
+    DebugAssert(this->nulls.empty() || this->nulls.size() == 1 || this->nulls.size() == this->values.size(),
+                "Mismatching number of nulls");
   }
 
   bool is_nullable_series() const { return size() != 1; }

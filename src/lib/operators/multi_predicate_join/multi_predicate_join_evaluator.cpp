@@ -30,13 +30,8 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
           auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_ids.second);
           auto join_mode_copy = join_mode;
 
-          // We need to do this assignment to work around an internal compiler error.
-          // The compiler error would occur, if you tried to directly access _comparators within the following
-          // lambda. This error is discussed at https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-          auto& comparators = _comparators;
-
           with_comparator(predicate.predicate_condition, [&](auto comparator) {
-            comparators.emplace_back(
+            _comparators.emplace_back(
                 std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
                     comparator, join_mode_copy, std::move(left_accessors), std::move(right_accessors)));
           });
@@ -66,7 +61,7 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
   const auto chunk_count = table.chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& segment = chunk->get_segment(column_id);
     accessors[chunk_id] = create_segment_accessor<T>(segment);

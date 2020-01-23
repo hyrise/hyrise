@@ -11,7 +11,6 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 /**

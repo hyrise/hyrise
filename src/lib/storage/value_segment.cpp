@@ -8,10 +8,10 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_segment_visitor.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -66,7 +66,7 @@ ValueSegment<T>::ValueSegment(std::vector<T>&& values, std::vector<bool>&& null_
 }
 
 template <typename T>
-const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
 
@@ -84,7 +84,7 @@ bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
 }
 
 template <typename T>
-const T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
+T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of segment type because it is null.");
@@ -142,8 +142,8 @@ pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() {
 }
 
 template <typename T>
-size_t ValueSegment<T>::size() const {
-  return _values.size();
+ChunkOffset ValueSegment<T>::size() const {
+  return static_cast<ChunkOffset>(_values.size());
 }
 
 template <typename T>
@@ -159,15 +159,23 @@ std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const Polymor
 }
 
 template <typename T>
-size_t ValueSegment<T>::estimate_memory_usage() const {
-  size_t bool_size = 0u;
+size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
+  auto null_value_vector_size = size_t{0};
   if (_null_values) {
-    bool_size = _null_values->size() * sizeof(bool);
+    null_value_vector_size = _null_values->size() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+    null_value_vector_size =
+        sizeof(_null_values) +
+        (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
   }
 
-  return sizeof(*this) + _values.size() * sizeof(T) + bool_size;
+  const auto common_elements_size = sizeof(*this) + null_value_vector_size;
+
+  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT
+    return common_elements_size + string_vector_memory_usage(_values, mode);
+  }
+
+  return common_elements_size + _values.size() * sizeof(T);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);

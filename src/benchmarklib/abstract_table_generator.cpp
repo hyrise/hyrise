@@ -3,7 +3,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
-#include "operators/export_binary.hpp"
+#include "import_export/binary/binary_writer.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
@@ -38,7 +38,6 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Sort tables if a sort order was defined by the benchmark
    */
-
   const auto& sort_order_by_table = _sort_order_by_table();
   if (!sort_order_by_table.empty()) {
     std::cout << "- Sorting tables" << std::endl;
@@ -61,9 +60,16 @@ void AbstractTableGenerator::generate_and_store() {
       const auto immutable_sorted_table = sort->get_output();
       table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
                                       Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-      for (auto chunk_id = ChunkID{0}; chunk_id < immutable_sorted_table->chunk_count(); ++chunk_id) {
-        auto mvcc_data = std::make_shared<MvccData>(immutable_sorted_table->get_chunk(chunk_id)->size(), CommitID{0});
-        table->append_chunk(immutable_sorted_table->get_chunk(chunk_id)->segments(), mvcc_data);
+      const auto chunk_count = immutable_sorted_table->chunk_count();
+      const auto column_count = immutable_sorted_table->column_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = immutable_sorted_table->get_chunk(chunk_id);
+        auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+        Segments segments{};
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          segments.emplace_back(chunk->get_segment(column_id));
+        }
+        table->append_chunk(segments, mvcc_data);
         table->get_chunk(chunk_id)->set_ordered_by({table->column_id_by_name(column_name), order_by_mode});
       }
 
@@ -74,7 +80,24 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
-   * Encode the Tables
+   * Add constraints if defined by the benchmark
+   */
+  _add_constraints(table_info_by_name);
+
+  /**
+   * Finalizing all chunks of all tables that are still mutable.
+   */
+  // TODO(any): Finalization might trigger encoding in the future.
+  for (auto& [table_name, table_info] : table_info_by_name) {
+    auto& table = table_info_by_name[table_name].table;
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+      if (chunk->is_mutable()) chunk->finalize();
+    }
+  }
+
+  /**
+   * Encode the tables
    */
   std::cout << "- Encoding tables if necessary" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
@@ -117,7 +140,7 @@ void AbstractTableGenerator::generate_and_store() {
 
       std::cout << "- Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
       Timer per_table_timer;
-      ExportBinary::write_binary(*table_info.table, binary_file_path);
+      BinaryWriter::write(*table_info.table, binary_file_path);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
     metrics.binary_caching_duration = timer.lap();
@@ -181,7 +204,7 @@ void AbstractTableGenerator::generate_and_store() {
     metrics.index_duration = timer.lap();
     std::cout << "- Creating indexes done (" << format_duration(metrics.index_duration) << ")" << std::endl;
   } else {
-    std::cout << "- No indexes created as --indexes was not specified" << std::endl;
+    std::cout << "- No indexes created as --indexes was not specified or set to false" << std::endl;
   }
 }
 
@@ -195,5 +218,8 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }
 
 AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const { return {}; }
+
+void AbstractTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
 
 }  // namespace opossum

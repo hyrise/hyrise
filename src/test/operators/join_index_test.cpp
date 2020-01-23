@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
 #include "operators/join_index.hpp"
@@ -40,10 +39,8 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_j = load_table_with_index("resources/test_data/tbl/int3.tbl", 1);
     _table_wrapper_k = load_table_with_index("resources/test_data/tbl/int4.tbl", 1);
     _table_wrapper_l = load_table_with_index("resources/test_data/tbl/int.tbl", 1);
-    _table_wrapper_m =
-        load_table_with_index("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
-    _table_wrapper_n =
-        load_table_with_index("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+    _table_wrapper_m = load_table_with_index("resources/test_data/tbl/int_float_null_1.tbl", 20);
+    _table_wrapper_n = load_table_with_index("resources/test_data/tbl/int_float_null_2.tbl", 20);
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
