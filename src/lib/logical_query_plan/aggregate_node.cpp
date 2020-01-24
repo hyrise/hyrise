@@ -118,7 +118,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
     if(expression_idx < aggregate_expressions_begin_idx) {
       group_by_columns.insert(node_expressions[expression_idx]);
     } else {
-      aggregate_columns.insert(node_expressions[expression_idx];
+      aggregate_columns.insert(node_expressions[expression_idx]);
     }
   }
   // Create ExpressionsConstraintDefinition

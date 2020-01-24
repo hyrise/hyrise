@@ -6,12 +6,11 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "storage/constraints/expressions_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-class LQPColumnExpression;
 
 enum class LQPNodeType {
   Aggregate,
@@ -48,6 +47,8 @@ struct LQPOutputRelation {
 };
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
+
+class LQPColumnExpression;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
