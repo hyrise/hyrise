@@ -6,13 +6,13 @@
 
 #include "base_test.hpp"
 
+#include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 // In this domain input modeling is explicitly used.
@@ -25,50 +25,49 @@ class SingleSegmentIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     // Int segments
-    dict_segment_int_no_nulls =
-        BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
-    dict_segment_int_no_nulls_2 = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0});
+    dict_segment_int_no_nulls = create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
+    dict_segment_int_no_nulls_2 = create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0});
     dict_segment_int_nulls =
-        BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt, std::nullopt});
-    dict_segment_int_mixed = BaseTest::create_dict_segment_by_type<int32_t>(
+        create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_int_mixed = create_dict_segment_by_type<int32_t>(
         DataType::Int, {std::nullopt, 3, std::nullopt, 0, std::nullopt, 4, 3, std::nullopt});
-    dict_segment_int_empty = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {});
+    dict_segment_int_empty = create_dict_segment_by_type<int32_t>(DataType::Int, {});
 
     // Long segments
     dict_segment_long_no_nulls =
-        BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {3L, 4L, 0L, 4L, 2L, 7L, 8L, 1L, 4L, 9L});
+        create_dict_segment_by_type<int64_t>(DataType::Long, {3L, 4L, 0L, 4L, 2L, 7L, 8L, 1L, 4L, 9L});
     dict_segment_long_nulls =
-        BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {std::nullopt, std::nullopt, std::nullopt});
-    dict_segment_long_mixed = BaseTest::create_dict_segment_by_type<int64_t>(
+        create_dict_segment_by_type<int64_t>(DataType::Long, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_long_mixed = create_dict_segment_by_type<int64_t>(
         DataType::Long, {std::nullopt, 3L, std::nullopt, 0L, std::nullopt, 4L, 3L, std::nullopt});
-    dict_segment_long_empty = BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {});
+    dict_segment_long_empty = create_dict_segment_by_type<int64_t>(DataType::Long, {});
 
     // Float segments
-    dict_segment_float_no_nulls = BaseTest::create_dict_segment_by_type<float>(
+    dict_segment_float_no_nulls = create_dict_segment_by_type<float>(
         DataType::Float, {3.1f, 4.9f, 0.2f, 4.8f, 2.3f, 7.7f, 8.4f, 1.6f, 4.5f, 9.0f});
     dict_segment_float_nulls =
-        BaseTest::create_dict_segment_by_type<float>(DataType::Float, {std::nullopt, std::nullopt, std::nullopt});
-    dict_segment_float_mixed = BaseTest::create_dict_segment_by_type<float>(
+        create_dict_segment_by_type<float>(DataType::Float, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_float_mixed = create_dict_segment_by_type<float>(
         DataType::Float, {std::nullopt, 3.1f, std::nullopt, 0.2f, std::nullopt, 4.8f, 3.1f, std::nullopt});
-    dict_segment_float_empty = BaseTest::create_dict_segment_by_type<float>(DataType::Float, {});
+    dict_segment_float_empty = create_dict_segment_by_type<float>(DataType::Float, {});
 
     // Double segments
-    dict_segment_double_no_nulls = BaseTest::create_dict_segment_by_type<double>(
-        DataType::Double, {3.1, 4.9, 0.2, 4.8, 2.3, 7.7, 8.4, 1.6, 4.5, 9.0});
+    dict_segment_double_no_nulls =
+        create_dict_segment_by_type<double>(DataType::Double, {3.1, 4.9, 0.2, 4.8, 2.3, 7.7, 8.4, 1.6, 4.5, 9.0});
     dict_segment_double_nulls =
-        BaseTest::create_dict_segment_by_type<double>(DataType::Double, {std::nullopt, std::nullopt, std::nullopt});
-    dict_segment_double_mixed = BaseTest::create_dict_segment_by_type<double>(
+        create_dict_segment_by_type<double>(DataType::Double, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_double_mixed = create_dict_segment_by_type<double>(
         DataType::Double, {std::nullopt, 3.1, std::nullopt, 0.2, std::nullopt, 4.8, 3.1, std::nullopt});
-    dict_segment_double_empty = BaseTest::create_dict_segment_by_type<double>(DataType::Double, {});
+    dict_segment_double_empty = create_dict_segment_by_type<double>(DataType::Double, {});
 
     // String segments
-    dict_segment_string_no_nulls = BaseTest::create_dict_segment_by_type<pmr_string>(
-        DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
+    dict_segment_string_no_nulls =
+        create_dict_segment_by_type<pmr_string>(DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
     dict_segment_string_nulls =
-        BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt, std::nullopt});
-    dict_segment_string_mixed = BaseTest::create_dict_segment_by_type<pmr_string>(
+        create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
         DataType::String, {std::nullopt, "hello", std::nullopt, "alpha", std::nullopt, "test", "hello", std::nullopt});
-    dict_segment_string_empty = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
+    dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
     // Int indexes
     index_int_no_nulls =
@@ -220,7 +219,7 @@ TYPED_TEST_SUITE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespac
     IsIndexForTest
   Tested functions:
     bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  
+
   | Characteristic     |   Block 1  | Block 2 | Block 3 | Block 4 | Block 5 |
   |--------------------|------------|---------|---------|---------|---------|
   |[A] value data type |        Int |    Long |   Float |  Double |  String |
@@ -230,7 +229,7 @@ TYPED_TEST_SUITE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespac
   |[E] segments emtpy  |       true |   false |
   |[F] seg. type       | Dict. Seg. |
 
-  Base Choice: 
+  Base Choice:
     A1, B2, C2, D1, E2, F1
   Further derived combinations:
     A2, B2, C2, D1, E2, F1
@@ -275,7 +274,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 
   | Characteristic      |       Block 1  |        Block 2 |        Block 3 |          Block 4 | Block 5 |
   |---------------------|----------------|----------------|----------------|------------------|---------|
-  |[A] value data type  |            Int |           Long |          Float |           Double |  String |     
+  |[A] value data type  |            Int |           Long |          Float |           Double |  String |
   |[B] value type       |           NULL | smallest value | largest value  | non-edge value   |    none |
   |                     |                | in segment     | in segment     | (either smallest |
   |                     |                |                |                | nor largest)     |
@@ -357,7 +356,7 @@ TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
 
   | Characteristic      | Block 1  | Block 2 | Block 3 | Block 4 | Block 5 |
   |---------------------|----------|---------|---------|---------|---------|
-  |[A] value data type  |      Int |    Long |   Float |  Double |  String |     
+  |[A] value data type  |      Int |    Long |   Float |  Double |  String |
   |[B] nulls only       |     true |   false |
   |[C] non-NULLs only   |     true |   false |
   |[D] index is empty   |     true |   false |

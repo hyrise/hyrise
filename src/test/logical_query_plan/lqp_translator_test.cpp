@@ -13,11 +13,14 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "hyrise.hpp"
+#include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/export_node.hpp"
+#include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -29,7 +32,9 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/export.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
@@ -784,7 +789,7 @@ TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
    *                  |
    *              GetTable
    *           table_int_float2
-   *    
+   *
    */
 
   auto int_float_node_1 = StoredTableNode::make("table_int_float2");
@@ -964,6 +969,30 @@ TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
 
   const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
   EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
+}
+
+TEST_F(LQPTranslatorTest, Export) {
+  // clang-format off
+  const auto lqp =
+  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
+    ValidateNode::make(int_float_node));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto exporter = std::dynamic_pointer_cast<Export>(pqp);
+
+  EXPECT_EQ(exporter->type(), OperatorType::Export);
+  EXPECT_EQ(exporter->input_left()->type(), OperatorType::Validate);
+}
+
+TEST_F(LQPTranslatorTest, Import) {
+  const auto lqp = ImportNode::make("a_table", "a_file.tbl", FileType::Auto);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto importer = std::dynamic_pointer_cast<Import>(pqp);
+
+  EXPECT_EQ(importer->type(), OperatorType::Import);
+  EXPECT_EQ(importer->input_left(), nullptr);
 }
 
 }  // namespace opossum
