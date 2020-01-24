@@ -32,9 +32,10 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> ProjectionNode::constraints() const {
-  auto input_lqp_constraints = left_input()->constraints();
   auto projection_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
   projection_lqp_constraints->reserve(node_expressions.size());
+
+  auto input_lqp_constraints = left_input()->constraints();
 
   // Check each input constraint for applicability in this projection node
   const auto& expressions = column_expressions();

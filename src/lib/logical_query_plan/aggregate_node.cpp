@@ -81,7 +81,50 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
 }
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
-  return {};
+  auto aggregate_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+
+  // (1) Identify incoming constraints that are eligible for forwarding
+
+  // We call column_expressions() to avoid the (intermediate) ANY() aggregates
+  // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
+  const auto& columns = column_expressions();
+  const auto column_expressions_set = ExpressionUnorderedSet{columns.cbegin(), columns.cend()};
+
+
+  // Check each input constraint for applicability in this aggregate node
+  auto input_lqp_constraints = left_input()->constraints();
+  for (const auto& constraint : *input_lqp_constraints) {
+    // Check whether column expressions have been filtered out with this node.
+    bool found_all_column_expressions =
+        std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
+                    [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
+                      return column_expressions_set.contains(constraint_column_expr);
+                    });
+
+    if (found_all_column_expressions) {
+      aggregate_lqp_constraints->insert(constraint);
+    }
+  }
+
+  // (2) Create a new unique constraint based on the Group-By column(s).
+  // The set of group-by columns represents a candidate key of the output relation.
+  // In addition, we also know that non-group-by columns are functionally dependent on group-by columns.
+  ExpressionUnorderedSet group_by_columns;
+  ExpressionUnorderedSet aggregate_columns;
+  group_by_columns.reserve(aggregate_expressions_begin_idx + 1);
+  aggregate_columns.reserve(node_expressions.size() - aggregate_expressions_begin_idx);
+  for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx;
+       ++expression_idx) {
+    if(expression_idx < aggregate_expressions_begin_idx) {
+      group_by_columns.insert(node_expressions[expression_idx]);
+    } else {
+      aggregate_columns.insert(node_expressions[expression_idx];
+    }
+  }
+  // Create ExpressionsConstraintDefinition
+  aggregate_lqp_constraints->emplace(group_by_columns, IsPrimaryKey::No, aggregate_columns);
+
+  return aggregate_lqp_constraints;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
