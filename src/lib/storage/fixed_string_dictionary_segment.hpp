@@ -24,9 +24,6 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
-  // returns the dictionary as pmr_vector
-  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
-
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 

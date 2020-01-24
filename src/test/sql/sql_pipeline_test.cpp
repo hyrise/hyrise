@@ -7,8 +7,8 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
-#include "logical_query_plan/join_node.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/validate.hpp"
@@ -635,8 +635,8 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   EXPECT_FALSE(sql_pipeline_statement_0.lqp_cache);
 
   // Default caches
-  SQLPipelineBuilder::default_pqp_cache = default_pqp_cache;
-  SQLPipelineBuilder::default_lqp_cache = default_lqp_cache;
+  Hyrise::get().default_pqp_cache = default_pqp_cache;
+  Hyrise::get().default_lqp_cache = default_lqp_cache;
   const auto sql_pipeline_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
   EXPECT_EQ(sql_pipeline_1.pqp_cache, default_pqp_cache);
   EXPECT_EQ(sql_pipeline_1.lqp_cache, default_lqp_cache);

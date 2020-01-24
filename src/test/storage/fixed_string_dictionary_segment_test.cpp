@@ -37,11 +37,11 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressSegmentString) {
   EXPECT_EQ(dict_segment->unique_values_count(), 4u);
 
   // Test sorting
-  auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], "Alexander");
-  EXPECT_EQ((*dict)[1], "Bill");
-  EXPECT_EQ((*dict)[2], "Hasso");
-  EXPECT_EQ((*dict)[3], "Steve");
+  auto dict = dict_segment->fixed_string_dictionary();
+  EXPECT_EQ(*(dict->begin()), "Alexander");
+  EXPECT_EQ(*(dict->begin() + 1), "Bill");
+  EXPECT_EQ(*(dict->begin() + 2), "Hasso");
+  EXPECT_EQ(*(dict->begin() + 3), "Steve");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
@@ -72,10 +72,10 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   // Test sorting
-  auto dict = dict_segment->dictionary();
-  EXPECT_EQ((*dict)[0], "QuiteShort");
-  EXPECT_EQ((*dict)[1], "Short");
-  EXPECT_EQ((*dict)[2], "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
+  auto dict = dict_segment->fixed_string_dictionary();
+  EXPECT_EQ(*(dict->begin()), "QuiteShort");
+  EXPECT_EQ(*(dict->begin() + 1), "Short");
+  EXPECT_EQ(*(dict->begin() + 2), "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {

@@ -79,6 +79,11 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   }
 
   if (encoding_type != EncodingType::Unencoded) {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      chunk->finalize();
+    }
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 

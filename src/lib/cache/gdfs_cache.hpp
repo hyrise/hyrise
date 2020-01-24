@@ -6,6 +6,7 @@
 
 #include "abstract_cache_impl.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
