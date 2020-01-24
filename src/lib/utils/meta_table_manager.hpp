@@ -18,14 +18,21 @@ class MetaTableManager : public Noncopyable {
 
   // Generates the meta table specified by table_name (which should not include the prefix)
   std::shared_ptr<Table> generate_table(const std::string& table_name) const;
+  std::shared_ptr<Table> generate_table_stub(const std::string& table_name) const;
 
   // Generator methods for the different meta tables
   static std::shared_ptr<Table> generate_tables_table();
+  static std::shared_ptr<Table> generate_tables_table_stub();
   static std::shared_ptr<Table> generate_columns_table();
+  static std::shared_ptr<Table> generate_columns_table_stub();
   static std::shared_ptr<Table> generate_chunks_table();
+  static std::shared_ptr<Table> generate_chunks_table_stub();
   static std::shared_ptr<Table> generate_chunk_sort_orders_table();
+  static std::shared_ptr<Table> generate_chunk_sort_orders_table_stub();
   static std::shared_ptr<Table> generate_segments_table();
+  static std::shared_ptr<Table> generate_segments_table_stub();
   static std::shared_ptr<Table> generate_accurate_segments_table();
+  static std::shared_ptr<Table> generate_accurate_segments_table_stub();
 
   // Returns name.starts_with(META_PREFIX) as stdlibc++ does not support starts_with yet.
   static bool is_meta_table_name(const std::string& name);
@@ -34,7 +41,7 @@ class MetaTableManager : public Noncopyable {
   friend class Hyrise;
   MetaTableManager();
 
-  std::unordered_map<std::string, std::function<std::shared_ptr<Table>(void)>> _methods;
+  std::unordered_map<std::string, std::vector<std::function<std::shared_ptr<Table>(void)>>> _methods;
   std::vector<std::string> _table_names;
 };
 

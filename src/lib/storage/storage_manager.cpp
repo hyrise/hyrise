@@ -40,7 +40,7 @@ void StorageManager::drop_table(const std::string& name) {
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
   if (MetaTableManager::is_meta_table_name(name)) {
-    return Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
+    return Hyrise::get().meta_table_manager.generate_table_stub(name.substr(MetaTableManager::META_PREFIX.size()));
   }
 
   const auto iter = _tables.find(name);

@@ -9,6 +9,7 @@
 
 #include "hyrise.hpp"
 #include "types.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
 
@@ -69,7 +70,12 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
+  std::shared_ptr<Table> stored_table;
+  if (MetaTableManager::is_meta_table_name(_name)) {
+    stored_table = Hyrise::get().meta_table_manager.generate_table(_name.substr(MetaTableManager::META_PREFIX.size()));
+  } else {
+    stored_table = Hyrise::get().storage_manager.get_table(_name);
+  }
 
   // The chunk count might change while we are in this method as other threads concurrently insert new data. MVCC
   // guarantees that rows that are inserted after this transaction was started (and thus after GetTable started to

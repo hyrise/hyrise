@@ -90,12 +90,18 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  _methods["tables"] = &MetaTableManager::generate_tables_table;
-  _methods["columns"] = &MetaTableManager::generate_columns_table;
-  _methods["chunks"] = &MetaTableManager::generate_chunks_table;
-  _methods["chunk_sort_orders"] = &MetaTableManager::generate_chunk_sort_orders_table;
-  _methods["segments"] = &MetaTableManager::generate_segments_table;
-  _methods["segments_accurate"] = &MetaTableManager::generate_accurate_segments_table;
+  _methods["tables"] = {&MetaTableManager::generate_tables_table,
+                              &MetaTableManager::generate_tables_table_stub};
+  _methods["columns"] = {&MetaTableManager::generate_columns_table,
+                               &MetaTableManager::generate_columns_table_stub};
+  _methods["chunks"] = {&MetaTableManager::generate_chunks_table,
+                              &MetaTableManager::generate_chunks_table_stub};
+  _methods["chunk_sort_orders"] = {&MetaTableManager::generate_chunk_sort_orders_table,
+                                         &MetaTableManager::generate_chunk_sort_orders_table_stub};
+  _methods["segments"] = {&MetaTableManager::generate_segments_table,
+                                &MetaTableManager::generate_segments_table_stub};
+  _methods["segments_accurate"] = {&MetaTableManager::generate_accurate_segments_table,
+                                         &MetaTableManager::generate_accurate_segments_table_stub};
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
@@ -107,18 +113,26 @@ MetaTableManager::MetaTableManager() {
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
 
 std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
-  const auto table = _methods.at(table_name)();
+  const auto table = _methods.at(table_name).at(0)();
   table->set_table_statistics(TableStatistics::from_table(*table));
   return table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
+std::shared_ptr<Table> MetaTableManager::generate_table_stub(const std::string& table_name) const {
+  return _methods.at(table_name).at(1)();
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_tables_table_stub() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
-                                              {"column_count", DataType::Int, false},
-                                              {"row_count", DataType::Long, false},
-                                              {"chunk_count", DataType::Int, false},
-                                              {"max_chunk_size", DataType::Long, false}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+                                             {"column_count", DataType::Int, false},
+                                             {"row_count", DataType::Long, false},
+                                             {"chunk_count", DataType::Int, false},
+                                             {"max_chunk_size", DataType::Long, false}};
+  return std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
+  auto output_table = generate_tables_table_stub();
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
@@ -129,12 +143,16 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_columns_table() {
+std::shared_ptr<Table> MetaTableManager::generate_columns_table_stub() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"column_name", DataType::String, false},
                                               {"data_type", DataType::String, false},
                                               {"nullable", DataType::Int, false}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+  return std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_columns_table() {
+  auto output_table =  generate_columns_table_stub();
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -147,13 +165,17 @@ std::shared_ptr<Table> MetaTableManager::generate_columns_table() {
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
+std::shared_ptr<Table> MetaTableManager::generate_chunks_table_stub() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
                                               {"invalid_row_count", DataType::Long, false},
                                               {"cleanup_commit_id", DataType::Long, true}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+  return std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
+  auto output_table = generate_chunks_table_stub();
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -175,12 +197,16 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
  * is sorted on two columns). To prepare for this change, this additional table stores the sort orders and allows a
  * chunk to have multiple sort orders. Cascading sort orders for chunks are currently not planned.
  */
-std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
+std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table_stub() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"column_id", DataType::Int, false},
                                               {"order_mode", DataType::String, false}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+  return std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
+  auto output_table = generate_chunk_sort_orders_table_stub();
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -198,7 +224,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
+std::shared_ptr<Table> MetaTableManager::generate_segments_table_stub() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"column_id", DataType::Int, false},
@@ -207,23 +233,30 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
                                               {"encoding_type", DataType::String, true},
                                               {"vector_compression_type", DataType::String, true},
                                               {"estimated_size_in_bytes", DataType::Long, false}};
+  return std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+}
 
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
+  auto output_table = generate_segments_table_stub();
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Sampled);
 
   return output_table;
 }
 
+std::shared_ptr<Table> MetaTableManager::generate_accurate_segments_table_stub() {
+  const auto columns = TableColumnDefinitions{
+                    {"table_name", DataType::String, false},       {"chunk_id", DataType::Int, false},
+                    {"column_id", DataType::Int, false},           {"column_name", DataType::String, false},
+                    {"column_data_type", DataType::String, false}, {"distinct_value_count", DataType::Long, false},
+                    {"encoding_type", DataType::String, true},     {"vector_compression_type", DataType::String, true},
+                    {"size_in_bytes", DataType::Long, false}};
+  return std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+}
+
 std::shared_ptr<Table> MetaTableManager::generate_accurate_segments_table() {
   PerformanceWarning("Accurate segment information are expensive to gather. Use with caution.");
-  const auto columns = TableColumnDefinitions{
-      {"table_name", DataType::String, false},       {"chunk_id", DataType::Int, false},
-      {"column_id", DataType::Int, false},           {"column_name", DataType::String, false},
-      {"column_data_type", DataType::String, false}, {"distinct_value_count", DataType::Long, false},
-      {"encoding_type", DataType::String, true},     {"vector_compression_type", DataType::String, true},
-      {"size_in_bytes", DataType::Long, false}};
 
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = generate_accurate_segments_table_stub();
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Full);
 
   return output_table;
