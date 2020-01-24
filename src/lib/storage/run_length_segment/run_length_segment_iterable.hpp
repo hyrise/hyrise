@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "storage/segment_iterables.hpp"
 #include "storage/run_length_segment.hpp"
+#include "storage/segment_iterables.hpp"
 
 #include "utils/performance_warning.hpp"
 

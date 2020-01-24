@@ -154,7 +154,7 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id  == ColumnID{0}) return;
+      if (column_id == ColumnID{0}) return;
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
@@ -231,7 +231,7 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id  == ColumnID{0}) return;
+      if (column_id == ColumnID{0}) return;
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
@@ -292,8 +292,8 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
     if (encoding_supports_data_type(encoding_spec.encoding_type, test_table->column_data_type(column_id))) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
-       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id  == ColumnID{0}) return;
+      // skip test if the column that is used for testing doesn't support encoding
+      if (column_id == ColumnID{0}) return;
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
