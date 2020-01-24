@@ -72,27 +72,50 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
 const std::shared_ptr<const ExpressionsConstraintDefinitions> JoinNode::constraints() const {
   switch(join_mode) {
   case JoinMode::Inner: {
+    // The Inner Join does not add any rows or null values in the output relation.
+    // Therefore, all input constraints remain valid.
+
+    // TODO 1. Merge input constraints input_left() and input_right()
+
+    // TODO 2. Check for valid constraints and forward if applicable
+    // Remove primary key flags
+
       return {};
     }
     case JoinMode::Left: {
+      // The Left (outer) Join adds null values for tuples not present in the right table.
+      // Therefore, input constraints of the right table have to be discarded.
+
+      // TODO Forward input constraints input_left() if applicable
       return {};
     }
     case JoinMode::Right: {
+      // The Right (outer) Join adds null values for tuples not present in the right table.
+      // Therefore, input constraints of the left table have to be discarded.
+
+      // TODO Forward input constraints input_right() if applicable
       return {};
     }
     case JoinMode::FullOuter: {
+      // The Full Outer Join might produce null values in all output columns.
+      // Therefore, we have to discard all input constraints
       return {};
     }
     case JoinMode::Cross: {
+      // No uniqueness guarantee possible
       return {};
     }
     case JoinMode::Semi: {
+      // The Semi-Join outputs input_left() without adding any rows or columns. But depending on the right table,
+      // tuples may be filtered out. As a consequence, we can forward the constraints.
       return forward_constraints();
     }
     case JoinMode::AntiNullAsTrue: {
+      // ?
       return {};
     }
     case JoinMode::AntiNullAsFalse: {
+      // ?
       return {};
     }
   }
