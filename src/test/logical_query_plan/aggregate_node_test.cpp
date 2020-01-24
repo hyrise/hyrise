@@ -92,4 +92,35 @@ TEST_F(AggregateNodeTest, Copy) {
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 
+TEST_F(AggregateNodeTest, ConstraintsSingleGroupBy) {
+  const auto aggregate1 = sum_(add_(_a, _b));
+  const auto aggregate2 = sum_(add_(_a, _c));
+  _aggregate_node = AggregateNode::make(expression_vector(_a),
+                                        expression_vector(aggregate1, aggregate2), _mock_node);
+
+  EXPECT_EQ(_aggregate_node->constraints()->size(), 1);
+  const auto lqp_constraint = *_aggregate_node->constraints()->cbegin();
+  EXPECT_EQ(lqp_constraint.column_expressions.size(), 1);
+  EXPECT_EQ((*lqp_constraint.column_expressions.cbegin()).get(), *lqp_column_(_a));
+
+  EXPECT_EQ(lqp_constraint.column_expressions_functionally_dependent.size(), 1);
+  EXPECT_TRUE(lqp_constraint.column_expressions_functionally_dependent.contains(aggregate1));
+  EXPECT_TRUE(lqp_constraint.column_expressions_functionally_dependent.contains(aggregate2));
+}
+
+TEST_F(AggregateNodeTest, ConstraintsMultiGroupBy) {
+
+}
+
+TEST_F(AggregateNodeTest, ConstraintsForwarding) {
+    // Unique: a
+    const auto table_constraint_1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}}, IsPrimaryKey::No};
+    // Unique: b
+    const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+
+    _mock_node->set_table_constraints({table_constraint_1, table_constraint_2});
+
+
+}
+
 }  // namespace opossum

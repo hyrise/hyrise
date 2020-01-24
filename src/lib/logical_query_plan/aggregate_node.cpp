@@ -87,8 +87,8 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
 
   // We call column_expressions() to avoid the (intermediate) ANY() aggregates
   // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
-  const auto& columns = column_expressions();
-  const auto column_expressions_set = ExpressionUnorderedSet{columns.cbegin(), columns.cend()};
+  const auto& column_expressions_vec = column_expressions();
+  const auto column_expressions_set = ExpressionUnorderedSet{column_expressions_vec.cbegin(), column_expressions_vec.cend()};
 
 
   // Check each input constraint for applicability in this aggregate node
@@ -116,9 +116,9 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
   for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx;
        ++expression_idx) {
     if(expression_idx < aggregate_expressions_begin_idx) {
-      group_by_columns.insert(node_expressions[expression_idx]);
+      group_by_columns.insert(column_expressions_vec[expression_idx]);
     } else {
-      aggregate_columns.insert(node_expressions[expression_idx]);
+      aggregate_columns.insert(column_expressions_vec[expression_idx]);
     }
   }
   // Create ExpressionsConstraintDefinition
