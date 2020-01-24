@@ -101,7 +101,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
     void advance(std::ptrdiff_t n) {
       // For now, the lazy approach
-      PerformanceWarning("using repeated increment/decrement for random access");
+      PerformanceWarning("Using repeated increment/decrement for random access");
       if (n < 0) {
         for (std::ptrdiff_t i = n; i < 0; ++i) {
           decrement();
