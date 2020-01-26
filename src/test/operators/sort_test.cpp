@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "base_test.hpp"
+#include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/join_nested_loop.hpp"
@@ -119,15 +120,12 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStable) {
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2);
 
-  // we want the output to be sorted after column a and in second place after column b.
-  // So first we sort after column b and then after column a.
-  auto sort_after_b = std::make_shared<Sort>(table_wrapper, ColumnID{1}, OrderByMode::Ascending, 2u);
-  sort_after_b->execute();
+  std::vector<SortColumnDefinition> sort_definitions = {{ColumnID{0}, OrderByMode::Ascending},
+                                                        {ColumnID{1}, OrderByMode::Ascending}};
+  auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
+  sort->execute();
 
-  auto sort_after_a = std::make_shared<Sort>(sort_after_b, ColumnID{0}, OrderByMode::Ascending, 2u);
-  sort_after_a->execute();
-
-  EXPECT_TABLE_EQ_ORDERED(sort_after_a->get_output(), expected_result);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
@@ -136,15 +134,12 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2);
 
-  // we want the output to be sorted after column a and in second place after column b.
-  // So first we sort after column b and then after column a.
-  auto sort_after_b = std::make_shared<Sort>(table_wrapper, ColumnID{1}, OrderByMode::Descending, 2u);
-  sort_after_b->execute();
+  std::vector<SortColumnDefinition> sort_definitions = {{ColumnID{0}, OrderByMode::Ascending},
+                                                        {ColumnID{1}, OrderByMode::Descending}};
+  auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
+  sort->execute();
 
-  auto sort_after_a = std::make_shared<Sort>(sort_after_b, ColumnID{0}, OrderByMode::Ascending, 2u);
-  sort_after_a->execute();
-
-  EXPECT_TABLE_EQ_ORDERED(sort_after_a->get_output(), expected_result);
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
