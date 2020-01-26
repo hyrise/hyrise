@@ -169,6 +169,8 @@ const boost::bimap<JoinMode, std::string> join_mode_to_string = make_bimap<JoinM
     {JoinMode::Semi, "Semi"},
     {JoinMode::AntiNullAsTrue, "AntiNullAsTrue"},
     {JoinMode::AntiNullAsFalse, "AntiNullAsFalse"},
+    {JoinMode::Intersect, "Intersect"},
+    {JoinMode::Except, "Except"},
 });
 
 const boost::bimap<TableType, std::string> table_type_to_string =
