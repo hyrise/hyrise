@@ -263,29 +263,23 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   auto input_operator = translate_node(node->left_input());
 
-  /**
-   * Go through all the order descriptions and create a sort operator for each of them.
-   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
-   * We therefore sort by the n+1-th column before sorting by the n-th column.
-   */
-
   std::shared_ptr<AbstractOperator> current_pqp = input_operator;
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
-  if (pqp_expressions.size() > 1) {
-    PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
-  }
 
   auto pqp_expression_iter = pqp_expressions.rbegin();
   auto order_by_mode_iter = sort_node->order_by_modes.rbegin();
 
+  std::vector<SortColumnDefinition> column_definitions;
+  column_definitions.reserve(pqp_expressions.size());
   for (; pqp_expression_iter != pqp_expressions.rend(); ++pqp_expression_iter, ++order_by_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    current_pqp = std::make_shared<Sort>(current_pqp, pqp_column_expression->column_id, *order_by_mode_iter);
+    column_definitions.push_back({pqp_column_expression->column_id, *order_by_mode_iter});
   }
+  current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
   return current_pqp;
 }
