@@ -106,6 +106,15 @@ std::string ResultSerializer::build_command_complete_message(const OperatorType 
       // information
       return "DELETE -1";
     }
+    case OperatorType::BeginTransaction: {
+      return "BEGIN";
+    }
+    case OperatorType::CommitTransaction: {
+      return "COMMIT";
+    }
+    case OperatorType::RollbackTransaction: {
+      return "ROLLBACK";
+    }
     default:
       // Assuming normal query
       return "SELECT " + std::to_string(row_count);
