@@ -95,7 +95,7 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
     column_names->push_back("col_1");
     column_names->push_back("col_2");
     storage_manager.add_table("table_a",
-                              GenerateCustomTable(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, column_names));
+                              GenerateCustomTable(size_t{40'000}, ChunkOffset{2'000}, DataType::Int, column_names));
 
     for (auto _ : state) {
       hsql::SQLParserResult result;
@@ -110,17 +110,17 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
 
 class SortPicoBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{2}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(size_t{2}, ChunkOffset{2'000}); }
 };
 
 class SortSmallBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{4'000}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(size_t{4'000}, ChunkOffset{2'000}); }
 };
 
 class SortLargeBenchmark : public SortBenchmark {
  public:
-  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{400'000}); }
+  void SetUp(benchmark::State& st) override { InitializeCustomTableWrapper(size_t{400'000}, ChunkOffset{2'000}); }
 };
 
 class SortReferencePicoBenchmark : public SortPicoBenchmark {
@@ -158,58 +158,60 @@ class SortReferenceLargeBenchmark : public SortLargeBenchmark {
 class SortStringSmallBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{4'000}, DataType::String);
+    InitializeCustomTableWrapper(size_t{4'000}, ChunkOffset{2'000}, DataType::String);
   }
 };
 
 class SortStringBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{40'000}, DataType::String);
+    InitializeCustomTableWrapper(size_t{40'000}, ChunkOffset{2'000}, DataType::String);
   }
 };
 
 class SortStringLargeBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{400'000}, DataType::String);
+    InitializeCustomTableWrapper(size_t{400'000}, ChunkOffset{2'000}, DataType::String);
   }
 };
 
 class SortNullBenchmark : public SortBenchmark {
  public:
   void SetUp(benchmark::State& st) override {
-    InitializeCustomTableWrapper(ChunkOffset{2'000}, size_t{40'000}, DataType::Int, std::nullopt,
+    InitializeCustomTableWrapper(size_t{40'000}, ChunkOffset{2'000}, DataType::Int, std::nullopt,
                                  std::optional<float>{0.2});
   }
 };
 
-BENCHMARK_F(SortBenchmark, BM_Sort)(benchmark::State& state) { BM_Sort(state); }
-
-BENCHMARK_F(SortBenchmark, BM_SortSingleColumnSQL)(benchmark::State& state) { BM_SortSingleColumnSQL(state); }
-
-BENCHMARK_F(SortBenchmark, BM_SortMultiColumnSQL)(benchmark::State& state) { BM_SortMultiColumnSQL(state); }
 
 BENCHMARK_F(SortPicoBenchmark, BM_SortPico)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortSmallBenchmark, BM_SortSmall)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortLargeBenchmark, BM_SortLarge)(benchmark::State& state) { BM_Sort(state); }
+BENCHMARK_F(SortBenchmark, BM_Sort)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortReferenceBenchmark, BM_SortReference)(benchmark::State& state) { BM_Sort(state); }
+BENCHMARK_F(SortLargeBenchmark, BM_SortLarge)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortReferencePicoBenchmark, BM_SortReferencePico)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortReferenceSmallBenchmark, BM_SortReferenceSmall)(benchmark::State& state) { BM_Sort(state); }
 
+BENCHMARK_F(SortReferenceBenchmark, BM_SortReference)(benchmark::State& state) { BM_Sort(state); }
+
 BENCHMARK_F(SortReferenceLargeBenchmark, BM_SortReferenceLarge)(benchmark::State& state) { BM_Sort(state); }
 
-BENCHMARK_F(SortStringBenchmark, BM_SortString)(benchmark::State& state) { BM_Sort(state); }
-
 BENCHMARK_F(SortStringSmallBenchmark, BM_SortStringSmall)(benchmark::State& state) { BM_Sort(state); }
+
+BENCHMARK_F(SortStringBenchmark, BM_SortString)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortStringLargeBenchmark, BM_SortStringLarge)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortNullBenchmark, BM_SortNullBenchmark)(benchmark::State& state) { BM_Sort(state); }
+
+BENCHMARK_F(SortBenchmark, BM_SortSingleColumnSQL)(benchmark::State& state) { BM_SortSingleColumnSQL(state); }
+
+BENCHMARK_F(SortBenchmark, BM_SortMultiColumnSQL)(benchmark::State& state) { BM_SortMultiColumnSQL(state); }
+
 
 }  // namespace opossum
