@@ -26,8 +26,8 @@ namespace opossum {
 
 bool JoinSortMerge::supports(const JoinConfiguration config) {
   return (config.predicate_condition != PredicateCondition::NotEquals || config.join_mode == JoinMode::Inner) &&
-         config.left_data_type == config.right_data_type && config.join_mode != JoinMode::Semi &&
-         config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
+         config.left_data_type == config.right_data_type && config.join_mode != JoinMode::Semi && config.join_mode != JoinMode::Intersect &&
+         config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse && config.join_mode != JoinMode::Except;
 }
 
 /**

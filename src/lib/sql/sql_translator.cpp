@@ -310,36 +310,12 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
 
   }
 
-/*  // a) Find matching columns and create JoinPredicates from them
-  // b) Add columns from right input to the output when they have no match in the left input
-  for (const auto& left_expression : left_input_lqp->column_expressions()) {
-    const auto& right_expression = right_element.expression;
-    const auto& right_identifiers = right_element.identifiers;
-
-    if (!right_identifiers.empty()) {
-      // Ignore previous names if there is an alias
-      const auto right_identifier = right_identifiers.back();
-
-      const auto left_expression =
-          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
-
-      AssertInput(left_expression, "The tables you are trying to union do not match");
-      // Two columns match, let's join on them.
-      join_predicates.emplace_back(
-            std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
-    } else {
-      AssertInput(true, "Identifiers should not be empty for set operations");
-    }
-  } */
-
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
   if (set_operator.setType == hsql::kSetExcept) {
-    lqp = JoinNode::make(JoinMode::AntiNullAsFalse, join_predicates, left_input_lqp, right_input_lqp);
+    lqp = JoinNode::make(JoinMode::Except, join_predicates, left_input_lqp, right_input_lqp);
   } else if (set_operator.setType == hsql::kSetIntersect) {
-//    lqp = JoinNode::make(JoinMode::Inner, join_predicates, left_input_lqp, right_input_lqp);
-//    const auto subquery = std::make_shared<LQPSubqueryExpression>(lqp, parameter_ids, parameter_expressions)
-//    lqp = PredicateNode::make(exists_(subquery), _current_lqp);
+    lqp = JoinNode::make(JoinMode::Intersect, join_predicates, left_input_lqp, right_input_lqp);
   }
 
   if (!join_predicates.empty()) {

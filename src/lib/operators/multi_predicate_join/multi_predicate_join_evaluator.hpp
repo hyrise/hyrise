@@ -47,7 +47,13 @@ class MultiPredicateJoinEvaluator {
       // If either left or right value is NULL, the comparison will evaluate to TRUE for AntiNullAsTrue and to FALSE
       // for all other JoinModes.
       if (!left_value || !right_value) {
-        return _join_mode == JoinMode::AntiNullAsTrue;
+        if (_join_mode == JoinMode::AntiNullAsTrue) {
+          return true;
+        }
+        if (!left_value && !right_value) {
+          return _join_mode == JoinMode::Intersect || _join_mode == JoinMode::Except;
+        }
+        return false;
       } else {
         return _compare_functor(*left_value, *right_value);
       }
