@@ -70,6 +70,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
+    case LQPNodeType::Export:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
     case LQPNodeType::RollbackTransaction:

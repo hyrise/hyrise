@@ -84,6 +84,6 @@ auto any_segment_iterable_test_formatter = [](const ::testing::TestParamInfo<Seg
 };
 
 INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
-                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, true)),
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, true)),
                          any_segment_iterable_test_formatter);
 }  // namespace opossum

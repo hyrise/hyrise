@@ -11,6 +11,7 @@
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -214,8 +215,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
       case hsql::kBeginTransaction: {
         auto job = std::make_shared<JobTask>([this]() {
           if (!_transaction_context || !_transaction_context->is_auto_commit()) {
-            this->set_warning_message(
-                std::string("WARNING: Cannot begin transaction inside an active transaction."));
+            this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
             return;
           }
           _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
@@ -226,8 +226,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
       case hsql::kCommitTransaction: {
         auto job = std::make_shared<JobTask>([this]() {
           if (!_transaction_context || _transaction_context->is_auto_commit()) {
-            this->set_warning_message(
-                std::string("WARNING: Cannot commit since there is no active transaction."));
+            this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
             return;
           }
           _transaction_context->commit();
@@ -238,8 +237,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
       case hsql::kRollbackTransaction: {
         auto job = std::make_shared<JobTask>([this]() {
           if (_transaction_context->is_auto_commit()) {
-            this->set_warning_message(
-                std::string("WARNING: Cannot rollback since there is no active transaction."));
+            this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
             return;
           }
           _transaction_context->rollback(true);
@@ -381,12 +379,8 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
   }
 }
 
-void SQLPipelineStatement::set_warning_message(std::string warning_message) {
-  _warning_message = warning_message;
-}
+void SQLPipelineStatement::set_warning_message(std::string warning_message) { _warning_message = warning_message; }
 
-std::optional<std::string> SQLPipelineStatement::warning_message() {
-  return _warning_message;
-}
+std::optional<std::string> SQLPipelineStatement::warning_message() { return _warning_message; }
 
 }  // namespace opossum

@@ -2,14 +2,14 @@
 
 namespace opossum {
 
-SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index)
+SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, const size_t size, const size_t absolute_index)
     : _data{data},
       _size{size},
-      _data_index{0u},
+      _data_index{absolute_index},
       _absolute_index{absolute_index},
       _current_meta_block{std::make_unique<std::array<uint32_t, Packing::meta_block_size>>()},
       _current_meta_block_index{0u} {
-  if (data && !data->empty()) {
+  if (data && !data->empty() && _absolute_index != _size) {
     _unpack_next_meta_block();
   }
 }
