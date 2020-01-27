@@ -66,8 +66,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   // we can first repeat each line on the left side #rightSide times and then repeat the ascending sequence for the
   // right side #leftSide times
 
-  std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
-  std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
+  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
+  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
   Segments output_segments;
   auto is_left_side = true;
@@ -94,7 +94,6 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 
       // see if we can reuse a PosList that we already calculated - important to use a reference here so that the map
       // gets updated accordingly
-      // TODO
       auto& pos_list_out = (is_left_side ? calculated_pos_lists_left : calculated_pos_lists_right)[pos_list_in];
       if (!pos_list_out) {
         // can't reuse

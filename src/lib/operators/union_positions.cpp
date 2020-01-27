@@ -227,7 +227,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * below)
    */
   const auto add = [&](const auto& table) {
-    auto current_pos_list = std::shared_ptr<const PosList>();
+    auto current_pos_list = std::shared_ptr<const AbstractPosList>();
     const auto first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto segment = first_chunk->get_segment(column_id);

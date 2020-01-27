@@ -144,7 +144,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     // Begin Iterator
     PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
-                        PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+                        AbstractPosListIterator position_filter_begin, AbstractPosListIterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},

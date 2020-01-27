@@ -118,7 +118,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = PosList::const_iterator;
+    using PosListIterator = AbstractPosListIterator;
 
    public:
     explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor, const PosListIterator& begin_pos_list_it,
@@ -165,7 +165,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = PosList::const_iterator;
+    using PosListIterator = AbstractPosListIterator;
 
    public:
     explicit MultipleChunkIterator(

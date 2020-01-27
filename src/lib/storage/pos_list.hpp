@@ -9,6 +9,66 @@
 
 namespace opossum {
 
+class PosListIterator : public AbstractPosListIterator, private pmr_vector<RowID>::const_iterator {
+public:
+  using VectorIterator = pmr_vector<RowID>::const_iterator;
+
+  PosListIterator(const VectorIterator& base_iterator) : VectorIterator(base_iterator) {};
+
+  virtual AbstractPosListIterator& operator++() override {
+    VectorIterator::operator++();
+    return *this;
+  }
+
+  virtual PosListIterator& operator--() override {
+    VectorIterator::operator--();
+    return *this;
+  }
+
+  virtual AbstractPosListIterator& operator+=(size_t n) override {
+    VectorIterator::operator+=(n);
+    return *this;
+  }
+
+  virtual AbstractPosListIterator operator+(size_t n) override {
+    auto copy(*this);
+    copy += n;
+    return std::move(copy);
+  }
+
+  virtual VectorIterator::difference_type operator-(const AbstractPosListIterator& other) const override {
+    return other.operator-(*this);
+  }
+
+  virtual VectorIterator::difference_type operator-(const PosListIterator& other) {
+    return static_cast<VectorIterator>(*this) - static_cast<VectorIterator>(other);
+  }
+
+  bool operator==(const AbstractPosListIterator& other) const override {
+    return other == *this;
+  }
+
+  bool operator==(const PosListIterator& other) const {
+    return static_cast<VectorIterator>(*this) == static_cast<VectorIterator>(other);
+  }
+
+  bool operator!=(const AbstractPosListIterator& other) const override {
+    return other != *this;
+  }
+
+  bool operator!=(const PosListIterator& other) const {
+    return !(*this == other);
+  }
+
+  RowID operator*() const override {
+    return VectorIterator::operator*();
+  }
+
+  const RowID* operator->() const override {
+    return VectorIterator::operator->();
+  }
+};
+
 // For a long time, PosList was just a pmr_vector<RowID>. With this class, we want to add functionality to that vector,
 // more specifically, flags that give us some guarantees about its contents. If we know, e.g., that all entries point
 // into the same chunk, we can simplify things in split_pos_list_by_chunk_id.
@@ -59,7 +119,7 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   void guarantee_single_chunk() { _references_single_chunk = true; }
 
   // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
-  bool references_single_chunk() const {
+  bool references_single_chunk() const override {
     if (_references_single_chunk) {
       DebugAssert(
           [&]() {
@@ -74,7 +134,7 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   }
 
   // For chunks that share a common ChunkID, returns that ID.
-  ChunkID common_chunk_id() const {
+  ChunkID common_chunk_id() const override {
     DebugAssert(references_single_chunk(),
                 "Can only retrieve the common_chunk_id if the PosList is guaranteed to reference a single chunk.");
     Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
@@ -85,31 +145,47 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::get_allocator;
 
   // Element access
-  // using Vector::at; - Oh no. People have misused this in the past.
-  using Vector::operator[];
+  RowID operator[](size_t n) const override {
+    return Vector::operator[](n);
+  }
+
+  RowID& operator[](size_t n) {
+    return Vector::operator[](n);
+  }
+
   using Vector::back;
   using Vector::data;
   using Vector::front;
 
   // Iterators
+  AbstractPosListIterator cbegin() const override {
+    return PosListIterator(Vector::cbegin());
+  }
+  AbstractPosListIterator cend() const override {
+    return PosListIterator(Vector::cend());
+  }
+
+  AbstractPosListIterator begin() const override {
+    return cbegin();
+  }
+  AbstractPosListIterator end() const override {
+    return cend();
+  }
+
   using Vector::begin;
+  using Vector::end;
   using Vector::cbegin;
   using Vector::cend;
-  using Vector::crbegin;
-  using Vector::crend;
-  using Vector::end;
-  using Vector::rbegin;
-  using Vector::rend;
 
   // Capacity
   using Vector::capacity;
   using Vector::max_size;
   using Vector::reserve;
   using Vector::shrink_to_fit;
-  size_t size() const {
+  size_t size() const override {
     return Vector::size();
   }
-  bool empty() const {
+  bool empty() const override {
     return Vector::empty();
   }
 
@@ -126,7 +202,7 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::swap;
 
   // TODO: Proper support for comparison
-  bool operator==(const AbstractPosList& other) const {
+  bool operator==(const AbstractPosList& other) const override {
     return other == *this;
   }
 
@@ -139,7 +215,6 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
     return static_cast<const pmr_vector<RowID>&>(*this) == other;
   }
 
-   
 
  private:
   bool _references_single_chunk = false;

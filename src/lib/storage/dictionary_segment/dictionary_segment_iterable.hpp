@@ -117,7 +117,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
                         const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
-                        PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+                        AbstractPosListIterator position_filter_begin, AbstractPosListIterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},

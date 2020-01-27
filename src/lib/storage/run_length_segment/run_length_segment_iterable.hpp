@@ -135,8 +135,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
     explicit PointAccessIterator(const pmr_vector<T>* values, const pmr_vector<bool>* null_values,
                                  const pmr_vector<ChunkOffset>* end_positions,
-                                 const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
+                                 const AbstractPosListIterator position_filter_begin,
+                                 AbstractPosListIterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
           _values{values},

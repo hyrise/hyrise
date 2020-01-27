@@ -29,7 +29,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     if (_segment.is_nullable()) {
       auto begin = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                        position_filter->cbegin(), position_filter->cbegin()};
@@ -146,8 +146,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
-                                        const PosList::const_iterator position_filter_begin,
-                                        PosList::const_iterator position_filter_it)
+                                        const AbstractPosListIterator position_filter_begin,
+                                        AbstractPosListIterator position_filter_it)
         : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(
                                                                                              position_filter_begin),
                                                                                          std::move(position_filter_it)},
@@ -176,8 +176,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
-                                 const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
+                                 const AbstractPosListIterator position_filter_begin,
+                                 AbstractPosListIterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
           _values_begin_it{values_begin_it},

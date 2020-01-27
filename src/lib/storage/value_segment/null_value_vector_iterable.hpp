@@ -71,8 +71,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values,
-                                 const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
+                                 const AbstractPosListIterator position_filter_begin,
+                                 AbstractPosListIterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
                                                                                      std::move(position_filter_it)},
           _null_values{null_values} {}
