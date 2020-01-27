@@ -4,20 +4,14 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in,
-                 const std::vector<SortColumnDefinition>& sort_definitions, const size_t output_chunk_size)
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
+           const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _sort_definitions(sort_definitions),
-      _output_chunk_size(output_chunk_size) {
-  _sort_definition_data_types.resize(_sort_definitions.size());
-  for (auto column_id = ColumnID{0}; column_id < _sort_definitions.size(); ++column_id) {
-    auto sort_definition = _sort_definitions[column_id];
-    _sort_definition_data_types[column_id] = input_table_left()->column_data_type(sort_definition.column);
-  }
-}
+      _output_chunk_size(output_chunk_size) {}
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
-                 const OrderByMode order_by_mode, const size_t output_chunk_size)
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
+           const size_t output_chunk_size)
     : Sort::Sort(in, {{column_id, order_by_mode}}, output_chunk_size){};
 
 const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
@@ -36,6 +30,12 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
+  _sort_definition_data_types.resize(_sort_definitions.size());
+  for (auto column_id = ColumnID{0}; column_id < _sort_definitions.size(); ++column_id) {
+    auto sort_definition = _sort_definitions[column_id];
+    _sort_definition_data_types[column_id] = input_table_left()->column_data_type(sort_definition.column);
+  }
+
   std::shared_ptr<PosList> previously_sorted_pos_list = std::shared_ptr<PosList>(nullptr);
 
   _validate_sort_definitions();
@@ -47,7 +47,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       auto sort_single_col_impl = SortImpl<ColumnDataType>(input_table_left(), sort_definition.column,
-                                                              sort_definition.order_by_mode, _output_chunk_size);
+                                                           sort_definition.order_by_mode, _output_chunk_size);
       previously_sorted_pos_list = sort_single_col_impl.sort_one_column(previously_sorted_pos_list);
     });
   }
@@ -96,7 +96,7 @@ std::shared_ptr<const Table> Sort::_get_materialized_output(const std::shared_pt
 
       auto segment_ptr_and_accessor_by_chunk_id =
           std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-              std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
+                                                std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
       segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
       for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
@@ -174,7 +174,7 @@ class Sort::SortImpl {
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-              const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
+           const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
         _column_id(column_id),
         _order_by_mode(order_by_mode),
@@ -227,7 +227,7 @@ class Sort::SortImpl {
     if (pos_list) {
       auto segment_ptr_and_accessor_by_chunk_id =
           std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-              std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
+                                                std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
       segment_ptr_and_accessor_by_chunk_id.reserve(_table_in->chunk_count());
 
       // When there was a preceding sorting run, we materialize according to the passed PosList.
