@@ -8,84 +8,71 @@
 namespace opossum {
     TableExport::TableExport(const std::string &path_to_dir) : _path_to_dir(path_to_dir) {
       //TODO Check if file already exists;
-      _create_table_meta_file();
-      _create_column_meta_file();
-      _create_segment_meta_file();
+      _create_file(TableExportType::TABLE);
+      _create_file(TableExportType::COLUMN);
+      _create_file(TableExportType::SEGMENT);
     }
 
     void TableExport::export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
-        _append_to_file(_get_table_meta_relative_path(), _export_table_meta_data(table_wrapper));
-        _append_to_file(_get_column_meta_relative_path(), _export_column_meta_data(table_wrapper));
-        _append_to_file(_get_segment_meta_relative_path(), _export_segment_meta_data(table_wrapper));
+        _append_to_file(TableExportType::TABLE,  _export_table_data(table_wrapper));
+        _append_to_file(TableExportType::COLUMN, _export_column_data(table_wrapper));
+        _append_to_file(TableExportType::SEGMENT,_export_segment_data(table_wrapper));
     }
 
-    std::string TableExport::_get_table_meta_header() const {
-      std::stringstream table_meta_header;
+    const std::string TableExport::_get_header(const TableExportType type) const {
+      std::stringstream meta_header;
 
-      table_meta_header << "TABLE_NAME" << _separator;
-      table_meta_header << "ROW_COUNT" << _separator;
-      table_meta_header << "CHUNK_SIZE" << "\n";
+      switch (type){
+        case TableExportType::TABLE: {
+          meta_header << "TABLE_NAME" << _separator;
+          meta_header << "ROW_COUNT" << _separator;
+          meta_header << "CHUNK_SIZE" << "\n";
+          break;
+        }
+        case TableExportType::COLUMN: {
+          meta_header << "TABLE_NAME" << _separator;
+          meta_header << "COLUMN_NAME" << _separator;
+          meta_header << "COLUMN_DATA_TYPE" << _separator;
+          break;
+        }
+        case TableExportType::SEGMENT: {
+          meta_header << "TABLE_NAME" << _separator;
+          meta_header << "COLUMN_NAME" << _separator;
+          meta_header << "CHUNK_ID" << _separator;
+          meta_header << "ENCODING_TYPE" << _separator;
+          meta_header << "COMPRESSION_TYPE" << "\n";
+          break;
+        }
+      }
 
-      return table_meta_header.str();
-    }
-
-    std::string TableExport::_get_column_meta_header() const {
-      std::stringstream column_meta_header;
-
-      column_meta_header << "TABLE_NAME" << _separator;
-      column_meta_header << "COLUMN_NAME" << _separator;
-      column_meta_header << "COLUMN_DATA_TYPE" << _separator
-
-      return column_meta_header.str();
-    }
-
-    std::string TableExport::_get_segment_meta_header() const {
-      std::stringstream segment_meta_header;
-
-      segment_meta_header << "TABLE_NAME" << _separator;
-      segment_meta_header << "COLUMN_NAME" << _separator;
-      segment_meta_header << "CHUNK_ID" << _separator;
-      segment_meta_header << "ENCODING_TYPE" << _separator;
-      segment_meta_header << "COMPRESSION_TYPE" << "\n";
-
-      return segment_meta_header.str();
+      return meta_header.str();
     }
 
     //TODO Rewrite this
-    void TableExport::_create_table_meta_file() const {
-      _append_to_file(_get_table_meta_relative_path(), _get_table_meta_header());
+    void TableExport::_create_file(const TableExportType type) const {
+      _append_to_file(type, _get_header(type));
     }
 
-    void TableExport::_create_column_meta_file() const {
-      _append_to_file(_get_column_meta_relative_path(), _get_column_meta_header());
-    }
+    void TableExport::_append_to_file(const TableExportType type, const std::string& str) const {
 
-    void TableExport::_create_segment_meta_file() const {
-      _append_to_file(_get_segment_meta_relative_path(), _get_segment_meta_header());
-    }
-
-    void TableExport::_append_to_file(const std::string& path,const std::string& str) const {
+      const std::string& path = _get_relative_path(type);
       std::fstream column_meta;
+
       column_meta.open(path, std::ofstream::out | std::ofstream::app);
       column_meta << str;
       column_meta.close();
     }
 
-    //TODO Rewrite this
-    const std::string TableExport::_get_table_meta_relative_path() const {
-      return _path_to_dir + "/" + _table_meta_file_name + ".csv";
-    }
-
-    const std::string TableExport::_get_column_meta_relative_path() const {
-      return _path_to_dir + "/" + _column_meta_file_name + ".csv";
-    }
-
-    const std::string TableExport::_get_segment_meta_relative_path() const {
-      return _path_to_dir + "/" + _segment_meta_file_name + ".csv";
+    const std::string& TableExport::_get_relative_path(const TableExportType type) const {
+        switch(type){
+          case TableExportType::TABLE: return _table_file_path;
+          case TableExportType::COLUMN: return _column_file_path;
+          case TableExportType::SEGMENT: return _segment_file_path;
+        }
     }
 
 
-    std::string TableExport::_export_table_meta_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
+    const std::string TableExport::_export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
       std::stringstream ss;
 
       ss << table_wrapper->get_name() << _separator;
@@ -95,7 +82,7 @@ namespace opossum {
       return ss.str();
     }
 
-    std::string TableExport::_export_column_meta_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
+    const std::string TableExport::_export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
       std::stringstream ss;
 
       auto const table = table_wrapper->get_table();
@@ -111,7 +98,7 @@ namespace opossum {
       return ss.str();
     }
 
-    std::string TableExport::_export_segment_meta_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
+    const std::string TableExport::_export_segment_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const {
       std::stringstream ss;
       const auto table = table_wrapper->get_table();
       const auto table_name = table_wrapper->get_name();
@@ -148,6 +135,4 @@ namespace opossum {
       }
       return ss.str();
     }
-
-
 }
