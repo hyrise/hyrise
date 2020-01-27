@@ -266,12 +266,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   std::shared_ptr<AbstractOperator> current_pqp = input_operator;
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
 
-  auto pqp_expression_iter = pqp_expressions.rbegin();
-  auto order_by_mode_iter = sort_node->order_by_modes.rbegin();
+  auto pqp_expression_iter = pqp_expressions.begin();
+  auto order_by_mode_iter = sort_node->order_by_modes.begin();
 
   std::vector<SortColumnDefinition> column_definitions;
   column_definitions.reserve(pqp_expressions.size());
-  for (; pqp_expression_iter != pqp_expressions.rend(); ++pqp_expression_iter, ++order_by_mode_iter) {
+  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++order_by_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
