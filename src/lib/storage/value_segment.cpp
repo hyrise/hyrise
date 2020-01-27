@@ -156,12 +156,16 @@ template <typename T>
 std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
                                                         // (clang-tidy reports slicing that comes from tbb)
+
+  std::shared_ptr<BaseSegment> copied_segment;
   if (is_nullable()) {
     pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
-    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values), std::move(new_null_values));
+    copied_segment = std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values), std::move(new_null_values));
   } else {
-    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values));
+    copied_segment = std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values));
   }
+  copied_segment->access_counter.set_counter_values(access_counter);
+  return copied_segment;
 }
 
 template <typename T>

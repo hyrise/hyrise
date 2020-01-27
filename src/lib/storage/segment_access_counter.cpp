@@ -142,4 +142,27 @@ SegmentAccessCounter::Counter<uint64_t> SegmentAccessCounter::counter() const {
   return counter;
 }
 
+void SegmentAccessCounter::set_counter_values(uint64_t other, uint64_t iterator_create, uint64_t iterator_seq_access,
+  uint64_t iterator_increasing_access, uint64_t iterator_random_access, uint64_t accessor_create,
+  uint64_t accessor_access, uint64_t dictionary_access) {
+  _counter.other = other;
+  _counter.iterator_create = iterator_create;
+  _counter.iterator_seq_access = iterator_seq_access;
+  _counter.iterator_increasing_access = iterator_increasing_access;
+  _counter.iterator_random_access = iterator_random_access;
+  _counter.accessor_create = accessor_create;
+  _counter.accessor_access = accessor_access;
+  _counter.dictionary_access = dictionary_access;
+}
+
+void SegmentAccessCounter::set_counter_values(const Counter<uint64_t>& counter) {
+  set_counter_values(counter.other, counter.iterator_create, counter.iterator_seq_access,
+    counter.iterator_increasing_access, counter.iterator_random_access, counter.accessor_create,
+    counter.accessor_access, counter.dictionary_access);
+}
+
+void SegmentAccessCounter::set_counter_values(const SegmentAccessCounter& counter) {
+  set_counter_values(counter.counter());
+}
+
 }  // namespace opossum

@@ -55,6 +55,14 @@ class SegmentAccessCounter {
 
   void reset();
 
+  void set_counter_values(uint64_t other, uint64_t iterator_create, uint64_t iterator_seq_access,
+                          uint64_t iterator_increasing_access, uint64_t iterator_random_access,
+                          uint64_t accessor_create, uint64_t accessor_access, uint64_t dictionary_access);
+
+  void set_counter_values(const Counter<uint64_t>& counter);
+
+  void set_counter_values(const SegmentAccessCounter& counter);
+
   Counter<uint64_t> counter() const;
 
   static void reset(const std::map<std::string, std::shared_ptr<Table>>& tables);
