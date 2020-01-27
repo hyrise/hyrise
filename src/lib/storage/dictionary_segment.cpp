@@ -59,8 +59,10 @@ std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
   auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<DictionarySegment<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
-                                                    _null_value_id);
+  auto copy = std::allocate_shared<DictionarySegment<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
+    _null_value_id);
+  copy->access_counter.set_counter_values(access_counter);
+  return copy;
 }
 
 template <typename T>
