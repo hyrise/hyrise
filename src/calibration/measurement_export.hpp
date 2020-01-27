@@ -1,6 +1,4 @@
-//
-// Created by Lukas Böhme on 03.01.20.
-//
+#pragma once
 
 #include <operators/abstract_operator.hpp>
 #include <string>

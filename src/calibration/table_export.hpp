@@ -1,3 +1,5 @@
+#pragma once
+
 #include "string"
 #include "storage/table.hpp"
 #include "calibration_table_wrapper.hpp"
@@ -7,6 +9,7 @@ namespace opossum {
 enum TableExportType {
     TABLE, COLUMN, SEGMENT
 };
+
 class TableExport{
  public:
     TableExport(const std::string& path_to_dir);

@@ -1,6 +1,3 @@
-//
-// Created by Lukas Böhme on 03.01.20.
-//
 #include "fstream"
 
 #include <expression/lqp_column_expression.hpp>
