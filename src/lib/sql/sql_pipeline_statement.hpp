@@ -103,6 +103,9 @@ class SQLPipelineStatement : public Noncopyable {
   std::optional<std::string> warning_message();
 
  private:
+  // Adds (only) transaction-related jobs to _tasks and returns true, if present
+  bool handleTransactionJobs();
+
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
   // table that already exists).
   // Throws an InvalidInputException if an invalid PQP is detected.

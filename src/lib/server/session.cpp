@@ -11,7 +11,7 @@ Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo se
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
       _send_execution_info(send_execution_info),
-      _transaction_context(Hyrise::get().transaction_manager.new_transaction_context()) {}
+      _transaction_context(nullptr) {}
 
 std::shared_ptr<Socket> Session::socket() { return _socket; }
 
@@ -135,6 +135,8 @@ void Session::_handle_simple_query() {
 
     _transaction_context = transaction_context;
   }
+  _transaction_context = transaction_context;
+
   _postgres_protocol_handler->send_ready_for_query();
 }
 

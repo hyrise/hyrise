@@ -66,8 +66,6 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
     return _parsed_sql_statement;
   }
 
-  std::cout << "_parsed_sql_statement seems to be NULL" << std::endl;
-
   DebugAssert(!_sql_string.empty(), "Cannot parse empty SQL string");
 
   _parsed_sql_statement = std::make_shared<hsql::SQLParserResult>();
@@ -207,12 +205,29 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
   if (!_tasks.empty()) {
     return _tasks;
   }
+  
+  if (!_is_transaction_statement)
+  {
+    handleTransactionJobs();
+  }
+  else
+  {
+    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
+    _tasks.reserve(operator_tasks.size());
+    for (auto& ot : operator_tasks) {
+      _tasks.emplace_back(ot);
+    }
+  }
 
-  if (_is_transaction_statement) {
-    auto* transaction_statement =
-        reinterpret_cast<hsql::TransactionStatement*>(_parsed_sql_statement->getStatements().front());
+  return _tasks;
+}
 
-    switch (transaction_statement->command) {
+bool SQLPipelineStatement::handleTransactionJobs() {
+  auto sql_statement = get_parsed_sql_statement();
+  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
+  auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
+
+  switch (transaction_statement->command) {
       // Create JobTask for each TransactionStatement
       case hsql::kBeginTransaction: {
         auto job = std::make_shared<JobTask>([this]() {
@@ -220,6 +235,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
             this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
             return;
           }
+          if (_transaction_context->phase() == TransactionPhase::ErrorRolledBack) return;
+
           _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
         });
         _tasks.emplace_back(job);
@@ -231,6 +248,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
             this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
             return;
           }
+
           _transaction_context->commit();
         });
         _tasks.emplace_back(job);
@@ -248,15 +266,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
         break;
       }
     }
-  } else {
-    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
-    _tasks.reserve(operator_tasks.size());
-    for (auto& ot : operator_tasks) {
-      _tasks.emplace_back(ot);
-    }
-  }
 
-  return _tasks;
+    return true;
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
@@ -273,7 +284,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     return false;
   };
 
-  if (has_failed()) {
+  if (has_failed() && !_is_transaction_statement) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
 
@@ -311,9 +322,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task
-  if (!_is_transaction_statement) {
-    _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
-  }
+  _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
 
   if (!_result_table) _query_has_output = false;
 

@@ -39,8 +39,8 @@ class CommitContext;
 enum class TransactionPhase {
   Active,                // Transaction has just been created. Operators may be executed.
   Aborted,               // One of the operators failed. Transaction needs to be rolled back.
-  ExplicitlyRolledBack,  // Transaction has been rolled back due to rollback transaction statement.
   ErrorRolledBack,       // Transaction has been rolled back due to error.
+  ExplicitlyRolledBack,  // Transaction has been rolled back due to rollback transaction statement.
   Committing,            // Commit ID has been assigned. Operators may commit records.
   Committed,             // Transaction has been committed.
 };
