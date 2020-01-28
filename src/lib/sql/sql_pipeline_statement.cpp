@@ -203,13 +203,28 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
 
+  if (!handleTransactionJobs()) {
+    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
+    _tasks.reserve(operator_tasks.size());
+    for (auto& ot : operator_tasks) {
+      _tasks.emplace_back(ot);
+    }
+  }
+
+  return _tasks;
+}
+
+bool SQLPipelineStatement::handleTransactionJobs() {
+  if (!_tasks.empty())
+    return true;
+
   auto sql_statement = get_parsed_sql_statement();
 
   const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
 
-  if (statements.front()->isType(hsql::StatementType::kStmtTransaction)) {
-    auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
+  auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
 
+  if (statements.front()->isType(hsql::StatementType::kStmtTransaction)) {
     switch (transaction_statement->command) {
       // Create JobTask for each TransactionStatement
       case hsql::kBeginTransaction: {
@@ -218,6 +233,8 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
             this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
             return;
           }
+          if (_transaction_context->phase() == TransactionPhase::ErrorRolledBack) return;
+
           _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
         });
         _tasks.emplace_back(job);
@@ -229,7 +246,12 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
             this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
             return;
           }
-          _transaction_context->commit();
+
+          if (_transaction_context->phase() == TransactionPhase::ErrorRolledBack) {
+            this->set_warning_message(std::string("WARNING: Cannot commit since transaction is in failing state. The transaction has been rolled back."));
+            _transaction_context->rollback(true);
+          } else
+            _transaction_context->commit();
         });
         _tasks.emplace_back(job);
         break;
@@ -246,15 +268,11 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
         break;
       }
     }
-  } else {
-    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
-    _tasks.reserve(operator_tasks.size());
-    for (auto& ot : operator_tasks) {
-      _tasks.emplace_back(ot);
-    }
+
+    return true;
   }
 
-  return _tasks;
+  return false;
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
@@ -271,8 +289,8 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     return false;
   };
 
-  if (has_failed()) {
-    return {SQLPipelineStatus::Failure, _result_table};
+  if (has_failed() && !handleTransactionJobs()) {
+      return {SQLPipelineStatus::Failure, _result_table};
   }
 
   if (_result_table || !_query_has_output) {
@@ -293,6 +311,8 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   if (has_failed()) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
+
+  std::cout << _transaction_context->is_auto_commit() << std::endl;
 
   if (_use_mvcc == UseMvcc::Yes && _transaction_context->is_auto_commit()) {
     _transaction_context->commit();

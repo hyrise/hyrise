@@ -132,9 +132,9 @@ void Session::_handle_simple_query() {
     }
     _postgres_protocol_handler->send_command_complete(
         ResultSerializer::build_command_complete_message(execution_information.root_operator, row_count));
-
-    _transaction_context = transaction_context;
   }
+  _transaction_context = transaction_context;
+
   _postgres_protocol_handler->send_ready_for_query();
 }
 

@@ -240,6 +240,7 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
         // The pipeline was executed using a transaction context (i.e., no auto-commit after each statement).
         // Previously returned results are invalid.
         _result_tables.clear();
+        _transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
       }
 
       return {SQLPipelineStatus::Failure, _result_tables};
