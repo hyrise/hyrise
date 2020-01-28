@@ -30,8 +30,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
-  std::cout << name << " was added" << std::endl;
-
   table->set_table_statistics(TableStatistics::from_table(*table));
   _tables.emplace(name, std::move(table));
 }
@@ -39,9 +37,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 void StorageManager::drop_table(const std::string& name) {
   std::unique_lock lock(*_table_mutex);
   const auto num_deleted = _tables.erase(name);
-  if (num_deleted != 1) {
-    std::cout << name << " made problems " << std::endl;
-  }
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
