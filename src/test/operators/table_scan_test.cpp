@@ -1053,4 +1053,29 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   }
 }
 
+TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
+  // Verify that order_by flag is not set when not present in left input
+  auto scan_unsorted = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  scan_unsorted->execute();
+
+  const auto result_table_unsorted = scan_unsorted->get_output();
+
+  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
+    EXPECT_FALSE(ordered_by);
+  }
+
+  // Verify that order_by flag is set when present in left input
+  auto scan_sorted = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  scan_sorted->execute();
+
+  const auto result_table_sorted = scan_sorted->get_output();
+
+  for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
+    ASSERT_TRUE(ordered_by);
+    EXPECT_EQ(ordered_by, std::make_pair(ColumnID{0}, OrderByMode::Ascending));
+  }
+}
+
 }  // namespace opossum

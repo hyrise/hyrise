@@ -30,7 +30,7 @@ class SortedSegmentBetweenSearch {
         _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
-    /**
+  /**
      * Uses exponential search to find lower_bound of null values to exclude them from further scanning.
      * This version of exponential search first reduces the range where the search for NULL values will be performed
      * and performs a binary search for the exact bound within this range afterwards.

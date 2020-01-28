@@ -9,8 +9,8 @@
 #include "expression/pqp_column_expression.hpp"
 #include "operators/difference.hpp"
 #include "operators/projection.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/sort.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -86,7 +86,7 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   difference_unsorted->execute();
 
   const auto result_table_unsorted = difference_unsorted->get_output();
-  
+
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
     const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
     EXPECT_FALSE(ordered_by);
@@ -100,7 +100,7 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   difference_sorted->execute();
 
   const auto result_table_sorted = difference_sorted->get_output();
-  
+
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
     ASSERT_TRUE(ordered_by);

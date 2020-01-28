@@ -11,6 +11,7 @@
 #include "operators/delete.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -189,6 +190,34 @@ TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
 
   const auto output_attribute_vector_decompressor = output_attribute_vector->create_base_decompressor();
   EXPECT_EQ(output_attribute_vector_decompressor->get(0), ValueID{1});
+}
+
+TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
+  // Verify that order_by flag is not set when not present in left input
+  const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
+  projection_a_unsorted->execute();
+
+  const auto result_table_unsorted = projection_a_unsorted->get_output();
+
+  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
+    EXPECT_FALSE(ordered_by);
+  }
+
+  // Verify that order_by flag is set when present in left input
+  auto sort = std::make_shared<Sort>(table_wrapper_a, ColumnID{0});
+  sort->execute();
+
+  const auto projection_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_a));
+  projection_a_sorted->execute();
+
+  const auto result_table_sorted = projection_a_sorted->get_output();
+
+  for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
+    ASSERT_TRUE(ordered_by);
+    EXPECT_EQ(ordered_by, std::make_pair(ColumnID{0}, OrderByMode::Ascending));
+  }
 }
 
 }  // namespace opossum
