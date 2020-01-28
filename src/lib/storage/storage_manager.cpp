@@ -31,7 +31,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   }
 
   // Create table statistics and chunk pruning statistics for added table.
-  std::cout << name << " was added" << std::endl;
 
   table->set_table_statistics(TableStatistics::from_table(*table));
   generate_chunk_pruning_statistics(table);
@@ -42,9 +41,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 void StorageManager::drop_table(const std::string& name) {
   std::unique_lock lock(*_table_mutex);
   const auto num_deleted = _tables.erase(name);
-  if (num_deleted != 1) {
-    std::cout << name << " made problems " << std::endl;
-  }
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
@@ -56,19 +52,10 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
   return iter->second;
 }
 
-<<<<<<< HEAD
-bool StorageManager::has_table(const std::string& name) const { return _tables.count(name); }
-=======
-bool StorageManager::has_table(const std::string& name) const {
+bool StorageManager::has_table(const std::string& name) const { 
   std::shared_lock lock(*_table_mutex);
-  if (MetaTableManager::is_meta_table_name(name)) {
-    const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
-    return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
-                              name.substr(MetaTableManager::META_PREFIX.size()));
-  }
   return _tables.count(name);
 }
->>>>>>> 00bd6766b... Make StorageManger's table ops thread-safe
 
 std::vector<std::string> StorageManager::table_names() const {
   std::shared_lock lock(*_table_mutex);
