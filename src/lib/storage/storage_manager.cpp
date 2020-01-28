@@ -19,6 +19,7 @@
 namespace opossum {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
+  std::unique_lock lock(*_table_mutex);
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
@@ -29,16 +30,23 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
+  std::cout << name << " was added" << std::endl;
+
   table->set_table_statistics(TableStatistics::from_table(*table));
   _tables.emplace(name, std::move(table));
 }
 
 void StorageManager::drop_table(const std::string& name) {
+  std::unique_lock lock(*_table_mutex);
   const auto num_deleted = _tables.erase(name);
+  if (num_deleted != 1) {
+    std::cout << name << " made problems " << std::endl;
+  }
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
+  std::shared_lock lock(*_table_mutex);
   if (MetaTableManager::is_meta_table_name(name)) {
     return Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
   }
@@ -50,6 +58,7 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
 }
 
 bool StorageManager::has_table(const std::string& name) const {
+  std::shared_lock lock(*_table_mutex);
   if (MetaTableManager::is_meta_table_name(name)) {
     const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
     return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
@@ -59,6 +68,7 @@ bool StorageManager::has_table(const std::string& name) const {
 }
 
 std::vector<std::string> StorageManager::table_names() const {
+  std::shared_lock lock(*_table_mutex);
   std::vector<std::string> table_names;
   table_names.reserve(_tables.size());
 

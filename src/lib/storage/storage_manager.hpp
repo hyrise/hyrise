@@ -64,6 +64,7 @@ class StorageManager : public Noncopyable {
 
   // Tables can currently not be modified concurrently
   std::map<std::string, std::shared_ptr<Table>> _tables;
+  mutable std::unique_ptr<std::shared_mutex> _table_mutex = std::make_unique<std::shared_mutex>();
 
   // The map of views is locked because views are created dynamically, e.g., in TPC-H 15
   std::map<std::string, std::shared_ptr<LQPView>> _views;
