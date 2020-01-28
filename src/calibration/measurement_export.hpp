@@ -13,7 +13,7 @@ class MeasurementExport {
  private:
   const std::string& _path_to_dir;
   //TODO use parserconfig
-  const std::string _delimiter = ",";
+  const std::string _separator = ",";
 
   void _export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
 

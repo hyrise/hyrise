@@ -91,13 +91,13 @@ namespace opossum {
             if (expression->type == ExpressionType::LQPColumn) {
 
               // INPUT_ROWS_LEFT TODO this does not extract anything
-              ss << (op->input_left() != nullptr ? std::to_string(op->input_table_left()->row_count()) : "null") << _delimiter;
+              ss << (op->input_left() != nullptr ? std::to_string(op->input_table_left()->row_count()) : "null") << _separator;
 
               // OUTPUT_ROWS
-              ss << (op->get_output() != nullptr ? std::to_string(op->get_output()->row_count()) : "null") << _delimiter;
+              ss << (op->get_output() != nullptr ? std::to_string(op->get_output()->row_count()) : "null") << _separator;
 
               // RUNTIME_NS
-              ss << std::to_string(op->performance_data().walltime.count()) << _delimiter;
+              ss << std::to_string(op->performance_data().walltime.count()) << _separator;
 
               const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
               const auto column_reference = column_expression->column_reference;
@@ -111,12 +111,12 @@ namespace opossum {
                 } else {
                   ss << "REFERENCE_SCAN";
                 }
-                ss << _delimiter;
+                ss << _separator;
 
                 // TABLE_NAME
                 const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
                 const auto& table_name = stored_table_node->table_name;
-                ss << table_name << _delimiter;
+                ss << table_name << _separator;
                 const auto original_column_id = column_reference.original_column_id();
 
                 // COLUMN_NAME
@@ -133,11 +133,11 @@ namespace opossum {
     void MeasurementExport::_create_file_table_scan() const{
       std::stringstream ss;
 
-      ss << "INPUT_ROWS_LEFT" << _delimiter;
-      ss << "OUTPUT_ROWS"     << _delimiter;
-      ss << "RUNTIME_NS"      << _delimiter;
-      ss << "SCAN_TYPE"       << _delimiter;
-      ss << "TABLE_NAME"      << _delimiter;
+      ss << "INPUT_ROWS_LEFT" << _separator;
+      ss << "OUTPUT_ROWS" << _separator;
+      ss << "RUNTIME_NS" << _separator;
+      ss << "SCAN_TYPE" << _separator;
+      ss << "TABLE_NAME" << _separator;
       ss << "COLUMN_NAME"     << "\n";
 
       _append_to_file_by_operator_type(ss.str(), OperatorType::TableScan);
