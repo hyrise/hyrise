@@ -20,7 +20,7 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
   // begin and commit transaction statements are executed successfully
   EXPECT_TRUE(execution_information.error_message.empty());
   EXPECT_EQ(execution_information.result_table, nullptr);
-  EXPECT_EQ(execution_information.root_operator, OperatorType::CommitTransaction);
+  EXPECT_EQ(execution_information.custom_command_complete_message.value(), "COMMIT");
 }
 
 TEST_F(TransactionHandlingTest, RollbackTransaction) {

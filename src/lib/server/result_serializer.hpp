@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+struct ExecutionInformation;
+
 // The ResultSerializer serializes the result data returned by Hyrise according to PostgreSQL Wire Protocol.
 class ResultSerializer {
  public:
@@ -23,6 +25,8 @@ class ResultSerializer {
       const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler);
 
   // Build completion message after query execution containing the statement type and the number of rows affected
+  static std::string build_command_complete_message(const ExecutionInformation& execution_information,
+                                                    const uint64_t row_count);
   static std::string build_command_complete_message(const OperatorType root_operator_type, const uint64_t row_count);
 };
 

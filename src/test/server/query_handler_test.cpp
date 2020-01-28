@@ -23,7 +23,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
   EXPECT_EQ(execution_information.result_table->column_count(), 1);
   EXPECT_EQ(execution_information.result_table->row_count(), 1);
   EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", execution_information.pipeline_metrics);
-  EXPECT_EQ(execution_information.root_operator, OperatorType::Projection);
+  EXPECT_EQ(execution_information.root_operator_type, OperatorType::Projection);
 }
 
 TEST_F(QueryHandlerTest, CreatePreparedPlan) {

@@ -22,7 +22,9 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
 
   if (pipeline_status == SQLPipelineStatus::Success) {
     execution_info.result_table = result_table;
-    execution_info.root_operator = sql_pipeline.get_physical_plans().back()->type();
+    execution_info.root_operator_type = sql_pipeline.get_physical_plans().back()->type();
+
+    handleTransactionStatementMessage(execution_info, sql_pipeline);
 
     if (send_execution_info == SendExecutionInfo::Yes) {
       std::stringstream stream;
@@ -87,4 +89,31 @@ std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(
   return tasks.back()->get_operator()->get_output();
 }
 
+void QueryHandler::handleTransactionStatementMessage(ExecutionInformation& execution_info, SQLPipeline& sql_pipeline) {
+  // handle custom user feedback (command complete messages) for transaction statements
+  auto sql_statement = sql_pipeline.get_parsed_sql_statements().back();
+  auto& statements = sql_statement->getStatements();
+
+  if (statements.front()->isType(hsql::StatementType::kStmtTransaction)) {
+    auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
+
+    switch (transaction_statement->command) {
+      case hsql::kBeginTransaction: {
+        execution_info.custom_command_complete_message = "BEGIN";
+        break;
+      }
+      case hsql::kCommitTransaction: {
+        execution_info.custom_command_complete_message = "COMMIT";
+        break;
+      }
+      case hsql::kRollbackTransaction: {
+        execution_info.custom_command_complete_message = "ROLLBACK";
+        break;
+      }
+      default: {
+        FailInput("TransactionStatement command not supported");
+      }
+    }
+  }
+}
 }  // namespace opossum

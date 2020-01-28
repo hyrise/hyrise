@@ -132,6 +132,7 @@ class SQLPipelineStatement : public Noncopyable {
   const CleanupTemporaries _cleanup_temporaries;
 
   std::optional<std::string> _warning_message;
+  bool _is_transaction_statement;
 };
 
 }  // namespace opossum

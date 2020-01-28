@@ -44,7 +44,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
       _cleanup_temporaries(cleanup_temporaries),
-      _warning_message(std::nullopt) {
+      _warning_message(std::nullopt),
+      _is_transaction_statement(false) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
@@ -94,9 +95,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   SQLTranslator sql_translator{_use_mvcc};
 
   std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+
+  _is_transaction_statement = parsed_sql->getStatements().front()->isType(hsql::kStmtTransaction);
+
   lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
+
   _unoptimized_logical_plan = lqp_roots.front();
 
   const auto done = std::chrono::high_resolution_clock::now();
@@ -203,12 +208,9 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
 
-  auto sql_statement = get_parsed_sql_statement();
-
-  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-
-  if (statements.front()->isType(hsql::StatementType::kStmtTransaction)) {
-    auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
+  if (_is_transaction_statement) {
+    auto* transaction_statement =
+        reinterpret_cast<hsql::TransactionStatement*>(_parsed_sql_statement->getStatements().front());
 
     switch (transaction_statement->command) {
       // Create JobTask for each TransactionStatement
@@ -309,11 +311,10 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task
-  auto sql_statement = get_parsed_sql_statement();
-  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  if (statements[0]->type() != hsql::StatementType::kStmtTransaction) {
+  if (!_is_transaction_statement) {
     _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
   }
+
   if (!_result_table) _query_has_output = false;
 
   DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
