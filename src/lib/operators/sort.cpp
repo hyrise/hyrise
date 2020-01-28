@@ -10,10 +10,6 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size) {}
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
-           const size_t output_chunk_size)
-    : Sort::Sort(in, {{column_id, order_by_mode}}, output_chunk_size){};
-
 const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
 
 const std::string& Sort::name() const {

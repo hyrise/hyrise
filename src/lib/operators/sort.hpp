@@ -35,9 +35,6 @@ class Sort : public AbstractReadOnlyOperator {
   Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
           size_t output_chunk_size = Chunk::DEFAULT_SIZE);
 
-  Sort(const std::shared_ptr<const AbstractOperator>& in, ColumnID column_id,
-          OrderByMode order_by_mode = OrderByMode::Ascending, size_t output_chunk_size = Chunk::DEFAULT_SIZE);
-
   const std::vector<SortColumnDefinition>& sort_definitions() const;
 
   const std::string& name() const override;
