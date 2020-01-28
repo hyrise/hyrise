@@ -224,14 +224,10 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
     return {_pipeline_status, _result_tables};
   }
 
-  const auto pipeline_size = _sql_pipeline_statements.size();
-
-  _result_tables.reserve(pipeline_size);
-
-  std::shared_ptr<TransactionContext> previous_statement_transaction_context = _transaction_context;
+  _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    pipeline_statement->set_transaction_context(previous_statement_transaction_context);
+    pipeline_statement->set_transaction_context(_transaction_context);
     const auto& [statement_status, table] = pipeline_statement->get_result_table();
     if (statement_status == SQLPipelineStatus::Failure) {
       _failed_pipeline_statement = pipeline_statement;
@@ -240,33 +236,31 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
         // The pipeline was executed using a transaction context (i.e., no auto-commit after each statement).
         // Previously returned results are invalid.
         _result_tables.clear();
-        _transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+        _transaction_context = nullptr;
       }
 
       return {SQLPipelineStatus::Failure, _result_tables};
     }
 
     if (pipeline_statement->warning_message())
-      _warning_messages.push_back(WarningMessage(pipeline_statement->warning_message().value()));
+      _warning_messages.emplace_back(pipeline_statement->warning_message().value());
 
-          DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+    DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
     _result_tables.emplace_back(table);
 
     switch (pipeline_statement->transaction_context()->phase()) {
+      // Auto-commit statements should always be committed or rolled back at this point
       case TransactionPhase::Committed:
       case TransactionPhase::ExplicitlyRolledBack:
-        previous_statement_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+        _transaction_context = nullptr;
         break;
       default:
-        previous_statement_transaction_context = pipeline_statement->transaction_context()->is_auto_commit()
-                                                     ? Hyrise::get().transaction_manager.new_transaction_context()
-                                                     : pipeline_statement->transaction_context();
+        _transaction_context = pipeline_statement->transaction_context();
     }
   }
 
   _pipeline_status = SQLPipelineStatus::Success;
-  _transaction_context = previous_statement_transaction_context;
   return {_pipeline_status, _result_tables};
 }
 
@@ -285,9 +279,7 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
-std::vector<std::string> SQLPipeline::warning_messages() {
-  return _warning_messages;
-}
+std::vector<std::string> SQLPipeline::warning_messages() { return _warning_messages; }
 
 SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {

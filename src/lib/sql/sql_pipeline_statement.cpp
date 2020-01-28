@@ -65,8 +65,6 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
     return _parsed_sql_statement;
   }
 
-  std::cout << "_parsed_sql_statement seems to be NULL" << std::endl;
-
   DebugAssert(!_sql_string.empty(), "Cannot parse empty SQL string");
 
   _parsed_sql_statement = std::make_shared<hsql::SQLParserResult>();
@@ -215,8 +213,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 }
 
 bool SQLPipelineStatement::handleTransactionJobs() {
-  if (!_tasks.empty())
-    return true;
+  if (!_tasks.empty()) return true;
 
   auto sql_statement = get_parsed_sql_statement();
 
@@ -247,11 +244,7 @@ bool SQLPipelineStatement::handleTransactionJobs() {
             return;
           }
 
-          if (_transaction_context->phase() == TransactionPhase::ErrorRolledBack) {
-            this->set_warning_message(std::string("WARNING: Cannot commit since transaction is in failing state. The transaction has been rolled back."));
-            _transaction_context->rollback(true);
-          } else
-            _transaction_context->commit();
+          _transaction_context->commit();
         });
         _tasks.emplace_back(job);
         break;
@@ -290,7 +283,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   };
 
   if (has_failed() && !handleTransactionJobs()) {
-      return {SQLPipelineStatus::Failure, _result_table};
+    return {SQLPipelineStatus::Failure, _result_table};
   }
 
   if (_result_table || !_query_has_output) {
@@ -311,8 +304,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   if (has_failed()) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
-
-  std::cout << _transaction_context->is_auto_commit() << std::endl;
 
   if (_use_mvcc == UseMvcc::Yes && _transaction_context->is_auto_commit()) {
     _transaction_context->commit();
