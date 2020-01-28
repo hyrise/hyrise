@@ -51,12 +51,19 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
     pred_y = model.predict(ohe_data)
 
+    # The score function returns the coefficient of determination R^2 of the prediction.
+    # The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares ((y_true - y_pred) ** 2).sum()
+    # and v is the total sum of squares ((y_true - y_true.mean()) ** 2).sum(). The best possible score is 1.0 and it can
+    # be negative (because the model can be arbitrarily worse). A constant model that always predicts the expected value
+    # of y, disregarding the input features, would get a R^2 score of 0.0.
+    model_score = model.score(ohe_data, real_y)
+
     plt.scatter(real_y, pred_y, c='b')
     #abline_values = range(int(max(np.amax(pred_y), np.amax(real_y)) + 10000))
 
     # Plot the best fit line over the actual values
     #plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-    plt.title('{}_{}_{}'.format(data_type, encoding, method))
+    plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_score))
     plt.ylim([0, max(np.amax(pred_y), np.amax(real_y)) + 10000])
     plt.xlim([0, max(np.amax(pred_y), np.amax(real_y)) + 10000])
     plt.xlabel("Real Time")
@@ -107,18 +114,21 @@ def train_general_model(train_data, model_type, out):
     train_y = np.ravel(train_data[['RUNTIME_NS']])
 
     if model_type == 'linear':
-        model = LinearRegression().fit(train_X, train_y)
+        general_model = LinearRegression().fit(train_X, train_y)
     elif model_type == 'ridge':
-        model = Ridge(alpha=1000).fit(train_X, train_y)
+        general_model = Ridge(alpha=1000).fit(train_X, train_y)
     elif model_type == 'lasso':
-        model = Lasso(alpha=1000).fit(train_X, train_y)
+        general_model = Lasso(alpha=1000).fit(train_X, train_y)
     elif model_type == 'boost':
-        model = GradientBoostingRegressor(loss='huber').fit(train_X, train_y)
+        general_model = GradientBoostingRegressor(loss='huber').fit(train_X, train_y)
+
+    # if model_type != 'boost':
+    #     print('general', general_model.coef_)
 
     filename = '{}/Models/{}_general_model.sav'.format(out, model_type)
-    joblib.dump(model, filename)
+    joblib.dump(general_model, filename)
 
-    return model
+    return general_model
 
 
 def plot_general_model(test_data, model, model_type, data_type, encoding, out):
@@ -126,9 +136,10 @@ def plot_general_model(test_data, model, model_type, data_type, encoding, out):
     test_y = np.ravel(test_data[['RUNTIME_NS']])
 
     pred_y = model.predict(test_X)
+    model_score = model.score(test_X, test_y)
     plt.scatter(test_y, pred_y, c='b')
 
-    plt.title('General Model')
+    plt.title('General Model; Score: {}'.format(model_score))
     plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) + 10000])
     plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) + 10000])
     plt.xlabel("Real Time")
