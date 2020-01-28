@@ -51,19 +51,14 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
     pred_y = model.predict(ohe_data)
 
-    # The score function returns the coefficient of determination R^2 of the prediction.
-    # The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares ((y_true - y_pred) ** 2).sum()
-    # and v is the total sum of squares ((y_true - y_true.mean()) ** 2).sum(). The best possible score is 1.0 and it can
-    # be negative (because the model can be arbitrarily worse). A constant model that always predicts the expected value
-    # of y, disregarding the input features, would get a R^2 score of 0.0.
-    model_score = model.score(ohe_data, real_y)
+    model_scores = calculate_error(ohe_data, pred_y, real_y, model)
 
     plt.scatter(real_y, pred_y, c='b')
     #abline_values = range(int(max(np.amax(pred_y), np.amax(real_y)) + 10000))
 
     # Plot the best fit line over the actual values
     #plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-    plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_score))
+    plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_scores['R2']))
     plt.ylim([0, max(np.amax(pred_y), np.amax(real_y)) + 10000])
     plt.xlim([0, max(np.amax(pred_y), np.amax(real_y)) + 10000])
     plt.xlabel("Real Time")
@@ -72,41 +67,32 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
     plt.savefig(output_path, bbox_inches='tight')
 
 
-def generate_output(costmodel, test_data, out):
-    # predict runtime for test queries in the test data
-    #ohe_data = preprocess_data(test_data)
-    # for now, since we don't have the data in our trainings measurements
-    ohe_data = test_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME', 'COMPRESSION', 'SIZE_IN_BYTES',
-                                      'DISTINCT_VALUE_COUNT', 'IS_NULLABLE'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
-    # hacky solution
-    ohe_data['DATA_TYPE_long'] = 0
-    ohe_data['DATA_TYPE_string'] = 0
-    ohe_data['DATA_TYPE_double'] = 0
-    y_true = ohe_data[['RUNTIME_NS']]
-    ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
-    y_pred = costmodel.model.predict(ohe_data)
-    error = abs(y_true.to_numpy()-y_pred)
-    mse = calculate_error(y_true, y_pred)
-
-    # print and put the plots in the output folder
-    fig = plt.figure()
-    plt.boxplot(error)
-    output_path = '{}error_model_{}_{}'.format(out, costmodel.data_type, costmodel.encoding)
-    fig.savefig(output_path, bbox_inches='tight')
-
-    f = plt.figure()
-    #plt.scatter(scatter_data)
-    plt.show()
-    return mse
-
-
-def calculate_error(y_true, y_pred):
+def calculate_error(test_X, y_true, y_pred, model):
     # calculate error (ME) for the model
     mse = mean_squared_error(y_true, y_pred, squared=False)
 
-    # TODO: add other error measures
-    return mse
+    # The score function returns the coefficient of determination R^2 of the prediction.
+    # The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares ((y_true - y_pred) ** 2).sum()
+    # and v is the total sum of squares ((y_true - y_true.mean()) ** 2).sum(). The best possible score is 1.0 and it can
+    # be negative (because the model can be arbitrarily worse). A constant model that always predicts the expected value
+    # of y, disregarding the input features, would get a R^2 score of 0.0.
+    R2 = model.score(test_X, y_pred)
+
+    # Laut Master Thesis:
+    # logarithm of the accuracy ratio (LnQ). Tofallis et al. define this measure to overcome the limitations of RMSE and
+    # MAPE by providing a unbiased error measure [72]. LnQ is the natural logarithm of the quotient of the predicted
+    # value yˆ and the actual value y. By using the natural logarithm, this measure
+    # is symmetric in the sense that changing the actual value and the prediction merely changes the sign of the error
+    # value (cf. Equation (2.14)). By that, LnQ shows structural under- or over- estimation, which may show the quality
+    # of a tested model. A drawback of LnQ is the difficulty in interpreting error values. Doubling the quotient does
+    # not consistently affect the error value. Due to the logarithmic function, the measure penalizes small quotients
+    # relatively hard, whereas it treats large residuals comparably easy.
+    LNQ = 1/len(y_true) * np.sum(np.exp(np.divide(y_pred, y_true)))
+
+    scores = {'MSE': mse, 'R2': R2, 'LNQ': LNQ}
+    print(scores)
+
+    return scores
 
 
 def train_general_model(train_data, model_type, out):
@@ -136,10 +122,10 @@ def plot_general_model(test_data, model, model_type, data_type, encoding, out):
     test_y = np.ravel(test_data[['RUNTIME_NS']])
 
     pred_y = model.predict(test_X)
-    model_score = model.score(test_X, test_y)
+    model_scores = calculate_error(test_X, pred_y, test_y, model)
     plt.scatter(test_y, pred_y, c='b')
 
-    plt.title('General Model; Score: {}'.format(model_score))
+    plt.title('General Model; Score: {}'.format(model_scores['R2']))
     plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) + 10000])
     plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) + 10000])
     plt.xlabel("Real Time")
