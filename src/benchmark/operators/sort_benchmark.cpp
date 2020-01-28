@@ -22,10 +22,12 @@ class SortBenchmark : public MicroBenchmarkBasicFixture {
   void BM_Sort(benchmark::State& state) {
     _clear_cache();
 
-    auto warm_up = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending);
+    auto warm_up = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{
+                                                                ColumnID{0} /* "a" */, OrderByMode::Ascending}});
     warm_up->execute();
     for (auto _ : state) {
-      auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending);
+      auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{
+                                                               ColumnID{0} /* "a" */, OrderByMode::Ascending}});
       sort->execute();
     }
   }
@@ -184,7 +186,6 @@ class SortNullBenchmark : public SortBenchmark {
   }
 };
 
-
 BENCHMARK_F(SortPicoBenchmark, BM_SortPico)(benchmark::State& state) { BM_Sort(state); }
 
 BENCHMARK_F(SortSmallBenchmark, BM_SortSmall)(benchmark::State& state) { BM_Sort(state); }
@@ -212,6 +213,5 @@ BENCHMARK_F(SortNullBenchmark, BM_SortNullBenchmark)(benchmark::State& state) { 
 BENCHMARK_F(SortBenchmark, BM_SortSingleColumnSQL)(benchmark::State& state) { BM_SortSingleColumnSQL(state); }
 
 BENCHMARK_F(SortBenchmark, BM_SortMultiColumnSQL)(benchmark::State& state) { BM_SortMultiColumnSQL(state); }
-
 
 }  // namespace opossum
