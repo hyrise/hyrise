@@ -206,7 +206,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
   
-  if (!_is_transaction_statement)
+  if (_is_transaction_statement)
   {
     handleTransactionJobs();
   }
@@ -321,8 +321,10 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
-  // Get output from the last task
-  _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
+  // Get output from the last task if the task was an actual operator and not a transaction statement
+  if (!_is_transaction_statement) {
+    _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
+  }
 
   if (!_result_table) _query_has_output = false;
 

@@ -62,13 +62,11 @@ TEST_F(TransactionHandlingTest, TransactionContextTest) {
   execution_info_transaction_context_pair =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
   execution_information = execution_info_transaction_context_pair.first;
-
+  transaction_ctx = execution_info_transaction_context_pair.second;
+  
   // when the user begins a transaction, a new transaction context is created internally (not in "auto-commit" mode)
   // the transaction is therefore still active until the user either rolls back or commits
   EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::Active);
-
-  transaction_ctx = execution_info_transaction_context_pair.second;
-
   EXPECT_TRUE(execution_information.error_message.empty());
   EXPECT_EQ(transaction_ctx->is_auto_commit(), false);
 
@@ -80,13 +78,13 @@ TEST_F(TransactionHandlingTest, TransactionContextTest) {
 
   // now that the user rolled back,
   // the transaction context is in the successful state of having been rolled back on purpose
-  EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::ExplicitlyRolledBack);
-
-  transaction_ctx = execution_info_transaction_context_pair.second;
-
-  // internally a new transaction context has been created, again in "auto-commit" mode
+  EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::ExplicitlyRolledBack); 
   EXPECT_TRUE(execution_information.error_message.empty());
-  EXPECT_EQ(transaction_ctx->is_auto_commit(), true);
+
+  // internally the transaction context returned by the pipeline is has been set to nullptr, 
+  // in order to force creating a new one, again in "auto-commit" mode
+  transaction_ctx = execution_info_transaction_context_pair.second;
+  EXPECT_EQ(transaction_ctx, nullptr); 
 }
 
 }  // namespace opossum
