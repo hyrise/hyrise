@@ -280,7 +280,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    column_definitions.emplace_back(pqp_column_expression->column_id, *order_by_mode_iter);
+    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *order_by_mode_iter});
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
