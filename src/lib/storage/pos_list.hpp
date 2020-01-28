@@ -30,7 +30,7 @@ public:
     return *this;
   }
 
-  virtual AbstractPosListIterator operator+(size_t n) override {
+  virtual PosListIterator operator+(size_t n) {
     auto copy(*this);
     copy += n;
     return std::move(copy);
@@ -189,7 +189,6 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
     return Vector::empty();
   }
 
-
   // Modifiers
   using Vector::clear;
   using Vector::emplace;
@@ -200,6 +199,11 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::push_back;
   using Vector::resize;
   using Vector::swap;
+
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const override {
+    // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
+    return size() * sizeof(Vector::value_type);
+  }
 
   // TODO: Proper support for comparison
   bool operator==(const AbstractPosList& other) const override {

@@ -29,7 +29,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     if (_segment.is_nullable()) {
       auto begin = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                        position_filter->cbegin(), position_filter->cbegin()};

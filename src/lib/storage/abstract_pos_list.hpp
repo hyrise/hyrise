@@ -16,32 +16,32 @@ class AbstractPosListIterator {
   using reference = const RowID&;
   using pointer = const RowID*;
 
-    // TODO: These functions should be pure, but then it won't compile.
+  virtual ~AbstractPosListIterator();
 
-  virtual AbstractPosListIterator& operator++();
+  virtual AbstractPosListIterator& operator++() = 0;
 
-  virtual AbstractPosListIterator& operator--();
+  virtual AbstractPosListIterator& operator--() = 0;
 
-  virtual AbstractPosListIterator& operator+=(size_t n);
+  virtual AbstractPosListIterator& operator+=(size_t n) = 0;
 
-  virtual AbstractPosListIterator operator+(size_t n);
+  /* virtual AbstractPosListIterator operator+(size_t n) = 0; */
 
-  virtual const AbstractPosListIterator& operator++(int);
+  virtual const AbstractPosListIterator& operator++(int) = 0;
 
-  virtual difference_type operator-(const AbstractPosListIterator& other) const;
+  virtual difference_type operator-(const AbstractPosListIterator& other) const = 0;
 
-  virtual bool operator==(const AbstractPosListIterator& other) const;
+  virtual bool operator==(const AbstractPosListIterator& other) const = 0;
 
-  virtual bool operator!=(const AbstractPosListIterator& other) const;
+  virtual bool operator!=(const AbstractPosListIterator& other) const = 0;
 
-  virtual value_type operator*() const;
+  virtual value_type operator*() const = 0;
 
-  virtual pointer operator->() const;
+  virtual pointer operator->() const = 0;
 };
 
 class AbstractPosList {
  public:
-  virtual ~AbstractPosList() = default;
+  virtual ~AbstractPosList();
 
   // Returns whether it is guaranteed that the PosList references a single ChunkID.
   // However, it may be false even if this is the case.
@@ -62,9 +62,9 @@ class AbstractPosList {
   virtual bool empty() const = 0;
   virtual size_t size() const = 0;
 
-  virtual bool operator==(const AbstractPosList& other) const {
-    return false;
-  }
+  virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
+
+  virtual bool operator==(const AbstractPosList& other) const = 0;
 };
 
 }  // namespace opossum
