@@ -22,9 +22,11 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
       auto begin = Iterator<OffsetValueIteratorT>{_segment.block_minima().cbegin(), offset_values.cbegin(),
-                                                  _segment.null_values().cbegin()};
+                                                  _segment.null_values().cbegin(), ChunkOffset{0}};
 
-      auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
+      auto end =
+          Iterator<OffsetValueIteratorT>{_segment.block_minima().cend(), offset_values.cend(),
+                                         _segment.null_values().cend(), static_cast<ChunkOffset>(_segment.size())};
 
       functor(begin, end);
     });
@@ -61,17 +63,13 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
    public:
-    // Begin Iterator
     explicit Iterator(ReferenceFrameIterator block_minimum_it, OffsetValueIteratorT offset_value_it,
-                      NullValueIterator null_value_it)
+                      NullValueIterator null_value_it, ChunkOffset chunk_offset)
         : _block_minimum_it{block_minimum_it},
           _offset_value_it{offset_value_it},
           _null_value_it{null_value_it},
           _index_within_frame{0u},
-          _chunk_offset{0u} {}
-
-    // End iterator
-    explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it, {}} {}
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -103,6 +101,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
     void advance(std::ptrdiff_t n) {
       // For now, the lazy approach
+      PerformanceWarning("Using repeated increment/decrement for random access");
       if (n < 0) {
         for (std::ptrdiff_t i = n; i < 0; ++i) {
           decrement();

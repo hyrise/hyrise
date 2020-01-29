@@ -48,6 +48,7 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   std::string reference_filename = reference_filepath + reference_filenames.at(GetParam());
   auto importer = std::make_shared<opossum::Import>(reference_filename, "a", Chunk::DEFAULT_SIZE, GetParam());
   importer->execute();
+
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
@@ -63,7 +64,22 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
       reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
   auto importer = std::make_shared<opossum::Import>(reference_filename, "a");
   importer->execute();
+
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
+}
+
+TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
+  std::string reference_filename =
+      reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
+  auto importer = std::make_shared<opossum::Import>(reference_filename, "a");
+  importer->execute();
+
+  auto table = Hyrise::get().storage_manager.get_table("a");
+
+  EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
+  EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
+  EXPECT_TRUE(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.has_value());
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.value(), CommitID{0});
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {
