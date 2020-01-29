@@ -169,13 +169,14 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ValueVectorIterator _values_begin_it;
   };
 
-  template <typename SubIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<SubIteratorType>, SegmentPosition<T>> {
+  template <typename _SubIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
     using NullValueVectorIterator = typename pmr_concurrent_vector<bool>::const_iterator;
+    using SubIteratorType = _SubIteratorType;
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,

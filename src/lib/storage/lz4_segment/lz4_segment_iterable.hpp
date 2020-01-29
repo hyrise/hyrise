@@ -13,6 +13,7 @@ template <typename T>
 class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentIterable<T>> {
  public:
   using ValueType = T;
+  using PointAccessibleSegmentIterable<LZ4SegmentIterable<T>>::_on_with_iterators;
 
   explicit LZ4SegmentIterable(const LZ4Segment<T>& segment) : _segment{segment} {}
 
@@ -137,16 +138,16 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator, _SubIteratorType>, SegmentPosition<T>> {
    public:
+    using SubIteratorType = _SubIteratorType;
     using ValueType = T;
     using IterableType = LZ4SegmentIterable<T>;
     using DataIteratorType = typename std::vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
-    using SubIteratorType = _SubIteratorType;
 
     // Begin Iterator
     PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
                         SubIteratorType position_filter_begin, SubIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator, SubIteratorType>,
+        : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator, _SubIteratorType>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _data_it{std::move(data_it)},

@@ -8,7 +8,10 @@
 
 namespace opossum {
 
-class PosList;
+class AbstractPosList;
+
+template<typename Functor>
+void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functor& func);
 
 class AbstractPosList {
  public:
@@ -42,8 +45,6 @@ class AbstractPosList {
     });
   }
 };
-
-class PosList;
 
 template <typename PosListType>
 typename PosListType::const_iterator make_pos_list_begin_iterator(PosListType& pos_list);

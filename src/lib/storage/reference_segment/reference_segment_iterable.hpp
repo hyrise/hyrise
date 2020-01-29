@@ -21,6 +21,7 @@ template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {
  public:
   using ValueType = T;
+  using SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>>::_on_with_iterators;
 
   explicit ReferenceSegmentIterable(const ReferenceSegment& segment) : _segment{segment} {}
 
@@ -96,9 +97,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
-      resolve_pos_list_type(pos_list, [&](auto& pos_list){
-        const auto begin_it = make_pos_list_begin_iterator(pos_list);
-        const auto end_it = make_pos_list_end_iterator(pos_list);
+      resolve_pos_list_type(pos_list, [&](auto& typed_pos_list){
+        const auto begin_it = make_pos_list_begin_iterator(typed_pos_list);
+        const auto end_it = make_pos_list_end_iterator(typed_pos_list);
         auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
         auto end = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, end_it};
         functor(begin, end);
