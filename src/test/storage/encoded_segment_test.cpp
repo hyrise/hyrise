@@ -128,7 +128,7 @@ auto encoded_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentE
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
-                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, false)),
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, false)),
                          encoded_segment_test_formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
