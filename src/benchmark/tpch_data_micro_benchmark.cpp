@@ -6,6 +6,7 @@
 
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -218,8 +219,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanAggregate)(benchm
     table_scan->execute();
     // Note that it doesn't really make sense to aggregate when ordering by a unique column
     std::vector<ColumnID> group_by = {l_orderkey_id};
-    const auto aggregates = {std::make_shared<AggregateExpression>(AggregateFunction::Sum, l_partkey_id)};
-    auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregates, group_by);
+    auto table_scan_output = table_scan->get_output();
+    const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+            max_(pqp_column_(l_partkey_id,
+                    table_scan_output->column_data_type(l_partkey_id),
+                    table_scan_output->column_is_nullable(l_partkey_id),
+                    table_scan_output->column_name(l_partkey_id)))};
+    auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregate_expressions, group_by);
     aggregate->execute();
   }
 }
