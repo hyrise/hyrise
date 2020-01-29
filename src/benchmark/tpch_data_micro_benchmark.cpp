@@ -1,5 +1,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "cert-err58-cpp"
+
+#include <operators/sort.hpp>
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
@@ -11,7 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -203,19 +205,28 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanJoinAggregate)(be
   const auto l_partkey_id = ColumnID{1};
   const auto between_orderkey_predicate = std::make_shared<BetweenExpression>(
           PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
+  const auto sorted_line_item = std::make_shared<Sort>(line_item, l_orderkey_id);
+  sorted_line_item->execute();
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(line_item, between_orderkey_predicate);
+    const auto table_scan = std::make_shared<TableScan>(sorted_line_item, between_orderkey_predicate);
     table_scan->execute();
     // Self-Semi-join on primary key (makes no practical sense in the real world but interesting for us)
-    auto join = std::make_shared<JoinHash>(
-        table_scan, table_scan, JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(l_orderkey_id, l_orderkey_id), PredicateCondition::Equals});
-    join->execute();
     // Sort-based aggregate (with GROUP BY)
     // again, a non-sensical aggregate (smallest part key id per order line item - there is always just one)
+    const auto output = table_scan->get_output();
+
+    for(auto chunk_id = ChunkID{0}; chunk_id < output->chunk_count(); chunk_id++) {
+      const std::optional<std::pair<ColumnID, OrderByMode>>& ordered_by = output->get_chunk(chunk_id)->ordered_by();
+      if (ordered_by) {
+        std::cout << "chunk " << chunk_id << " ordered by: " << ordered_by->first << ordered_by->second << std::endl;
+      } else {
+        std::cout << "chunk " << chunk_id << " not ordered" << std::endl;
+      }
+    }
+
     std::vector<AggregateColumnDefinition> aggregates = {{l_partkey_id, AggregateFunction::Min}};
-    std::vector<ColumnID> groupby = {l_orderkey_id};
-    auto aggregate = std::make_shared<AggregateHash>(join, aggregates, groupby);
+    std::vector<ColumnID> group_by = {l_orderkey_id};
+    auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregates, group_by);
     aggregate->execute();
   }
 }
