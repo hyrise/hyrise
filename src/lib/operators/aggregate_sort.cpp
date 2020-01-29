@@ -368,7 +368,6 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     for(auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
       if (input_table->get_chunk(chunk_id)->ordered_by() != all_chunks_ordered_by) {
         all_chunks_ordered_by = std::nullopt;
-        std::cout << "Some chunk not sorted: Chunk " << chunk_id << std::endl;
         break;
       }
     }
@@ -376,9 +375,10 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   // Sort input table consecutively by the group by columns (stable sort)
   auto sorted_table = input_table;
+  auto order_by = all_chunks_ordered_by; 
   for (const auto& column_id : _groupby_column_ids) {
+    // skip already sorted column
     if (all_chunks_ordered_by && all_chunks_ordered_by->first == column_id) {
-      std::cout << "Skipping sort because column already sorted" << column_id << std::endl;
       continue;
     }
     const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
@@ -386,6 +386,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     Sort sort = Sort(sorted_wrapper, column_id);
     sort.execute();
     sorted_table = sort.get_output();
+    order_by = std::make_pair(column_id, OrderByMode::Ascending);
   }
 
   _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
@@ -590,12 +591,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   // Append output to result table
   result_table->append_chunk(_output_segments);
-
+  
   // Set order_by flag
-  const auto chunk = result_table->last_chunk();
-  const auto ordered_by_mode = sorted_table->get_chunk(ChunkID{0})->ordered_by()->second;
-  const auto ordered_by_column_id = _groupby_column_ids.back();
-  chunk->set_ordered_by(std::make_pair(ordered_by_column_id, ordered_by_mode));
+  result_table->last_chunk()->set_ordered_by(*order_by);
 
   return result_table;
 }
