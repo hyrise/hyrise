@@ -162,6 +162,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
       const auto ordered_by = chunk_in->ordered_by();
       if (ordered_by) {
+        chunk->finalize();
         chunk->set_ordered_by(ordered_by.value());
       }
       output_chunks.emplace_back(chunk);

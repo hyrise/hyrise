@@ -208,7 +208,11 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     const auto chunk_count = output->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      output->get_chunk(chunk_id)->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+      auto chunk = output->get_chunk(chunk_id);
+      if (chunk->is_mutable()){
+        chunk->finalize();
+      }
+      chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
     }
 
     return output;

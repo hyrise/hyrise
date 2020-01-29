@@ -243,6 +243,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       const auto chunk = std::make_shared<Chunk>(output_segments);
       const auto ordered_by = chunk_in->ordered_by();
       if (ordered_by) {
+        chunk->finalize();
         chunk->set_ordered_by(ordered_by.value());
       }
       output_chunks.emplace_back(chunk);

@@ -602,7 +602,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   result_table->append_chunk(_output_segments);
 
   // Set order_by flag
-  result_table->last_chunk()->set_ordered_by(*order_by);
+  auto chunk = result_table->last_chunk();
+  chunk->finalize();
+  chunk->set_ordered_by(*order_by);
 
   return result_table;
 }
