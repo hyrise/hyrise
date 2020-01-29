@@ -221,7 +221,10 @@ void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_ro
 
 const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
 
-void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
+void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
+  Assert(!is_mutable(), "Cannot set ordered_by on mutable chunks.");
+  _ordered_by.emplace(ordered_by); 
+}
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
   if (_cleanup_commit_id == 0) {
