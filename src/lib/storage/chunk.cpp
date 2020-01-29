@@ -223,7 +223,7 @@ const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const
 
 void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
   Assert(!is_mutable(), "Cannot set ordered_by on mutable chunks.");
-  _ordered_by.emplace(ordered_by); 
+  _ordered_by.emplace(ordered_by);
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
