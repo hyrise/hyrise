@@ -126,24 +126,6 @@ void PredicateReorderingRule::_reorder_predicates(
               return between_expression != nullptr;
             });
 
-  /*
-  std::cout << "Reordered query plan:" << std::endl;
-  for (auto& node: nodes_and_cardinalities) {
-    const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node.first);
-    if (predicate_node == nullptr) {
-      std::cout << "non-predicate node" << std::endl;
-      continue;
-    }
-    const auto predicate = predicate_node->predicate();
-    const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate);
-    if (between_expression != nullptr) {
-      std::cout << "between_expression node" << std::endl;
-    } else {
-      std::cout << "other predicate node" << std::endl;
-    }
-  }
-  */
-
   // Ensure that nodes are chained correctly
   nodes_and_cardinalities.back().first->set_left_input(input);
 

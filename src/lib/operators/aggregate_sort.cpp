@@ -383,7 +383,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   auto sorted_table = input_table;
   auto order_by = all_chunks_ordered_by;
   for (const auto& column_id : _groupby_column_ids) {
-    // skip already sorted column
+    // Skip already sorted columns.
+    // The order in which columns are sorted is not relevant here since we only care about grouping.
     if (all_chunks_ordered_by && all_chunks_ordered_by->first == column_id) {
       continue;
     }
