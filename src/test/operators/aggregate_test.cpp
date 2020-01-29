@@ -16,6 +16,7 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -145,6 +146,47 @@ class OperatorsAggregateTest : public BaseTest {
       _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
       _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a, _table_wrapper_2_o_b,
       _table_wrapper_int_int;
+};
+
+class AggregateSortedTest : public BaseTest {
+  public:
+    void SetUp() override {
+      _table_wrapper_1_1 = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+      _table_wrapper_1_1->execute();
+
+    }
+
+  protected:
+
+  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
+                   const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
+                   bool test_aggregate_on_reference_table = true) {
+    // load expected results from file
+    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
+    EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
+
+    {
+      // Test the Aggregate on stored table data
+      auto aggregate = std::make_shared<AggregateSort>(in, aggregates, groupby_column_ids);
+      aggregate->execute();
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    }
+
+    if (test_aggregate_on_reference_table) {
+      // Perform a TableScan to create a reference table
+      const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
+      table_scan->execute();
+
+      // Perform the Aggregate on a reference table
+      const auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregates, groupby_column_ids);
+      aggregate->execute();
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    }
+  }
+
+    inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1;
+
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
@@ -749,10 +791,7 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
 }
-
-TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
+TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) { auto filtered = std::make_shared<TableScan>( this->_table_wrapper_1_1_dict,
       less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
@@ -788,6 +827,52 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
 
   this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
+}
+
+
+
+TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
 }
 
 }  // namespace opossum
