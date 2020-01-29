@@ -20,7 +20,9 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id,
                                                        const PredicateCondition& init_predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition}, value{value} {
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
+      value{value},
+      _column_is_nullable{in_table->column_is_nullable(column_id)} {
   Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(value),
          "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
          "ExpressionEvaluatorTableScanImpl.");
@@ -149,8 +151,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, predicate_condition,
-                                                         boost::get<ColumnDataType>(value));
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable,
+                                                         predicate_condition, boost::get<ColumnDataType>(value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           if (begin == end) return;

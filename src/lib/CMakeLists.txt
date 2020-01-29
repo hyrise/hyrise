@@ -125,6 +125,8 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/export_node.cpp
+    logical_query_plan/export_node.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -495,7 +497,6 @@ set(
     storage/segment_iterables.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
-    operators/table_scan/sorted_segment_between_search.hpp
     operators/table_scan/sorted_segment_search.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp

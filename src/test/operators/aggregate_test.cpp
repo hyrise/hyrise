@@ -9,6 +9,7 @@
 
 #include "base_test.hpp"
 
+#include "expression/aggregate_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
@@ -16,13 +17,56 @@
 #include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+  template <typename T>
+  void test_output(const std::shared_ptr<AbstractOperator> in,
+                   const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
+                   const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
+                   bool test_aggregate_on_reference_table = true) {
+    // load expected results from file
+    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
+    EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
+
+    auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{};
+    const auto& table = in->get_output();
+    for (const auto& [column_id, aggregate_function] : aggregate_definitions) {
+      if (column_id != INVALID_COLUMN_ID) {
+        aggregates.emplace_back(std::make_shared<AggregateExpression>(
+            aggregate_function, pqp_column_(column_id, table->column_data_type(column_id),
+                                            table->column_is_nullable(column_id), table->column_name(column_id))));
+      } else {
+        aggregates.emplace_back(std::make_shared<AggregateExpression>(
+            aggregate_function, pqp_column_(column_id, DataType::Long, false, "*")));
+      }
+    }
+
+    {
+      // Test the Aggregate on stored table data
+      auto aggregate = std::make_shared<T>(in, aggregates, groupby_column_ids);
+      aggregate->execute();
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    }
+
+    if (test_aggregate_on_reference_table) {
+      // Perform a TableScan to create a reference table
+      const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
+      table_scan->execute();
+
+      // Perform the Aggregate on a reference table
+      const auto aggregate = std::make_shared<T>(table_scan, aggregates, groupby_column_ids);
+      aggregate->execute();
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    }
+  }
 
 template <typename T>
 class OperatorsAggregateTest : public BaseTest {
@@ -113,32 +157,6 @@ class OperatorsAggregateTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
-                   const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
-                   bool test_aggregate_on_reference_table = true) {
-    // load expected results from file
-    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
-    EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
-
-    {
-      // Test the Aggregate on stored table data
-      auto aggregate = std::make_shared<T>(in, aggregates, groupby_column_ids);
-      aggregate->execute();
-      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
-    }
-
-    if (test_aggregate_on_reference_table) {
-      // Perform a TableScan to create a reference table
-      const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
-      table_scan->execute();
-
-      // Perform the Aggregate on a reference table
-      const auto aggregate = std::make_shared<T>(table_scan, aggregates, groupby_column_ids);
-      aggregate->execute();
-      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
-    }
-  }
-
   inline static std::shared_ptr<TableWrapper> _table_wrapper_1_0, _table_wrapper_1_0_null, _table_wrapper_1_1,
       _table_wrapper_1_1_null, _table_wrapper_1_1_large, _table_wrapper_join_1, _table_wrapper_join_2,
       _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_3_1,
@@ -147,13 +165,61 @@ class OperatorsAggregateTest : public BaseTest {
       _table_wrapper_int_int;
 };
 
+class AggregateSortedTest : public BaseTest {
+  public:
+    void SetUp() override {
+      _table_wrapper_1_1 = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+      _table_wrapper_1_1->execute();
+
+      _table_wrapper_multi_columns = std::make_shared<TableWrapper>(
+          load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", 2));
+      _table_wrapper_multi_columns->execute();
+    }
+
+  protected:
+
+  void test_ordered_by_flag_set_correct(const std::shared_ptr<Table> test_table) {
+    const auto chunk_count = test_table->chunk_count();
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = test_table->get_chunk(chunk_id);
+      const auto ordered_by = chunk->ordered_by();
+      if (ordered_by) {
+        const auto ordered_segment = chunk->get_segment(ordered_by->first);
+        segment_with_iterators(*ordered_segment, [&](auto it, auto end) {
+            it++;
+            auto prev_iterator = --it;
+            if (ordered_by->second == OrderByMode::Ascending || ordered_by->second == OrderByMode::AscendingNullsLast) {
+              while(it != end) {
+                EXPECT_TRUE(it->value() >= prev_iterator->value());
+                ++it;
+              }
+            } else if (ordered_by->second == OrderByMode::Descending || ordered_by->second == OrderByMode::DescendingNullsLast) {
+              while(it != end) {
+                EXPECT_TRUE(it->value() <= prev_iterator->value());
+                ++it;
+              }
+            }
+        });
+      }
+    }
+  }
+
+
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_multi_columns;
+
+};
+
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
 TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      max_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_is_nullable(ColumnID{1}),
+                       table->column_name(ColumnID{1})))};
+  auto aggregate =
+      std::make_shared<TypeParam>(this->_table_wrapper_1_1, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
 
   if constexpr (std::is_same_v<TypeParam, AggregateHash>) {
     EXPECT_EQ(aggregate->name(), "AggregateHash");
@@ -165,24 +231,32 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotSumStringColumns) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1_string->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      sum_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_is_nullable(ColumnID{0}),
+                       table->column_name(ColumnID{0})))};
+  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                               std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotAvgStringColumns) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1_string->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      avg_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_is_nullable(ColumnID{0}),
+                       table->column_name(ColumnID{0})))};
+  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                               std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
-  auto aggregate = std::make_shared<TypeParam>(
-      this->_table_wrapper_1_1_string,
-      std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::StandardDeviationSample}},
-      std::vector<ColumnID>{ColumnID{0}});
+  const auto table = this->_table_wrapper_1_1_string->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      standard_deviation_sample_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}),
+                                             table->column_is_nullable(ColumnID{0}), table->column_name(ColumnID{0})))};
+  auto aggregate = std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, aggregate_expressions,
+                                               std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
@@ -191,12 +265,16 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
 // the aggregated column is functionally dependent on the group-by columns.
 TYPED_TEST(OperatorsAggregateTest, AnyOnGroupWithMultipleEntries) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+      this->_table_wrapper_2_2, equals_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
-  auto aggregate = std::make_shared<TypeParam>(
-      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
-      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  const auto table = this->_table_wrapper_2_2->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      any_(pqp_column_(ColumnID{2}, table->column_data_type(ColumnID{2}), table->column_is_nullable(ColumnID{2}),
+                       table->column_name(ColumnID{2})))};
+
+  auto aggregate =
+      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   aggregate->execute();
 
   // Column 2 stores the value 20 twice for the remaining group.
@@ -208,174 +286,178 @@ TYPED_TEST(OperatorsAggregateTest, FailAnyOnNonDependentColumn) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+      this->_table_wrapper_2_2, equals_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
   // Column 3 stores different values for the tuples of the remaining group.
-  auto aggregate = std::make_shared<TypeParam>(
-      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
-      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  const auto table = this->_table_wrapper_2_2->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      any_(pqp_column_(ColumnID{3}, table->column_data_type(ColumnID{3}), table->column_is_nullable(ColumnID{3}),
+                       table->column_name(ColumnID{3})))};
+
+  auto aggregate =
+      std::make_shared<TypeParam>(filtered, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 // Use ANY() on a column with NULL values.
 TYPED_TEST(OperatorsAggregateTest, AnyAndNulls) {
-  this->test_output(this->_table_wrapper_1_0_null, {{ColumnID{0}, AggregateFunction::Any}}, {ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_1_0_null, {{ColumnID{0}, AggregateFunction::Any}}, {ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CanCountStringColumns) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMax) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMin) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateSum) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateAvg) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateStandardDeviationSampleLarge) {
-  this->test_output(this->_table_wrapper_1_1_large, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_large, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_large.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateCount) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateCountDistinct) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::CountDistinct}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::CountDistinct}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateMax) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateMin) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/min.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateStringMax) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Max}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Max}}, {},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/max_str.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateStringMin) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Min}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Min}}, {},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/min_str.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateSum) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateAvg) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/stddev_samp_null.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateCount) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMax) {
-  this->test_output(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMin) {
-  this->test_output(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateSum) {
-  this->test_output(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAvg) {
-  this->test_output(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateCount) {
-  this->test_output(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateAvgMax) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/max_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMaxStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/max_stddev_samp.tbl",
                     1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinAvg) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/min_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/min_stddev_samp.tbl",
                     1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinMax) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/min_max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateAvgAvg) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Avg}, {ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/avg_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::StandardDeviationSample},
                      {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}},
@@ -383,123 +465,123 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleStandardDe
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateSumAvg) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateSumSum) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/sum_sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateSumCount) {
-  this->test_output(this->_table_wrapper_1_2,
+  test_output<AggregateSort>(this->_table_wrapper_1_2,
                     {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/sum_count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyMax) {
-  this->test_output(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Max}}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Max}}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyMin) {
-  this->test_output(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Min}}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Min}}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/min.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbySum) {
-  this->test_output(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAvg) {
-  this->test_output(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/stddev_samp_null.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyCount) {
-  this->test_output(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyMax) {
-  this->test_output(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Max}},
+  test_output<AggregateSort>(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Max}},
                     {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyMin) {
-  this->test_output(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Min}},
+  test_output<AggregateSort>(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Min}},
                     {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/min.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbySum) {
-  this->test_output(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Sum}},
+  test_output<AggregateSort>(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Sum}},
                     {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyAvg) {
-  this->test_output(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Avg}},
+  test_output<AggregateSort>(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Avg}},
                     {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/stddev_samp_null.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyCount) {
-  this->test_output(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Count}},
+  test_output<AggregateSort>(this->_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Count}},
                     {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMaxAvg) {
-  this->test_output(
+  test_output<AggregateSort>(
       this->_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Max}, {ColumnID{3}, AggregateFunction::Avg}},
       {ColumnID{0}, ColumnID{1}}, "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvg) {
-  this->test_output(
+  test_output<AggregateSort>(
       this->_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
       {ColumnID{0}, ColumnID{1}}, "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/min_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinMax) {
-  this->test_output(
+  test_output<AggregateSort>(
       this->_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Max}},
       {ColumnID{0}, ColumnID{1}}, "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/min_max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumAvg) {
-  this->test_output(
+  test_output<AggregateSort>(
       this->_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Sum}, {ColumnID{3}, AggregateFunction::Avg}},
       {ColumnID{0}, ColumnID{1}}, "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/sum_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateStandardDeviationSampleAvg) {
-  this->test_output(this->_table_wrapper_2_2,
+  test_output<AggregateSort>(this->_table_wrapper_2_2,
                     {{ColumnID{2}, AggregateFunction::StandardDeviationSample}, {ColumnID{3}, AggregateFunction::Avg}},
                     {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/stddev_samp_avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateStandardDeviationSampleStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_2_2,
+  test_output<AggregateSort>(this->_table_wrapper_2_2,
                     {{ColumnID{2}, AggregateFunction::StandardDeviationSample},
                      {ColumnID{3}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}, ColumnID{1}},
@@ -507,157 +589,158 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateStandardDeviationSam
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumSum) {
-  this->test_output(
+  test_output<AggregateSort>(
       this->_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Sum}, {ColumnID{3}, AggregateFunction::Sum}},
       {ColumnID{0}, ColumnID{1}}, "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/sum_sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumCount) {
-  this->test_output(
+  test_output<AggregateSort>(
       this->_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Sum}, {ColumnID{3}, AggregateFunction::Count}},
       {ColumnID{0}, ColumnID{1}}, "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/sum_count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateMax) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Max}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Max}}, {},
                     "resources/test_data/tbl/aggregateoperator/0gb_1agg/max.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateMin) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Min}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Min}}, {},
                     "resources/test_data/tbl/aggregateoperator/0gb_1agg/min.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateSum) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Sum}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Sum}}, {},
                     "resources/test_data/tbl/aggregateoperator/0gb_1agg/sum.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateAvg) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Avg}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Avg}}, {},
                     "resources/test_data/tbl/aggregateoperator/0gb_1agg/avg.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {},
                     "resources/test_data/tbl/aggregateoperator/0gb_1agg/stddev_samp.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbySingleAggregateCount) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Count}}, {},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Count}}, {},
                     "resources/test_data/tbl/aggregateoperator/0gb_1agg/count.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregate) {
-  this->test_output(this->_table_wrapper_1_0, {}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_0, {}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
-  this->test_output(this->_table_wrapper_1_1, {}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_0agg/result.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
-  EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{},
-                                           std::vector<ColumnID>{}),
-               std::logic_error);
+  EXPECT_THROW(
+      std::make_shared<TypeParam>(this->_table_wrapper_1_1_string, std::vector<std::shared_ptr<AggregateExpression>>{},
+                                  std::vector<ColumnID>{}),
+      std::logic_error);
 }
 
 /**
  * Tests for NULL values
  */
 TYPED_TEST(OperatorsAggregateTest, CanCountStringColumnsWithNull) {
-  this->test_output(this->_table_wrapper_1_1_string_null, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_string_null, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/count_str_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMinWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateSumWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateAvgWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateStandardDeviationSampleWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateCountWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
-  this->test_output(this->_table_wrapper_1_0_null, {}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_0_null, {}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStar) {
-  this->test_output(this->_table_wrapper_1_1, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStarWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_star_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyCountStar) {
-  this->test_output(this->_table_wrapper_2_0_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}},
+  test_output<AggregateSort>(this->_table_wrapper_2_0_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}},
                     {ColumnID{0}, ColumnID{2}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyCountStar) {
-  this->test_output(this->_table_wrapper_3_0_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}},
+  test_output<AggregateSort>(this->_table_wrapper_3_0_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}},
                     {ColumnID{0}, ColumnID{2}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_0agg/count_star.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMaxWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateSumWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAvgWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  test_output<AggregateSort>(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1, false);
 }
 
@@ -667,9 +750,9 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
-  this->test_output(filtered,
+  test_output<AggregateSort>(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
                      {ColumnID{2}, AggregateFunction::Count},
                      {INVALID_COLUMN_ID, AggregateFunction::Count}},
@@ -678,9 +761,9 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTable) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
-  this->test_output(filtered,
+  test_output<AggregateSort>(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
                      {ColumnID{2}, AggregateFunction::Count},
                      {INVALID_COLUMN_ID, AggregateFunction::Count}},
@@ -694,79 +777,79 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1, less_than_(this->get_column_expression(this->_table_wrapper_1_1, ColumnID{0}), "100"));
+      this->_table_wrapper_1_1, less_than_(get_column_expression(this->_table_wrapper_1_1, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  test_output<AggregateSort>(filtered, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_2, less_than_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), "100"));
+      this->_table_wrapper_2_2, less_than_(get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
+  test_output<AggregateSort>(filtered, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
                     {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/min_avg_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbySumOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_2_1, less_than_(this->get_column_expression(this->_table_wrapper_2_1, ColumnID{0}), "100"));
+      this->_table_wrapper_2_1, less_than_(get_column_expression(this->_table_wrapper_2_1, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
+  test_output<AggregateSort>(filtered, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/sum_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
+  test_output<AggregateSort>(filtered, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/sum_avg_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
+      this->_table_wrapper_1_2, less_than_(get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(
+  test_output<AggregateSort>(
       filtered, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}, {ColumnID{2}, AggregateFunction::Avg}},
       {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/stddev_samp_avg_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
-      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  auto filtered =
+      std::make_shared<TableScan>(this->_table_wrapper_1_1_dict,
+                                  less_than_(get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
-      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  auto filtered =
+      std::make_shared<TableScan>(this->_table_wrapper_1_1_dict,
+                                  less_than_(get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
+  test_output<AggregateSort>(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/any_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleOnRef) {
-  auto filtered = std::make_shared<TableScan>(
-      this->_table_wrapper_1_1_dict,
-      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  auto filtered =
+      std::make_shared<TableScan>(this->_table_wrapper_1_1_dict,
+                                  less_than_(get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
+  test_output<AggregateSort>(filtered, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_filtered.tbl", 1);
 }
 
@@ -776,7 +859,7 @@ TYPED_TEST(OperatorsAggregateTest, JoinThenAggregate) {
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
-  this->test_output(join, {}, {ColumnID{0}, ColumnID{3}},
+  test_output<AggregateSort>(join, {}, {ColumnID{0}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/join_2gb_0agg/result.tbl", 1);
 }
 
@@ -786,8 +869,96 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan});
   join->execute();
 
-  this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  test_output<AggregateSort>(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
+}
+
+
+
+TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
+  for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+                  "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", sorted_table_wrapper->get_output()->max_chunk_size());
+  }
+}
+
+TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
+  // Test for sorted for each column
+  const auto input_table = this->_table_wrapper_multi_columns->get_output();
+  const auto column_count = input_table->column_count();
+  for (ColumnID sorted_by_column_id = ColumnID{0}; sorted_by_column_id < column_count; ++sorted_by_column_id) {
+    Sort sort = Sort(this->_table_wrapper_multi_columns, sorted_by_column_id);
+    sort.execute();
+    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    sorted_table_wrapper->execute();
+    // Group and aggregate by every column combination
+    for (ColumnID group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {
+      for (ColumnID aggregate_by_column_id = ColumnID{0}; aggregate_by_column_id < column_count; ++aggregate_by_column_id) {
+        if (group_by_column_id == aggregate_by_column_id) continue;
+        const auto table = sorted_table_wrapper->get_output();
+        const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+        max_(pqp_column_(aggregate_by_column_id, table->column_data_type(aggregate_by_column_id), table->column_is_nullable(aggregate_by_column_id),
+                         table->column_name(aggregate_by_column_id)))};
+        std::vector<ColumnID> groupby_column_ids = {group_by_column_id};
+        const auto ordered_aggregate = std::make_shared<AggregateSort>(sorted_table_wrapper, aggregate_expressions, groupby_column_ids);
+        const auto unordered_aggregate = std::make_shared<AggregateSort>(this->_table_wrapper_multi_columns, aggregate_expressions, groupby_column_ids);
+        ordered_aggregate->execute();
+        unordered_aggregate->execute();
+        EXPECT_TABLE_EQ_UNORDERED(ordered_aggregate->get_output(), unordered_aggregate->get_output());
+      }
+    }
+  }
+}
+
+TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
+  Sort sort = Sort(this->_table_wrapper_multi_columns, ColumnID{1});
+  sort.execute();
+  std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+  sorted_table_wrapper->execute();
+  auto table = sorted_table_wrapper->get_output();
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+  max_(pqp_column_(ColumnID{0}, table->column_data_type(ColumnID{0}), table->column_is_nullable(ColumnID{0}),
+                   table->column_name(ColumnID{0})))};
+
+  std::vector<ColumnID> groupby_column_ids = {ColumnID{2}};
+  const auto aggregate = std::make_shared<AggregateSort>(this->_table_wrapper_multi_columns, aggregate_expressions, groupby_column_ids);
 }
 
 }  // namespace opossum
