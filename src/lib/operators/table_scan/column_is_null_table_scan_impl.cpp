@@ -55,36 +55,36 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
   });
 }
 
-  void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                        PosList& matches, const OrderByMode order_by) const {
-    const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
-    const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
-    segment_with_iterators(segment, [&](auto begin, auto end) {
-      if (is_nulls_first) {
-        const auto first_not_null = std::lower_bound(begin, end, bool{},
-                               [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
-        if (predicate_is_null) {
-          end = first_not_null;
-        } else {
-          begin = first_not_null;
-        }
-      } else {  // nulls last
-        const auto first_null = std::lower_bound(begin, end, bool{},
-                                 [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
-        if (predicate_is_null) {
-          begin = first_null;
-        } else {
-          end = first_null;
-        }
+void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                              PosList& matches, const OrderByMode order_by) const {
+  const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
+  const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
+  segment_with_iterators(segment, [&](auto begin, auto end) {
+    if (is_nulls_first) {
+      const auto first_not_null = std::lower_bound(
+          begin, end, bool{}, [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+      if (predicate_is_null) {
+        end = first_not_null;
+      } else {
+        begin = first_not_null;
       }
+    } else {  // nulls last
+      const auto first_null = std::lower_bound(
+          begin, end, bool{}, [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+      if (predicate_is_null) {
+        begin = first_null;
+      } else {
+        end = first_null;
+      }
+    }
 
-      size_t output_idx = matches.size();
-      matches.resize(matches.size() + std::distance(begin, end));
-      for (auto segment_it = begin; segment_it != end; ++segment_it) {
-        matches[output_idx++] = RowID{chunk_id, segment_it->chunk_offset()};
-      }
-    });
-  }
+    size_t output_idx = matches.size();
+    matches.resize(matches.size() + std::distance(begin, end));
+    for (auto segment_it = begin; segment_it != end; ++segment_it) {
+      matches[output_idx++] = RowID{chunk_id, segment_it->chunk_offset()};
+    }
+  });
+}
 
 void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id,
                                                     PosList& matches) const {

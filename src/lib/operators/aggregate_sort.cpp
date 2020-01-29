@@ -301,7 +301,6 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
                                             input_table->column_data_type(column_id),
                                             input_table->column_is_nullable(column_id));
-    // TODO include sortedness in output?
   }
 
   // Create aggregate column definitions
@@ -372,7 +371,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // check if there's a common chunk ordering
   auto all_chunks_ordered_by = input_table->get_chunk(ChunkID{0})->ordered_by();
   if (all_chunks_ordered_by) {
-    for(auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
+    for (auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
       if (input_table->get_chunk(chunk_id)->ordered_by() != all_chunks_ordered_by) {
         all_chunks_ordered_by = std::nullopt;
         break;
@@ -382,7 +381,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   // Sort input table consecutively by the group by columns (stable sort)
   auto sorted_table = input_table;
-  auto order_by = all_chunks_ordered_by; 
+  auto order_by = all_chunks_ordered_by;
   for (const auto& column_id : _groupby_column_ids) {
     // skip already sorted column
     if (all_chunks_ordered_by && all_chunks_ordered_by->first == column_id) {
@@ -601,7 +600,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   // Append output to result table
   result_table->append_chunk(_output_segments);
-  
+
   // Set order_by flag
   result_table->last_chunk()->set_ordered_by(*order_by);
 

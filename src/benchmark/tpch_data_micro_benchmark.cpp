@@ -20,7 +20,6 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
-
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
@@ -202,7 +201,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanJoinAggregate)(be
   const auto l_orderkey_id = ColumnID{0};
   const auto l_partkey_id = ColumnID{1};
   const auto between_orderkey_predicate = std::make_shared<BetweenExpression>(
-          PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
+      PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
   for (auto _ : state) {
     const auto table_scan = std::make_shared<TableScan>(line_item, between_orderkey_predicate);
     table_scan->execute();
