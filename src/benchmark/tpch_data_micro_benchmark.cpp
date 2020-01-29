@@ -6,6 +6,7 @@
 
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -195,38 +196,36 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
   }
 }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanJoinAggregate)(benchmark::State& state) {
+/**
+ * The objective of this benchmark is to measure performance improvements when having
+ * - a sorted column
+ * - a between scan on that column
+ * - an aggregation grouping by that column.
+ */
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanAggregate)(benchmark::State& state) {
   // Take e.g. TPC-H LineItem (biggest table in dataset)
   std::shared_ptr<TableWrapper>& line_item = _table_wrapper_map.at("lineitem");
-  // Between Scan on primary key (l_orderkey) with ~50% selectivity
-  // values in sf-0.01 go from 1 to 60000
   const auto l_orderkey_id = ColumnID{0};
   const auto l_partkey_id = ColumnID{1};
-  const auto between_orderkey_predicate = std::make_shared<BetweenExpression>(
-  PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
+  // Between Scan on primary key (l_orderkey) with ~50% selectivity
+  // Values in sf-0.01 go from 1 to 60000.
+  const auto orderkey_between_predicate = std::make_shared<BetweenExpression>(
+      PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
   const auto sorted_line_item = std::make_shared<Sort>(line_item, l_orderkey_id);
   sorted_line_item->execute();
 
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(sorted_line_item, between_orderkey_predicate);
+    const auto table_scan = std::make_shared<TableScan>(sorted_line_item, orderkey_between_predicate);
     table_scan->execute();
-    // Self-Semi-join on primary key (makes no practical sense in the real world but interesting for us)
-    // Sort-based aggregate (with GROUP BY)
-    // again, a non-sensical aggregate (smallest part key id per order line item - there is always just one)
-    const auto output = table_scan->get_output();
-
-    for(auto chunk_id = ChunkID{0}; chunk_id < output->chunk_count(); chunk_id++) {
-      const std::optional<std::pair<ColumnID, OrderByMode>>& ordered_by = output->get_chunk(chunk_id)->ordered_by();
-      if (ordered_by) {
-        std::cout << "chunk " << chunk_id << " ordered by: " << ordered_by->first << ordered_by->second << std::endl;
-      } else {
-        std::cout << "chunk " << chunk_id << " not ordered" << std::endl;
-      }
-    }
-
-    std::vector<AggregateColumnDefinition> aggregates = {{l_partkey_id, AggregateFunction::Min}};
+    // Note that it doesn't really make sense to aggregate when ordering by a unique column
     std::vector<ColumnID> group_by = {l_orderkey_id};
-    auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregates, group_by);
+    auto table_scan_output = table_scan->get_output();
+    const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+            max_(pqp_column_(l_partkey_id,
+                    table_scan_output->column_data_type(l_partkey_id),
+                    table_scan_output->column_is_nullable(l_partkey_id),
+                    table_scan_output->column_name(l_partkey_id)))};
+    auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregate_expressions, group_by);
     aggregate->execute();
   }
 }
