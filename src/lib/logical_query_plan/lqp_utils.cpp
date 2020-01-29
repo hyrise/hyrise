@@ -206,8 +206,6 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
           return LQPVisitation::VisitInputs;
         });
       } break;
-      case LQPNodeType::BeginTransaction:
-      case LQPNodeType::CommitTransaction:
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:
@@ -223,7 +221,6 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Limit:
       case LQPNodeType::Predicate:
       case LQPNodeType::Projection:
-      case LQPNodeType::RollbackTransaction:
       case LQPNodeType::Root:
       case LQPNodeType::Sort:
       case LQPNodeType::StaticTable:

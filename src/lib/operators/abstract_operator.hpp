@@ -18,8 +18,6 @@ class TransactionContext;
 enum class OperatorType {
   Aggregate,
   Alias,
-  BeginTransaction,
-  CommitTransaction,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
@@ -41,7 +39,6 @@ enum class OperatorType {
   Print,
   Product,
   Projection,
-  RollbackTransaction,
   Sort,
   TableScan,
   TableWrapper,

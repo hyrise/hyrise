@@ -62,8 +62,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For the vast majority of node types, AbstractLQPNode::node_expression holds all expressions required by this
     // node.
     case LQPNodeType::Alias:
-    case LQPNodeType::BeginTransaction:
-    case LQPNodeType::CommitTransaction:
     case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
@@ -73,7 +71,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Export:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
-    case LQPNodeType::RollbackTransaction:
     case LQPNodeType::Root:
     case LQPNodeType::Sort:
     case LQPNodeType::StaticTable:

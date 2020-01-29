@@ -1,5 +1,6 @@
 #include "result_serializer.hpp"
 #include "lossy_cast.hpp"
+#include "query_handler.hpp"
 
 namespace opossum {
 
@@ -89,6 +90,15 @@ void ResultSerializer::send_query_response(
   }
 }
 
+std::string ResultSerializer::build_command_complete_message(const ExecutionInformation& execution_information,
+                                                             const uint64_t row_count) {
+  if (execution_information.custom_command_complete_message) {
+    return execution_information.custom_command_complete_message.value();
+  } else {
+    return build_command_complete_message(execution_information.root_operator_type, row_count);
+  }
+}
+
 std::string ResultSerializer::build_command_complete_message(const OperatorType root_operator_type,
                                                              const uint64_t row_count) {
   switch (root_operator_type) {
@@ -105,15 +115,6 @@ std::string ResultSerializer::build_command_complete_message(const OperatorType 
       // We do not return how many rows are affected, because we do not track this
       // information
       return "DELETE -1";
-    }
-    case OperatorType::BeginTransaction: {
-      return "BEGIN";
-    }
-    case OperatorType::CommitTransaction: {
-      return "COMMIT";
-    }
-    case OperatorType::RollbackTransaction: {
-      return "ROLLBACK";
     }
     default:
       // Assuming normal query
