@@ -158,10 +158,35 @@ class AggregateSortedTest : public BaseTest {
       _table_wrapper_multi_columns = std::make_shared<TableWrapper>(
           load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", 2));
       _table_wrapper_multi_columns->execute();
-
     }
 
   protected:
+
+  void test_ordered_by_flag_set_correct(const std::shared_ptr<Table> test_table) {
+    const auto chunk_count = test_table->chunk_count();
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = test_table->get_chunk(chunk_id);
+      const auto ordered_by = chunk->ordered_by();
+      if (ordered_by) {
+        const auto ordered_segment = chunk->get_segment(ordered_by->first);
+        segment_with_iterators(*ordered_segment, [&](auto it, auto end) {
+            it++;
+            auto prev_iterator = --it;
+            if (ordered_by->second == OrderByMode::Ascending || ordered_by->second == OrderByMode::AscendingNullsLast) {
+              while(it != end) {
+                EXPECT_TRUE(it->value() >= prev_iterator->value());
+                ++it;
+              }
+            } else if (ordered_by->second == OrderByMode::Descending || ordered_by->second == OrderByMode::DescendingNullsLast) {
+              while(it != end) {
+                EXPECT_TRUE(it->value() <= prev_iterator->value());
+                ++it;
+              }
+            }
+        });
+      }
+    }
+  }
 
   void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
@@ -902,6 +927,17 @@ TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
       }
     }
   }
+}
+
+TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
+  Sort sort = Sort(this->_table_wrapper_multi_columns, ColumnID{1});
+  sort.execute();
+  std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+  sorted_table_wrapper->execute();
+
+  std::vector<AggregateColumnDefinition> aggregateDefinitions = {{ColumnID{0}, AggregateFunction::Max}};
+  std::vector<ColumnID> groupby_column_ids = {ColumnID{2}};
+  const auto aggregate = std::make_shared<AggregateSort>(this->_table_wrapper_multi_columns, aggregateDefinitions, groupby_column_ids);
 }
 
 }  // namespace opossum
