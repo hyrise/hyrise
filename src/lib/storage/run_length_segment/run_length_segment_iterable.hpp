@@ -26,7 +26,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     auto begin =
         PointAccessIterator{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(),
                             position_filter->cbegin(), position_filter->cbegin()};
@@ -128,17 +128,20 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    *   - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
    *   - a binary search in the range [0, previous_end_position] else
    */
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>> {
+  template <typename _SubIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
+    using SubIteratorType = _SubIteratorType;
 
     explicit PointAccessIterator(const pmr_vector<T>* values, const pmr_vector<bool>* null_values,
                                  const pmr_vector<ChunkOffset>* end_positions,
-                                 const AbstractPosListIterator position_filter_begin,
-                                 AbstractPosListIterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
-                                                                                  std::move(position_filter_it)},
+                                 const SubIteratorType position_filter_begin,
+                                 SubIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator,
+                                         SegmentPosition<T>>{std::move(position_filter_begin),
+                                                          std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},

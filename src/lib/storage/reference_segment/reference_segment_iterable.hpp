@@ -31,15 +31,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     const auto& pos_list = _segment.pos_list();
 
-    const auto begin_it = pos_list->begin();
-    const auto end_it = pos_list->end();
-
+    // TODO: Change comment to reflect changes
     // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
     // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
     // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
-
-    if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
-      auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
+    if (pos_list->references_single_chunk() && pos_list->size() > 0 && pos_list->common_chunk_id() != INVALID_CHUNK_ID) {
+      auto referenced_segment = referenced_table->get_chunk(pos_list->common_chunk_id())->get_segment(referenced_column_id);
 
       bool functor_was_called = false;
 
@@ -99,10 +96,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
-      auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
-      auto end = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, end_it};
-
-      functor(begin, end);
+      resolve_pos_list_type(pos_list, [&](auto& pos_list){
+        const auto begin_it = make_pos_list_begin_iterator(pos_list);
+        const auto end_it = make_pos_list_end_iterator(pos_list);
+        auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
+        auto end = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, end_it};
+        functor(begin, end);
+      });
     }
   }
 
@@ -113,12 +113,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
  private:
   // The iterator for cases where we iterate over a single referenced chunk
-  template <typename Accessor>
-  class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor>, SegmentPosition<T>> {
+  template <typename Accessor, typename PosListIterator>
+  class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor, PosListIterator>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = AbstractPosListIterator;
 
    public:
     explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor, const PosListIterator& begin_pos_list_it,
@@ -161,11 +160,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
-  class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentPosition<T>> {
+  template <typename PosListIterator>
+  class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator<PosListIterator>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = AbstractPosListIterator;
 
    public:
     explicit MultipleChunkIterator(

@@ -68,6 +68,13 @@ class SegmentIterable {
     _self()._on_with_iterators(f);
   }
 
+  template <typename Functor>
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+    resolve_pos_list_type(*position_filter, [&](auto& pos_list){
+      _self()._on_with_iterators(pos_list, functor);
+    });
+  }
+
   /**
    * @param f is a generic lambda accepting a segment value (i.e. use const auto&)
    */
@@ -142,6 +149,13 @@ template <typename Derived>
 class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
  public:
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
+
+  template <typename Functor>
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+    resolve_pos_list_type(*position_filter, [&](auto& pos_list){
+      _self()._on_with_iterators(pos_list, functor);
+    });
+  }
 
   template <typename Functor>
   void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {

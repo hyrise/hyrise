@@ -25,17 +25,17 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
 
   // Iterate over the input_pos_list and split the entries by chunk_id
   auto original_position = ChunkOffset{0};
-  for (const auto& row_id : *input_pos_list) {
+  input_pos_list->for_each([&](auto& row_id){
     if (row_id.is_null()) {
       original_position++;
-      continue;
+      return;
     }
 
     auto& mapping = pos_lists_by_chunk_id[row_id.chunk_id];
 
     mapping.row_ids->emplace_back(row_id);
     mapping.original_positions.emplace_back(original_position++);
-  }
+  });
 
   return pos_lists_by_chunk_id;
 }

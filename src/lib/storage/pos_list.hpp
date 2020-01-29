@@ -9,66 +9,6 @@
 
 namespace opossum {
 
-class PosListIterator : public AbstractPosListIterator, private pmr_vector<RowID>::const_iterator {
-public:
-  using VectorIterator = pmr_vector<RowID>::const_iterator;
-
-  PosListIterator(const VectorIterator& base_iterator) : VectorIterator(base_iterator) {};
-
-  virtual AbstractPosListIterator& operator++() override {
-    VectorIterator::operator++();
-    return *this;
-  }
-
-  virtual PosListIterator& operator--() override {
-    VectorIterator::operator--();
-    return *this;
-  }
-
-  virtual AbstractPosListIterator& operator+=(size_t n) override {
-    VectorIterator::operator+=(n);
-    return *this;
-  }
-
-  virtual PosListIterator operator+(size_t n) {
-    auto copy(*this);
-    copy += n;
-    return std::move(copy);
-  }
-
-  virtual VectorIterator::difference_type operator-(const AbstractPosListIterator& other) const override {
-    return other.operator-(*this);
-  }
-
-  virtual VectorIterator::difference_type operator-(const PosListIterator& other) {
-    return static_cast<VectorIterator>(*this) - static_cast<VectorIterator>(other);
-  }
-
-  bool operator==(const AbstractPosListIterator& other) const override {
-    return other == *this;
-  }
-
-  bool operator==(const PosListIterator& other) const {
-    return static_cast<VectorIterator>(*this) == static_cast<VectorIterator>(other);
-  }
-
-  bool operator!=(const AbstractPosListIterator& other) const override {
-    return other != *this;
-  }
-
-  bool operator!=(const PosListIterator& other) const {
-    return !(*this == other);
-  }
-
-  RowID operator*() const override {
-    return VectorIterator::operator*();
-  }
-
-  const RowID* operator->() const override {
-    return VectorIterator::operator->();
-  }
-};
-
 // For a long time, PosList was just a pmr_vector<RowID>. With this class, we want to add functionality to that vector,
 // more specifically, flags that give us some guarantees about its contents. If we know, e.g., that all entries point
 // into the same chunk, we can simplify things in split_pos_list_by_chunk_id.
@@ -158,20 +98,6 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::front;
 
   // Iterators
-  AbstractPosListIterator cbegin() const override {
-    return PosListIterator(Vector::cbegin());
-  }
-  AbstractPosListIterator cend() const override {
-    return PosListIterator(Vector::cend());
-  }
-
-  AbstractPosListIterator begin() const override {
-    return cbegin();
-  }
-  AbstractPosListIterator end() const override {
-    return cend();
-  }
-
   using Vector::begin;
   using Vector::end;
   using Vector::cbegin;
@@ -224,5 +150,14 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   bool _references_single_chunk = false;
 };
 
+template <>
+PosList::const_iterator make_pos_list_begin_iterator<PosList>(PosList& pos_list) {
+  return pos_list.cbegin();
+}
+
+template <>
+PosList::const_iterator make_pos_list_end_iterator<PosList>(PosList& pos_list) {
+  return pos_list.cend();
+}
 
 }  // namespace opossum

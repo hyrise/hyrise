@@ -8,36 +8,7 @@
 
 namespace opossum {
 
-class AbstractPosListIterator {
- public:
-  using iterator_category = std::input_iterator_tag;
-  using value_type = RowID;
-  using difference_type = std::ptrdiff_t;
-  using reference = const RowID&;
-  using pointer = const RowID*;
-
-  virtual ~AbstractPosListIterator();
-
-  virtual AbstractPosListIterator& operator++() = 0;
-
-  virtual AbstractPosListIterator& operator--() = 0;
-
-  virtual AbstractPosListIterator& operator+=(size_t n) = 0;
-
-  /* virtual AbstractPosListIterator operator+(size_t n) = 0; */
-
-  virtual const AbstractPosListIterator& operator++(int) = 0;
-
-  virtual difference_type operator-(const AbstractPosListIterator& other) const = 0;
-
-  virtual bool operator==(const AbstractPosListIterator& other) const = 0;
-
-  virtual bool operator!=(const AbstractPosListIterator& other) const = 0;
-
-  virtual value_type operator*() const = 0;
-
-  virtual pointer operator->() const = 0;
-};
+class PosList;
 
 class AbstractPosList {
  public:
@@ -50,12 +21,6 @@ class AbstractPosList {
   // For chunks that share a common ChunkID, returns that ID.
   virtual ChunkID common_chunk_id() const = 0;
 
-  virtual AbstractPosListIterator cbegin() const = 0;
-  virtual AbstractPosListIterator cend() const = 0;
-
-  virtual AbstractPosListIterator begin() const = 0;
-  virtual AbstractPosListIterator end() const = 0;
-
   virtual RowID operator[](size_t n) const = 0;
 
   // Capacity
@@ -65,6 +30,26 @@ class AbstractPosList {
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
 
   virtual bool operator==(const AbstractPosList& other) const = 0;
+
+  template <typename Functor>
+  void for_each(const Functor& functor) const {
+    resolve_pos_list_type(*this, [&functor](auto& pos_list){
+      auto it = make_pos_list_begin_iterator(pos_list);
+      auto end = make_pos_list_end_iterator(pos_list);
+      for(; it != end; ++it) {
+        functor(*it);
+      }
+    });
+  }
 };
+
+class PosList;
+
+template <typename PosListType>
+typename PosListType::const_iterator make_pos_list_begin_iterator(PosListType& pos_list);
+
+template <typename PosListType>
+typename PosListType::const_iterator make_pos_list_end_iterator(PosListType& pos_list);
+
 
 }  // namespace opossum

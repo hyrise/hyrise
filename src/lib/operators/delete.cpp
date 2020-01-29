@@ -47,8 +47,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       }
     }
 
-    // TODO
-    for (auto row_id : *pos_list) {
+    pos_list->for_each([&](auto& row_id){
       const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
       Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers");
 
@@ -81,7 +80,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
           }
         }
       }
-    }
+    });
   }
 
   return nullptr;
@@ -95,13 +94,13 @@ void Delete::_on_commit_records(const CommitID commit_id) {
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
 
-    for (const auto& row_id : *referencing_segment->pos_list()) {
+    referencing_segment->pos_list()->for_each([&](auto& row_id){
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       referenced_chunk->get_scoped_mvcc_data_lock()->set_end_cid(row_id.chunk_offset, commit_id);
       referenced_chunk->increase_invalid_row_count(1);
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
-    }
+    });
   }
 }
 
@@ -113,7 +112,7 @@ void Delete::_on_rollback_records() {
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
 
-    for (const auto& row_id : *referencing_segment->pos_list()) {
+    referencing_segment->pos_list()->for_each([&](auto& row_id){
       auto expected = _transaction_id;
 
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
@@ -127,7 +126,7 @@ void Delete::_on_rollback_records() {
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop
       // unlocking rows here as well.
       if (!result) return;
-    }
+    });
   }
 }
 

@@ -174,25 +174,24 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           pos_list_out = pos_list_in;
         } else {
           temp_pos_list.guarantee_single_chunk();
-          // TODO
-          for (auto row_id : *pos_list_in) {
+          pos_list_in->for_each([&](auto& row_id){
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
-          }
+          });
           pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
         }
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
-        for (auto row_id : *pos_list_in) {
+        pos_list_in->for_each([&](auto& row_id){
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
           if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(row_id);
           }
-        }
+        });
         pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
       }
 

@@ -62,8 +62,10 @@ struct ChunkOffsetMapping {
 template <typename Derived, typename Value>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessSegmentIterator(AbstractPosListIterator position_filter_begin,
-                                          AbstractPosListIterator position_filter_it)
+  using SubIteratorType = typename Derived::SubIteratorType;
+
+  explicit BasePointAccessSegmentIterator(SubIteratorType position_filter_begin,
+                                          SubIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
@@ -92,8 +94,8 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   }
 
  private:
-  AbstractPosListIterator _position_filter_begin;
-  AbstractPosListIterator _position_filter_it;
+  SubIteratorType _position_filter_begin;
+  SubIteratorType _position_filter_it;
 };
 
 }  // namespace opossum

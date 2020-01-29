@@ -877,14 +877,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Get the row ids that are referenced
     auto new_pos_list = std::make_shared<PosList>();
-    for (const auto& row : *pos_list) {
+    pos_list->for_each([&](auto& row){
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {
-        // TODO
         new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
       }
-    }
+    });
 
     return new_pos_list;
   }
