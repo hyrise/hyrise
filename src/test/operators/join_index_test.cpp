@@ -181,9 +181,9 @@ TYPED_TEST(JoinIndexTest, InnerJoinSingleChunk) {
 
 TYPED_TEST(JoinIndexTest, InnerRefJoin) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
@@ -191,9 +191,9 @@ TYPED_TEST(JoinIndexTest, InnerRefJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
@@ -214,9 +214,9 @@ TYPED_TEST(JoinIndexTest, InnerDictJoinSwapTables) {
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
@@ -224,9 +224,9 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
@@ -240,9 +240,9 @@ TYPED_TEST(JoinIndexTest, InnerJoinBig) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
-  auto scan_c = this->create_table_scan(this->_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = create_table_scan(this->_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
-  auto scan_d = this->create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
+  auto scan_d = create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
   scan_d->execute();
 
   this->test_join_output(scan_c, scan_d, {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::Inner,
@@ -437,7 +437,7 @@ TYPED_TEST(JoinIndexTest, JoinLessThanOnDictAndDict) {
 
 TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
@@ -446,7 +446,7 @@ TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
 
 TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
   // scan that returns all rows
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals},
@@ -455,11 +455,11 @@ TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<JoinIndex>(
@@ -475,11 +475,11 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<JoinIndex>(
@@ -493,11 +493,11 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<JoinIndex>(
@@ -511,11 +511,11 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<JoinIndex>(
@@ -531,11 +531,11 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThan, 6);
+  auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThan, 6);
   scan_a->execute();
-  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<JoinIndex>(
@@ -559,7 +559,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
 
 TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
@@ -568,7 +568,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRig
 
 TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns all rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   EXPECT_THROW(
@@ -580,7 +580,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLef
 
 TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns all rows
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
@@ -590,7 +590,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft
 
 TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   EXPECT_THROW(
@@ -602,7 +602,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRigh
 
 TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns no rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
 
   this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
@@ -611,7 +611,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSide
 
 TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns no rows
-  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
+  auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
 
   EXPECT_THROW(
@@ -623,7 +623,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSide
 
 TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns no rows
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
@@ -633,7 +633,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideI
 
 TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns no rows
-  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
+  auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
 
   EXPECT_THROW(

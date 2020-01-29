@@ -9,6 +9,7 @@
 #include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -17,7 +18,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   using Packing = SimdBp128Packing;
 
  public:
-  SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index = 0u);
+  SimdBp128Iterator(const pmr_vector<uint128_t>* data, const size_t size, const size_t absolute_index = 0u);
 
   SimdBp128Iterator(const SimdBp128Iterator& other);
   SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
@@ -50,6 +51,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   }
 
   void advance(std::ptrdiff_t n) {
+    PerformanceWarning("Using repeated increment/decrement for random access");
     // The easy way for now
     if (n < 0) {
       for (std::ptrdiff_t i = n; i < 0; ++i) {
