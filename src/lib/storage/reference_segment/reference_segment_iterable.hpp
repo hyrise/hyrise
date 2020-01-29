@@ -98,10 +98,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
       resolve_pos_list_type(pos_list, [&](auto& typed_pos_list){
-        const auto begin_it = make_pos_list_begin_iterator(typed_pos_list);
-        const auto end_it = make_pos_list_end_iterator(typed_pos_list);
-        auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
-        auto end = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, end_it};
+        auto begin_it = make_pos_list_begin_iterator_nc(*typed_pos_list);
+        auto end_it = make_pos_list_end_iterator_nc(*typed_pos_list);
+        using dt = typename std::remove_reference<decltype(begin_it)>::type;
+        auto begin = MultipleChunkIterator<dt>{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
+        auto end = MultipleChunkIterator<dt>{referenced_table, referenced_column_id, accessors, begin_it, end_it};
         functor(begin, end);
       });
     }

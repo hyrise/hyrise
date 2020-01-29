@@ -160,4 +160,14 @@ PosList::const_iterator make_pos_list_end_iterator<PosList>(PosList& pos_list) {
   return pos_list.cend();
 }
 
+template <>
+PosList::iterator make_pos_list_begin_iterator_nc<PosList>(PosList& pos_list) {
+  return pos_list.begin();
+}
+
+template <>
+PosList::iterator make_pos_list_end_iterator_nc<PosList>(PosList& pos_list) {
+  return pos_list.end();
+}
+
 }  // namespace opossum

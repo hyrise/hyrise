@@ -17,6 +17,8 @@ class AbstractPosList {
  public:
   virtual ~AbstractPosList();
 
+  AbstractPosList& operator=(AbstractPosList&& other) = default;
+
   // Returns whether it is guaranteed that the PosList references a single ChunkID.
   // However, it may be false even if this is the case.
   virtual bool references_single_chunk() const = 0;
@@ -52,5 +54,10 @@ typename PosListType::const_iterator make_pos_list_begin_iterator(PosListType& p
 template <typename PosListType>
 typename PosListType::const_iterator make_pos_list_end_iterator(PosListType& pos_list);
 
+template <typename PosListType>
+typename PosListType::iterator make_pos_list_begin_iterator_nc(PosListType& pos_list);
+
+template <typename PosListType>
+typename PosListType::iterator make_pos_list_end_iterator_nc(PosListType& pos_list);
 
 }  // namespace opossum

@@ -110,7 +110,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   template <typename ZsDecompressorType, typename DictionaryIteratorType, typename _SubIteratorType>
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, _SubIteratorType>,
-                                              SegmentPosition<T>> {
+                                              SegmentPosition<T>, _SubIteratorType> {
    public:
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
@@ -120,7 +120,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
                         const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
                         SubIteratorType position_filter_begin, SubIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, SubIteratorType>,
-                                         SegmentPosition<T>> {std::move(position_filter_begin),
+                                         SegmentPosition<T>, _SubIteratorType> {std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _dictionary_begin_it{dictionary_begin_it},
           _null_value_id{null_value_id},

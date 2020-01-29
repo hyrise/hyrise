@@ -59,10 +59,11 @@ struct ChunkOffsetMapping {
  * are returned.
  */
 
-template <typename Derived, typename Value>
+template <typename Derived, typename Value, typename _SubIteratorType>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  using SubIteratorType = typename Derived::SubIteratorType;
+  // using SubIteratorType = typename Derived::SubIteratorType;
+  using SubIteratorType = _SubIteratorType;
 
   explicit BasePointAccessSegmentIterator(SubIteratorType position_filter_begin,
                                           SubIteratorType position_filter_it)

@@ -129,7 +129,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    *   - a binary search in the range [0, previous_end_position] else
    */
   template <typename _SubIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, SegmentPosition<T>> {
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, SegmentPosition<T>, _SubIteratorType> {
    public:
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
@@ -140,7 +140,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                  const SubIteratorType position_filter_begin,
                                  SubIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator,
-                                         SegmentPosition<T>>{std::move(position_filter_begin),
+                                         SegmentPosition<T>, _SubIteratorType>{std::move(position_filter_begin),
                                                           std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},

@@ -139,7 +139,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename _SubIteratorType>
   class NonNullPointAccessIterator
-      : public BasePointAccessSegmentIterator<NonNullPointAccessIterator<_SubIteratorType>, SegmentPosition<T>> {
+      : public BasePointAccessSegmentIterator<NonNullPointAccessIterator<_SubIteratorType>, SegmentPosition<T>, _SubIteratorType> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -151,7 +151,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                         const SubIteratorType position_filter_begin,
                                         SubIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<NonNullPointAccessIterator,
-                                         SegmentPosition<T>>{std::move(position_filter_begin),
+                                         SegmentPosition<T>, _SubIteratorType>{std::move(position_filter_begin),
                                                           std::move(position_filter_it)},
           _values_begin_it{values_begin_it} {}
 
@@ -170,7 +170,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   };
 
   template <typename _SubIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, SegmentPosition<T>> {
+class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, SegmentPosition<T>, _SubIteratorType> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -183,7 +183,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                  const SubIteratorType position_filter_begin,
                                  SubIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator,
-                                         SegmentPosition<T>>{std::move(position_filter_begin),
+                                         SegmentPosition<T>, _SubIteratorType>{std::move(position_filter_begin),
                                                           std::move(position_filter_it)},
           _values_begin_it{values_begin_it},
           _null_values_begin_it{null_values_begin_it} {}
