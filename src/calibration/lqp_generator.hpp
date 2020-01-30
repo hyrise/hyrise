@@ -15,5 +15,7 @@ class LQPGenerator {
 
  private:
   std::vector<std::shared_ptr<AbstractLQPNode>> _generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper>& table) const;
+
+    const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_joins(std::shared_ptr<const CalibrationTableWrapper> sharedPtr) const;
 };
 }

@@ -65,7 +65,7 @@ namespace opossum {
       const auto column_data_types = table->get_table()->column_data_types();
 
       for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        // Column specfic values
+        // Column specific values
         const auto column = stored_table_node->get_column(column_names.at(column_id));
         const auto distribution = table->get_column_data_distribution(column_id);
         const auto step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
@@ -104,9 +104,24 @@ namespace opossum {
               generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_not_null_(column), stored_table_node)));
               // add reference scan with empty pos list
               generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_null_(column), stored_table_node)));
+
+
+              // Add String-specific Scans
+              if (std::is_same<ColumnDataType, std::string>::value) {
+                // Between
+                generated_lpqs.emplace_back(PredicateNode::make(between_inclusive_(column, "a", "b"), stored_table_node));
+                // Like
+                generated_lpqs.emplace_back(PredicateNode::make(like_(column, "   "), stored_table_node));
+                // column vs column scan (comparing two columns with each other)
+                generated_lpqs.emplace_back(PredicateNode::make(equals_(column, column), stored_table_node));
+              }
           });
         }
       }
       return generated_lpqs;
     }
+
+//    const std::vector<std::shared_ptr<AbstractLQPNode>> LQPGenerator::_generate_joins(std::shared_ptr<const CalibrationTableWrapper> sharedPtr) const {
+//
+//    }
 }
