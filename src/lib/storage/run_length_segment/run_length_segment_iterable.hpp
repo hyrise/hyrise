@@ -28,9 +28,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     auto begin =
-        PointAccessIterator{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(),
+        PointAccessIterator<PosList::const_iterator>{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(),
                             position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator{_segment.values().get(), _segment.null_values().get(),
+    auto end = PointAccessIterator<PosList::const_iterator>{_segment.values().get(), _segment.null_values().get(),
                                    _segment.end_positions().get(), position_filter->cbegin(), position_filter->cend()};
 
     functor(begin, end);

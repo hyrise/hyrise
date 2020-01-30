@@ -36,16 +36,8 @@ class AbstractPosList {
 
   virtual bool operator==(const AbstractPosList& other) const = 0;
 
-  template <typename Functor>
-  void for_each(const Functor& functor) const {
-    resolve_pos_list_type(*this, [&functor](auto& pos_list){
-      auto it = make_pos_list_begin_iterator(pos_list);
-      auto end = make_pos_list_end_iterator(pos_list);
-      for(; it != end; ++it) {
-        functor(*it);
-      }
-    });
-  }
+  // template <typename Functor>
+  // void for_each(const Functor& functor) const;
 };
 
 template <typename PosListType>
