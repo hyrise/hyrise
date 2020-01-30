@@ -1,3 +1,5 @@
+#pragma once
+
 #include "string"
 #include <logical_query_plan/abstract_lqp_node.hpp>
 #include "logical_query_plan/stored_table_node.hpp"
