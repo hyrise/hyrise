@@ -110,6 +110,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   std::vector<std::shared_ptr<AbstractExpression>> values;
   ParameterID parameter_id(0);
 
+  const auto started_cache = std::chrono::high_resolution_clock::now();
+
   visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
     if (node) {
       for (auto& root_expression : node->node_expressions) {
@@ -127,7 +129,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   });
 
 
-  const auto started = std::chrono::high_resolution_clock::now();
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
     if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp)) {
@@ -138,8 +139,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
         _optimized_logical_plan = (*cached_plan)->instantiate(values);
-        const auto done = std::chrono::high_resolution_clock::now();
-        _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+        const auto done_cache = std::chrono::high_resolution_clock::now();
+        _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_cache);
         return _optimized_logical_plan;
       }
     }
@@ -150,12 +151,16 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
 
-  // There has to be a better way to copy an unoptimized LQP
   auto ulqp = unoptimized_lqp->deep_copy();
+
+  const auto done_cache = std::chrono::high_resolution_clock::now();
+  _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_cache);
+  const auto started_optimize = std::chrono::high_resolution_clock::now();
+
   auto optimized_without_values = _optimizer->optimize(std::move(ulqp));
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  const auto done_optimize = std::chrono::high_resolution_clock::now();
+  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
 
   std::vector<ParameterID> all_parameter_ids(parameter_id);
   std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
