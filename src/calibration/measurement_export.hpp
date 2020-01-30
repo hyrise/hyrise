@@ -17,7 +17,7 @@ class MeasurementExport {
 
   void _export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
 
-  [[nodiscard]] std::string _path_by_type(OperatorType operator_type) const ;
+  [[nodiscard]] std::string _path(OperatorType operator_type) const ;
 
   void _export_generic(std::shared_ptr<const AbstractOperator> op) const;
 

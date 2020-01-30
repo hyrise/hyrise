@@ -7,6 +7,9 @@
 
 namespace opossum {
     TableExport::TableExport(const std::string &path_to_dir) : _path_to_dir(path_to_dir) {
+      //Create dir if not exists
+      std::filesystem::create_directories(path_to_dir);
+
       //TODO Check if file already exists;
       _create_file(TableExportType::TABLE);
       _create_file(TableExportType::COLUMN);

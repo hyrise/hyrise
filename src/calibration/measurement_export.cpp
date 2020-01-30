@@ -3,6 +3,7 @@
 #include <expression/lqp_column_expression.hpp>
 #include <expression/expression_utils.hpp>
 #include <logical_query_plan/stored_table_node.hpp>
+#include <regex>
 #include "measurement_export.hpp"
 #include "constant_mappings.hpp"
 #include "storage/table.hpp"
@@ -11,6 +12,9 @@
 namespace opossum {
 
     MeasurementExport::MeasurementExport(const std::string& path_to_dir) : _path_to_dir(path_to_dir){
+      //Create dir if not exists
+      std::filesystem::create_directories(path_to_dir);
+
       for ( int type_int = int(OperatorType::Aggregate); type_int !=  int(OperatorType::Mock); ++type_int)
       {
         auto type = static_cast<OperatorType>(type_int);
@@ -68,7 +72,7 @@ namespace opossum {
     }
 
     //TODO Construct path before starting export-> save it in map
-    std::string MeasurementExport::_path_by_type(OperatorType operator_type) const {
+    std::string MeasurementExport::_path(OperatorType operator_type) const {
       std::stringstream path;
       path << _path_to_dir << "/" << operator_type << ".csv";
       return path.str();
@@ -77,11 +81,12 @@ namespace opossum {
     void MeasurementExport::_append_to_file(std::string line, OperatorType operator_type) const {
       std::ofstream outfile;
       //TODO Get path from map
-      outfile.open(_path_by_type(operator_type), std::ofstream::out | std::ofstream::app);
+      outfile.open(_path(operator_type), std::ofstream::out | std::ofstream::app);
       outfile << line;
       outfile.close();
     }
 
+    // Generic Export
     void MeasurementExport::_export_generic(std::shared_ptr<const AbstractOperator> op) const {
       std::stringstream ss;
       // INPUT_ROWS_LEFT TODO this does not extract anything
@@ -97,8 +102,9 @@ namespace opossum {
       ss << std::to_string(op->performance_data().walltime.count()) << "\n";
 
       _append_to_file(ss.str(), op->type());
-    }
 
+
+    }
 
     // TABLE_SCAN
     void MeasurementExport::_export_table_scan(std::shared_ptr<const AbstractOperator> op) const {
@@ -143,7 +149,17 @@ namespace opossum {
 
                 // COLUMN_NAME
                 const auto sm_table = Hyrise::get().storage_manager.get_table(table_name);
-                ss << sm_table->column_names()[original_column_id] << "\n";
+                ss << sm_table->column_names()[original_column_id] << _separator;
+              }
+
+              // DESCRIPTION
+
+              auto description = op->description();
+              std::smatch matches;
+
+              std::regex self_regex("Impl: ([A-Z]\\w+)", std::regex_constants::ECMAScript | std::regex_constants::icase);
+              if (std::regex_search(description, matches, self_regex)) {
+                ss << matches[1] << "\n";
               }
             }
             return ExpressionVisitation::VisitArguments;
@@ -177,12 +193,13 @@ namespace opossum {
         case OperatorType::Projection:          return _generic_header();
         case OperatorType::Sort:                return _generic_header();
         case OperatorType::TableScan:
-          ss << "INPUT_ROWS_LEFT" << _separator;
-          ss << "OUTPUT_ROWS"     << _separator;
-          ss << "RUNTIME_NS"      << _separator;
-          ss << "SCAN_TYPE"       << _separator;
-          ss << "TABLE_NAME"      << _separator;
-          ss << "COLUMN_NAME"     << "\n";
+          ss << "INPUT_ROWS_LEFT"     << _separator;
+          ss << "OUTPUT_ROWS"         << _separator;
+          ss << "RUNTIME_NS"          << _separator;
+          ss << "SCAN_TYPE"           << _separator;
+          ss << "TABLE_NAME"          << _separator;
+          ss << "COLUMN_NAME"         << _separator;
+          ss << "SCAN_IMPLEMENTATION" << "\n";
           break;
         case OperatorType::TableWrapper:        return _generic_header();
         case OperatorType::UnionAll:            return _generic_header();
