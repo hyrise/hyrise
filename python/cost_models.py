@@ -5,11 +5,14 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
-import sys
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import joblib
 import numpy as np
-
+import argparse
+from prepare_calibration_data import import_train_data
+from prepare_tpch import import_test_data
+import os
 
 # store model and metadata about the model in one object (there might be better ways, tbd)
 class CostModel:
@@ -20,191 +23,243 @@ class CostModel:
         self.data_type = data_type
 
 
-def import_test_data(tpch):
-    # read data
-    table_scans = pd.read_csv(tpch[0])
-    table_meta_data = pd.read_csv(tpch[1])
-    segment_meta_data = pd.read_csv(tpch[2])
-    attribute_meta_data = pd.read_csv(tpch[3])
-
-    # preprocess data
-    joined_data = table_scans.merge(table_meta_data, on="TABLE_NAME", how="left")
-    joined_data = joined_data.merge(attribute_meta_data, on="COLUMN_NAME", how="left")
-    joined_data = joined_data.merge(segment_meta_data, on="COLUMN_NAME", how="left")
-
-    joined_data = joined_data[['SCAN_TYPE', 'TABLE_NAME', 'COLUMN_NAME', 'INPUT_ROWS',
-                               'OUTPUT_ROWS', 'RUNTIME_NS', 'ROW_COUNT_x',
-                               'MAX_CHUNK_SIZE', 'DATA_TYPE',
-                               'DISTINCT_VALUE_COUNT', 'IS_NULLABLE',
-                               'ENCODING', 'COMPRESSION', 'SIZE_IN_BYTES']]
-    joined_data = joined_data.rename(columns={"TABLE_NAME_x": "TABLE_NAME", "ROW_COUNT_x": "ROW_COUNT"})
-    joined_data['SELECTIVITY'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS'])
-
-    return joined_data
-
-
-def import_train_data(input_data):
-    table_scan_data = pd.read_csv(input_data[0])
-    columns_data = pd.read_csv(input_data[1])
-    table_data = pd.read_csv(input_data[2])
-
-    joined_data = table_scan_data.merge(table_data, on=["TABLE_NAME", "COLUMN_NAME"], how="left")
-
-    # extract encoding_type from column_name
-    # encodings = [[encoding.split('_')[1]] for encoding in columns_data[['COLUMN_NAME']]]
-    # columns_data['ENCODING'] = encodings
-
-    joined_data = joined_data.merge(columns_data, on="TABLE_NAME", how="left")
-    joined_data = joined_data.rename(columns={"INPUT_ROWS_LEFT": "INPUT_ROWS", "CHUNK_SIZE": "MAX_CHUNK_SIZE",
-                                              "COLUMN_DATA_TYPE": "DATA_TYPE", "ENCODING_TYPE": "ENCODING",
-                                              "TABLE_NAME": "TABLE_NAME", "COLUMN_NAME": "COLUMN_NAME",
-                                              "COLUMN_DATA_TYPE": "DATA_TYPE", "COLUMN_TYPE": "SCAN_TYPE"})
-    joined_data['SELECTIVITY'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS'])
-
-    return joined_data
-
-
 def preprocess_data(data):
-    # linear regression for now, try other models later
     # one-hot encoding
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'IS_NULLABLE',
-                                                 'ENCODING', 'COMPRESSION'])
-
+    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
     return ohe_data
 
 
 def train_model(train_data, type):
-    # not for now, since there are no compression types in the data
-    #ohe_data = preprocess_data(train_data)
-
-    ohe_data = train_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
-    y = ohe_data[['RUNTIME_NS']]
+    ohe_data = preprocess_data(train_data)
+    y = np.ravel(ohe_data[['RUNTIME_NS']])
     X = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
     if type == 'linear':
         model = LinearRegression().fit(X, y)
     elif type == 'ridge':
-        model = Ridge(alpha=1000).fit(X,y)
+        model = Ridge(alpha=1000).fit(X, y)
     elif type == 'lasso':
-        model = Lasso(alpha=1000).fit(X,y)
+        model = Lasso(alpha=1000).fit(X, y)
     elif type == 'boost':
-        model = GradientBoostingRegressor(loss='huber').fit(X,y)
+        model = GradientBoostingRegressor(loss='huber').fit(X, y)
 
     return model
 
 
-def generate_model_plot(model, test_data, method, data_type, encoding):
-    ohe_data = test_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
-    real_y = ohe_data[['RUNTIME_NS']]
+#generate_model_plot(model, model_test_data, type, data_type, encoding, out)
+def generate_model_plot(model, test_data, method, data_type, encoding, out):
+    ohe_data = preprocess_data(test_data)
+    real_y = np.ravel(ohe_data[['RUNTIME_NS']])
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
     pred_y = model.predict(ohe_data)
 
-    print('{}_{}_{}'.format(data_type, encoding, method))
+    model_scores = calculate_error(ohe_data, pred_y, real_y, model)
+
     plt.scatter(real_y, pred_y, c='b')
-    plt.title('{}_{}_{}'.format(data_type, encoding, method))
-    plt.ylim([0, max(np.amax(pred_y), np.amax(real_y.to_numpy())) + 10000000])
-    plt.xlim([0, max(np.amax(pred_y), np.amax(real_y.to_numpy())) + 10000000])
+    axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
+    axis_min = min(0, np.amin(pred_y), np.amin(real_y))
+    abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
+
+    # Plot the best fit line over the actual values
+    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
+    plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_scores['R2']))
+    plt.ylim([axis_min, axis_max])
+    plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
-    output_path = 'prediction/{}_{}_{}'.format(method, data_type, encoding)
+    output_path = '{}/Plots/{}_{}_{}'.format(out, method, data_type, encoding)
     plt.savefig(output_path, bbox_inches='tight')
 
 
-def generate_output(costmodel, test_data, out):
-    # predict runtime for test queries in the test data
-    #ohe_data = preprocess_data(test_data)
-    # for now, since we don't have the data in our trainings measurements
-    ohe_data = test_data.drop(labels=['TABLE_NAME', 'COLUMN_NAME', 'COMPRESSION', 'SIZE_IN_BYTES',
-                                      'DISTINCT_VALUE_COUNT', 'IS_NULLABLE'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
-    # hacky solution
-    ohe_data['DATA_TYPE_long'] = 0
-    ohe_data['DATA_TYPE_string'] = 0
-    ohe_data['DATA_TYPE_double'] = 0
-    y_true = ohe_data[['RUNTIME_NS']]
-    ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
-    y_pred = costmodel.model.predict(ohe_data)
-    error = abs(y_true.to_numpy()-y_pred)
-    mse = calculate_error(y_true, y_pred)
-
-    # print and put the plots in the output folder
-    fig = plt.figure()
-    plt.boxplot(error)
-    output_path = '{}error_model_{}_{}'.format(out, costmodel.data_type, costmodel.encoding)
-    fig.savefig(output_path, bbox_inches='tight')
-
-    f = plt.figure()
-    #plt.scatter(scatter_data)
-    plt.show()
-    return mse
-
-
-def calculate_error(y_true, y_pred):
+def calculate_error(test_X, y_true, y_pred, model):
     # calculate error (ME) for the model
     mse = mean_squared_error(y_true, y_pred, squared=False)
-    return mse
 
-def main():
-    tpch = [arg for arg in sys.argv[1:5]]
-    test_data = import_test_data(tpch)
-    train_data = import_train_data([arg for arg in sys.argv[5:8]])
-    model_types = ['linear', 'lasso', 'ridge', 'boost']
-    # TODO: maybe order the test and trainings data in the same way (does it influence the regression?)
-    output_folder = sys.argv[8]
+    # The score function returns the coefficient of determination R^2 of the prediction.
+    # The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares ((y_true - y_pred) ** 2).sum()
+    # and v is the total sum of squares ((y_true - y_true.mean()) ** 2).sum(). The best possible score is 1.0 and it can
+    # be negative (because the model can be arbitrarily worse). A constant model that always predicts the expected value
+    # of y, disregarding the input features, would get a R^2 score of 0.0.
+    R2 = model.score(test_X, y_pred)
+
+    # Laut Master Thesis:
+    # logarithm of the accuracy ratio (LnQ). Tofallis et al. define this measure to overcome the limitations of RMSE and
+    # MAPE by providing a unbiased error measure [72]. LnQ is the natural logarithm of the quotient of the predicted
+    # value yˆ and the actual value y. By using the natural logarithm, this measure
+    # is symmetric in the sense that changing the actual value and the prediction merely changes the sign of the error
+    # value (cf. Equation (2.14)). By that, LnQ shows structural under- or over- estimation, which may show the quality
+    # of a tested model. A drawback of LnQ is the difficulty in interpreting error values. Doubling the quotient does
+    # not consistently affect the error value. Due to the logarithmic function, the measure penalizes small quotients
+    # relatively hard, whereas it treats large residuals comparably easy.
+    LNQ = 1/len(y_true) * np.sum(np.exp(np.divide(y_pred, y_true)))
+
+    scores = {'MSE': mse, 'R2': R2, 'LNQ': LNQ}
+    print(scores)
+
+    return scores
+
+
+def train_general_model(train_data, model_type, out):
+    train_X = train_data[['INPUT_ROWS', 'OUTPUT_ROWS']]
+    train_y = np.ravel(train_data[['RUNTIME_NS']])
+
+    if model_type == 'linear':
+        general_model = LinearRegression().fit(train_X, train_y)
+    elif model_type == 'ridge':
+        general_model = Ridge(alpha=1000).fit(train_X, train_y)
+    elif model_type == 'lasso':
+        general_model = Lasso(alpha=1000).fit(train_X, train_y)
+    elif model_type == 'boost':
+        general_model = GradientBoostingRegressor(loss='huber').fit(train_X, train_y)
+
+    # if model_type != 'boost':
+    #     print('general', general_model.coef_)
+
+    filename = '{}/Models/{}_general_model.sav'.format(out, model_type)
+    joblib.dump(general_model, filename)
+
+    return general_model
+
+
+def plot_general_model(test_data, model, model_type, data_type, encoding, out):
+    test_X = test_data[['INPUT_ROWS', 'OUTPUT_ROWS']]
+    test_y = np.ravel(test_data[['RUNTIME_NS']])
+
+    pred_y = model.predict(test_X)
+    model_scores = calculate_error(test_X, pred_y, test_y, model)
+    plt.scatter(test_y, pred_y, c='b')
+
+    plt.title('General Model; Score: {}'.format(model_scores['R2']))
+    plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
+    plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
+    plt.xlabel("Real Time")
+    plt.ylabel("Predicted Time")
+    output_path = '{}/Plots/{}_{}_{}_general'.format(out, model_type, data_type, encoding)
+    plt.savefig(output_path, bbox_inches='tight')
+
+    #return model
+
+
+def add_dummy_types(train, test, col):
+    diff1 = np.setdiff1d(train[col].unique(), test[col].unique())
+    diff2 = np.setdiff1d(test[col].unique(), train[col].unique())
+    for d1 in diff1:
+        test['{}_{}'.format(col, d1)] = 0
+    for d2 in diff2:
+        train['{}_{}'.format(col, d2)]= 0
+    #return [train, test]
+
+
+def parseargs(opt=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
+    # in case no test data is given, just split the train data in to train and test dataset
+    parser.add_argument('--test', help='Testdata in csv format', action='append', nargs='+')
+    parser.add_argument('--m', help='Model type')
+    parser.add_argument('--out', help='Output folder')
+
+    if (opt):
+        return parser.parse_args(opt)
+    else:
+        return parser.parse_args()
+
+
+def import_data(args):
+    test_data = import_train_data(args.test[0])
+    test_data = test_data.dropna()
+
+    train_data = import_train_data(args.train[0])
+    train_data = train_data.dropna()
+
+    # check whether trainings and testdata have the same format
+    # TBD: should it rather fail otherwise?
+    inter = train_data.columns.intersection(test_data.columns)
+    test_data = test_data[inter.tolist()]
+    train_data = train_data[inter.tolist()]
+
+    return [train_data, test_data]
+
+
+def main(args):
     cost_models = []
-
-    # also keep one 'universal' model in case some thing comes up, that we don't have a specific model for?
-    u_cost_model = train_model(train_data, 'linear')
-    cost_models.append(CostModel(u_cost_model, data_type='None', encoding='None'))
-    # make models for different scan operators and combinations of encodings/compressions
-    test_data_splitted = []
+    test_data_split = []
     leftover_test_data = []
+    out = "Output"
+
+    if args.m:
+        model_types = [args.m]
+    else:
+        model_types = ['linear', 'lasso', 'ridge', 'boost']
+
+    if args.test:
+        train_data, test_data = import_data(args)
+    else:
+        train_data = import_train_data(args.train[0])
+        train_data = train_data.dropna()
+
+    if args.out:
+        out = args.out
+
+    if not os.path.exists("{}/Models".format(out)):
+        os.makedirs("{}/Models".format(out))
+
+    if not os.path.exists("{}/Plots".format(out)):
+        os.makedirs("{}/Plots".format(out))
+
+    for type in model_types:
+        train_general_model(train_data, type, out)
+
+    # make models for different scan operators and combinations of encodings/compressions
     for encoding in train_data['ENCODING'].unique():
         for data_type in train_data['DATA_TYPE'].unique():
 
-            model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['DATA_TYPE'] == data_type) &
-                                                                                (train_data['ENCODING'] == encoding)])
-            # model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
-            #model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
-            # if we have train data for this combination, train a model
+            if not args.test:
+                model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['DATA_TYPE'] == data_type) &
+                                                                                    (train_data['ENCODING'] == encoding)])
+            else:
+                model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
+                model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
+                add_dummy_types(model_train_data, model_test_data, 'SCAN_TYPE')
 
-            dfilename = 'data/splitted_{}_{}_train_data.sav'.format(data_type, encoding)
-            joblib.dump(model_test_data, dfilename)
+            # TODO: needed to save this?
+            #dfilename = 'data/split_{}_{}_train_data.sav'.format(data_type, encoding)
+            #joblib.dump(model_test_data, dfilename)
 
+            # if there is train data for this combination, train a model
             if not model_train_data.empty:
                 for type in model_types:
                     model = train_model(model_train_data, type)
 
-                    #cost_model = CostModel(model, encoding, data_type)
-                    #cost_models.append(cost_model)
-                    filename = 'models/splitted_{}_{}_{}_model.sav'.format(type, data_type, encoding)
+                    # TODO: needed?
+                    cost_model = CostModel(model, encoding, data_type)
+                    cost_models.append(cost_model)
+
+                    filename = '{}/Models/split_{}_{}_{}_model.sav'.format(out, type, data_type, encoding)
                     joblib.dump(model, filename)
-                    generate_model_plot(model, model_test_data, type, data_type, encoding)
 
-                    # if there is no test_data for this combination, continue
-                    if model_test_data.empty:
-                        continue
-                    test_data_splitted.append(model_test_data)
+                    if not model_test_data.empty:
+                        # TODO:  nicer plots
+                        generate_model_plot(model, model_test_data, type, data_type, encoding, out)
+                        general_model = joblib.load('{}/Models/{}_general_model.sav'.format(out, type))
+                        plot_general_model(model_test_data, general_model, type, data_type, encoding, out)
 
-                    # predict the runtime for the queries of the test_data that correspond to this model and calculate the
-                    # error (SSE)
-                    #model_mse = generate_output(cost_model, model_test_data, output_folder)
+                    # test_data_split.append(model_test_data)
 
-                # if we don't have a model for this combination but test_data, add the test_data to test on the universal model
+            # if we don't have a model for this combination but test_data, add the test_data to test on the
+            #  universal model
             if not model_test_data.empty:
                 leftover_test_data.append(model_test_data)
 
+    # u_model = make_general_model(train_data, leftover_test_data)
+    # u_cost_model = CostModel(u_model, 'all', 'all')
+    # cost_models.append(u_cost_model)
 
-    # umodel_mse = generate_output(u_cost_model, leftover_test_data, output_folder)
+    #TODO make general model with only input and output rows against time
 
-    # TODO: catch the queries that don't correspond to any model and use the 'universal model' for runtime prediction of those
-
-    # TODO: what kind of output is expected? Also: Error as attribute of the CostModel class?
-
-    # TBD mode, parameter: scale data? Use regularization?
+    # TODO: catch the queries that don't correspond to any model and use the 'general model' for runtime prediction
+    #  of those
 
 
 if __name__ == '__main__':
-    main()
+    args = parseargs()
+    main(args)

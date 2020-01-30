@@ -22,11 +22,9 @@ namespace opossum {
         //Export current operator
         _export_typed_operator(op);
 
-        // Recursion on left & right operator
-        while (op->input_left() != nullptr && op->input_right() != nullptr){
-          export_to_csv(op->input_left());
-          export_to_csv(op->input_right());
-        }
+        export_to_csv(op->input_left());
+        export_to_csv(op->input_right());
+
       }
     }
 
@@ -88,7 +86,7 @@ namespace opossum {
       std::stringstream ss;
 
       // INPUT_ROWS_LEFT TODO this does not extract anything
-      ss << std::to_string(op->input_table_left() != nullptr ? op->input_table_left()->row_count() : -1) << _delimiter;
+      ss << std::to_string(op->input_left() != nullptr ? op->input_table_left()->row_count() : 0) << _delimiter;
 
       // OUTPUT_ROWS
       ss << std::to_string(op->get_output() != nullptr ? op->get_output()->row_count() : 0) << _delimiter;
@@ -108,7 +106,7 @@ namespace opossum {
 
               if (original_node->type == LQPNodeType::StoredTable) {
 
-                // COLUMN_TYPE
+                // SCAN_TYPE
                 if (original_node == node->left_input()) {
                   ss << "COLUMN_SCAN";
                 } else {
@@ -137,11 +135,11 @@ namespace opossum {
       std::stringstream ss;
 
       ss << "INPUT_ROWS_LEFT" << _delimiter;
-      ss << "OUTPUT_ROWS" << _delimiter;
-      ss << "RUNTIME_NS" << _delimiter;
-      ss << "COLUMN_TYPE" << _delimiter;
-      ss << "TABLE_NAME" << _delimiter;
-      ss << "COLUMN_NAME" << "\n";
+      ss << "OUTPUT_ROWS"     << _delimiter;
+      ss << "RUNTIME_NS"      << _delimiter;
+      ss << "SCAN_TYPE"       << _delimiter;
+      ss << "TABLE_NAME"      << _delimiter;
+      ss << "COLUMN_NAME"     << "\n";
 
       _append_to_file_by_operator_type(ss.str(), OperatorType::TableScan);
     }
