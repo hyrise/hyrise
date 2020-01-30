@@ -36,21 +36,14 @@ constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 constexpr auto TABLE_NAME_PREFIX = "ping";
 const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 //const auto CHUNK_SIZES = std::vector{size_t{10}};
-const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
+const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
+const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
 // Frame of References supports only int columns
 // Dictionary Encoding should always have the id 0
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
+const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 //const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
-const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
-const auto CREATE_INDEX = true; 
-
-// single benchmark values (median, min, max)
-// determined by column stats python script
-///////////////////////////////
-// const auto BM_VAL_CAPTAIN_ID = std::vector{298186, 59547, 1211286};
-// const auto BM_VAL_CAPTAIN_STATUS = std::vector{2, 1, 2};
-// const auto BM_VAL_LATITUDE = std::vector{25.1388267, 24.9154559, 25.1916198};
-// const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-06 23:57:34", "2018-12-22 23:22:11", "2018-11-05 05:38:15"};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
+const auto CREATE_INDEX = false; 
 
 // quantile benchmark values (mixed data type table)
 // determined by column stats python script calculated with pandas, settings nearest 
@@ -163,35 +156,42 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
             // Maybe there is a better way to do this
             const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
-            const auto sorted_table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
+            const auto new_table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
             auto table_wrapper = std::make_shared<TableWrapper>(loaded_table);
             table_wrapper->execute();
             const auto chunk_encoding_spec = ChunkEncodingSpec(table_wrapper->get_output()->column_count(), {encoding});
 
-            auto sorted_table = sort_table_chunk_wise(loaded_table, order_by_column, chunk_size, chunk_encoding_spec);
-            storage_manager.add_table(sorted_table_name, sorted_table);
-            std::cout << "Created table: " << sorted_table_name << std::endl;
+            auto new_table = loaded_table;
+
+            if (strcmp(order_by_column, "unsorted") == 0) {
+              ChunkEncoder::encode_all_chunks(new_table, chunk_encoding_spec);
+            } else {
+              new_table = sort_table_chunk_wise(loaded_table, order_by_column, chunk_size, chunk_encoding_spec);
+            }
+
+            storage_manager.add_table(new_table_name, new_table);
+            std::cout << "Created table: " << new_table_name << std::endl;
 
             // table stats
-            for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
-              for (auto chunk_id = ChunkID{0}, end = sorted_table->chunk_count(); chunk_id < end;  ++chunk_id) {
-                const auto& chunk = sorted_table->get_chunk(chunk_id);
+            for (auto column_id = ColumnID{0}; column_id < new_table->column_count(); ++column_id) {
+              for (auto chunk_id = ChunkID{0}, end = new_table->chunk_count(); chunk_id < end;  ++chunk_id) {
+                const auto& chunk = new_table->get_chunk(chunk_id);
                 const auto& segment = chunk->get_segment(column_id);
 
-                segment_meta_data_csv_file << sorted_table_name << "," << sorted_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << segment->estimate_memory_usage() << "\n";
+                segment_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << segment->estimate_memory_usage() << "\n";
               }
             }
 
             // create index for each chunk and each segment 
             if (CREATE_INDEX && encoding.encoding_type == EncodingType::Dictionary) {
               std::cout << "Creating indexes: ";
-              const auto chunk_count = sorted_table->chunk_count();
-              const auto column_count = sorted_table->column_count();
+              const auto chunk_count = new_table->chunk_count();
+              const auto column_count = new_table->column_count();
               
               for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
                 for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-                  const auto& index = sorted_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-                  index_meta_data_csv_file << sorted_table_name << "," << sorted_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << index->memory_consumption() << "\n";
+                  const auto& index = new_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
+                  index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << index->memory_consumption() << "\n";
                 }
               }
               std::cout << "done " << std::endl;
@@ -462,7 +462,7 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
   for (size_t chunk_size_id = 0; chunk_size_id < CHUNK_SIZES.size(); ++chunk_size_id) {
     for (size_t order_by_column_id = 0; order_by_column_id < ORDER_COLUMNS.size(); ++order_by_column_id) {
       for (size_t encoding_id = 0; encoding_id < CHUNK_ENCODINGS.size(); ++encoding_id) {
-        for (size_t scan_column_id = 0; scan_column_id < ORDER_COLUMNS.size(); ++scan_column_id) {
+        for (size_t scan_column_id = 0; scan_column_id < SCAN_COLUMNS.size(); ++scan_column_id) {
           for (size_t scan_value_id = 0; scan_value_id < BM_SCAN_VALUES; ++scan_value_id)
           {
             b->Args({static_cast<long long>(chunk_size_id), static_cast<long long>(order_by_column_id), static_cast<long long>(encoding_id), static_cast<long long>(scan_column_id), static_cast<long long>(scan_value_id)});
@@ -472,9 +472,9 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
 //BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
