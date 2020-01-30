@@ -1,5 +1,4 @@
 #include "split_pos_list_by_chunk_id.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -12,7 +11,6 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
   // shared_ptr<const PosList>, we first create regular PosLists, add the values to them, and then convert these.
 
   // Create PosLists and set them as `references_single_chunk`
-  // // TODO
   auto pos_lists_by_chunk_id = PosListsByChunkID{number_of_chunks};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < number_of_chunks; ++chunk_id) {
@@ -26,17 +24,17 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
 
   // Iterate over the input_pos_list and split the entries by chunk_id
   auto original_position = ChunkOffset{0};
-  for_each_pl(input_pos_list, [&](auto& row_id){
+  for (const auto row_id : *input_pos_list) {
     if (row_id.is_null()) {
       original_position++;
-      return;
+      continue;
     }
 
     auto& mapping = pos_lists_by_chunk_id[row_id.chunk_id];
 
     mapping.row_ids->emplace_back(row_id);
     mapping.original_positions.emplace_back(original_position++);
-  });
+  }
 
   return pos_lists_by_chunk_id;
 }

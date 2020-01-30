@@ -13,7 +13,6 @@ template <typename T>
 class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentIterable<T>> {
  public:
   using ValueType = T;
-  using PointAccessibleSegmentIterable<LZ4SegmentIterable<T>>::_on_with_iterators;
 
   explicit LZ4SegmentIterable(const LZ4Segment<T>& segment) : _segment{segment} {}
 
@@ -39,7 +38,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
    * at index 0 in the position list.
    */
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
 
     const auto position_filter_size = position_filter->size();
@@ -61,16 +60,16 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     if (_segment.null_values()) {
       auto begin =
-          PointAccessIterator<ValueIterator, PosList::const_iterator>{decompressed_filtered_segment.begin(), _segment.null_values()->cbegin(),
+          PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values()->cbegin(),
                                              position_filter->cbegin(), position_filter->cbegin()};
       auto end =
-          PointAccessIterator<ValueIterator, PosList::const_iterator>{decompressed_filtered_segment.begin(), _segment.null_values()->cend(),
+          PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values()->cend(),
                                              position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     } else {
-      auto begin = PointAccessIterator<ValueIterator, PosList::const_iterator>{decompressed_filtered_segment.begin(), std::nullopt,
+      auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), std::nullopt,
                                                       position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<ValueIterator, PosList::const_iterator>{decompressed_filtered_segment.begin(), std::nullopt,
+      auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), std::nullopt,
                                                     position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
@@ -134,11 +133,10 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     std::optional<NullValueIterator> _null_value_it;
   };
 
-  template <typename ValueIterator, typename _SubIteratorType>
+  template <typename ValueIterator>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator, _SubIteratorType>, SegmentPosition<T>, _SubIteratorType> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>, SegmentPosition<T>> {
    public:
-    using SubIteratorType = _SubIteratorType;
     using ValueType = T;
     using IterableType = LZ4SegmentIterable<T>;
     using DataIteratorType = typename std::vector<T>::const_iterator;
@@ -146,9 +144,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     // Begin Iterator
     PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
-                        SubIteratorType position_filter_begin, SubIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator, SubIteratorType>,
-                                         SegmentPosition<T>, _SubIteratorType>{std::move(position_filter_begin),
+                        AbstractPosList::PosListIterator<> position_filter_begin, AbstractPosList::PosListIterator<> position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
+                                         SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _data_it{std::move(data_it)},
           _null_value_it{std::move(null_value_it)} {}

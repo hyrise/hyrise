@@ -91,8 +91,8 @@ class AbstractTableScanImpl {
     // more than once. Even on machines with 512-bit SIMD registers, we prefer to use 256 bits, because current Intel
     // CPUs clock down when 512-bit is used. If you want to run this with 512-bit registers, you need to change the
     // SIMD_SIZE here as well as replace _m256 with _m512 twice below.
-    constexpr size_t SIMD_SIZE = 256 / 8;
-    constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ChunkOffset);
+    // constexpr size_t SIMD_SIZE = 256 / 8;
+    constexpr size_t BLOCK_SIZE = 1;//SIMD_SIZE / sizeof(ChunkOffset);
 
     // The index at which we will write the next matching row
     auto matches_out_index = matches_out.size();
@@ -146,23 +146,23 @@ class AbstractTableScanImpl {
       // Next, write *all* offsets in the block into `offsets`
       auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
 
-      // if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
-      //                                                                 std::decay_t<decltype(*left_it)>>,
-      //                                  std::decay_t<decltype(left_it)>>) {
-      //   // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
-      //   // save us the memory lookup
-      //   const auto first_offset = left_it_for_offsets->chunk_offset();
+      if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
+                                                                      std::decay_t<decltype(*left_it)>>,
+                                       std::decay_t<decltype(left_it)>>) {
+        // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
+        // save us the memory lookup
+        const auto first_offset = left_it_for_offsets->chunk_offset();
 
-      //   // NOLINTNEXTLINE
-      //   {}  // clang-format off
-      //   #pragma omp simd safelen(BLOCK_SIZE)
-      //   // clang-format on
-      //   for (size_t i = 0; i < BLOCK_SIZE; ++i) {
-      //     offsets[i] = first_offset + static_cast<ChunkOffset>(i);
-      //   }
+        // NOLINTNEXTLINE
+        {}  // clang-format off
+        #pragma omp simd safelen(BLOCK_SIZE)
+        // clang-format on
+        for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+          offsets[i] = first_offset + static_cast<ChunkOffset>(i);
+        }
 
-      //   left_it_for_offsets += BLOCK_SIZE;
-      // } else {
+        left_it_for_offsets += BLOCK_SIZE;
+      } else {
         // Slow path - the chunk offsets are not guaranteed to be linear
 
         // NOLINTNEXTLINE
@@ -173,7 +173,7 @@ class AbstractTableScanImpl {
           offsets[i] = left_it_for_offsets->chunk_offset();
           ++left_it_for_offsets;
         }
-      // }
+      }
 
       // Now write the matches into matches_out.
 #ifndef __AVX512VL__

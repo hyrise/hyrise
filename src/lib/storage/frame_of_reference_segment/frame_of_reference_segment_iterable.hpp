@@ -31,16 +31,16 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
 
-      auto begin = PointAccessIterator<OffsetValueDecompressorT, PosList::const_iterator>{&_segment.block_minima(), &_segment.null_values(),
+      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
                                                                  std::move(decompressor), position_filter->cbegin(),
                                                                  position_filter->cbegin()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT, PosList::const_iterator>{position_filter->cbegin(), position_filter->cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
     });
@@ -131,28 +131,27 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     ChunkOffset _chunk_offset;
   };
 
-  template <typename OffsetValueDecompressorT, typename _SubIteratorType>
+  template <typename OffsetValueDecompressorT>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT, _SubIteratorType>, SegmentPosition<T>, _SubIteratorType> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
-    using SubIteratorType = _SubIteratorType;
 
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         const std::shared_ptr<OffsetValueDecompressorT>& attribute_decompressor,
-                        const SubIteratorType position_filter_begin, SubIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT, SubIteratorType>,
-                                         SegmentPosition<T>, _SubIteratorType>{std::move(position_filter_begin),
+                        const AbstractPosList::PosListIterator<> position_filter_begin, AbstractPosList::PosListIterator<> position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
+                                         SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{attribute_decompressor} {}
 
     // End Iterator
-    explicit PointAccessIterator(const SubIteratorType position_filter_begin,
-                                 SubIteratorType position_filter_it)
+    explicit PointAccessIterator(const AbstractPosList::PosListIterator<> position_filter_begin,
+                                 AbstractPosList::PosListIterator<> position_filter_it)
         : PointAccessIterator{nullptr, nullptr, nullptr, std::move(position_filter_begin),
                               std::move(position_filter_it)} {}
 

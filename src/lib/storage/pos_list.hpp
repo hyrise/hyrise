@@ -150,6 +150,20 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   bool _references_single_chunk = false;
 };
 
+inline AbstractPosList::PosListIterator<true> AbstractPosList::begin() {
+  if (auto t = dynamic_cast<PosList*>(this)) {
+    return PosListIterator<true>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
+  }
+  Fail("asd");
+}
+
+inline AbstractPosList::PosListIterator<true> AbstractPosList::end() {
+  if (auto t = dynamic_cast<PosList*>(this)) {
+    return PosListIterator<true>(this, ChunkOffset{static_cast<ChunkOffset>(size())}, ChunkOffset{static_cast<ChunkOffset>(size())});
+  }
+  Fail("asd");
+}
+
 template <>
 inline PosList::const_iterator make_pos_list_begin_iterator<PosList>(PosList& pos_list) {
   return pos_list.cbegin();

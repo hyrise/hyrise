@@ -110,7 +110,6 @@ template <typename T>
 class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentIterable<T>> {
  public:
   using ValueType = T;
-  using PointAccessibleSegmentIterable<AnySegmentIterable<T>>::_on_with_iterators;
 
   template <typename IterableT>
   explicit AnySegmentIterable(const IterableT& iterable)
@@ -128,7 +127,7 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
   }

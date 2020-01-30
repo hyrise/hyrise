@@ -26,7 +26,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
     auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
     functor(begin, end);
@@ -64,20 +64,17 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     NullValueIterator _null_value_it;
   };
 
-  template <typename _SubIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_SubIteratorType>, IsNullSegmentPosition, _SubIteratorType> {
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
    public:
     using ValueType = bool;
     using NullValueVector = pmr_concurrent_vector<bool>;
-    using SubIteratorType = _SubIteratorType;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values,
-                                 const SubIteratorType position_filter_begin,
-                                 SubIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator,
-                                        IsNullSegmentPosition, _SubIteratorType>{std::move(position_filter_begin),
-                                          std::move(position_filter_it)},
+                                 const AbstractPosList::PosListIterator<> position_filter_begin,
+                                 AbstractPosList::PosListIterator<> position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
+                                                                                     std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:

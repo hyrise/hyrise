@@ -865,8 +865,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference segment entries into a pos list pointing to the original table.
   * This is done because there should not be any reference segments referencing reference segments.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
-                                                 const std::shared_ptr<const PosList>& pos_list) {
+  std::shared_ptr<AbstractPosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
+                                                 const std::shared_ptr<const AbstractPosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto input_pos_lists = std::vector<std::shared_ptr<const AbstractPosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
@@ -877,13 +877,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Get the row ids that are referenced
     auto new_pos_list = std::make_shared<PosList>();
-    for_each_pl(pos_list, [&](auto& row){
+    for (const auto row : *pos_list) {
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {
         new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
       }
-    });
+    }
 
     return new_pos_list;
   }
