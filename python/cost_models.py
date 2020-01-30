@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
 import matplotlib.pyplot as plt
+plt.style.use('ggplot')
 import joblib
 import numpy as np
 import argparse
@@ -45,6 +46,7 @@ def train_model(train_data, type):
     return model
 
 
+#generate_model_plot(model, model_test_data, type, data_type, encoding, out)
 def generate_model_plot(model, test_data, method, data_type, encoding, out):
     ohe_data = preprocess_data(test_data)
     real_y = np.ravel(ohe_data[['RUNTIME_NS']])
@@ -54,13 +56,15 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
     model_scores = calculate_error(ohe_data, pred_y, real_y, model)
 
     plt.scatter(real_y, pred_y, c='b')
-    #abline_values = range(int(max(np.amax(pred_y), np.amax(real_y)) + 10000))
+    axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
+    axis_min = min(0, np.amin(pred_y), np.amin(real_y))
+    abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
 
     # Plot the best fit line over the actual values
-    #plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
+    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
     plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_scores['R2']))
-    plt.ylim([0, max(np.amax(pred_y), np.amax(real_y)) + 10000])
-    plt.xlim([0, max(np.amax(pred_y), np.amax(real_y)) + 10000])
+    plt.ylim([axis_min, axis_max])
+    plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
     output_path = '{}/Plots/{}_{}_{}'.format(out, method, data_type, encoding)
@@ -126,8 +130,8 @@ def plot_general_model(test_data, model, model_type, data_type, encoding, out):
     plt.scatter(test_y, pred_y, c='b')
 
     plt.title('General Model; Score: {}'.format(model_scores['R2']))
-    plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) + 10000])
-    plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) + 10000])
+    plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
+    plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
     output_path = '{}/Plots/{}_{}_{}_general'.format(out, model_type, data_type, encoding)
@@ -146,7 +150,7 @@ def add_dummy_types(train, test, col):
     #return [train, test]
 
 
-def parseargs():
+def parseargs(opt=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
     # in case no test data is given, just split the train data in to train and test dataset
@@ -154,7 +158,10 @@ def parseargs():
     parser.add_argument('--m', help='Model type')
     parser.add_argument('--out', help='Output folder')
 
-    return parser.parse_args()
+    if (opt):
+        return parser.parse_args(opt)
+    else:
+        return parser.parse_args()
 
 
 def import_data(args):
@@ -173,8 +180,7 @@ def import_data(args):
     return [train_data, test_data]
 
 
-def main():
-    args = parseargs()
+def main(args):
     cost_models = []
     test_data_split = []
     leftover_test_data = []
@@ -255,4 +261,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    args = parseargs()
+    main(args)
