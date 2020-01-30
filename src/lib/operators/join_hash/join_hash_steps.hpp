@@ -877,7 +877,7 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
           auto new_pos_list = std::make_shared<PosList>(pos_list->size());
           auto new_pos_list_iter = new_pos_list->begin();
 
-          pos_list->for_each([&](auto& row){
+          for_each_pl(pos_list, [&](auto& row){
             if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
               *new_pos_list_iter = row;
             } else {

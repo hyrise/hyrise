@@ -284,8 +284,41 @@ constexpr DataType data_type_from_type() {
   });
 }
 
+// template <typename Functor>
+// void for_each(std::shared_ptr<AbstractPosList> t, const Functor& functor) {
+//   resolve_pos_list_type(*t, [&functor](auto& pos_list){
+//     auto it = make_pos_list_begin_iterator(pos_list);
+//     auto end = make_pos_list_end_iterator(pos_list);
+//     for(; it != end; ++it) {
+//       functor(*it);
+//     }
+//   });
+// }
+
 template <typename Functor>
-void for_each(const Functor& functor, AbstractPosList* t) {
+void for_each_pl(const std::shared_ptr<const AbstractPosList> t, const Functor& functor) {
+  resolve_pos_list_type(*t, [&functor](auto& pos_list){
+    auto it = make_pos_list_begin_iterator(pos_list);
+    auto end = make_pos_list_end_iterator(pos_list);
+    for(; it != end; ++it) {
+      functor(*it);
+    }
+  });
+}
+
+template <typename Functor>
+void for_each_pl(const std::unique_ptr<const AbstractPosList> t, const Functor& functor) {
+  resolve_pos_list_type(*t, [&functor](auto& pos_list){
+    auto it = make_pos_list_begin_iterator(pos_list);
+    auto end = make_pos_list_end_iterator(pos_list);
+    for(; it != end; ++it) {
+      functor(*it);
+    }
+  });
+}
+
+template <typename Functor>
+void for_each_pl(AbstractPosList* t, const Functor& functor) {
   resolve_pos_list_type(*t, [&functor](auto& pos_list){
     auto it = make_pos_list_begin_iterator(pos_list);
     auto end = make_pos_list_end_iterator(pos_list);

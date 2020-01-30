@@ -11,6 +11,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -174,7 +175,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           pos_list_out = pos_list_in;
         } else {
           temp_pos_list.guarantee_single_chunk();
-          pos_list_in->for_each([&](auto& row_id){
+          for_each_pl(pos_list_in, [&](auto& row_id){
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
@@ -184,7 +185,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
-        pos_list_in->for_each([&](auto& row_id){
+        for_each_pl(pos_list_in, [&](auto& row_id){
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();

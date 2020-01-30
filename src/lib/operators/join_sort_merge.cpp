@@ -877,7 +877,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Get the row ids that are referenced
     auto new_pos_list = std::make_shared<PosList>();
-    pos_list->for_each([&](auto& row){
+    for_each_pl(pos_list, [&](auto& row){
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {

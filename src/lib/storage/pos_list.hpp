@@ -151,22 +151,22 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
 };
 
 template <>
-PosList::const_iterator make_pos_list_begin_iterator<PosList>(PosList& pos_list) {
+inline PosList::const_iterator make_pos_list_begin_iterator<PosList>(PosList& pos_list) {
   return pos_list.cbegin();
 }
 
 template <>
-PosList::const_iterator make_pos_list_end_iterator<PosList>(PosList& pos_list) {
+inline PosList::const_iterator make_pos_list_end_iterator<PosList>(PosList& pos_list) {
   return pos_list.cend();
 }
 
 template <>
-PosList::iterator make_pos_list_begin_iterator_nc<PosList>(PosList& pos_list) {
+inline PosList::iterator make_pos_list_begin_iterator_nc<PosList>(PosList& pos_list) {
   return pos_list.begin();
 }
 
 template <>
-PosList::iterator make_pos_list_end_iterator_nc<PosList>(PosList& pos_list) {
+inline PosList::iterator make_pos_list_end_iterator_nc<PosList>(PosList& pos_list) {
   return pos_list.end();
 }
 

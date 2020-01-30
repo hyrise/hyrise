@@ -322,9 +322,15 @@ void JoinIndex::_reference_join_two_segments_using_index(
 
     PosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
     // TODO
-    std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
-    std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
-    std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
+
+    resolve_pos_list_type(reference_segment_pos_list, [&](auto& typed_pos_list){
+      // auto begin = make_pos_list_begin_iterator(*typed_pos_list);
+      auto end = make_pos_list_end_iterator(*typed_pos_list);
+      std::copy(typed_pos_list->begin(), end, mutable_ref_seg_pos_list.begin());
+      std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
+      std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
+
+    });
 
     PosList index_table_matches{};
     std::set_intersection(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end(), index_scan_pos_list.begin(),

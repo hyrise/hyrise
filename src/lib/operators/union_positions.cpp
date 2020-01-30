@@ -12,6 +12,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "resolve_type.hpp"
 
 /**
  * ### UnionPositions implementation
@@ -332,7 +333,11 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
       auto& out_pos_list = reference_matrix[cluster_id];
       auto in_pos_list = ref_segment->pos_list();
       // TODO
-      std::copy(in_pos_list->begin(), in_pos_list->end(), std::back_inserter(out_pos_list));
+      resolve_pos_list_type(*in_pos_list, [&](auto& typed_pos_list){
+        auto begin = make_pos_list_begin_iterator(typed_pos_list);
+        auto end = make_pos_list_end_iterator(typed_pos_list);
+        std::copy(begin, end, std::back_inserter(out_pos_list));
+      });
     }
   }
   return reference_matrix;
