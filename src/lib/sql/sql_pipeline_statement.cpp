@@ -116,7 +116,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     if (node) {
       for (auto& root_expression : node->node_expressions) {
         visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-          if (expression->type == ExpressionType::Value) {
+          if (expression->type == ExpressionType::Value || expression->type == ExpressionType::List) {
             values.push_back(expression);
             expression = std::make_shared<PlaceholderExpression>(parameter_id);
             parameter_id++;
@@ -287,10 +287,10 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   _result_table = tasks.back()->get_operator()->get_output();
   if (!_result_table) _query_has_output = false;
 
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
-                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
-                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
-                reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE9(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
+                _metrics->cache_duration.count(), _metrics->optimization_duration.count(),
+                _metrics->lqp_translation_duration.count(), _metrics->plan_execution_duration.count(),
+                _metrics->query_plan_cache_hit, get_tasks().size(), reinterpret_cast<uintptr_t>(this));
 
   return {SQLPipelineStatus::Success, _result_table};
 }
