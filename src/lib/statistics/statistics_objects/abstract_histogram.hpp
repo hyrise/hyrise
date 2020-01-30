@@ -223,6 +223,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
 
+  bool is_uniformly_distributed(const float distribution_threshold) const;
+
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).

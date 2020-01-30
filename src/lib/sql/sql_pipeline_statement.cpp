@@ -14,6 +14,7 @@
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -109,6 +110,22 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   ParameterID parameter_id(0);
+
+  bool contains_non_uniform_distribution = false;
+
+  visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+    if (node) {
+      const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+      if (table_node) {
+        const auto &table_statistics = table_node->table_statistics;
+        for (auto &expression: table_node->column_expressions())
+        table_statistics->column_statistics[table_node->get_cloumn()]
+
+      }
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
 
   visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
     if (node) {
