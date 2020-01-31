@@ -34,8 +34,7 @@ constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
 // table and compression settings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "ping";
-const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
-//const auto CHUNK_SIZES = std::vector{size_t{10}};
+const auto CHUNK_SIZE = size_t{1'000'000};
 const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
 // Frame of References supports only int columns
@@ -43,7 +42,7 @@ const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "t
 const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 //const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
 //const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
-const auto CREATE_INDEX = true; 
+const auto CREATE_INDEX = false; 
 
 // quantile benchmark values (mixed data type table)
 // determined by column stats python script calculated with pandas, settings nearest 
@@ -115,8 +114,8 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
   return sorted_table;
 }
 
-std::string get_table_name(const std::string table_name, const std::size_t chunk_size, const std::string order_by_column , const std::string encoding) {
-  return table_name + "_csize_" + std::to_string(chunk_size) + "_orderby_" + order_by_column + "_encoding_" + encoding;
+std::string get_table_name(const std::string table_name, const std::string order_by_column , const std::string encoding) {
+  return table_name + "_orderby_" + order_by_column + "_encoding_" + encoding;
 } 
 
 }  // namespace
@@ -146,56 +145,54 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
       index_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,ROW_COUNT,SIZE_IN_BYTES\n"; 
       
       // Sort table and add sorted tables to the storage manager
-      for (const auto chunk_size : CHUNK_SIZES) {
-        // Load origninal table from tbl file with specified chunk size
-        std::cout << "Load initial table form tbl file '" << TBL_FILE << "' with chunk size: " << chunk_size << "." << std::endl;
-        auto loaded_table = load_table(TBL_FILE, chunk_size);
+      // Load origninal table from tbl file with specified chunk size
+      std::cout << "Load initial table form tbl file '" << TBL_FILE << "' with chunk size: " << CHUNK_SIZE << "." << std::endl;
+      auto loaded_table = load_table(TBL_FILE, CHUNK_SIZE);
 
-        for (const auto order_by_column : ORDER_COLUMNS) {
-          for (const opossum::SegmentEncodingSpec & encoding : CHUNK_ENCODINGS) {
+      for (const auto order_by_column : ORDER_COLUMNS) {
+        for (const opossum::SegmentEncodingSpec & encoding : CHUNK_ENCODINGS) {
 
-            // Maybe there is a better way to do this
-            const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
-            const auto new_table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
-            auto table_wrapper = std::make_shared<TableWrapper>(loaded_table);
-            table_wrapper->execute();
-            const auto chunk_encoding_spec = ChunkEncodingSpec(table_wrapper->get_output()->column_count(), {encoding});
+          // Maybe there is a better way to do this
+          const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
+          const auto new_table_name = get_table_name(TABLE_NAME_PREFIX, order_by_column, encoding_type);
+          auto table_wrapper = std::make_shared<TableWrapper>(loaded_table);
+          table_wrapper->execute();
+          const auto chunk_encoding_spec = ChunkEncodingSpec(table_wrapper->get_output()->column_count(), {encoding});
 
-            auto new_table = loaded_table;
+          auto new_table = loaded_table;
 
-            if (strcmp(order_by_column, "unsorted") == 0) {
-              ChunkEncoder::encode_all_chunks(new_table, chunk_encoding_spec);
-            } else {
-              new_table = sort_table_chunk_wise(loaded_table, order_by_column, chunk_size, chunk_encoding_spec);
+          if (strcmp(order_by_column, "unsorted") == 0) {
+            ChunkEncoder::encode_all_chunks(new_table, chunk_encoding_spec);
+          } else {
+            new_table = sort_table_chunk_wise(loaded_table, order_by_column, CHUNK_SIZE, chunk_encoding_spec);
+          }
+
+          storage_manager.add_table(new_table_name, new_table);
+          std::cout << "Created table: " << new_table_name << std::endl;
+
+          // table stats
+          for (auto column_id = ColumnID{0}; column_id < new_table->column_count(); ++column_id) {
+            for (auto chunk_id = ChunkID{0}, end = new_table->chunk_count(); chunk_id < end;  ++chunk_id) {
+              const auto& chunk = new_table->get_chunk(chunk_id);
+              const auto& segment = chunk->get_segment(column_id);
+
+              segment_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << segment->estimate_memory_usage() << "\n";
             }
+          }
 
-            storage_manager.add_table(new_table_name, new_table);
-            std::cout << "Created table: " << new_table_name << std::endl;
-
-            // table stats
-            for (auto column_id = ColumnID{0}; column_id < new_table->column_count(); ++column_id) {
-              for (auto chunk_id = ChunkID{0}, end = new_table->chunk_count(); chunk_id < end;  ++chunk_id) {
-                const auto& chunk = new_table->get_chunk(chunk_id);
-                const auto& segment = chunk->get_segment(column_id);
-
-                segment_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << segment->estimate_memory_usage() << "\n";
-              }
-            }
-
-            // create index for each chunk and each segment 
-            if (CREATE_INDEX && encoding.encoding_type == EncodingType::Dictionary) {
-              std::cout << "Creating indexes: ";
-              const auto chunk_count = new_table->chunk_count();
-              const auto column_count = new_table->column_count();
+          // create index for each chunk and each segment 
+          if (CREATE_INDEX && encoding.encoding_type == EncodingType::Dictionary) {
+            std::cout << "Creating indexes: ";
+            const auto chunk_count = new_table->chunk_count();
+            const auto column_count = new_table->column_count();
               
-              for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-                for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-                  const auto& index = new_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-                  index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << index->memory_consumption() << "\n";
-                }
+            for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+              for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+                const auto& index = new_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
+                index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << index->memory_consumption() << "\n";
               }
-              std::cout << "done " << std::endl;
             }
+            std::cout << "done " << std::endl;
           }
         }
       }
@@ -245,16 +242,15 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
 
   auto& storage_manager = Hyrise::get().storage_manager;
   
-  const auto chunk_size = CHUNK_SIZES[state.range(0)];
-  const auto order_by_column = ORDER_COLUMNS[state.range(1)];
-  const auto encoding = CHUNK_ENCODINGS[state.range(2)];
-  const auto scan_column_index = state.range(3);
+  const auto order_by_column = ORDER_COLUMNS[state.range(0)];
+  const auto encoding = CHUNK_ENCODINGS[state.range(1)];
+  const auto scan_column_index = state.range(2);
   const auto scan_column = SCAN_COLUMNS[scan_column_index];
-  const auto search_value_index = state.range(4);
+  const auto search_value_index = state.range(3);
 
 
   const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
-  const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
+  const auto table_name = get_table_name(TABLE_NAME_PREFIX, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
 
@@ -325,7 +321,6 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   }
 }
 
-
 BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length. 1");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length. 2");
@@ -334,17 +329,16 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark
 
   auto& storage_manager = Hyrise::get().storage_manager;
 
-  const auto chunk_size = CHUNK_SIZES[state.range(0)];
-  const auto order_by_column = ORDER_COLUMNS[state.range(1)];
-  const auto encoding = CHUNK_ENCODINGS[state.range(2)];
-  const auto scan_column_index = state.range(3);
+  const auto order_by_column = ORDER_COLUMNS[state.range(0)];
+  const auto encoding = CHUNK_ENCODINGS[state.range(1)];
+  const auto scan_column_index = state.range(2);
   const auto scan_column = SCAN_COLUMNS[scan_column_index];
-  const auto search_value_index = state.range(4);
+  const auto search_value_index = state.range(3);
 
   if (encoding.encoding_type != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
 
   const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
-  const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
+  const auto table_name = get_table_name(TABLE_NAME_PREFIX, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
 
@@ -371,14 +365,12 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark
 }
 
 static void CustomArguments(benchmark::internal::Benchmark* b) {
-  for (size_t chunk_size_id = 0; chunk_size_id < CHUNK_SIZES.size(); ++chunk_size_id) {
-    for (size_t order_by_column_id = 0; order_by_column_id < ORDER_COLUMNS.size(); ++order_by_column_id) {
-      for (size_t encoding_id = 0; encoding_id < CHUNK_ENCODINGS.size(); ++encoding_id) {
-        for (size_t scan_column_id = 0; scan_column_id < SCAN_COLUMNS.size(); ++scan_column_id) {
-          for (size_t scan_value_id = 0; scan_value_id < BM_SCAN_VALUES; ++scan_value_id)
-          {
-            b->Args({static_cast<long long>(chunk_size_id), static_cast<long long>(order_by_column_id), static_cast<long long>(encoding_id), static_cast<long long>(scan_column_id), static_cast<long long>(scan_value_id)});
-          }
+  for (size_t order_by_column_id = 0; order_by_column_id < ORDER_COLUMNS.size(); ++order_by_column_id) {
+    for (size_t encoding_id = 0; encoding_id < CHUNK_ENCODINGS.size(); ++encoding_id) {
+      for (size_t scan_column_id = 0; scan_column_id < SCAN_COLUMNS.size(); ++scan_column_id) {
+        for (size_t scan_value_id = 0; scan_value_id < BM_SCAN_VALUES; ++scan_value_id)
+        {
+          b->Args({static_cast<long long>(order_by_column_id), static_cast<long long>(encoding_id), static_cast<long long>(scan_column_id), static_cast<long long>(scan_value_id)});
         }
       }
     }
@@ -386,6 +378,6 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
 }
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
