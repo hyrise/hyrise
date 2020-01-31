@@ -3,6 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include "stdio.h"
+#include "sys/types.h"
+#include "sys/sysinfo.h"
 
 #include "meta_table_manager.hpp"
 
@@ -208,9 +210,11 @@ std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
 std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
   const auto columns = TableColumnDefinitions{{"cpu_total_used", DataType::Float, false},
                                               {"cpu_process_used", DataType::Float, false},
-                                              {"ram_available", DataType::Int, false},
+                                              {"ram_total_available", DataType::Int, false},
                                               {"ram_total_used", DataType::Int, false},
-                                              {"ram_process_used", DataType::Int, false}};
+                                              {"ram_total_used_percent", DataType::Float, false},
+                                              {"ram_process_used", DataType::Int, false},
+                                              {"ram_process_used_percent", DataType::Int, false}};
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
@@ -293,9 +297,23 @@ std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
   std::cout << time_window.count() << std::endl;
   float process_cpu_usage = 100.0 * ((kernel_time - kernel_time_ref) + (user_time - user_time_ref)) / (time_window.count() / 10.0);
 
-  output_table->append({system_cpu_usage, process_cpu_usage, int32_t{0}, int32_t{0}, int32_t{0}});
+  output_table->append({system_cpu_usage, process_cpu_usage, int32_t{0}, int32_t{0}, float{0}, int32_t{0}, int32_t{0}});
 
-  //
+  // get system wide ram usage
+  /*
+  struct sysinfo memory_info;
+  sysinfo(&memory_info);
+
+  long long total_ram = memory_info.totalram * memory_info.mem_unit;
+  long long total_swap = memory_info.totalswap * memory_info.mem_unit;
+  long long ram_used = (memory_info.totalram - memory_info.freeram) * memory_info.mem_unit;
+  long long swap_used = (memory_info.totalswap - memory_info.freeswap) * memory_info.mem_unit;
+
+  float system_memory_usage = 100.0 * (ram_used + swap_used) / (total_ram + total_swap);
+
+  output_table->append({system_cpu_usage, process_cpu_usage, ram_used + swap_used, system_memory_usage, int32_t{0}});
+  */
+
   return output_table;
 
 #else 
