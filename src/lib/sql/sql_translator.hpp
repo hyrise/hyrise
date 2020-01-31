@@ -51,6 +51,8 @@ class SQLTranslator final {
    */
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
+  bool cacheable();
+
  private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
   // for equal SQL expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
@@ -116,6 +118,8 @@ class SQLTranslator final {
   TableSourceState _translate_table_origin(const hsql::TableRef& hsql_table_ref);
   std::shared_ptr<AbstractLQPNode> _translate_stored_table(
       const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
+  std::shared_ptr<AbstractLQPNode> _translate_meta_table(
+      const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   TableSourceState _translate_predicated_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
@@ -179,6 +183,7 @@ class SQLTranslator final {
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
   std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
+  bool _cacheable{true};
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<SelectListElement> _inflated_select_list_elements;
