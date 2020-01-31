@@ -40,9 +40,9 @@ const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "ti
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
 // Frame of References supports only int columns
 // Dictionary Encoding should always have the id 0
-//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
+const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 //const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}};
-const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
+//const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}};
 const auto CREATE_INDEX = true; 
 
 // quantile benchmark values (mixed data type table)
@@ -249,7 +249,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   const auto order_by_column = ORDER_COLUMNS[state.range(1)];
   const auto encoding = CHUNK_ENCODINGS[state.range(2)];
   const auto scan_column_index = state.range(3);
-  const auto scan_column = ORDER_COLUMNS[scan_column_index];
+  const auto scan_column = SCAN_COLUMNS[scan_column_index];
   const auto search_value_index = state.range(4);
 
 
@@ -259,7 +259,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   auto table = storage_manager.get_table(table_name);
 
   const auto scan_column_id = table->column_id_by_name(scan_column);
-  const auto order_by_column_id = table->column_id_by_name(order_by_column);
+  //const auto order_by_column_id = table->column_id_by_name(order_by_column);
   auto operand = pqp_column_(scan_column_id, table->column_data_type(scan_column_id), false, scan_column);
 
   // scan
@@ -280,9 +280,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   ////
   //// Assertions for the correction scan method, encoding types, and expected sort orders.
   ////
-  if (warm_up_table_scan->get_output()->row_count() == 0) {
-    std::cout << "Warning: executed table scan did not yield any results." << std::endl;
-  }
+  // if (warm_up_table_scan->get_output()->row_count() == 0) {
+  //   std::cout << "Warning: executed table scan did not yield any results." << std::endl;
+  // }
 
   // if (order_by_column == scan_column) {
   //   const auto description = warm_up_table_scan->description(DescriptionMode::SingleLine);
@@ -290,31 +290,31 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   //   Assert(description.find("ColumnVsValue") != std::string::npos, "Executed scan on colum " + scan_column + " was no ColumnVsValue scan.");
   // }
   
-  const auto chunk_count = table->chunk_count();
-  const auto column_count = table->column_count();
-  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    resolve_data_type(table->column_data_type(column_id), [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
+  // const auto chunk_count = table->chunk_count();
+  // const auto column_count = table->column_count();
+  // for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+  //   resolve_data_type(table->column_data_type(column_id), [&](auto type) {
+  //     using ColumnDataType = typename decltype(type)::type;
 
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto segment = table->get_chunk(chunk_id)->get_segment(column_id);
+  //     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+  //       const auto segment = table->get_chunk(chunk_id)->get_segment(column_id);
 
-          const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
-          if (unencoded_segment) {
-            Assert(encoding.encoding_type == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
-          } else {
-            const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-            Assert(encoded_segment && encoded_segment->encoding_type() == encoding.encoding_type, "Encoding type not as requested for " + scan_column + ".");
-          }
+  //         const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
+  //         if (unencoded_segment) {
+  //           Assert(encoding.encoding_type == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
+  //         } else {
+  //           const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+  //           Assert(encoded_segment && encoded_segment->encoding_type() == encoding.encoding_type, "Encoding type not as requested for " + scan_column + ".");
+  //         }
 
-          if (column_id == order_by_column_id) {
-            Assert(table->get_chunk(chunk_id)->ordered_by()->first == ColumnID{column_id}, "Chunk is unsorted, but it should be.");
-          } else {
-            Assert(table->get_chunk(chunk_id)->ordered_by() == std::nullopt || table->get_chunk(chunk_id)->ordered_by()->first != ColumnID{column_id}, "Chunk shall not be sorted, but is.");
-          }
-      }
-    });
-  }
+  //         if (column_id == order_by_column_id) {
+  //           Assert(table->get_chunk(chunk_id)->ordered_by()->first == ColumnID{column_id}, "Chunk is unsorted, but it should be.");
+  //         } else {
+  //           Assert(table->get_chunk(chunk_id)->ordered_by() == std::nullopt || table->get_chunk(chunk_id)->ordered_by()->first != ColumnID{column_id}, "Chunk shall not be sorted, but is.");
+  //         }
+  //     }
+  //   });
+  // }
   ////
   //// Assertions End
   ////
@@ -325,93 +325,6 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)(benchmark::State& state) {
-  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length.");
-  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length.");
-  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length.");
-  Assert(BM_VAL_TIMESTAMP.size() == BM_SCAN_VALUES, "Sample search values for columns should have the same length.");
-
-  auto& storage_manager = Hyrise::get().storage_manager;
-  
-  const auto chunk_size = CHUNK_SIZES[state.range(0)];
-  const auto order_by_column = ORDER_COLUMNS[state.range(1)];
-  const auto encoding = CHUNK_ENCODINGS[state.range(2)];
-  const auto scan_column_index = state.range(3);
-  const auto scan_column = ORDER_COLUMNS[scan_column_index];
-  const auto search_value_index = state.range(4);
-
-
-  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
-  const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
-  
-  auto table = storage_manager.get_table(table_name);
-
-  const auto scan_column_id = table->column_id_by_name(scan_column);
-  const auto order_by_column_id = table->column_id_by_name(order_by_column);
-  auto operand = pqp_column_(scan_column_id, table->column_data_type(scan_column_id), false, scan_column);
-
-  // scan
-  std::shared_ptr<BinaryPredicateExpression> predicate;
-  // should by nicer dicer
-  if (scan_column_index == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_ID[search_value_index]));}
-  if (scan_column_index == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LATITUDE[search_value_index]));}
-  if (scan_column_index == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LONGITUDE[search_value_index]));}
-  if (scan_column_index == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_TIMESTAMP[search_value_index]));}
-  if (scan_column_index == 4) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_STATUS[search_value_index]));}
-
-  auto table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-
-  const auto warm_up_table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
-  warm_up_table_scan->execute();
-
-  ////
-  //// Assertions for non-empty results, the correction scan method, encoding types, and expected sort orders.
-  ////
-  if (warm_up_table_scan->get_output()->row_count() == 0) {
-    std::cout << "Warning: executed table scan did not yield any results." << std::endl;
-  }
-
-  if (order_by_column == scan_column) {
-   const auto description = warm_up_table_scan->description(DescriptionMode::SingleLine);
-   Assert(description.find("scanned with binary search]") != std::string::npos, "Requested a sorted scan on colum " + scan_column + ", but impl description is:\n\t" + description);
-   Assert(description.find("ColumnVsValue") != std::string::npos, "Executed scan on colum " + scan_column + " was no ColumnVsValue scan.");
-  }
-  
-  const auto chunk_count = table->chunk_count();
-  const auto column_count = table->column_count();
-  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    resolve_data_type(table->column_data_type(column_id), [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto segment = table->get_chunk(chunk_id)->get_segment(column_id);
-
-          const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
-          if (unencoded_segment) {
-            Assert(encoding.encoding_type == EncodingType::Unencoded, "Encoding type >>Unencoded<< requested for " + scan_column + " but not found.");
-          } else {
-            const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-            Assert(encoded_segment && encoded_segment->encoding_type() == encoding.encoding_type, "Encoding type not as requested for " + scan_column + ".");
-          }
-
-          if (column_id == order_by_column_id) {
-            Assert(table->get_chunk(chunk_id)->ordered_by()->first == ColumnID{column_id}, "Chunk is unsorted, but it should be.");
-          } else {
-            Assert(table->get_chunk(chunk_id)->ordered_by() == std::nullopt || table->get_chunk(chunk_id)->ordered_by()->first != ColumnID{column_id}, "Chunk shall not be sorted, but is.");
-          }
-      }
-    });
-  }
-  ////
-  //// Assertions End
-  ////
-  
-  for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
-    table_scan->execute();
-  }
-}
 
 BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length. 1");
@@ -425,10 +338,9 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark
   const auto order_by_column = ORDER_COLUMNS[state.range(1)];
   const auto encoding = CHUNK_ENCODINGS[state.range(2)];
   const auto scan_column_index = state.range(3);
-  const auto scan_column = ORDER_COLUMNS[scan_column_index];
+  const auto scan_column = SCAN_COLUMNS[scan_column_index];
   const auto search_value_index = state.range(4);
 
-  //if (order_by_column != ORDER_COLUMNS[0]) state.SkipWithError("Running only for a single random sorted column (should not matter for index scans). Skipping others.");
   if (encoding.encoding_type != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
 
   const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
@@ -472,8 +384,7 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
-//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
 
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
