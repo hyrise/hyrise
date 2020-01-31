@@ -2,10 +2,10 @@
 
 #include "hyrise.hpp"
 #include "import_export/csv/csv_parser.hpp"
-#include "storage/table.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
