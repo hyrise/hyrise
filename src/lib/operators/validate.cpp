@@ -169,10 +169,12 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in->common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        // if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
+        auto pos_list_in_specialized = std::dynamic_pointer_cast<const PosList>(pos_list_in);
+
+        if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id) && pos_list_in_specialized) {
           // We can reuse the old PosList since it is entirely visible.
-          // pos_list_out = pos_list_in;
-        // } else {
+          pos_list_out = pos_list_in_specialized;
+        } else {
           temp_pos_list.guarantee_single_chunk();
           for (auto row_id : *pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
@@ -180,7 +182,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
             }
           }
           pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
-        // }
+        }
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.

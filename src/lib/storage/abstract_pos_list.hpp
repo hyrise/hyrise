@@ -10,15 +10,6 @@
 
 namespace opossum {
 
-// class AbstractPosList {
-// // public:
-// //   virtual ~AbstractPosList() = default;
-// // virtual RowID operator[](size_t n) const = 0; 
-// }
-
-// template<typename Functor>
-// void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functor& func);
-
 class PosList;
 
 class AbstractPosList {
@@ -34,56 +25,30 @@ public:
     _max_size = max_size;
   }
 
-  void increment() { ++_chunk_offset; 
-    if (_chunk_offset > _max_size) {
-      std::cout << "Sau" << std::endl;
-    }
-  }
+  void increment() { ++_chunk_offset; }
 
-  void decrement() { --_chunk_offset;
-    if (_chunk_offset > _max_size) {
-      std::cout << "Sau" << std::endl;
-    }
-   }
+  void decrement() { --_chunk_offset; }
 
-  void advance(std::ptrdiff_t n) { _chunk_offset += n;
-    if (_chunk_offset > _max_size) {
-      std::cout << "Sau" << std::endl;
-    }
-   }
-
-  /**
-   * Although `other` could have a different type, it is practically impossible,
-   * since AnySegmentIterator is only used within AnySegmentIterable.
-   */
+  void advance(std::ptrdiff_t n) { _chunk_offset += n; }
 
 
   bool equal(const PosListIterator other) const {
     // assert + chunk offset compare
     // DebugAssert()
-    // return false;
     return (other._chunk_offset == _chunk_offset && other._pl_pointer == _pl_pointer);
-    // const auto casted_other = static_cast<const AnySegmentIteratorWrapper<T, Iterator>*>(other);
-    // return _iterator == casted_other->_iterator;
   }
 
   bool equal(const PosListIterator* other) const {
     // assert + chunk offset compare
     // DebugAssert()
     return (other->_chunk_offset == _chunk_offset && other->_pl_pointer == _pl_pointer);
-    // const auto casted_other = static_cast<const AnySegmentIteratorWrapper<T, Iterator>*>(other);
-    // return _iterator == casted_other->_iterator;
   }
 
   std::ptrdiff_t distance_to(const PosListIterator other) const {
-    // const auto casted_other = static_cast<const AnySegmentIteratorWrapper<T, Iterator>*>(other);
-    // return casted_other->_iterator - _iterator;
     return (other._chunk_offset - _chunk_offset);
   }
 
   std::ptrdiff_t distance_to(const PosListIterator* other) const {
-    // const auto casted_other = static_cast<const AnySegmentIteratorWrapper<T, Iterator>*>(other);
-    // return casted_other->_iterator - _iterator;
     return (other->_chunk_offset - _chunk_offset);
   }
 
@@ -93,9 +58,6 @@ public:
     } else {
       return (*_pl_pointer)[_chunk_offset];
     }
-    // const auto value = *_iterator;
-    // return {value.value(), value.is_null(), value.chunk_offset()};
-
   }
 
 
@@ -122,19 +84,8 @@ public:
     return PosListIterator<false>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
   }
 
-  // PosListIterator<true> begin() {
-  //   // if is debug{
-  //   if (auto t = std::dynamic_cast<PosList>(this)) {
-  //     return PosListIterator<true>(this, ChunkOffset{0});
-  //   }
-  // }
-
   PosListIterator<true> begin();
   PosListIterator<true> end();
-
-      // PosListIterator<true>
-    // return PosListIterator(this, ChunkOffset{0});
-  // }
 
   PosListIterator<false> end() const {
     return PosListIterator<false>(this, ChunkOffset{static_cast<ChunkOffset>(size())}, ChunkOffset{static_cast<ChunkOffset>(size())});
@@ -154,22 +105,11 @@ public:
 
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
 
-  virtual bool operator==(const AbstractPosList& other) const = 0;
+  virtual bool operator==(const AbstractPosList* other) const = 0;
 
   // template <typename Functor>
   // void for_each(const Functor& functor) const;
 };
 
-template <typename PosListType>
-extern typename PosListType::const_iterator make_pos_list_begin_iterator(PosListType& pos_list);
-
-template <typename PosListType>
-extern typename PosListType::const_iterator make_pos_list_end_iterator(PosListType& pos_list);
-
-template <typename PosListType>
-extern typename PosListType::iterator make_pos_list_begin_iterator_nc(PosListType& pos_list);
-
-template <typename PosListType>
-extern typename PosListType::iterator make_pos_list_end_iterator_nc(PosListType& pos_list);
 
 }  // namespace opossum

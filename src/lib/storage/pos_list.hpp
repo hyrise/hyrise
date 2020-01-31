@@ -132,8 +132,12 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   }
 
   // TODO: Proper support for comparison
-  bool operator==(const AbstractPosList& other) const override {
-    return other == *this;
+  bool operator==(const AbstractPosList* other) const override {
+    // return other == *this;
+    if (auto p = dynamic_cast<const PosList*>(other)) {
+      return static_cast<const pmr_vector<RowID>&>(*this) == static_cast<const pmr_vector<RowID>&>(*p);
+    }
+    Fail("operator == fail");
   }
 
   bool operator==(const PosList& other) const {
@@ -164,24 +168,5 @@ inline AbstractPosList::PosListIterator<true> AbstractPosList::end() {
   Fail("asd");
 }
 
-template <>
-inline PosList::const_iterator make_pos_list_begin_iterator<PosList>(PosList& pos_list) {
-  return pos_list.cbegin();
-}
-
-template <>
-inline PosList::const_iterator make_pos_list_end_iterator<PosList>(PosList& pos_list) {
-  return pos_list.cend();
-}
-
-template <>
-inline PosList::iterator make_pos_list_begin_iterator_nc<PosList>(PosList& pos_list) {
-  return pos_list.begin();
-}
-
-template <>
-inline PosList::iterator make_pos_list_end_iterator_nc<PosList>(PosList& pos_list) {
-  return pos_list.end();
-}
 
 }  // namespace opossum
