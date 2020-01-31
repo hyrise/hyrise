@@ -5,6 +5,7 @@
 #include "stdio.h"
 #include "sys/types.h"
 #include "sys/sysinfo.h"
+#include "sys/times.h"
 
 #include "meta_table_manager.hpp"
 
@@ -93,6 +94,112 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
   }
 }
 
+std::vector<float> get_load_avg() {
+#if defined(__linux__)
+
+  std::ifstream load_avg_file;
+  load_avg_file.open("/proc/loadavg", std::ifstream::in);
+  
+  std::string load_avg_value;
+  std::vector<float> load_avg_values;
+  for (int value_index = 0; value_index < 3; ++value_index){
+    std::getline(load_avg_file, load_avg_value, ' ');
+    load_avg_values.push_back(std::stof(load_avg_value));
+  }
+  load_avg_file.close();
+  
+  return load_avg_values;
+
+#endif
+
+  Fail("Can't read /proc/loadavg on non-Linux systems");
+}
+
+float get_system_cpu_usage() {
+#if defined(__linux__)
+
+  static unsigned long long last_user_time = 0u, last_user_nice_time = 0u, last_kernel_time = 0u, last_idle_time = 0u;
+  
+  std::ifstream stat_file;
+  stat_file.open("/proc/stat", std::ifstream::in);
+  
+  std::string cpu_line;
+  std::getline(stat_file, cpu_line);
+  unsigned long long user_time, user_nice_time, kernel_time, idle_time;
+  std::sscanf(cpu_line.c_str(), "cpu %llu %llu %llu %llu", &user_time, &user_nice_time, &kernel_time, &idle_time);
+  stat_file.close();
+  
+  auto used = (user_time - last_user_time) + (user_nice_time - last_user_nice_time) + (kernel_time - last_kernel_time);
+  auto total = used + (idle_time - last_idle_time);
+
+  last_user_time = user_time;
+  last_user_nice_time = user_nice_time;
+  last_kernel_time = kernel_time;
+  last_idle_time = idle_time;
+
+  return 100.0 * used / total;
+
+#endif
+
+  Fail("Can't read /proc/stat on non-Linux systems");  
+}
+
+float get_process_cpu_usage() {
+#if defined(__linux__)
+
+  static clock_t last_clock_time = 0u, last_kernel_time = 0u, last_user_time = 0u;
+  struct tms timeSample;
+
+  auto clock_time = times(&timeSample);
+  auto kernel_time = timeSample.tms_stime;
+  auto user_time = timeSample.tms_utime;
+
+  auto used = (user_time - last_user_time) + (kernel_time - last_kernel_time);
+  auto total = clock_time - last_clock_time;
+
+  last_user_time = user_time;
+  last_kernel_time = kernel_time;
+  last_clock_time = clock_time;
+
+  // TODO divide by processors
+  return 100.0 * used / total;
+
+#endif
+
+  Fail("Can't use sys/times.h on non-Linux systems");  
+}
+
+std::vector<int> get_ram_usage() {
+#if defined(__linux__)
+
+  struct sysinfo memory_info;
+  sysinfo(&memory_info);
+
+  auto total_ram = memory_info.totalram * memory_info.mem_unit;
+  auto total_swap = memory_info.totalswap * memory_info.mem_unit;
+  auto ram_used = (memory_info.totalram - memory_info.freeram) * memory_info.mem_unit;
+  auto swap_used = (memory_info.totalswap - memory_info.freeswap) * memory_info.mem_unit;
+
+  return {static_cast<int>(total_ram), static_cast<int>(total_swap), static_cast<int>(ram_used), static_cast<int>(swap_used)};
+
+#endif
+
+  Fail("Can't use sys/sysinfo.h on non-Linux systems");  
+}
+
+auto gather_workload_meta_data(const std::shared_ptr<Table>& meta_table) {
+
+#if defined(__linux__)
+  auto system_cpu_usage = get_system_cpu_usage();
+  auto process_cpu_usage = get_process_cpu_usage();
+  auto load_avg = get_load_avg();
+  auto ram_usage = get_ram_usage();
+
+  meta_table->append({system_cpu_usage, process_cpu_usage, load_avg.at(0), load_avg.at(1), load_avg.at(2), ram_usage.at(2), ram_usage.at(3)});
+
+#endif
+}
+
 }  // namespace
 
 namespace opossum {
@@ -111,6 +218,9 @@ MetaTableManager::MetaTableManager() {
     _table_names.emplace_back(table_name);
   }
   std::sort(_table_names.begin(), _table_names.end());
+  
+  get_system_cpu_usage();
+  get_process_cpu_usage();
 }
 
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
@@ -208,118 +318,22 @@ std::shared_ptr<Table> MetaTableManager::generate_chunk_sort_orders_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
-  const auto columns = TableColumnDefinitions{{"cpu_total_used", DataType::Float, false},
-                                              {"cpu_process_used", DataType::Float, false},
-                                              {"ram_total_available", DataType::Int, false},
-                                              {"ram_total_used", DataType::Int, false},
-                                              {"ram_total_used_percent", DataType::Float, false},
-                                              {"ram_process_used", DataType::Int, false},
-                                              {"ram_process_used_percent", DataType::Int, false}};
+  const auto columns = TableColumnDefinitions{{"cpu_system_usage", DataType::Float, false},
+                                              {"cpu_process_usage", DataType::Float, false},
+                                              {"load_average_1_min", DataType::Float, false},
+                                              {"load_average_5_min", DataType::Float, false},
+                                              {"load_average_15_min", DataType::Float, false},
+                                              {"ram_used", DataType::Int, false},
+                                              {"swap_used", DataType::Int, false}};//,
+                                              //{"ram_used_percent", DataType::Float, false},
+                                              //{"swap_used_percent", DataType::Float, false},
+                                              //{"mem_used_percent", DataType::Float, false}};
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  // delay between two cpu time measurements
-  auto time_window = std::chrono::milliseconds(1000);
-
-#if defined(__unix__) || defined(__unix) || defined(unix)
-  // Linux
-
-  // get system wide cpu usage
-  std::ifstream stat_file;
-  std::string cpu_line;
-
-  stat_file.open("/proc/stat", std::ifstream::in);
-  std::getline(stat_file, cpu_line);
-  unsigned long long total_user_ref, total_user_nice_ref, total_system_ref, total_idle_ref;
-  std::sscanf(cpu_line.c_str(), "cpu %llu %llu %llu %llu", &total_user_ref, &total_user_nice_ref, &total_system_ref, &total_idle_ref);
-  stat_file.close();
+  gather_workload_meta_data(output_table);
   
-  std::this_thread::sleep_for(time_window);
-  
-  stat_file.open("/proc/stat", std::ifstream::in);
-  std::getline(stat_file, cpu_line);
-  unsigned long long total_user, total_user_nice, total_system, total_idle;
-  std::sscanf(cpu_line.c_str(), "cpu %llu %llu %llu %llu", &total_user, &total_user_nice, &total_system, &total_idle);
-  stat_file.close();
-
-  auto used = (total_user - total_user_ref) + (total_user_nice - total_user_nice_ref) + (total_system - total_system_ref);
-  auto total = used + (total_idle - total_idle_ref);
-
-  float system_cpu_usage = 100.0 * used / total;
-
-  // get process cpu usage
-  std::ifstream self_stat_file;  
-  std::string self_stat_token;
-  self_stat_file.open("/proc/self/stat", std::ifstream::in);
-  
-  std::getline(self_stat_file, self_stat_token);
-  std::cout << self_stat_token << std::endl;
-  self_stat_file.seekg(0, self_stat_file.beg);
-  
-  for (int field_index = 0; field_index < 14; ++field_index) {
-    std::getline(self_stat_file, self_stat_token, ' ');
-  }
-  std::cout << self_stat_token << std::endl;
-  unsigned long long user_time_ref;
-  std::sscanf(self_stat_token.c_str(), "%llu", &user_time_ref);
-
-  std::getline(self_stat_file, self_stat_token, ' ');
-  std::cout << self_stat_token << std::endl;
-  unsigned long long kernel_time_ref;
-  std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time_ref);
-  self_stat_file.close();
-
-  std::this_thread::sleep_for(time_window);
-
-  self_stat_file.open("/proc/self/stat", std::ifstream::in);
-  
-  std::getline(self_stat_file, self_stat_token);
-  std::cout << self_stat_token << std::endl;
-  self_stat_file.seekg(0, self_stat_file.beg);
-
-  for (int field_index = 0; field_index < 14; ++field_index) {
-    std::getline(self_stat_file, self_stat_token, ' ');
-  }
-  std::cout << self_stat_token << std::endl;
-  unsigned long long user_time;
-  std::sscanf(self_stat_token.c_str(), "%llu", &user_time);
-
-  std::getline(self_stat_file, self_stat_token, ' ');
-  std::cout << self_stat_token << std::endl;
-  unsigned long long kernel_time;
-  std::sscanf(self_stat_token.c_str(), "%llu", &kernel_time);
-  self_stat_file.close();
-
-  std::cout << kernel_time_ref << std::endl;
-  std::cout << kernel_time << std::endl;
-  std::cout << user_time_ref << std::endl;
-  std::cout << user_time << std::endl;
-  std::cout << time_window.count() << std::endl;
-  float process_cpu_usage = 100.0 * ((kernel_time - kernel_time_ref) + (user_time - user_time_ref)) / (time_window.count() / 10.0);
-
-  output_table->append({system_cpu_usage, process_cpu_usage, int32_t{0}, int32_t{0}, float{0}, int32_t{0}, int32_t{0}});
-
-  // get system wide ram usage
-  /*
-  struct sysinfo memory_info;
-  sysinfo(&memory_info);
-
-  long long total_ram = memory_info.totalram * memory_info.mem_unit;
-  long long total_swap = memory_info.totalswap * memory_info.mem_unit;
-  long long ram_used = (memory_info.totalram - memory_info.freeram) * memory_info.mem_unit;
-  long long swap_used = (memory_info.totalswap - memory_info.freeswap) * memory_info.mem_unit;
-
-  float system_memory_usage = 100.0 * (ram_used + swap_used) / (total_ram + total_swap);
-
-  output_table->append({system_cpu_usage, process_cpu_usage, ram_used + swap_used, system_memory_usage, int32_t{0}});
-  */
-
   return output_table;
-
-#else 
-  // undefined OS
-  return output_table;
-#endif
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
