@@ -527,8 +527,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
       } else if (Hyrise::get().storage_manager.has_table(hsql_table_ref.name)) {
-        lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
-
+        if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
+          lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
+        } else {
+          lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
+        }
       } else if (Hyrise::get().storage_manager.has_view(hsql_table_ref.name)) {
         const auto view = Hyrise::get().storage_manager.get_view(hsql_table_ref.name);
         lqp = view->lqp;
@@ -653,6 +656,32 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
 
   return validated_stored_table_node;
 }
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
+    const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
+  AssertInput(Hyrise::get().storage_manager.has_table(name), std::string{"Did not find a table with name "} + name);
+  AssertInput(MetaTableManager::is_meta_table_name(name), std::string{"Did not find a meta table with name "} + name);
+
+  _cacheable = false;
+
+  const auto meta_table = Hyrise::get().storage_manager.get_table(name);
+
+  const auto static_table_node = StaticTableNode::make(meta_table);
+  const auto validated_static_table_node = _validate_if_active(static_table_node);
+
+  // Publish the columns of the table in the SQLIdentifierResolver
+  for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
+    const auto& column_definition = meta_table->column_definitions()[column_id];
+    const auto column_reference = LQPColumnReference{static_table_node, column_id};
+    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
+    sql_identifier_resolver->set_table_name(column_expression, name);
+  }
+
+  return validated_static_table_node;
+}
+
+bool SQLTranslator::cacheable() { return _cacheable; }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_mode(join.type);
