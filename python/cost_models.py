@@ -69,6 +69,7 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
     plt.ylabel("Predicted Time")
     output_path = '{}/Plots/{}_{}_{}'.format(out, method, data_type, encoding)
     plt.savefig(output_path, bbox_inches='tight')
+    plt.close()
 
 
 def calculate_error(test_X, y_true, y_pred, model):
@@ -128,6 +129,12 @@ def plot_general_model(test_data, model, model_type, data_type, encoding, out):
     pred_y = model.predict(test_X)
     model_scores = calculate_error(test_X, pred_y, test_y, model)
     plt.scatter(test_y, pred_y, c='b')
+    axis_max = max(np.amax(pred_y), np.amax(test_y)) * 1.05
+    axis_min = min(0, np.amin(pred_y), np.amin(test_y))
+    abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
+
+    # Plot the best fit line over the actual values
+    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
 
     plt.title('General Model; Score: {}'.format(model_scores['R2']))
     plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
@@ -136,6 +143,7 @@ def plot_general_model(test_data, model, model_type, data_type, encoding, out):
     plt.ylabel("Predicted Time")
     output_path = '{}/Plots/{}_{}_{}_general'.format(out, model_type, data_type, encoding)
     plt.savefig(output_path, bbox_inches='tight')
+    plt.close()
 
     #return model
 
