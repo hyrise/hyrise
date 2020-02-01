@@ -582,6 +582,8 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
+    utils/pos_list_utils.cpp
+    utils/pos_list_utils.hpp
     visualization/abstract_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp

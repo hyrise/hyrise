@@ -47,6 +47,9 @@ class Sort : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
+  template <typename MergeColumnType>
+  class MergeImpl;
+
   template <typename SortColumnType>
   class SortImpl;
 
