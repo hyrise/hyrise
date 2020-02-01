@@ -17,6 +17,10 @@
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "bytell_hash_map.hpp"
+
+#include "../../../../third_party/parallel-hashmap/parallel_hashmap/phmap.h"
+#include "../../../../third_party/robin-hood-hashing/src/include/robin_hood.h"
+
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/reference_segment.hpp"
@@ -71,16 +75,17 @@ using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const Aggre
 
 template <typename AggregateKey>
 using AggregateResultIdMap =
-    ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+    phmap::flat_hash_map<AggregateKey, AggregateResultId, robin_hood::hash<AggregateKey>, std::equal_to<AggregateKey>,
                          AggregateResultIdMapAllocator<AggregateKey>>;
 
-/*
-The key type that is used for the aggregation map.
-*/
+// The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;
 
+// A dummy type used as AggregateKey if no GROUP BY columns are present
+struct EmptyAggregateKey {};
+
 template <typename AggregateKey>
-using AggregateKeys = std::vector<AggregateKey>;
+using AggregateKeys = std::vector<std::pair<AggregateKey, AggregateResultId>>;
 
 template <typename AggregateKey>
 using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
@@ -127,7 +132,7 @@ class AggregateHash : public AbstractAggregateOperator {
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
-                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
+                          KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
@@ -140,6 +145,11 @@ class AggregateHash : public AbstractAggregateOperator {
 }  // namespace opossum
 
 namespace std {
+template <>
+struct hash<opossum::EmptyAggregateKey> {
+  size_t operator()(const opossum::EmptyAggregateKey& key) const { return 0; }
+};
+
 template <>
 struct hash<std::vector<opossum::AggregateKeyEntry>> {
   size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {

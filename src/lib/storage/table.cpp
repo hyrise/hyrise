@@ -31,13 +31,14 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _max_chunk_size(type == TableType::Data ? max_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
       _append_mutex(std::make_unique<std::mutex>()) {
   // _max_chunk_size has no meaning if the table is a reference table.
+  DebugAssert(max_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
   DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
-    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt,
+    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc) {
   _chunks = {chunks.begin(), chunks.end()};
 
@@ -137,13 +138,13 @@ void Table::append_mutable_chunk() {
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable));
+      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, _max_chunk_size));
     });
   }
 
   std::shared_ptr<MvccData> mvcc_data;
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(0, CommitID{0});
+    mvcc_data = std::make_shared<MvccData>(_max_chunk_size, MvccData::MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);

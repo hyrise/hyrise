@@ -31,6 +31,7 @@ struct VizVertexInfo {
   uintptr_t id;
   std::string label;
   std::string color = "white";
+  std::string font_name;
   std::string font_color = "white";
   std::string shape = "rectangle";
   double pen_width = 1.0;
@@ -39,6 +40,7 @@ struct VizVertexInfo {
 struct VizEdgeInfo {
   std::string label;
   std::string color = "white";
+  std::string font_name;
   std::string font_color = "white";
   double pen_width = 1.0;
   std::string dir = "forward";
@@ -77,11 +79,13 @@ class AbstractVisualizer {
     _add_property("color", &VizVertexInfo::color);
     _add_property("label", &VizVertexInfo::label);
     _add_property("shape", &VizVertexInfo::shape);
+    _add_property("fontname", &VizVertexInfo::font_name);
     _add_property("fontcolor", &VizVertexInfo::font_color);
     _add_property("penwidth", &VizVertexInfo::pen_width);
 
     // Add edge properties
     _add_property("color", &VizEdgeInfo::color);
+    _add_property("fontname", &VizEdgeInfo::font_name);
     _add_property("fontcolor", &VizEdgeInfo::font_color);
     _add_property("label", &VizEdgeInfo::label);
     _add_property("penwidth", &VizEdgeInfo::pen_width);

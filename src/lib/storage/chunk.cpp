@@ -49,8 +49,11 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
-  // Do this first to ensure that the first thing to exist in a row is the MVCC data.
-  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, INVALID_TRANSACTION_ID, CommitID{0});
+  if (has_mvcc_data()) {
+    // Make the row visible - mvcc_data has been pre-allocated
+    DebugAssert(mvcc_data()->tids.size() > size(), "MvccData capacity exhausted");
+    mvcc_data()->begin_cids[size()] = CommitID{0};
+  }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
@@ -80,12 +83,6 @@ ChunkOffset Chunk::size() const {
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 
-SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
-  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
-
-  return {*_mvcc_data, _mvcc_data->_mutex};
-}
-
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
@@ -101,11 +98,12 @@ void Chunk::finalize() {
   _is_mutable = false;
 
   if (has_mvcc_data()) {
-    auto mvcc = get_scoped_mvcc_data_lock();
-    Assert(!mvcc->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
+    Assert(!_mvcc_data->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
 
-    mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
-    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID,
+    // Do not use begin_cids.end() because that vector is pre-allocated and might be larger than the chunk
+    _mvcc_data->max_begin_cid =
+        *(std::max_element(_mvcc_data->begin_cids.begin(), _mvcc_data->begin_cids.begin() + size()));
+    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
            "finalized before all transactions committed/rolled back.");
   }

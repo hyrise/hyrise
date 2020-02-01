@@ -125,7 +125,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       }
 
       if (has_print_mvcc_flag(_flags) && chunk->has_mvcc_data()) {
-        auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+        auto mvcc_data = chunk->mvcc_data();
 
         auto begin = mvcc_data->begin_cids[chunk_offset];
         auto end = mvcc_data->end_cids[chunk_offset];

@@ -96,6 +96,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
+  // TODO this happens below again, do we need it twice?
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
@@ -107,9 +108,18 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
+// Idea: Reuse materialization from join (e.g., Q5)
+
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while `a
+  // BETWEEN 5 and 7` is. Also, make sure the PredicatePlacementRule ran at least once, so that predicates are as close
+  // to the StoredTableNode as possible where the ChunkPruningRule can work with them. On the other hand, run it before
+  // the PredicateSplitUp WITH disjunction split up and before the SemiJoinReductionRule as it does not particularly
+  // like diamonds.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
@@ -127,11 +137,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
-
-  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
-  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
-  // StoredTableNode as possible where the ChunkPruningRule can work with them.
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
@@ -260,7 +265,6 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
         case LQPNodeType::Delete:
-        case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
         case LQPNodeType::Predicate:

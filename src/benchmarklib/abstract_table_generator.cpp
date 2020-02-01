@@ -55,7 +55,7 @@ void AbstractTableGenerator::generate_and_store() {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
       auto sort = std::make_shared<Sort>(table_wrapper, table->column_id_by_name(column_name), order_by_mode,
-                                         _benchmark_config->chunk_size);
+                                         _benchmark_config->chunk_size, true);
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
       table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,

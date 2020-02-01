@@ -2,10 +2,9 @@
 
 #include <algorithm>
 
-#include "storage/run_length_segment.hpp"
 #include "storage/segment_iterables.hpp"
 
-#include "utils/performance_warning.hpp"
+#include "storage/run_length_segment.hpp"
 
 namespace opossum {
 
@@ -18,10 +17,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin = Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(),
-                          _segment.end_positions()->cbegin(), _segment.end_positions()->cbegin(), ChunkOffset{0}};
+    auto begin =
+        Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(), _segment.end_positions()->cbegin(), 0u};
     auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(),
-                        _segment.end_positions()->cbegin(), static_cast<ChunkOffset>(_segment.size())};
+                        static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }
@@ -53,21 +52,20 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
    public:
     explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
-                      const EndPositionIterator& end_position_it, const EndPositionIterator& end_position_begin_it,
-                      const ChunkOffset chunk_offset)
+                      const EndPositionIterator& end_position_it, const ChunkOffset start_position)
         : _value_it{value_it},
           _null_value_it{null_value_it},
           _end_position_it{end_position_it},
-          _end_position_it_begin{end_position_begin_it},
-          _chunk_offset{chunk_offset} {}
+          _end_position_it_begin{end_position_it},
+          _current_position{start_position} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
-      ++_chunk_offset;
+      ++_current_position;
 
-      if (_chunk_offset > *_end_position_it) {
+      if (_current_position > *_end_position_it) {
         ++_value_it;
         ++_null_value_it;
         ++_end_position_it;
@@ -75,10 +73,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void decrement() {
-      --_chunk_offset;
+      --_current_position;
 
       // Make sure to only check the previous end position when we are not in the very first run.
-      if (_end_position_it != _end_position_it_begin && _chunk_offset <= *(_end_position_it - 1)) {
+      if (_end_position_it != _end_position_it_begin && _current_position <= *(_end_position_it - 1)) {
         --_value_it;
         --_null_value_it;
         --_end_position_it;
@@ -86,7 +84,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void advance(std::ptrdiff_t n) {
-      PerformanceWarning("Using repeated increment/decrement for random access");
       // The easy way for now
       if (n < 0) {
         for (std::ptrdiff_t i = n; i < 0; ++i) {
@@ -99,20 +96,22 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       }
     }
 
-    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
+    bool equal(const Iterator& other) const { return _current_position == other._current_position; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
-      return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
+      return std::ptrdiff_t{other._current_position} - std::ptrdiff_t{_current_position};
     }
 
-    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
+    SegmentPosition<T> dereference() const {
+      return SegmentPosition<T>{*_value_it, *_null_value_it, _current_position};
+    }
 
    private:
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
     EndPositionIterator _end_position_it_begin;
-    ChunkOffset _chunk_offset;
+    ChunkOffset _current_position;
   };
 
   /**

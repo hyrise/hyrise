@@ -19,9 +19,33 @@ namespace opossum {
 
 class BinaryWriterTest : public BaseTest {
  protected:
-  void SetUp() override { std::remove(filename.c_str()); }
+  void SetUp() override {}
 
   void TearDown() override { std::remove(filename.c_str()); }
+
+  bool file_exists(const std::string& name) {
+    std::ifstream file{name};
+    return file.good();
+  }
+
+  bool compare_files(const std::string& original_file, const std::string& created_file) {
+    std::ifstream original(original_file);
+    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
+
+    std::ifstream created(created_file);
+    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
+
+    std::istreambuf_iterator<char> iterator_original(original);
+    std::istreambuf_iterator<char> iterator_created(created);
+    std::istreambuf_iterator<char> end;
+
+    while (iterator_original != end && iterator_created != end) {
+      if (*iterator_original != *iterator_created) return false;
+      ++iterator_original;
+      ++iterator_created;
+    }
+    return ((iterator_original == end) && (iterator_created == end));
+  }
 
   std::shared_ptr<Table> table;
   const std::string filename = test_data_path + "export_test.bin";
@@ -402,7 +426,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});

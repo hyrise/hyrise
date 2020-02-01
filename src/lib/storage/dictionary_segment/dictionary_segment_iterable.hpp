@@ -69,6 +69,19 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _attribute_it{attribute_it},
           _chunk_offset{chunk_offset} {}
 
+    // Returns the value ID of the current position without looking up the value in the dictionary. This is
+    // beneficial for algorithms that can do some pre-filtering on the value id (e.g., bloom filter). If you are
+    // interested only in the value ID, use the attribute vector iterable.
+    ValueID value_id() const {
+      return static_cast<ValueID>(*_attribute_it);
+    }
+
+    // Returns the value ID representing NULL, which is at the same time the size of the dictionary. This is only
+    // implemented for dictionary iterators.
+    ValueID null_value_id() const {
+      return _null_value_id;
+    }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -124,6 +137,21 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _dictionary_begin_it{dictionary_begin_it},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor} {}
+
+    // Returns the value ID of the current position without looking up the value in the dictionary. This is
+    // beneficial for algorithms that can do some pre-filtering on the value id (e.g., bloom filter). If you are
+    // interested only in the value ID, use the attribute vector iterable.
+    ValueID value_id() const {
+      const auto& chunk_offsets = this->chunk_offsets();
+      const auto value_id = _attribute_decompressor->get(chunk_offsets.offset_in_referenced_chunk);
+      return ValueID{value_id};
+    }
+
+    // Returns the value ID representing NULL, which is at the same time the size of the dictionary. This is only
+    // implemented for dictionary iterators.
+    ValueID null_value_id() const {
+      return _null_value_id;
+    }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

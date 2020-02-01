@@ -16,52 +16,21 @@
 namespace opossum {
 
 template <typename T>
-ValueSegment<T>::ValueSegment(bool nullable) : BaseValueSegment(data_type_from_type<T>()) {
-  if (nullable) _null_values = pmr_concurrent_vector<bool>();
+ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSegment(data_type_from_type<T>()) {
+  _values.reserve(capacity);
+  if (nullable) {
+    _null_values = pmr_vector<bool>();
+    _null_values->reserve(capacity);
+  }
 }
 
 template <typename T>
-ValueSegment<T>::ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable)
-    : BaseValueSegment(data_type_from_type<T>()), _values(alloc) {
-  if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
-}
+ValueSegment<T>::ValueSegment(pmr_vector<T>&& values)
+    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)) {}
 
 template <typename T>
-ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values), alloc) {}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
-                              const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(std::move(values), alloc),
-      _null_values({std::move(null_values), alloc}) {
-  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
-}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(const std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()), _values(values, alloc) {}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(std::vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values), alloc) {}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(const std::vector<T>& values, std::vector<bool>& null_values,
-                              const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(values, alloc),
-      _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {
-  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
-}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(std::vector<T>&& values, std::vector<bool>&& null_values,
-                              const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(std::move(values), alloc),
-      _null_values(pmr_concurrent_vector<bool>(std::move(null_values), alloc)) {
+ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values)
+    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)), _null_values(std::move(null_values)) {
   DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
 }
 
@@ -113,12 +82,12 @@ void ValueSegment<T>::reserve(const size_t capacity) {
 }
 
 template <typename T>
-const pmr_concurrent_vector<T>& ValueSegment<T>::values() const {
+const pmr_vector<T>& ValueSegment<T>::values() const {
   return _values;
 }
 
 template <typename T>
-pmr_concurrent_vector<T>& ValueSegment<T>::values() {
+pmr_vector<T>& ValueSegment<T>::values() {
   return _values;
 }
 
@@ -128,14 +97,14 @@ bool ValueSegment<T>::is_nullable() const {
 }
 
 template <typename T>
-const pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() const {
+const pmr_vector<bool>& ValueSegment<T>::null_values() const {
   DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
-pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() {
+pmr_vector<bool>& ValueSegment<T>::null_values() {
   DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
   return *_null_values;
@@ -148,13 +117,12 @@ ChunkOffset ValueSegment<T>::size() const {
 
 template <typename T>
 std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  pmr_concurrent_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
-                                                        // (clang-tidy reports slicing that comes from tbb)
+  pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
   if (is_nullable()) {
-    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
-    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values), std::move(new_null_values));
+    pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
+    return std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
   } else {
-    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values));
+    return std::make_shared<ValueSegment<T>>(std::move(new_values));
   }
 }
 
@@ -162,11 +130,11 @@ template <typename T>
 size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
   auto null_value_vector_size = size_t{0};
   if (_null_values) {
-    null_value_vector_size = _null_values->size() * sizeof(bool);
+    null_value_vector_size = _null_values->capacity() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
     null_value_vector_size =
         sizeof(_null_values) +
-        (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
+        (_null_values->capacity() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
   }
 
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
@@ -175,7 +143,7 @@ size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculati
     return common_elements_size + string_vector_memory_usage(_values, mode);
   }
 
-  return common_elements_size + _values.size() * sizeof(T);
+  return common_elements_size + _values.capacity() * sizeof(T);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);

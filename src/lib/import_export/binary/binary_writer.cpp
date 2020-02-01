@@ -21,8 +21,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // Writes the content of the vector to the ofstream
-template <typename T>
-void export_values(std::ofstream& ofstream, const pmr_vector<T>& values);
+template <typename T, typename Alloc>
+void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the strings are
  * written without any gaps between them.
@@ -57,8 +57,8 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   export_values(ofstream, buffer);
 }
 
-template <typename T>
-void export_values(std::ofstream& ofstream, const pmr_vector<T>& values) {
+template <typename T, typename Alloc>
+void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
@@ -69,18 +69,11 @@ void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values
 }
 
 // specialized implementation for bool values
-template <>
-void export_values(std::ofstream& ofstream, const pmr_vector<bool>& values) {
+template <typename Alloc>
+void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& values) {
   // Cast to fixed-size format used in binary file
   const auto writable_bools = pmr_vector<BoolAsByteType>(values.begin(), values.end());
   export_values(ofstream, writable_bools);
-}
-
-template <typename T>
-void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<T>& values) {
-  // TODO(all): could be faster if we directly write the values into the stream without prior conversion
-  const auto value_block = pmr_vector<T>{values.begin(), values.end()};
-  export_values(ofstream, value_block);
 }
 
 // Writes a shallow copy of the given value to the ofstream

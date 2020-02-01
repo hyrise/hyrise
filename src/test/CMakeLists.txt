@@ -1,6 +1,5 @@
 set(
     SHARED_SOURCES
-    base_test.cpp
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
@@ -49,7 +48,6 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
-    logical_query_plan/export_node_test.cpp
     logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
@@ -68,6 +66,7 @@ set(
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
+    memory/segments_using_allocators_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp

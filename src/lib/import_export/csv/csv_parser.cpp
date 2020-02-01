@@ -88,8 +88,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     table->append_chunk(segments, mvcc_data);
   }
 
-  table->last_chunk()->finalize();
-
   return table;
 }
 

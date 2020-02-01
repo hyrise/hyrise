@@ -4,7 +4,7 @@
 #include <random>
 #include <sstream>
 
-#include "base_test.hpp"
+#include "encoding_test.hpp"
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -23,13 +23,13 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   static constexpr auto row_count = size_t{1u} << 10;
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     for (auto index = size_t{0u}; index < row_count; ++index) {
       null_values[index] = index % 4 == 0;
@@ -39,7 +39,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
 
     for (auto index = size_t{0u}; index < row_count; ++index) {
       if (index % 3 == 0) {
@@ -55,8 +55,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     for (auto index = 0u; index < row_count; ++index) {
       null_values[index] = index % 4 == 0;

@@ -436,7 +436,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 
 TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   // Mark a row as modified by a different transaction
-  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock();
+  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->mvcc_data();
   auto& first_chunk_tids = first_chunk_mvcc_data_lock->tids;
   auto& first_chunk_end_cids = first_chunk_mvcc_data_lock->end_cids;
 
@@ -461,7 +461,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   EXPECT_EQ(first_chunk_tids[1], TransactionID{17});
   EXPECT_EQ(first_chunk_end_cids[1], MvccData::MAX_COMMIT_ID);
 
-  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock();
+  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->mvcc_data();
   auto& second_chunk_tids = second_chunk_mvcc_data_lock->tids;
   auto& second_chunk_end_cids = second_chunk_mvcc_data_lock->end_cids;
 
@@ -473,7 +473,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   // Similar to UpdateWithTransactionFailure, but without explicit transaction context
 
   // Mark a row as modified by a different transaction
-  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock();
+  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->mvcc_data();
   auto& first_chunk_tids = first_chunk_mvcc_data_lock->tids;
   auto& first_chunk_end_cids = first_chunk_mvcc_data_lock->end_cids;
 
@@ -498,7 +498,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   EXPECT_EQ(first_chunk_end_cids[1], MvccData::MAX_COMMIT_ID);
 
   // We had to abort before we got to the third statement
-  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock();
+  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->mvcc_data();
   auto& second_chunk_tids = second_chunk_mvcc_data_lock->tids;
   auto& second_chunk_end_cids = second_chunk_mvcc_data_lock->end_cids;
 
