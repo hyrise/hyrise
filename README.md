@@ -135,6 +135,7 @@ Contact: firstname.lastname@hpi.de
 -   Eva       Krebs
 -   Sven      Lehmann
 -   Tom       Lichtenstein
+-   Daniel    Lindner
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
