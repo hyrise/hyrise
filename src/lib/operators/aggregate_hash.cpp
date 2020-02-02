@@ -154,10 +154,11 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     while (it != end) {
       auto& key = get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset);
 
+      auto& result =
+          get_or_add_result(result_ids, results, key,
+                            RowID{chunk_id, chunk_offset});
+
       if (function == AggregateFunction::Any) {
-        auto& result =
-            get_or_add_result(result_ids, results, key,
-                              RowID{chunk_id, chunk_offset});
         if (result.current_primary_aggregate) {
           ++chunk_offset;
           ++it;
@@ -171,10 +172,6 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
       * If the value is NULL, the current aggregate value does not change.
       */
       if (!position.is_null()) {
-        auto& result =
-            get_or_add_result(result_ids, results, key,
-                              RowID{chunk_id, chunk_offset});
-
         // If we have a value, use the aggregator lambda to update the current aggregate value for this group
         aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
 
