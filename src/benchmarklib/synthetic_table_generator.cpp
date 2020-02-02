@@ -61,7 +61,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows, const ChunkOffset chunk_size,
     const std::optional<ChunkEncodingSpec>& segment_encoding_specs, const UseMvcc use_mvcc) {
-  Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
+  Assert(chunk_size != 0ul, "Cannot generate table with chunk size 0.");
   if (segment_encoding_specs) {
     Assert(column_specifications.size() == segment_encoding_specs->size(),
            "Length of value distributions needs to equal length of column encodings.");
