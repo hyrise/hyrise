@@ -247,7 +247,9 @@ class Sort::MergeImpl {
       // amount_of_null_row_ids += materialized_pos_list.second->size();
 
       // value_iterators.emplace_back(materialized_pos_list.first.begin());
-      value_iterators.emplace_back(chunk_id, value_vectors[chunk_id].begin());
+      if (value_vectors[chunk_id].size() > 0) {
+        value_iterators.emplace_back(chunk_id, value_vectors[chunk_id].begin());
+      }
       // null_iterators[chunk_id] = materialized_pos_list.second->begin();
     }
 
