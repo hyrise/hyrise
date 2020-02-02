@@ -71,7 +71,7 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
   std::transform(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(),
                  std::back_inserter(supported_segment_encodings), replace_unsupporting_encoding_types);
 
-  ColumnSpecification column_specification = {std::get<1>(GetParam()), tested_data_type, "column_name", std::nullopt};
+  ColumnSpecification column_specification = {std::get<1>(GetParam()), tested_data_type, "column_name"};
 
   auto table = table_generator->generate_table({supported_segment_encodings.size(), column_specification}, row_count,
                                                chunk_size, supported_segment_encodings);
