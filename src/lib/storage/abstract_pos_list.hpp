@@ -52,14 +52,7 @@ public:
     return (other->_chunk_offset - _chunk_offset);
   }
 
-  DereferenceReturnType dereference() const {
-    if constexpr (modifiable) {
-      return static_cast<PosList&>(*_pl_pointer)[_chunk_offset];
-    } else {
-      return (*_pl_pointer)[_chunk_offset];
-    }
-  }
-
+  DereferenceReturnType dereference() const;
 
   Typ _pl_pointer;
   ChunkOffset _chunk_offset;
