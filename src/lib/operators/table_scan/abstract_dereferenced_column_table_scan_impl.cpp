@@ -13,6 +13,15 @@
 #include "storage/value_segment.hpp"
 
 namespace opossum {
+  template <>
+  inline AbstractPosList::PosListIterator<true>::DereferenceReturnType AbstractPosList::PosListIterator<true>::dereference() const {
+    return static_cast<PosList&>(*_pl_pointer)[_chunk_offset];
+  }
+
+  template <>
+  inline AbstractPosList::PosListIterator<false>::DereferenceReturnType AbstractPosList::PosListIterator<false>::dereference() const {
+    return static_cast<const PosList&>(*_pl_pointer)[_chunk_offset];
+  }
 
 AbstractDereferencedColumnTableScanImpl::AbstractDereferencedColumnTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const ColumnID column_id,

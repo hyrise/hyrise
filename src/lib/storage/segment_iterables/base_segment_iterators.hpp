@@ -59,15 +59,13 @@ struct ChunkOffsetMapping {
  * are returned.
  */
 
+
 template <typename Derived, typename Value>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
   explicit BasePointAccessSegmentIterator(AbstractPosList::PosListIterator<> position_filter_begin,
                                           AbstractPosList::PosListIterator<> position_filter_it)
-      : _position_filter_begin{static_cast<const PosList*>(position_filter_begin._pl_pointer)->begin()},
-    _position_filter_it{
-        static_cast<const PosList*>(position_filter_it._pl_pointer)->begin() + position_filter_it._chunk_offset
-        } {}
+      : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
   const ChunkOffsetMapping chunk_offsets() const {
@@ -95,8 +93,8 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   }
 
  private:
-  PosList::const_iterator _position_filter_begin;
-  PosList::const_iterator _position_filter_it;
+  AbstractPosList::PosListIterator<> _position_filter_begin;
+  AbstractPosList::PosListIterator<> _position_filter_it;
 };
 
 }  // namespace opossum

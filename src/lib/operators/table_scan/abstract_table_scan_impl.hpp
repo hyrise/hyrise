@@ -14,6 +14,7 @@
 
 namespace opossum {
 
+
 /**
  * @brief the base class of all table scan impls
  */
