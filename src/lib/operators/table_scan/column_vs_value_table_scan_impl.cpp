@@ -10,6 +10,7 @@
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
+#include "utils/timer.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -71,7 +72,8 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 
 void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
-                                                          const std::shared_ptr<const AbstractPosList>& position_filter) const {
+                                                          const std::shared_ptr<const AbstractPosList>& irgendwas_anderes) const {
+  const auto position_filter = std::static_pointer_cast<const PosList>(irgendwas_anderes);
   /**
    * ValueID search_vid;              // left value id
    * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
@@ -122,6 +124,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };
+    Timer T;
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
       // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
@@ -134,7 +137,9 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
         _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       }
     });
+    std::cout << T.lap_formatted() << "\n";
   });
+
 }
 
 void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,

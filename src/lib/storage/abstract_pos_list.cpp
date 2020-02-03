@@ -9,6 +9,6 @@ namespace opossum {
 
   template <>
   AbstractPosList::PosListIterator<false>::DereferenceReturnType AbstractPosList::PosListIterator<false>::dereference() const {
-    return (*_pl_pointer)[_chunk_offset];
+    return static_cast<const PosList&>(*_pl_pointer)[_chunk_offset];
   }
 }  // namespace opossum
