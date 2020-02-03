@@ -889,7 +889,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     _perform_join();
 
-     if (include_null_left || include_null_right) {
+    if (include_null_left || include_null_right) {
       auto null_output_left = std::make_shared<PosList>();
       auto null_output_right = std::make_shared<PosList>();
       null_output_left->reserve(_null_rows_left->size());
