@@ -80,11 +80,11 @@ public:
   }
 
   PosListIterator<false> cbegin() const {
-    return PosListIterator<false>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
+    return begin();
   }
 
   PosListIterator<false> cend() const {
-    return PosListIterator<false>(this, ChunkOffset{static_cast<ChunkOffset>(size())}, ChunkOffset{static_cast<ChunkOffset>(size())});
+    return end();
   }
 
   // Capacity
