@@ -24,6 +24,7 @@ def import_train_data(input_data):
                                               "COLUMN_TYPE": "SCAN_TYPE"})
     if 'COMPRESSION_TYPE' in joined_data.columns:
         joined_data = joined_data.drop(labels=['COMPRESSION_TYPE'], axis=1)
+        joined_data = joined_data.drop(labels=['SCAN_IMPLEMENTATION'], axis=1)
 
     joined_data['SELECTIVITY'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS'])
     joined_data['SELECTIVITY'].fillna(0, inplace=True)
