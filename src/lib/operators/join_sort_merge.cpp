@@ -807,27 +807,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Concatenates a vector of pos lists into a single new pos list.
-  **/
-  std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
-    auto output = std::make_shared<PosList>();
-
-    // Determine the required space
-    size_t total_size = 0;
-    for (auto& pos_list : pos_lists) {
-      total_size += pos_list->size();
-    }
-
-    // Move the entries over the output pos list
-    output->reserve(total_size);
-    for (auto& pos_list : pos_lists) {
-      output->insert(output->end(), pos_list->begin(), pos_list->end());
-    }
-
-    return output;
-  }
-
-  /**
   * Adds the segments from an input table to the output table
   **/
   void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
@@ -910,31 +889,64 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     _perform_join();
 
-    // merge the pos lists into single pos lists
-    auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
-    auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+     if (include_null_left || include_null_right) {
+      auto null_output_left = std::make_shared<PosList>();
+      auto null_output_right = std::make_shared<PosList>();
+      null_output_left->reserve(_null_rows_left->size());
+      null_output_right->reserve(_null_rows_right->size());
 
-    // Add the outer join rows which had a null value in their join column
-    if (include_null_left) {
-      for (auto row_id_left : *_null_rows_left) {
-        output_left->push_back(row_id_left);
-        output_right->push_back(NULL_ROW_ID);
+      // Add the outer join rows which had a null value in their join column
+      if (include_null_left) {
+        for (auto row_id_left : *_null_rows_left) {
+          null_output_left->push_back(row_id_left);
+          null_output_right->push_back(NULL_ROW_ID);
+        }
+      }
+      if (include_null_right) {
+        for (auto row_id_right : *_null_rows_right) {
+          null_output_left->push_back(NULL_ROW_ID);
+          null_output_right->push_back(row_id_right);
+        }
+      }
+
+      _output_pos_lists_left.push_back(null_output_left);
+      _output_pos_lists_right.push_back(null_output_right);
+    }
+
+    // Intermediate structure for output chunks (to avoid concurrent appending to table)
+    std::vector<std::shared_ptr<Chunk>> result_chunks(_output_pos_lists_left.size());
+
+    // Determine if writing output in parallel is necessary.
+    // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
+    const auto write_output_concurrently = _cluster_count > 1 && _output_pos_lists_left[0]->size() > 10'000;
+
+    std::vector<std::shared_ptr<AbstractTask>> output_jobs;
+    output_jobs.reserve(_output_pos_lists_left.size());
+    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+      auto write_output_fun = [this, pos_list_id, &result_chunks] {
+        Segments output_segments;
+        _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+        result_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(output_segments));
+      };
+
+      if (write_output_concurrently) {
+        auto job = std::make_shared<JobTask>(write_output_fun);
+        output_jobs.push_back(job);
+        output_jobs.back()->schedule();
+      } else {
+        write_output_fun();
       }
     }
-    if (include_null_right) {
-      for (auto row_id_right : *_null_rows_right) {
-        output_left->push_back(NULL_ROW_ID);
-        output_right->push_back(row_id_right);
-      }
-    }
 
-    // Add the segments from both input tables to the output
-    Segments output_segments;
-    _add_output_segments(output_segments, _sort_merge_join.input_table_left(), output_left);
-    _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
+    Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
 
-    // Build the output_table with one Chunk
-    return _sort_merge_join._build_output_table({std::make_shared<Chunk>(output_segments)});
+    
+    // auto output_table = _sort_merge_join._initialize_output_table();
+    // for (auto& chunk : result_chunks) {
+    //   output_table->append_chunk(*chunk);
+    // }
+
+    return _sort_merge_join._build_output_table(std::move(result_chunks));
   }
 };
 
