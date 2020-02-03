@@ -471,6 +471,7 @@ set(
     storage/lz4_segment/lz4_segment_iterable.hpp
     storage/lz4_segment.cpp
     storage/lz4_segment.hpp
+    storage/matches_all_pos_list.hpp
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
