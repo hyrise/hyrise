@@ -17,8 +17,8 @@ public:
   template <bool modifiable = false>
   class PosListIterator : public boost::iterator_facade<PosListIterator<modifiable>, RowID, boost::random_access_traversal_tag, std::conditional_t<modifiable, RowID&, RowID>> {
 public:
-  typedef typename std::conditional<modifiable, AbstractPosList*, const AbstractPosList*>::type Typ;
-  typedef typename std::conditional<modifiable, RowID&, RowID>::type DereferenceReturnType;
+  using Typ = std::conditional_t<modifiable, AbstractPosList*, const AbstractPosList*>;
+  using DereferenceReturnType = std::conditional_t<modifiable, RowID&, RowID>;
   PosListIterator(Typ pl_pointer, ChunkOffset pos, ChunkOffset max_size) {
     _pl_pointer = pl_pointer;
     _chunk_offset = pos;
@@ -32,19 +32,19 @@ public:
   void advance(std::ptrdiff_t n) { _chunk_offset += n; }
 
 
-  bool equal(const PosListIterator other) const {
+  bool equal(const PosListIterator& other) const {
     // assert + chunk offset compare
-    // DebugAssert()
-    return (other._chunk_offset == _chunk_offset && other._pl_pointer == _pl_pointer);
+    // DebugAssert()!!!
+    return (other._chunk_offset == _chunk_offset);// && other._pl_pointer == _pl_pointer);
   }
 
   bool equal(const PosListIterator* other) const {
     // assert + chunk offset compare
-    // DebugAssert()
-    return (other->_chunk_offset == _chunk_offset && other->_pl_pointer == _pl_pointer);
+    // DebugAssert()!!!
+    return (other->_chunk_offset == _chunk_offset);// && other->_pl_pointer == _pl_pointer);
   }
 
-  std::ptrdiff_t distance_to(const PosListIterator other) const {
+  std::ptrdiff_t distance_to(const PosListIterator& other) const {
     return (other._chunk_offset - _chunk_offset);
   }
 
