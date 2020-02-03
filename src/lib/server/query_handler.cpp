@@ -8,13 +8,13 @@ namespace opossum {
 
 std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
     const std::string& query, const SendExecutionInfo send_execution_info,
-    const std::shared_ptr<TransactionContext>& transactionContext) {
+    const std::shared_ptr<TransactionContext>& transaction_context) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transactionContext).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transaction_context).create_pipeline();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
 
@@ -24,7 +24,7 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
     execution_info.result_table = result_table;
     execution_info.root_operator_type = sql_pipeline.get_physical_plans().back()->type();
 
-    handleTransactionStatementMessage(execution_info, sql_pipeline);
+    handle_transaction_statement_message(execution_info, sql_pipeline);
 
     if (send_execution_info == SendExecutionInfo::Yes) {
       std::stringstream stream;
@@ -38,7 +38,7 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
          "Transaction conflict, transaction was rolled back. Failed statement: " + failed_statement},
         {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
   }
-  return std::make_pair(execution_info, sql_pipeline.transaction_context());
+  return {execution_info, sql_pipeline.transaction_context()};
 }
 
 void QueryHandler::setup_prepared_plan(const std::string& statement_name, const std::string& query) {
@@ -89,7 +89,8 @@ std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(
   return tasks.back()->get_operator()->get_output();
 }
 
-void QueryHandler::handleTransactionStatementMessage(ExecutionInformation& execution_info, SQLPipeline& sql_pipeline) {
+void QueryHandler::handle_transaction_statement_message(ExecutionInformation& execution_info,
+                                                        SQLPipeline& sql_pipeline) {
   // handle custom user feedback (command complete messages) for transaction statements
   auto sql_statement = sql_pipeline.get_parsed_sql_statements().back();
   auto& statements = sql_statement->getStatements();

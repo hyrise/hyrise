@@ -84,7 +84,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Executes all tasks, waits for them to finish, and returns
   //   - {Success, table}       if the statement was successful and returned a table
   //   - {Success, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
-  //   - {RolledBack, nullptr}  if the transaction failed
+  //   - {Failure, nullptr}     if the transaction failed
   // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
   // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
   // transaction into account.
@@ -104,7 +104,7 @@ class SQLPipelineStatement : public Noncopyable {
 
  private:
   // Adds (only) transaction-related jobs to _tasks and returns true, if present
-  bool handleTransactionJobs();
+  bool _handle_transaction_jobs();
 
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
   // table that already exists).

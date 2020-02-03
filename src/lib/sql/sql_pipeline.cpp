@@ -204,7 +204,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::g
   const auto& [pipeline_status, tables] = get_result_tables();
 
   DebugAssert(pipeline_status != SQLPipelineStatus::NotExecuted,
-              "SQLPipeline::get_result_table() should either return Success or RolledBack");
+              "SQLPipeline::get_result_table() should either return Success or Failure");
 
   if (pipeline_status == SQLPipelineStatus::Failure) {
     static std::shared_ptr<const Table> null_table;

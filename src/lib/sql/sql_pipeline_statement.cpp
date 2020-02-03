@@ -207,7 +207,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
   }
 
   if (_is_transaction_statement) {
-    handleTransactionJobs();
+    _handle_transaction_jobs();
   } else {
     auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
     _tasks.reserve(operator_tasks.size());
@@ -219,7 +219,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
   return _tasks;
 }
 
-bool SQLPipelineStatement::handleTransactionJobs() {
+bool SQLPipelineStatement::_handle_transaction_jobs() {
   auto sql_statement = get_parsed_sql_statement();
   const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
   auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());

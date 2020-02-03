@@ -27,7 +27,7 @@ class QueryHandler {
  public:
   static std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> execute_pipeline(
       const std::string& query, const SendExecutionInfo send_execution_info,
-      const std::shared_ptr<TransactionContext>& transactionContext);
+      const std::shared_ptr<TransactionContext>& transaction_context);
 
   static void setup_prepared_plan(const std::string& statement_name, const std::string& query);
 
@@ -36,7 +36,7 @@ class QueryHandler {
   static std::shared_ptr<const Table> execute_prepared_plan(const std::shared_ptr<AbstractOperator>& physical_plan);
 
  private:
-  static void handleTransactionStatementMessage(ExecutionInformation& execution_info, SQLPipeline& sql_pipeline);
+  static void handle_transaction_statement_message(ExecutionInformation& execution_info, SQLPipeline& sql_pipeline);
 };
 
 }  // namespace opossum
