@@ -11,6 +11,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
+#include "storage/matches_all_pos_list.hpp"
 
 namespace opossum {
 
@@ -149,8 +150,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
-    auto pos_list_out = std::make_shared<const PosList>();
-    PosList temp_pos_list;
+    std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
 
@@ -169,12 +169,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in->common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        auto pos_list_in_specialized = std::dynamic_pointer_cast<const PosList>(pos_list_in);
-
-        if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id) && pos_list_in_specialized) {
+        if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
           // We can reuse the old PosList since it is entirely visible.
-          pos_list_out = pos_list_in_specialized;
+          pos_list_out = pos_list_in;
         } else {
+          PosList temp_pos_list;
           temp_pos_list.guarantee_single_chunk();
           for (auto row_id : *pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
@@ -183,9 +182,9 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           }
           pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
         }
-
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
+        PosList temp_pos_list;
         for (auto row_id : *pos_list_in) {
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
@@ -213,15 +212,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
 
-      temp_pos_list.guarantee_single_chunk();
-
       if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
-        const auto chunk_size = chunk_in->size();
-        temp_pos_list.resize(chunk_size);
-        for (auto chunk_offset = 0u; chunk_offset < chunk_size; ++chunk_offset) {
-          temp_pos_list[chunk_offset] = RowID{chunk_id, chunk_offset};
-        }
+        pos_list_out = std::make_shared<MatchesAllPosList>(chunk_in, chunk_id);
       } else {
+        PosList temp_pos_list;
+        temp_pos_list.guarantee_single_chunk();
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         for (auto i = 0u; i < chunk_size; i++) {
@@ -229,8 +224,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
             temp_pos_list.emplace_back(RowID{chunk_id, i});
           }
         }
+        pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
       }
-      pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
 
       // Create actual ReferenceSegment objects.
       for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {

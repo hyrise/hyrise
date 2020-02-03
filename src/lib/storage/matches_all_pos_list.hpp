@@ -12,32 +12,37 @@ class MatchesAllPosList : public AbstractPosList {
 
   MatchesAllPosList& operator=(MatchesAllPosList&& other) = default;
 
-  virtual bool references_single_chunk() const {
+  virtual bool references_single_chunk() const override {
     return true;
   }
 
-  virtual ChunkID common_chunk_id() const {
+  virtual ChunkID common_chunk_id() const override {
     return _common_chunk_id;
   }
 
-  virtual RowID operator[](size_t n) const {
+  virtual RowID operator[](size_t n) const override {
     return RowID{_common_chunk_id, static_cast<ChunkOffset>(n)};
   }
 
-  virtual bool empty() const {
+  virtual bool empty() const override {
     return size() == 0;
   }
 
-  virtual size_t size() const {
+  virtual size_t size() const override {
     return _common_chunk->size();
   }
 
-  virtual size_t memory_usage(const MemoryUsageCalculationMode) const {
+  virtual size_t memory_usage(const MemoryUsageCalculationMode) const override {
     return sizeof *this;
   }
 
   virtual bool operator==(const MatchesAllPosList* other) const {
     return _common_chunk == other->_common_chunk;
+  }
+
+  virtual bool operator==(const AbstractPosList* other) const override {
+    // TODO
+    return false;
   }
 
   // template <typename Functor>
