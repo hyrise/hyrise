@@ -149,12 +149,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
            * constructor in a regular interval based on the null_ratio with true.
            */
           if (column_specifications[column_index].null_ratio) {
-            null_values = std::vector<bool>(chunk_size, false);
+            null_values.resize(chunk_size, false);
 
             const double step_size = 1.0 / column_specifications[column_index].null_ratio.value();
             double current_row_offset = 0.0;
             while (current_row_offset < chunk_size) {
-              null_values[static_cast<int>(std::round(current_row_offset))] = true;
+              null_values[static_cast<size_t>(std::round(current_row_offset))] = true;
               current_row_offset += step_size;
             }
           }

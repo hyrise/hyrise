@@ -65,11 +65,8 @@ struct ColumnSpecification {
       : data_distribution(data_distribution), data_type(data_type), name(name), null_ratio(null_ratio) {}
 
   const ColumnDataDistribution data_distribution;
-
   const DataType data_type;
-
   const std::optional<std::string> name;
-
   const std::optional<float> null_ratio;
 };
 
