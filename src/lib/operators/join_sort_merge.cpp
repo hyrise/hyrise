@@ -914,7 +914,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
-    std::vector<std::shared_ptr<Chunk>> result_chunks(_output_pos_lists_left.size());
+    std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
@@ -923,30 +923,24 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
-      auto write_output_fun = [this, pos_list_id, &result_chunks] {
-        Segments output_segments;
-        _add_output_segments(output_segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
-        result_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(output_segments));
+      auto write_output_chunk = [this, pos_list_id, &output_chunks] {
+        Segments segments;
+        _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+        output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
       };
 
       if (write_output_concurrently) {
-        auto job = std::make_shared<JobTask>(write_output_fun);
+        auto job = std::make_shared<JobTask>(write_output_chunk);
         output_jobs.push_back(job);
         output_jobs.back()->schedule();
       } else {
-        write_output_fun();
+        write_output_chunk();
       }
     }
 
     Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
 
-    
-    // auto output_table = _sort_merge_join._initialize_output_table();
-    // for (auto& chunk : result_chunks) {
-    //   output_table->append_chunk(*chunk);
-    // }
-
-    return _sort_merge_join._build_output_table(std::move(result_chunks));
+    return _sort_merge_join._build_output_table(std::move(output_chunks));
   }
 };
 
