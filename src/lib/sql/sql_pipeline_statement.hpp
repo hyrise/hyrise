@@ -104,7 +104,7 @@ class SQLPipelineStatement : public Noncopyable {
 
  private:
   // Adds (only) transaction-related jobs to _tasks and returns true, if present
-  bool _handle_transaction_jobs();
+  std::shared_ptr<AbstractTask> _get_transaction_jobs();
 
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
   // table that already exists).

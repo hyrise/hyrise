@@ -207,7 +207,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
   }
 
   if (_is_transaction_statement) {
-    _handle_transaction_jobs();
+    _tasks.emplace_back(_get_transaction_jobs());
   } else {
     auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
     _tasks.reserve(operator_tasks.size());
@@ -219,52 +219,36 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
   return _tasks;
 }
 
-bool SQLPipelineStatement::_handle_transaction_jobs() {
-  auto sql_statement = get_parsed_sql_statement();
-  const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
+std::shared_ptr<AbstractTask> SQLPipelineStatement::_get_transaction_jobs() {
+    auto sql_statement = get_parsed_sql_statement();
+    const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
+    auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
 
-  switch (transaction_statement->command) {
-    // Create JobTask for each TransactionStatement
-    case hsql::kBeginTransaction: {
-      auto job = std::make_shared<JobTask>([this]() {
-        if (!_transaction_context || !_transaction_context->is_auto_commit()) {
-          this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
-          return;
-        }
-        if (_transaction_context->phase() == TransactionPhase::ErrorRolledBack) return;
-
-        _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
-      });
-      _tasks.emplace_back(job);
-      break;
+    switch (transaction_statement->command) {
+      case hsql::kBeginTransaction:
+        return std::make_shared<JobTask>([this] {
+          if (!_transaction_context || !_transaction_context->is_auto_commit())
+            this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
+          else
+            _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
+        });
+      case hsql::kCommitTransaction:
+        return std::make_shared<JobTask>([this] {
+          if (!_transaction_context || _transaction_context->is_auto_commit())
+            this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
+          else
+            _transaction_context->commit();
+        });
+      case hsql::kRollbackTransaction:
+        return std::make_shared<JobTask>([this] {
+          if (!_transaction_context || _transaction_context->is_auto_commit())
+            this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
+          else
+            _transaction_context->rollback(true);
+        });
+      default:
+        return nullptr;
     }
-    case hsql::kCommitTransaction: {
-      auto job = std::make_shared<JobTask>([this]() {
-        if (!_transaction_context || _transaction_context->is_auto_commit()) {
-          this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
-          return;
-        }
-
-        _transaction_context->commit();
-      });
-      _tasks.emplace_back(job);
-      break;
-    }
-    case hsql::kRollbackTransaction: {
-      auto job = std::make_shared<JobTask>([this]() {
-        if (_transaction_context->is_auto_commit()) {
-          this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
-          return;
-        }
-        _transaction_context->rollback(true);
-      });
-      _tasks.emplace_back(job);
-      break;
-    }
-  }
-
-  return true;
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
