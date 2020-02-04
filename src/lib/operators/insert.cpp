@@ -252,7 +252,7 @@ void Insert::_on_rollback_records() {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->end_cids[chunk_offset] = 0u;
+      mvcc_data->set_end_cid(chunk_offset, 0u);
 
       // Update chunk statistics
       target_chunk->increase_invalid_row_count(1u);

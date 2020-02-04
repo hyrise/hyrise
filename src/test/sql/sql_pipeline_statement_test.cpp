@@ -563,7 +563,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransaction) {
   // Mark a row as modified by a different transaction
-  _table_a->get_chunk(ChunkID{0})->mvcc_data()->tids[0] = TransactionID{17};
+  _table_a->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{17});
 
   const auto sql = "UPDATE table_a SET a = 1";
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
@@ -583,7 +583,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransac
 
 TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
   // Mark a row as modified by a different transaction
-  _table_a->get_chunk(ChunkID{0})->mvcc_data()->tids[0] = TransactionID{17};
+  _table_a->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{17});
 
   const auto sql = "UPDATE table_a SET a = 1";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();

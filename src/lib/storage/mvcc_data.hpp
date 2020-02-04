@@ -13,6 +13,7 @@ namespace opossum {
  */
 struct MvccData {
   friend class Chunk;
+  friend std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
  public:
   // The last commit id is reserved for uncommitted changes
@@ -43,9 +44,10 @@ struct MvccData {
   TransactionID get_tid(const ChunkOffset offset) const;
   void set_tid(const ChunkOffset offset, const TransactionID transaction_id,
                const std::memory_order memory_order = std::memory_order_seq_cst);
-  bool compare_exchange_tid(const ChunkOffset offset, const TransactionID expected_transaction_id,
-                            const TransactionID new_transaction_id);
+  bool compare_exchange_tid(const ChunkOffset offset, TransactionID expected_transaction_id,
+                            TransactionID new_transaction_id);
 
+  size_t memory_usage() const;
  private:
   // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
   pmr_vector<CommitID> _begin_cids;                  // < commit id when record was added

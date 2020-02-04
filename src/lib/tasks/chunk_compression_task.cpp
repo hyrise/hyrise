@@ -42,11 +42,13 @@ void ChunkCompressionTask::_on_execute() {
 bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t target_chunk_size) {
   if (chunk->size() != target_chunk_size) return false;
 
-  for (const auto begin_cid : chunk->mvcc_data()->begin_cids) {
+  const auto& mvcc_data = chunk->mvcc_data();
+
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < target_chunk_size; ++chunk_offset) {
     // TODO(anybody) Reading the non-atomic begin_cid (which is written to in Insert without a write lock) is likely UB
     //               When activating the ChunkCompressionTask, please look for a different means of determining whether
     //               all Inserts to a Chunk finished.
-    if (begin_cid == MvccData::MAX_COMMIT_ID) return false;
+    if (mvcc_data->get_begin_cid(chunk_offset) == MvccData::MAX_COMMIT_ID) return false;
   }
 
   return true;

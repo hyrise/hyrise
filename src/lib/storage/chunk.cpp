@@ -97,11 +97,14 @@ void Chunk::finalize() {
   _is_mutable = false;
 
   if (has_mvcc_data()) {
-    Assert(!_mvcc_data->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
+    const auto chunk_size = size();
+    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
+    _mvcc_data->max_begin_cid = CommitID{0};
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
+    }
 
     // Do not use begin_cids.end() because that vector is pre-allocated and might be larger than the chunk
-    _mvcc_data->max_begin_cid =
-        *(std::max_element(_mvcc_data->begin_cids.begin(), _mvcc_data->begin_cids.begin() + size()));
     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
            "finalized before all transactions committed/rolled back.");
@@ -180,10 +183,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   // TODO(anybody) Index memory usage missing
 
   if (_mvcc_data) {
-    bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);
-    bytes += _mvcc_data->tids.size() * sizeof(decltype(_mvcc_data->tids)::value_type);
-    bytes += _mvcc_data->begin_cids.size() * sizeof(decltype(_mvcc_data->begin_cids)::value_type);
-    bytes += _mvcc_data->end_cids.size() * sizeof(decltype(_mvcc_data->end_cids)::value_type);
+    bytes += _mvcc_data->memory_usage();
   }
 
   return bytes;

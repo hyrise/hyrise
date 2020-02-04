@@ -72,7 +72,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
           if (mvcc_data->get_tid(row_id.chunk_offset) == _transaction_id) {
             // Make sure that even we don't see it anymore
-            mvcc_data->get_tid(row_id.chunk_offset) = INVALID_TRANSACTION_ID;
+            mvcc_data->set_tid(row_id.chunk_offset, INVALID_TRANSACTION_ID);
           } else {
             // the row is already locked by someone else and the transaction needs to be rolled back
             _mark_as_failed();
@@ -118,7 +118,7 @@ void Delete::_on_rollback_records() {
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       // unlock all rows locked in _on_execute
-      const auto result = referenced_chunk->mvcc_data()->compare_exchange(row_id.chunk_offset, expected, 0u);
+      const auto result = referenced_chunk->mvcc_data()->compare_exchange_tid(row_id.chunk_offset, expected, 0u);
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop
