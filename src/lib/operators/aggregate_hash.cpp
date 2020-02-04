@@ -246,8 +246,6 @@ void AggregateHash::_aggregate() {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(groupby_column_id);
 
-        const auto chunk_count = input_table->chunk_count();
-
         resolve_data_type(data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
