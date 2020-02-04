@@ -220,37 +220,30 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
   auto sql_statement = get_parsed_sql_statement();
   const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
   auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
-
-  std::vector<std::shared_ptr<AbstractTask>> transaction_tasks;
-
   switch (transaction_statement->command) {
     case hsql::kBeginTransaction:
-      transaction_tasks.emplace_back(std::make_shared<JobTask>([this] {
+      return {std::make_shared<JobTask>([this] {
         if (!_transaction_context || !_transaction_context->is_auto_commit())
           this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
         else
           _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
-      }));
-      break;
+      })};
     case hsql::kCommitTransaction:
-      transaction_tasks.emplace_back(std::make_shared<JobTask>([this] {
+      return {std::make_shared<JobTask>([this] {
         if (!_transaction_context || _transaction_context->is_auto_commit())
           this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
         else
           _transaction_context->commit();
-      }));
-      break;
+      })};
     case hsql::kRollbackTransaction:
-      transaction_tasks.emplace_back(std::make_shared<JobTask>([this] {
+      return {std::make_shared<JobTask>([this] {
         if (!_transaction_context || _transaction_context->is_auto_commit())
           this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
         else
           _transaction_context->rollback(true);
-      }));
-      break;
+      })};
+    default: return nullptr;
   }
-
-  return transaction_tasks;
 }
 
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
