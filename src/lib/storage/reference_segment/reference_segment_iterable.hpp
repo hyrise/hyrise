@@ -198,11 +198,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
       const auto chunk_id = _pos_list_it->chunk_id;
-      const auto& chunk_offset = _pos_list_it->chunk_offset;
 
       if (!(*_accessors)[chunk_id]) {
         _create_accessor(chunk_id);
       }
+
+      const auto chunk_offset = _pos_list_it->chunk_offset;
+
       const auto typed_value = (*_accessors)[chunk_id]->access(chunk_offset);
 
       if (typed_value) {
