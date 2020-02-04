@@ -242,7 +242,7 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
         else
           _transaction_context->rollback(true);
       })};
-    default: return nullptr;
+    default: return {};
   }
 }
 
