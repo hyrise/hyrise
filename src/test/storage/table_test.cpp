@@ -75,7 +75,7 @@ TEST_F(StorageTableTest, GetColumnIDByName) {
   EXPECT_THROW(t->column_id_by_name("no_column_name"), std::exception);
 }
 
-TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t->max_chunk_size(), 2u); }
+TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t->target_chunk_size(), 2u); }
 
 TEST_F(StorageTableTest, GetValue) {
   t->append({4, "Hello,"});

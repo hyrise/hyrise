@@ -88,4 +88,12 @@ bool file_exists(const std::string& name);
 
 bool compare_files(const std::string& original_file, const std::string& created_file);
 
+const SegmentEncodingSpec all_segment_encoding_specs[]{
+    {EncodingType::Unencoded},
+    {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+    {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+    {EncodingType::FrameOfReference},
+    {EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned},
+    {EncodingType::LZ4, VectorCompressionType::SimdBp128},
+    {EncodingType::RunLength}};
 }  // namespace opossum

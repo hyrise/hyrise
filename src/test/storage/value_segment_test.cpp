@@ -88,7 +88,7 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
    */
 
   const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
-  const auto empty_usage_double = vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);  // TODO use floats
+  const auto empty_usage_double = vs_double.memory_usage(MemoryUsageCalculationMode::Sampled);
   const auto empty_usage_str = vs_str.memory_usage(MemoryUsageCalculationMode::Sampled);
 
   vs_int.append(1);

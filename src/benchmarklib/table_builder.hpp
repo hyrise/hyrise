@@ -186,7 +186,7 @@ class TableBuilder {
     // function f or even the number of executions of f. Therefore it should only be used with pure functions (no side
     // effects). There are exceptions to that, for_each gives these guarantees and expects impure functions.
 
-    if (_current_chunk_row_count() >= _table->max_chunk_size()) {
+    if (_current_chunk_row_count() >= _table->target_chunk_size()) {
       _emit_chunk();
     }
   }

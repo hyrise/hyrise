@@ -84,7 +84,7 @@ const std::string& Insert::name() const {
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
 
-  Assert(_target_table->max_chunk_size() > 0, "Expected max chunk size of target table to be greater than zero");
+  Assert(_target_table->target_chunk_size() > 0, "Expected target chunk size of target table to be greater than zero");
   for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
     // This is not really a strong limitation, we just did not want the compile time of all type combinations.
     // If you really want this, it should be only a couple of lines to implement.
@@ -111,14 +111,14 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto target_chunk = _target_table->get_chunk(target_chunk_id);
 
       // If the last Chunk of the target Table is either immutable or full, append a new mutable Chunk
-      if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->max_chunk_size()) {
+      if (!target_chunk->is_mutable() || target_chunk->size() == _target_table->target_chunk_size()) {
         _target_table->append_mutable_chunk();
         ++target_chunk_id;
         target_chunk = _target_table->get_chunk(target_chunk_id);
       }
 
       const auto num_rows_for_target_chunk =
-          std::min<size_t>(_target_table->max_chunk_size() - target_chunk->size(), remaining_rows);
+          std::min<size_t>(_target_table->target_chunk_size() - target_chunk->size(), remaining_rows);
 
       _target_chunk_ranges.emplace_back(
           ChunkRange{target_chunk_id, target_chunk->size(),
@@ -128,11 +128,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Do so before resizing the Segments, because the resize of `Chunk::_segments.front()` is what releases the
       // new row count.
       {
-        auto& tids = target_chunk->mvcc_data()->tids;
+        const auto& mvcc_data = target_chunk->mvcc_data();
         const auto transaction_id = context->transaction_id();
         for (auto target_chunk_offset = target_chunk->size();
              target_chunk_offset < target_chunk->size() + num_rows_for_target_chunk; ++target_chunk_offset) {
-          tids[target_chunk_offset].store(transaction_id, std::memory_order_relaxed);
+          mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_seq_cst);
       }
@@ -154,7 +154,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           const auto new_size = old_size + num_rows_for_target_chunk;
 
           // Cannot guarantee resize without reallocation. The ValueSegment should have been allocated with the target
-          // table's max chunk size reserved.
+          // table's target chunk size reserved.
           Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small");
           value_segment->values().resize(new_size);
 
@@ -224,8 +224,11 @@ void Insert::_on_commit_records(const CommitID cid) {
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->set_begin_cid(chunk_offset, cid);
-      mvcc_data->tids[chunk_offset] = 0u;
+      mvcc_data->set_tid(chunk_offset, 0u, std::memory_order_relaxed);
     }
+
+    // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
+    std::atomic_thread_fence(std::memory_order_release);
   }
 }
 
@@ -262,8 +265,11 @@ void Insert::_on_rollback_records() {
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->set_begin_cid(chunk_offset, 0u);
-      mvcc_data->tids[chunk_offset] = 0u;
+      mvcc_data->set_tid(chunk_offset, 0u, std::memory_order_relaxed);
     }
+
+    // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
+    std::atomic_thread_fence(std::memory_order_release);
   }
 }
 

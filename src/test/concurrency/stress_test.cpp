@@ -90,7 +90,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
 }
 
 TEST_F(StressTest, TestTransactionInserts) {
-  // An update-heavy load on a table with a ridiculously low max chunk size, creating many new chunks. This is
+  // An update-heavy load on a table with a ridiculously low target chunk size, creating many new chunks. This is
   // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
   // conflicts occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
   // no row being appended.

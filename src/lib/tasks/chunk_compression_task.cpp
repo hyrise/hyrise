@@ -29,15 +29,18 @@ void ChunkCompressionTask::_on_execute() {
     const auto chunk = table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
+    // TODO(anyone): It is unclear if this restriction is really necessary. If it becomes a problem and we decide to
+    // get rid of it, we should make sure that a new mutable chunk is created first so that inserts do not end up in
+    // the chunk being compressed.
+    DebugAssert(_chunk_is_completed(chunk, table->target_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
 
     ChunkEncoder::encode_chunk(chunk, table->column_data_types());
   }
 }
 
-bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size) {
-  if (chunk->size() != max_chunk_size) return false;
+bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t target_chunk_size) {
+  if (chunk->size() != target_chunk_size) return false;
 
   for (const auto begin_cid : chunk->mvcc_data()->begin_cids) {
     // TODO(anybody) Reading the non-atomic begin_cid (which is written to in Insert without a write lock) is likely UB

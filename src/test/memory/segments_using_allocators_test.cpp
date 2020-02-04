@@ -27,7 +27,7 @@ class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resour
   bool do_is_equal(const memory_resource& other) const noexcept override { return false; }
 };
 
-class SegmentsUsingAllocatorsTest : public ::testing::TestWithParam<std::tuple<DataType, SegmentEncodingSpec>> {
+class SegmentsUsingAllocatorsTest : public BaseTest<std::tuple<DataType, SegmentEncodingSpec>> {
  public:
   void SetUp() override {
     data_type = std::get<0>(GetParam());

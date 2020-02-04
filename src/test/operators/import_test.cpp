@@ -24,7 +24,7 @@ class OperatorsImportTest : public BaseTest {
 
 class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<FileType> info) {
+auto import_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -35,7 +35,7 @@ auto formatter = [](const ::testing::TestParamInfo<FileType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), formatter);
+                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), import_test_formatter);
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   auto expected_table =
@@ -107,20 +107,20 @@ TEST_F(OperatorsImportTest, ChunkSize) {
   importer->execute();
 
   // check if chunk_size property is correct
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->max_chunk_size(), 20U);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->target_chunk_size(), 20U);
 
   // check if actual chunk_size is correct
   EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->size(), 20U);
   EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{1})->size(), 20U);
 }
 
-TEST_F(OperatorsImportTest, MaxChunkSize) {
+TEST_F(OperatorsImportTest, TargetChunkSize) {
   auto importer =
       std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", "a", Chunk::DEFAULT_SIZE);
   importer->execute();
 
-  // check if chunk_size property is correct (maximum chunk size)
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->max_chunk_size(), Chunk::DEFAULT_SIZE);
+  // check if chunk_size property is correct (target chunk size)
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->target_chunk_size(), Chunk::DEFAULT_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
   EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->get_chunk(ChunkID{0})->size(), 100U);

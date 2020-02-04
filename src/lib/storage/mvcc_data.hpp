@@ -18,12 +18,6 @@ struct MvccData {
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
-  // Note that these vectors may be longer than the chunk this MvccData struct belongs to (see the note in the
-  // constructor)
-  pmr_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-  pmr_vector<CommitID> begin_cids;                  ///< commit id when record was added
-  pmr_vector<CommitID> end_cids;                    ///< commit id when record was deleted
-
   // This is used for optimizing the validation process. It is set during Chunk::finalize(). Consult
   // Validate::_on_execute for further details.
   std::optional<CommitID> max_begin_cid;
@@ -46,15 +40,17 @@ struct MvccData {
   CommitID get_end_cid(const ChunkOffset offset) const;
   void set_end_cid(const ChunkOffset offset, const CommitID commit_id);
 
+  TransactionID get_tid(const ChunkOffset offset) const;
+  void set_tid(const ChunkOffset offset, const TransactionID transaction_id,
+               const std::memory_order memory_order = std::memory_order_seq_cst);
+  bool compare_exchange_tid(const ChunkOffset offset, const TransactionID expected_transaction_id,
+                            const TransactionID new_transaction_id);
+
  private:
-  /**
-   * @brief Mutex used to manage access to MVCC data
-   *
-   * Exclusively locked in shrink()
-   * Locked for shared ownership when MVCC data of a Chunk are accessed
-   * via the get_scoped_mvcc_data_lock() getters
-   */
-  std::shared_mutex _mutex;
+  // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
+  pmr_vector<CommitID> _begin_cids;                  // < commit id when record was added
+  pmr_vector<CommitID> _end_cids;                    // < commit id when record was deleted
+  pmr_vector<copyable_atomic<TransactionID>> _tids;  // < 0 unless locked by a transaction
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

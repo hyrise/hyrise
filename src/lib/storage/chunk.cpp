@@ -51,8 +51,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 
   if (has_mvcc_data()) {
     // Make the row visible - mvcc_data has been pre-allocated
-    DebugAssert(mvcc_data()->tids.size() > size(), "MvccData capacity exhausted");
-    mvcc_data()->begin_cids[size()] = CommitID{0};
+    mvcc_data()->set_begin_cid(size(), CommitID{0});
   }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
