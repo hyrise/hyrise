@@ -199,31 +199,27 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
 /**
  * The objective of this benchmark is to measure performance improvements when having
  * - a sorted column
- * - a between scan on that column
  * - an aggregation grouping by that column.
  */
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6BetweenScanAggregate)(benchmark::State& state) {
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::State& state) {
   // Take e.g. TPC-H LineItem (biggest table in dataset)
+  // Assumption: We joined on shipmode, which is why we are sorted by that column
+  // Aggregate: group by ship mode and count(l_orderkey_id)
+
   std::shared_ptr<TableWrapper>& line_item = _table_wrapper_map.at("lineitem");
   const auto l_orderkey_id = ColumnID{0};
-  const auto l_partkey_id = ColumnID{1};
-  // Between Scan on primary key (l_orderkey) with ~50% selectivity
-  // Values in sf-0.01 go from 1 to 60000.
-  const auto orderkey_between_predicate = std::make_shared<BetweenExpression>(
-      PredicateCondition::BetweenInclusive, _lorderkey_operand, value_(15000), value_(45000));
-  const auto sorted_line_item = std::make_shared<Sort>(line_item, l_orderkey_id);
-  sorted_line_item->execute();
+  const auto l_shipmode_id = ColumnID{10};
 
+  const auto sorted_line_item = std::make_shared<Sort>(line_item, l_shipmode_id);
+  sorted_line_item->execute();
+  const auto table_scan_output = sorted_line_item->get_output();
+  const ColumnID group_by_column = l_orderkey_id;
+  const std::vector<ColumnID> group_by = {l_orderkey_id};
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{max_(pqp_column_(
+          group_by_column, table_scan_output->column_data_type(group_by_column),
+      table_scan_output->column_is_nullable(group_by_column), table_scan_output->column_name(group_by_column)))};
+  const auto aggregate = std::make_shared<AggregateSort>(sorted_line_item, aggregate_expressions, group_by);
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(sorted_line_item, orderkey_between_predicate);
-    table_scan->execute();
-    // Note that it doesn't really make sense to aggregate when ordering by a unique column
-    std::vector<ColumnID> group_by = {l_orderkey_id};
-    auto table_scan_output = table_scan->get_output();
-    const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{max_(pqp_column_(
-        l_partkey_id, table_scan_output->column_data_type(l_partkey_id),
-        table_scan_output->column_is_nullable(l_partkey_id), table_scan_output->column_name(l_partkey_id)))};
-    auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregate_expressions, group_by);
     aggregate->execute();
   }
 }
