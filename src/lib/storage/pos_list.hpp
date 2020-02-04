@@ -89,7 +89,7 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
     return Vector::operator[](n);
   }
 
-  RowID& operator[](size_t n) {
+  RowID& operator[](size_t n) override {
     return Vector::operator[](n);
   }
 

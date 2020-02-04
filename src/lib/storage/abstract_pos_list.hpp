@@ -25,6 +25,9 @@ public:
     _max_size = max_size;
   }
 
+  PosListIterator() = default;
+
+
   void increment() { ++_chunk_offset; }
 
   void decrement() { --_chunk_offset; }
@@ -35,21 +38,11 @@ public:
   bool equal(const PosListIterator& other) const {
     // assert + chunk offset compare
     // DebugAssert()!!!
-    return (other._chunk_offset == _chunk_offset);// && other._pl_pointer == _pl_pointer);
-  }
-
-  bool equal(const PosListIterator* other) const {
-    // assert + chunk offset compare
-    // DebugAssert()!!!
-    return (other->_chunk_offset == _chunk_offset);// && other->_pl_pointer == _pl_pointer);
+    return other._chunk_offset == _chunk_offset;
   }
 
   std::ptrdiff_t distance_to(const PosListIterator& other) const {
     return (other._chunk_offset - _chunk_offset);
-  }
-
-  std::ptrdiff_t distance_to(const PosListIterator* other) const {
-    return (other->_chunk_offset - _chunk_offset);
   }
 
   DereferenceReturnType dereference() const;
@@ -72,6 +65,8 @@ public:
   virtual ChunkID common_chunk_id() const = 0;
 
   virtual RowID operator[](size_t n) const = 0;
+
+  virtual RowID& operator[](size_t n) = 0;
 
   PosListIterator<false> begin() const {
     return PosListIterator<false>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
