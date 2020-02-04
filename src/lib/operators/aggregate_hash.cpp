@@ -443,12 +443,18 @@ void AggregateHash::_aggregate() {
           auto& result_ids = *context->result_ids;
           auto& results = context->results;
 
-          // count occurrences for each group key
-          for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-            auto& result = get_or_add_result(result_ids, results,
-                                             get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
-                                             RowID{chunk_id, chunk_offset});
-            ++result.aggregate_count;
+          if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
+            // Not grouped by anything, simply count the number of rows
+            results.resize(1);
+            results[0].aggregate_count += input_chunk_size;
+          } else {
+            // count occurrences for each group key
+            for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
+              auto& result = get_or_add_result(result_ids, results,
+                                               get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
+                                               RowID{chunk_id, chunk_offset});
+              ++result.aggregate_count;
+            }
           }
 
           ++aggregate_idx;
