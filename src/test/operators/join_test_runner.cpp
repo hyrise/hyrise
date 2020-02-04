@@ -510,6 +510,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto join_op = configuration.join_operator_factory->create_operator(input_operator_left, input_operator_right,
                                                                             primary_predicate, configuration);
 
+  // TODO recreate and re-run?
+
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
   const auto join_verification =

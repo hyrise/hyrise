@@ -46,8 +46,11 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
 
-  Hyrise::get().topology.use_numa_topology();
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+  // DO NOT modify the Hyrise class here, as those changes will get overwritten by the base test. Instead, make those
+  // changes in SetUp()
 }
 
 void SQLiteTestRunner::SetUp() {
@@ -127,6 +130,14 @@ void SQLiteTestRunner::SetUp() {
       Hyrise::get().storage_manager.add_table(table_name, table_cache_entry.table);
     }
   }
+
+  // Hyrise::get().topology.use_numa_topology();
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  // Enable caches so that we can spot errors that only occur if a query is executed a second time.
+  // This second run is done implicitly when a different encoding is used.
+  Hyrise::get().default_pqp_cache = _pqp_cache;
+  Hyrise::get().default_lqp_cache = _lqp_cache;
 }
 
 std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
@@ -187,6 +198,10 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Mark Tables modified by the query as dirty
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     for (const auto& table_name : lqp_find_modified_tables(plan)) {
+      if (!_table_cache_per_encoding.at(encoding_type).contains(table_name)) {
+        // Table was not cached, for example because it was created as part of the query
+        continue;
+      }
       // mark table cache entry as dirty, when table has been modified
       _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
     }
