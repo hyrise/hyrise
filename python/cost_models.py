@@ -26,7 +26,7 @@ class CostModel:
 def preprocess_data(data):
     # one-hot encoding
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
+    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING', 'SCAN_IMPLEMENTATION', 'COMPRESSION_TYPE'])
     return ohe_data
 
 
@@ -57,7 +57,7 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
 
     plt.scatter(real_y, pred_y, c='b')
     axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
-    axis_min = min(0, np.amin(pred_y), np.amin(real_y))
+    axis_min = min(np.amin(pred_y), np.amin(real_y))
     abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
 
     # Plot the best fit line over the actual values
@@ -148,14 +148,15 @@ def plot_general_model(test_data, model, model_type, data_type, encoding, out):
     #return model
 
 
-def add_dummy_types(train, test, col):
-    diff1 = np.setdiff1d(train[col].unique(), test[col].unique())
-    diff2 = np.setdiff1d(test[col].unique(), train[col].unique())
-    for d1 in diff1:
-        test['{}_{}'.format(col, d1)] = 0
-    for d2 in diff2:
-        train['{}_{}'.format(col, d2)]= 0
-    #return [train, test]
+def add_dummy_types(train, test, cols):
+    for col in cols:
+        diff1 = np.setdiff1d(train[col].unique(), test[col].unique())
+        diff2 = np.setdiff1d(test[col].unique(), train[col].unique())
+        for d1 in diff1:
+            test['{}_{}'.format(col, d1)] = 0
+        for d2 in diff2:
+            train['{}_{}'.format(col, d2)]= 0
+    return [train, test]
 
 
 def parseargs(opt=None):
@@ -227,7 +228,6 @@ def main(args):
             else:
                 model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
                 model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
-                add_dummy_types(model_train_data, model_test_data, 'SCAN_TYPE')
 
             # TODO: needed to save this?
             #dfilename = 'data/split_{}_{}_train_data.sav'.format(data_type, encoding)
@@ -236,6 +236,7 @@ def main(args):
             # if there is train data for this combination, train a model
             if not model_train_data.empty:
                 for type in model_types:
+                    model_train_data, model_test_data = add_dummy_types(model_train_data, model_test_data, ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE'])
                     model = train_model(model_train_data, type)
 
                     # TODO: needed?
