@@ -50,11 +50,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
+      using RowIDValuePair = std::pair<RowID, ColumnDataType>;
 
       std::mutex output_mutex;
 
-      auto output_pos_lists = std::vector<std::shared_ptr<PosList>>{};
-      output_pos_lists.resize(job_count);
+      auto output_value_vectors = std::vector<std::shared_ptr<std::vector<RowIDValuePair>>>{};
+      auto output_null_vectors = std::vector<std::shared_ptr<std::vector<RowIDValuePair>>>{};
+      output_value_vectors.resize(job_count);
+      output_null_vectors.resize(job_count);
 
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(job_count);
@@ -67,22 +70,30 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       }
 
       for (ChunkID job_id{0u}; job_id < job_count; ++job_id) {
-        auto job_task = std::make_shared<JobTask>(
-            [job_id, &in_table, pos_lists, sort_definition, &output_mutex, &output_pos_lists]() {
-              std::shared_ptr<PosList> chunk_column_sorted_pos_list = std::shared_ptr<PosList>(nullptr);
+        auto job_task = std::make_shared<JobTask>([job_id, &in_table, pos_lists, sort_definition, &output_mutex,
+                                                   &output_value_vectors, &output_null_vectors]() {
+          std::shared_ptr<std::vector<RowIDValuePair>> chunk_column_sorted_value_vector =
+              std::shared_ptr<std::vector<RowIDValuePair>>(nullptr);
+          std::shared_ptr<std::vector<RowIDValuePair>> chunk_column_sorted_null_vector =
+              std::shared_ptr<std::vector<RowIDValuePair>>(nullptr);
 
-              auto sort_single_col_impl =
-                  SortImpl<ColumnDataType>(in_table, sort_definition.column, sort_definition.order_by_mode);
+          auto sort_single_col_impl =
+              SortImpl<ColumnDataType>(in_table, sort_definition.column, sort_definition.order_by_mode);
 
-              if (pos_lists) {
-                chunk_column_sorted_pos_list = sort_single_col_impl.sort_one_column((*pos_lists)[job_id]);
-              } else {
-                chunk_column_sorted_pos_list = sort_single_col_impl.sort_one_column_of_chunk(job_id);
-              }
+          if (pos_lists) {
+            const auto chunk_column_sorted = sort_single_col_impl.sort_one_column((*pos_lists)[job_id]);
+            chunk_column_sorted_value_vector = chunk_column_sorted.first;
+            chunk_column_sorted_null_vector = chunk_column_sorted.second;
+          } else {
+            const auto chunk_column_sorted = sort_single_col_impl.sort_one_column_of_chunk(job_id);
+            chunk_column_sorted_value_vector = chunk_column_sorted.first;
+            chunk_column_sorted_null_vector = chunk_column_sorted.second;
+          }
 
-              std::lock_guard<std::mutex> lock(output_mutex);
-              output_pos_lists[job_id] = chunk_column_sorted_pos_list;
-            });
+          std::lock_guard<std::mutex> lock(output_mutex);
+          output_value_vectors[job_id] = chunk_column_sorted_value_vector;
+          output_null_vectors[job_id] = chunk_column_sorted_null_vector;
+        });
         jobs.push_back(job_task);
         job_task->schedule();
       }
@@ -92,7 +103,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       auto sort_single_col_impl =
           MergeImpl<ColumnDataType>(in_table, sort_definition.column, sort_definition.order_by_mode);
 
-      merged_pos_list = sort_single_col_impl.merge_pos_lists(output_pos_lists);
+      merged_pos_list = sort_single_col_impl.merge_value_and_null_vectors(output_value_vectors, output_null_vectors);
     });
   }
 
@@ -220,37 +231,20 @@ class Sort::MergeImpl {
             const OrderByMode order_by_mode = OrderByMode::Ascending)
       : _table_in(table_in), _column_id(column_id), _order_by_mode(order_by_mode) {}
 
-  std::shared_ptr<PosList> merge_pos_lists(std::vector<std::shared_ptr<PosList>> pos_lists) {
+  std::shared_ptr<PosList> merge_value_and_null_vectors(
+      std::vector<std::shared_ptr<std::vector<RowIDValuePair>>> value_vectors,
+      std::vector<std::shared_ptr<std::vector<RowIDValuePair>>> null_vectors) {
     std::shared_ptr<PosList> merged_pos_list = std::make_shared<PosList>();
     merged_pos_list->reserve(_table_in->row_count());
 
     auto value_iterators = std::vector<std::pair<ChunkID, typename std::vector<RowIDValuePair>::iterator>>{};
-    value_iterators.reserve(pos_lists.size());
-    // auto null_iterators = std::vector<typename std::vector<RowIDValuePair>::iterator>{};
-    // null_iterators.reserve(pos_lists.size());
+    value_iterators.reserve(value_vectors.size());
 
-    auto value_vectors = std::vector<std::vector<RowIDValuePair>>();
-    value_vectors.reserve(pos_lists.size());
-    auto null_vectors = std::vector<std::vector<RowIDValuePair>>();
-    null_vectors.reserve(pos_lists.size());
-
-    // size_t amount_of_value_row_ids = 0;
-    // size_t amount_of_null_row_ids = 0;
-
-    for (ChunkID chunk_id{0u}; chunk_id < pos_lists.size(); ++chunk_id) {
-      auto materialized_pos_list = _materialize_pos_list(pos_lists[chunk_id]);
-
-      value_vectors.emplace_back(materialized_pos_list.first);
-      // amount_of_value_row_ids += materialized_pos_list.first->size();
-
-      null_vectors.emplace_back(materialized_pos_list.second);
-      // amount_of_null_row_ids += materialized_pos_list.second->size();
-
-      // value_iterators.emplace_back(materialized_pos_list.first.begin());
-      if (value_vectors[chunk_id].size() > 0) {
-        value_iterators.emplace_back(chunk_id, value_vectors[chunk_id].begin());
+    for (ChunkID chunk_id{0u}; chunk_id < value_vectors.size(); ++chunk_id) {
+      const auto& value_vector = value_vectors[chunk_id];
+      if (value_vector->size() > 0) {
+        value_iterators.emplace_back(chunk_id, value_vectors[chunk_id]->begin());
       }
-      // null_iterators[chunk_id] = materialized_pos_list.second->begin();
     }
 
     bool nulls_last =
@@ -258,9 +252,10 @@ class Sort::MergeImpl {
 
     // (Step 0: Merge NULL values)
     if (!nulls_last) {
-      for (ChunkID chunk_id{0u}; chunk_id < pos_lists.size(); ++chunk_id) {
-        std::transform(std::begin(null_vectors[chunk_id]), std::end(null_vectors[chunk_id]),
-                       std::back_inserter(*merged_pos_list), [](auto const& pair) { return pair.first; });
+      for (ChunkID chunk_id{0u}; chunk_id < null_vectors.size(); ++chunk_id) {
+        const auto null_vector = *null_vectors[chunk_id];
+        std::transform(std::begin(null_vector), std::end(null_vector), std::back_inserter(*merged_pos_list),
+                       [](auto const& pair) { return pair.first; });
       }
     }
 
@@ -293,8 +288,8 @@ class Sort::MergeImpl {
       merged_pos_list->emplace_back(compare_result.first);
 
       auto compare_result_iterator = value_iterators[pos_list_id_of_compare_result_iterator].second;
-      if ((compare_result_iterator != value_vectors[chunk_id_of_compare_result].end()) &&
-          (std::next(compare_result_iterator) == value_vectors[chunk_id_of_compare_result].end())) {
+      if ((compare_result_iterator != value_vectors[chunk_id_of_compare_result]->end()) &&
+          (std::next(compare_result_iterator) == value_vectors[chunk_id_of_compare_result]->end())) {
         value_iterators.erase(value_iterators.begin() + pos_list_id_of_compare_result_iterator);
       } else {
         value_iterators[pos_list_id_of_compare_result_iterator].second = std::next(compare_result_iterator);
@@ -303,84 +298,14 @@ class Sort::MergeImpl {
 
     // (Step 2: Merge NULL values)
     if (nulls_last) {
-      for (ChunkID chunk_id{0u}; chunk_id < pos_lists.size(); ++chunk_id) {
-        std::transform(std::begin(null_vectors[chunk_id]), std::end(null_vectors[chunk_id]),
-                       std::back_inserter(*merged_pos_list), [](auto const& pair) { return pair.first; });
+      for (ChunkID chunk_id{0u}; chunk_id < null_vectors.size(); ++chunk_id) {
+        const auto null_vector = *null_vectors[chunk_id];
+        std::transform(std::begin(null_vector), std::end(null_vector), std::back_inserter(*merged_pos_list),
+                       [](auto const& pair) { return pair.first; });
       }
     }
 
     return merged_pos_list;
-  }
-
- protected:
-  std::pair<std::vector<RowIDValuePair>, std::vector<RowIDValuePair>> _materialize_pos_list(
-      std::shared_ptr<PosList> pos_list) {
-    auto row_id_value_vector = std::vector<RowIDValuePair>();
-    // TODO Check if the following should be commented in again
-    // row_id_value_vector.reserve(_table_in->row_count());
-
-    auto null_value_rows = std::vector<RowIDValuePair>();
-
-    if (pos_list) {
-      auto segment_ptr_and_accessor_by_chunk_id =
-          std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                std::shared_ptr<AbstractSegmentAccessor<MergeColumnType>>>>();
-      segment_ptr_and_accessor_by_chunk_id.reserve(_table_in->chunk_count());
-
-      // When there was a preceding sorting run, we materialize according to the passed PosList.
-      for (RowID row_id : *pos_list) {
-        const auto [chunk_id, chunk_offset] = row_id;
-
-        auto& segment_ptr_and_typed_ptr_pair = segment_ptr_and_accessor_by_chunk_id[chunk_id];
-        auto& base_segment = segment_ptr_and_typed_ptr_pair.first;
-        auto& accessor = segment_ptr_and_typed_ptr_pair.second;
-
-        if (!base_segment) {
-          base_segment = _table_in->get_chunk(chunk_id)->get_segment(_column_id);
-          accessor = create_segment_accessor<MergeColumnType>(base_segment);
-        }
-
-        // If the input segment is not a ReferenceSegment, we can take a fast(er) path
-        if (accessor) {
-          const auto typed_value = accessor->access(chunk_offset);
-          if (!typed_value) {
-            null_value_rows.emplace_back(row_id, MergeColumnType{});
-          } else {
-            row_id_value_vector.emplace_back(row_id, typed_value.value());
-          }
-        } else {
-          const auto value = (*base_segment)[chunk_offset];
-          if (variant_is_null(value)) {
-            null_value_rows.emplace_back(row_id, MergeColumnType{});
-          } else {
-            row_id_value_vector.emplace_back(row_id, boost::get<MergeColumnType>(value));
-          }
-        }
-      }
-    } else {
-      const auto chunk_count = _table_in->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = _table_in->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
-
-        auto base_segment = chunk->get_segment(_column_id);
-
-        segment_iterate<MergeColumnType>(*base_segment, [&](const auto& position) {
-          if (position.is_null()) {
-            null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, MergeColumnType{});
-          } else {
-            row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
-          }
-        });
-      }
-    }
-
-    // auto pair = std::pair<std::vector<RowIDValuePair>, std::vector<RowIDValuePair>>();
-    // pair.first = row_id_value_vector;
-    // pair.second = null_value_rows;
-    // return std::make_shared(pair);
-    // TODO Check if the following works as well
-    return {row_id_value_vector, null_value_rows};
   }
 
   const std::shared_ptr<const Table> _table_in;
@@ -404,7 +329,8 @@ class Sort::SortImpl {
   }
 
   // TODO(anyone): Reduce this method's code duplication with sort_one_column by making parameter chunk_id optional
-  std::shared_ptr<PosList> sort_one_column_of_chunk(ChunkID chunk_id, std::shared_ptr<PosList> pos_list = nullptr) {
+  std::pair<std::shared_ptr<std::vector<RowIDValuePair>>, std::shared_ptr<std::vector<RowIDValuePair>>>
+  sort_one_column_of_chunk(ChunkID chunk_id, std::shared_ptr<PosList> pos_list = nullptr) {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column_of_chunk(chunk_id, pos_list);
 
@@ -415,28 +341,11 @@ class Sort::SortImpl {
       _sort_with_operator<std::greater<>>();
     }
 
-    // 2b. Insert null rows if necessary
-    if (!_null_value_rows->empty()) {
-      if (_order_by_mode == OrderByMode::AscendingNullsLast || _order_by_mode == OrderByMode::DescendingNullsLast) {
-        // NULLs last
-        _row_id_value_vector->insert(_row_id_value_vector->end(), _null_value_rows->begin(), _null_value_rows->end());
-      } else {
-        // NULLs first (default behavior)
-        _row_id_value_vector->insert(_row_id_value_vector->begin(), _null_value_rows->begin(), _null_value_rows->end());
-      }
-    }
-
-    pos_list.reset();
-    pos_list = std::make_shared<PosList>();
-
-    for (auto& row_id_value : *_row_id_value_vector) {
-      pos_list->emplace_back(row_id_value.first);
-    }
-
-    return pos_list;
+    return {_row_id_value_vector, _null_value_rows};
   }
 
-  std::shared_ptr<PosList> sort_one_column(std::shared_ptr<PosList> pos_list = nullptr) {
+  std::pair<std::shared_ptr<std::vector<RowIDValuePair>>, std::shared_ptr<std::vector<RowIDValuePair>>> sort_one_column(
+      std::shared_ptr<PosList> pos_list = nullptr) {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column(pos_list);
 
@@ -447,25 +356,7 @@ class Sort::SortImpl {
       _sort_with_operator<std::greater<>>();
     }
 
-    // 2b. Insert null rows if necessary
-    if (!_null_value_rows->empty()) {
-      if (_order_by_mode == OrderByMode::AscendingNullsLast || _order_by_mode == OrderByMode::DescendingNullsLast) {
-        // NULLs last
-        _row_id_value_vector->insert(_row_id_value_vector->end(), _null_value_rows->begin(), _null_value_rows->end());
-      } else {
-        // NULLs first (default behavior)
-        _row_id_value_vector->insert(_row_id_value_vector->begin(), _null_value_rows->begin(), _null_value_rows->end());
-      }
-    }
-
-    pos_list.reset();
-    pos_list = std::make_shared<PosList>();
-
-    for (auto& row_id_value : *_row_id_value_vector) {
-      pos_list->emplace_back(row_id_value.first);
-    }
-
-    return pos_list;
+    return {_row_id_value_vector, _null_value_rows};
   }
 
  protected:
