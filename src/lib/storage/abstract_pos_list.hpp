@@ -42,7 +42,7 @@ public:
   }
 
   std::ptrdiff_t distance_to(const PosListIterator& other) const {
-    return (other._chunk_offset - _chunk_offset);
+    return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
   }
 
   DereferenceReturnType dereference() const;

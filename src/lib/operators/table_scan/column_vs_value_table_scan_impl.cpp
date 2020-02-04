@@ -72,8 +72,7 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
 
 void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
-                                                          const std::shared_ptr<const AbstractPosList>& irgendwas_anderes) const {
-  const auto position_filter = std::static_pointer_cast<const PosList>(irgendwas_anderes);
+                                                          const std::shared_ptr<const AbstractPosList>& position_filter) const {
   /**
    * ValueID search_vid;              // left value id
    * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)

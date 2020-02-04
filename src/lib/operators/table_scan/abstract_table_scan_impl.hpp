@@ -14,7 +14,6 @@
 
 namespace opossum {
 
-
 /**
  * @brief the base class of all table scan impls
  */
@@ -49,7 +48,7 @@ class AbstractTableScanImpl {
                        const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
-    /* _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it); */
+    _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
 
     // Do the remainder the easy way. If we did not use the optimization above, left_it was not yet touched, so we
     // iterate over the entire input data.
@@ -92,8 +91,8 @@ class AbstractTableScanImpl {
     // more than once. Even on machines with 512-bit SIMD registers, we prefer to use 256 bits, because current Intel
     // CPUs clock down when 512-bit is used. If you want to run this with 512-bit registers, you need to change the
     // SIMD_SIZE here as well as replace _m256 with _m512 twice below.
-    // constexpr size_t SIMD_SIZE = 256 / 8;
-    constexpr size_t BLOCK_SIZE = 1;//SIMD_SIZE / sizeof(ChunkOffset);
+    constexpr size_t SIMD_SIZE = 256 / 8;
+    constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ChunkOffset);
 
     // The index at which we will write the next matching row
     auto matches_out_index = matches_out.size();
