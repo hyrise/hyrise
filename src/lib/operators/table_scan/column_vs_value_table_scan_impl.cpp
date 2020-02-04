@@ -10,7 +10,6 @@
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
-#include "utils/timer.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -123,7 +122,6 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };
-    Timer T;
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
       // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
@@ -136,7 +134,6 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
         _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       }
     });
-    std::cout << T.lap_formatted() << "\n";
   });
 
 }
