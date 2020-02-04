@@ -13,41 +13,13 @@ namespace opossum {
     std::vector<std::shared_ptr<AbstractLQPNode>>
     LQPGenerator::generate(OperatorType operator_type, std::shared_ptr<const CalibrationTableWrapper> table) const {
       switch (operator_type) {
-        case OperatorType::Aggregate:           break;
-        case OperatorType::Alias:               break;
-        case OperatorType::Delete:              break;
-        case OperatorType::Difference:          break;
-        case OperatorType::ExportBinary:        break;
-        case OperatorType::ExportCsv:           break;
-        case OperatorType::GetTable:            break;
-        case OperatorType::ImportBinary:        break;
-        case OperatorType::ImportCsv:           break;
-        case OperatorType::IndexScan:           break;
-        case OperatorType::Insert:              break;
-        case OperatorType::JoinHash:            break;
-        case OperatorType::JoinIndex:           break;
-        case OperatorType::JoinNestedLoop:      break;
-        case OperatorType::JoinSortMerge:       break;
-        case OperatorType::JoinVerification:    break;
-        case OperatorType::Limit:               break;
-        case OperatorType::Print:               break;
-        case OperatorType::Product:             break;
-        case OperatorType::Projection:          break;
-        case OperatorType::Sort:                break;
-        case OperatorType::TableScan:           return _generate_table_scans(table);
-        case OperatorType::TableWrapper:        break;
-        case OperatorType::UnionAll:            break;
-        case OperatorType::UnionPositions:      break;
-        case OperatorType::Update:              break;
-        case OperatorType::Validate:            break;
-        case OperatorType::CreateTable:         break;
-        case OperatorType::CreatePreparedPlan:  break;
-        case OperatorType::CreateView:          break;
-        case OperatorType::DropTable:           break;
-        case OperatorType::DropView:            break;
-        case OperatorType::Mock:                break;
+        case OperatorType::TableScan:
+          return _generate_table_scans(table);
+        case OperatorType::JoinHash:
+        default:
+          break;
       }
-      return std::vector<std::shared_ptr<AbstractLQPNode>>(); //TODO How to avoid this? (This line is never reached)
+      throw std::runtime_error("Not implemented yet: Only TableScans and JoinHashes are currentlysupported");
     }
 
     std::vector<std::shared_ptr<AbstractLQPNode>>
@@ -57,7 +29,6 @@ namespace opossum {
 
       std::vector<std::shared_ptr<AbstractLQPNode>> generated_lpqs;
 
-      // TODO remove the need of referencing columns by string
       const auto stored_table_node = StoredTableNode::make(table->get_name());
 
       const int column_count = table->get_table()->column_count();
@@ -106,22 +77,69 @@ namespace opossum {
               generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_null_(column), stored_table_node)));
 
 
-              // Add String-specific Scans
+              // Like Predicate for Strings
               if (std::is_same<ColumnDataType, std::string>::value) {
-                // Between
-                generated_lpqs.emplace_back(PredicateNode::make(between_inclusive_(column, "a", "b"), stored_table_node));
-                // Like
-                generated_lpqs.emplace_back(PredicateNode::make(like_(column, "   "), stored_table_node));
-                // column vs column scan (comparing two columns with each other)
-                generated_lpqs.emplace_back(PredicateNode::make(equals_(column, column), stored_table_node));
+                for (int step = 0; step < 10; step++) {
+                  auto const upper_bound = (SyntheticTableGenerator::generate_value<pmr_string>(step));
+                  generated_lpqs.emplace_back(PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
+                }
+
+                // 100% selectivity
+                generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%"), stored_table_node));
+                // 0% selectivity
+                generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%not_there%"), stored_table_node));
               }
+
           });
         }
       }
+      _generate_column_vs_column_scans(table, generated_lpqs);
       return generated_lpqs;
     }
 
-//    const std::vector<std::shared_ptr<AbstractLQPNode>> LQPGenerator::_generate_joins(std::shared_ptr<const CalibrationTableWrapper> sharedPtr) const {
-//
-//    }
+    void LQPGenerator::_generate_column_vs_column_scans(
+            const std::shared_ptr<const CalibrationTableWrapper> &table, std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_queue) const {
+      /*
+       * ColumnVsColumn Scans occur when the value of a predicate is a column.
+       * In this case every value from one column has to be compared to every value of the other
+       * making this operation somewhat costly and therefore requiring a dedicated test case.
+       *
+       * We implement this creating a columnVsColumn scan in between all the columns with same data type
+       */
+      const auto column_definitions = table->get_table()->column_definitions();
+      using ColumnPair = std::pair<const std::string, const std::string>;
+      // TODO shuffle order (otherwise pairing will be solely determined by the order in data generation)
+      auto column_vs_column_scan_pairs = std::vector<ColumnPair>();
+
+      // TODO check if reference wrapper makes sense here
+      auto singles = std::vector<TableColumnDefinition>();
+
+      // TODO Try to avoid copying in loop
+      for (const TableColumnDefinition& column : column_definitions) {
+        bool matched = false;
+        auto single_iterator = singles.begin();
+	      while (single_iterator < singles.end()) {
+	        if (column.data_type == single_iterator->data_type) {
+            matched = true;
+            column_vs_column_scan_pairs.emplace_back(ColumnPair(single_iterator->name, column.name));
+            singles.erase(single_iterator);
+            break;
+          }
+	        single_iterator++;
+        }
+        if (!matched) {
+          singles.emplace_back(column);
+        }
+      }
+
+      const auto stored_table_node = StoredTableNode::make(table->get_name());
+
+      for (const ColumnPair &pair : column_vs_column_scan_pairs) {
+        lqp_queue.emplace_back(PredicateNode::make(
+                greater_than_(
+                        stored_table_node->get_column(pair.first),
+                        stored_table_node->get_column(pair.second)
+                ), stored_table_node));
+      }
+    }
 }
