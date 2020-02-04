@@ -70,6 +70,7 @@ void AbstractTableGenerator::generate_and_store() {
           segments.emplace_back(chunk->get_segment(column_id));
         }
         table->append_chunk(segments, mvcc_data);
+        table->get_chunk(chunk_id)->finalize();
         table->get_chunk(chunk_id)->set_ordered_by({table->column_id_by_name(column_name), order_by_mode});
       }
 
