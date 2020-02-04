@@ -50,22 +50,17 @@ namespace opossum {
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
-  ColumnSpecification column_specification = {{ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)},
-                                              DataType::Int};
-  auto table = generate_table({num_columns, column_specification}, num_rows, chunk_size,
-                              std::vector<SegmentEncodingSpec>(num_columns, segment_encoding_spec), UseMvcc::No);
+  ColumnSpecification column_specification = {
+      {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}, DataType::Int, segment_encoding_spec};
+  auto table = generate_table({num_columns, column_specification}, num_rows, chunk_size, UseMvcc::No);
 
   return table;
 }
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::optional<ChunkEncodingSpec>& segment_encoding_specs, const UseMvcc use_mvcc) {
+    const UseMvcc use_mvcc) {
   Assert(chunk_size != 0ul, "Cannot generate table with chunk size 0.");
-  if (segment_encoding_specs) {
-    Assert(column_specifications.size() == segment_encoding_specs->size(),
-           "Length of value distributions needs to equal length of column encodings.");
-  }
 
   // To speed up the table generation, the node scheduler is used. To not interfere with any settings for the actual
   // Hyrise process (e.g., the test runner or the calibration), the current scheduler is stored, replaced, and
@@ -183,11 +178,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
                 std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
           }
 
-          if (!segment_encoding_specs) {
+          if (!column_specifications[column_index].segment_encoding_spec) {
             segments[column_index] = value_segment;
           } else {
-            segments[column_index] = ChunkEncoder::encode_segment(
-                value_segment, column_specifications[column_index].data_type, segment_encoding_specs->at(column_index));
+            segments[column_index] =
+                ChunkEncoder::encode_segment(value_segment, column_specifications[column_index].data_type,
+                                             column_specifications[column_index].segment_encoding_spec.value());
           }
         });
       }));

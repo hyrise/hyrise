@@ -60,12 +60,18 @@ struct ColumnDataDistribution {
 
 struct ColumnSpecification {
   ColumnSpecification(const ColumnDataDistribution& data_distribution, const DataType& data_type,
+                      const std::optional<SegmentEncodingSpec> segment_encoding_spec = std::nullopt,
                       const std::optional<std::string> name = std::nullopt,
                       const std::optional<float> null_ratio = std::nullopt)
-      : data_distribution(data_distribution), data_type(data_type), name(name), null_ratio(null_ratio) {}
+      : data_distribution(data_distribution),
+        data_type(data_type),
+        segment_encoding_spec(segment_encoding_spec),
+        name(name),
+        null_ratio(null_ratio) {}
 
   const ColumnDataDistribution data_distribution;
   const DataType data_type;
+  const std::optional<SegmentEncodingSpec> segment_encoding_spec;
   const std::optional<std::string> name;
   const std::optional<float> null_ratio;
 };
@@ -76,10 +82,9 @@ class SyntheticTableGenerator {
   std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows, const ChunkOffset chunk_size,
                                         const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
-  static std::shared_ptr<Table> generate_table(
-      const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows,
-      const ChunkOffset chunk_size, const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
-      const UseMvcc use_mvcc = UseMvcc::No);
+  static std::shared_ptr<Table> generate_table(const std::vector<ColumnSpecification>& column_specifications,
+                                               const size_t num_rows, const ChunkOffset chunk_size,
+                                               const UseMvcc use_mvcc = UseMvcc::No);
 
   /**
     * Function to create a typed value from an integer. The data generation creates integers with the requested
