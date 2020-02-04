@@ -23,7 +23,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       functor(begin, end);
     } else {
       auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
-      auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend()};
+      auto end = NonNullIterator{_segment.values().cbegin(), _segment.values().cend()};
       functor(begin, end);
     }
   }
