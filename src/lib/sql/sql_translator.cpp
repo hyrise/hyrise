@@ -41,8 +41,10 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -205,9 +207,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 5. GROUP BY clause
   // 6. HAVING clause
   // 7. SELECT clause (incl. DISTINCT)
-  // 8. UNION clause
-  // 9. ORDER BY clause
-  // 10. LIMIT clause
+  // 8. ORDER BY clause
+  // 9. LIMIT clause
+  // 10. UNION/INTERSECT/EXCEPT clause
+  // 11. UNION/INTERSECT/EXCEPT ORDER BY clause
+  // 12 UNION/INTERSECT/EXCEPT LIMIT clause
 
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
@@ -286,49 +290,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   return _current_lqp;
-}
-
-void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operator) {
-
-  const auto left_input_lqp = _current_lqp;
-
-  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
-  const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
-
-  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
-
-  AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(), "The size of tables connected via set operators needs to match");
-
-  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size(); ++column_expression_idx) {
-    const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
-    const auto& right_expression = right_input_lqp->column_expressions()[column_expression_idx];
-
-    AssertInput(left_expression->data_type() == right_expression->data_type(), "The data type of both columns needs to match");
-
-    join_predicates.emplace_back(
-          std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
-
-  }
-
-  auto lqp = std::shared_ptr<AbstractLQPNode>();
-
-  if (set_operator.setType == hsql::kSetExcept) {
-    lqp = JoinNode::make(JoinMode::Except, join_predicates, left_input_lqp, right_input_lqp);
-  } else if (set_operator.setType == hsql::kSetIntersect) {
-    lqp = JoinNode::make(JoinMode::Intersect, join_predicates, left_input_lqp, right_input_lqp);
-  }
-
-  if (!join_predicates.empty()) {
-    // Projection Node to remove duplicate columns
-    lqp = ProjectionNode::make(_unwrap_elements(_inflated_select_list_elements), lqp);
-  }
-
-  if (!set_operator.isAll) {
-    lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
-                                       std::vector<std::shared_ptr<AbstractExpression>>{}, lqp);
-  }
-
-  _current_lqp = lqp;
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
@@ -1082,6 +1043,49 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     _current_lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
                                        std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
   }
+}
+
+void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operator) {
+
+  const auto left_input_lqp = _current_lqp;
+
+  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
+  const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
+
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(), "The size of tables connected via set operators needs to match");
+
+  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size(); ++column_expression_idx) {
+    const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
+    const auto& right_expression = right_input_lqp->column_expressions()[column_expression_idx];
+
+    AssertInput(left_expression->data_type() == right_expression->data_type(), "The data type of both columns needs to match");
+
+    join_predicates.emplace_back(
+          std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
+
+  }
+
+  auto lqp = std::shared_ptr<AbstractLQPNode>();
+
+  if (set_operator.setType == hsql::kSetExcept) {
+    lqp = ExceptNode::make(UnionMode::Positions, join_predicates, left_input_lqp, right_input_lqp);
+  } else if (set_operator.setType == hsql::kSetIntersect) {
+    lqp = IntersectNode::make(UnionMode::Positions, join_predicates, left_input_lqp, right_input_lqp);
+  }
+
+  if (!join_predicates.empty()) {
+    // Projection Node to remove duplicate columns
+    lqp = ProjectionNode::make(_unwrap_elements(_inflated_select_list_elements), lqp);
+  }
+
+  if (!set_operator.isAll) {
+    lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
+                                       std::vector<std::shared_ptr<AbstractExpression>>{}, lqp);
+  }
+
+  _current_lqp = lqp;
 }
 
 void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*>& order_list) {
