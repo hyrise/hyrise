@@ -154,75 +154,65 @@ class SortedSegmentSearch {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
     if (_begin == _end) return;
 
-    if (_is_ascending) {
-      // early out everything matches
-      if (_begin->value() > _first_search_value && (_end - 1)->value() < *_second_search_value) {
-        return;
-      }
+    auto first_value = _begin->value();
+    auto last_value = (_end - 1)->value();
+    if (!_is_ascending) std::swap(first_value, last_value);
 
-      // early out nothing matches
-      if (_begin->value() > *_second_search_value || (_end - 1)->value() < _first_search_value) {
-        _begin = _end;
-        return;
-      }
-    } else {
-      // early out everything matches
-      if (_begin->value() < *_second_search_value && (_end - 1)->value() > _first_search_value) {
-        return;
-      }
-      // early out nothing matches
-      if ((_end - 1)->value() > *_second_search_value || _begin->value() < _first_search_value) {
-        _begin = _end;
-        return;
-      }
+    // early out everything matches
+    if (first_value > _first_search_value && last_value < *_second_search_value) return;
+
+    // early out nothing matches
+    if (first_value > *_second_search_value || last_value < _first_search_value) {
+      _begin = _end;
+      return;
     }
 
     // This implementation uses behaviour which resembles std::equal_range's
     // behaviour. However, std::equal_range returns all elements in range
     // [first, last), which describes only the PredicateCondition::BetweenInclusive case.
     // For the other PredicateConditions, different borders are required.
-    if (_is_ascending) {
+    auto predicate_condition = _predicate_condition;
+    auto first_search_value = _first_search_value;
+    auto second_search_value = *_second_search_value;
+
+    // exchange predicate conditions and search values if descending
+    if (!_is_ascending) {
       switch (_predicate_condition) {
-        case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(_first_search_value, _begin, _end);
-          _end = _get_last_bound(*_second_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_last_bound(_first_search_value, _begin, _end);
-          _end = _get_last_bound(*_second_search_value, _begin, _end);
-          return;
+        case PredicateCondition::BetweenLowerExclusive:
+          predicate_condition = PredicateCondition::BetweenUpperExclusive;
+          break;
         case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_first_bound(_first_search_value, _begin, _end);
-          _end = _get_first_bound(*_second_search_value, _begin, _end);
-          return;
+          predicate_condition = PredicateCondition::BetweenLowerExclusive;
+          break;
+        case PredicateCondition::BetweenInclusive:
         case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(_first_search_value, _begin, _end);
-          _end = _get_first_bound(*_second_search_value, _begin, _end);
-          return;
+          break;
         default:
           Fail("Unsupported predicate condition encountered");
       }
-    } else {
-      switch (_predicate_condition) {
-        case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(*_second_search_value, _begin, _end);
-          _end = _get_last_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_first_bound(*_second_search_value, _begin, _end);
-          _end = _get_first_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_last_bound(*_second_search_value, _begin, _end);
-          _end = _get_last_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(*_second_search_value, _begin, _end);
-          _end = _get_first_bound(_first_search_value, _begin, _end);
-          return;
-        default:
-          Fail("Unsupported predicate condition encountered");
-      }
+
+      std::swap(first_search_value, second_search_value);
+    }
+
+    switch (predicate_condition) {
+      case PredicateCondition::BetweenInclusive:
+        _begin = _get_first_bound(first_search_value, _begin, _end);
+        _end = _get_last_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
+        _begin = _get_last_bound(first_search_value, _begin, _end);
+        _end = _get_last_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenUpperExclusive:
+        _begin = _get_first_bound(first_search_value, _begin, _end);
+        _end = _get_first_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenExclusive:
+        _begin = _get_last_bound(first_search_value, _begin, _end);
+        _end = _get_first_bound(second_search_value, _begin, _end);
+        return;
+      default:
+        Fail("Unsupported predicate condition encountered");
     }
   }
 
