@@ -159,7 +159,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
       for (const auto& expression : node->right_input()->column_expressions()) {
         locally_required_expressions.emplace(expression);
-      } 
+      }
     } break;
 
     // No pruning of the input columns to Delete, Update and Insert, they need them all.

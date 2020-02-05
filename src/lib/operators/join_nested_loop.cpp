@@ -95,7 +95,8 @@ const std::string& JoinNestedLoop::name() const {
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate, _secondary_predicates);
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                          _secondary_predicates);
 }
 
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -134,8 +135,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   const auto pos_list_right = std::make_shared<PosList>();
 
   const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::Intersect || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::Except;
+  const auto is_semi_or_anti_join = _mode == JoinMode::Semi || _mode == JoinMode::Intersect ||
+                                    _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue ||
+                                    _mode == JoinMode::Except;
 
   const auto track_left_matches = is_outer_join || is_semi_or_anti_join;
   const auto track_right_matches = _mode == JoinMode::FullOuter;
@@ -220,7 +222,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
   // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.
   if (is_semi_or_anti_join) {
-    const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::Except;
+    const auto invert =
+        _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::Except;
 
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
       const auto chunk_left = left_table->get_chunk(chunk_id);

@@ -1046,25 +1046,27 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 }
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operator) {
-
   const auto left_input_lqp = _current_lqp;
 
-  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
+  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
+                                      _with_descriptions};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
 
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
-  AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(), "The size of tables connected via set operators needs to match");
+  AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(),
+              "The size of tables connected via set operators needs to match");
 
-  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size(); ++column_expression_idx) {
+  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size();
+       ++column_expression_idx) {
     const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
     const auto& right_expression = right_input_lqp->column_expressions()[column_expression_idx];
 
-    AssertInput(left_expression->data_type() == right_expression->data_type(), "The data type of both columns needs to match");
+    AssertInput(left_expression->data_type() == right_expression->data_type(),
+                "The data type of both columns needs to match");
 
     join_predicates.emplace_back(
-          std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
-
+        std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
   }
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
@@ -1082,7 +1084,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
 
   if (!set_operator.isAll) {
     lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
-                                       std::vector<std::shared_ptr<AbstractExpression>>{}, lqp);
+                              std::vector<std::shared_ptr<AbstractExpression>>{}, lqp);
   }
 
   _current_lqp = lqp;

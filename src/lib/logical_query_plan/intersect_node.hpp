@@ -5,14 +5,15 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 #include "lqp_column_reference.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public AbstractLQPNode {
  public:
-  explicit IntersectNode(const UnionMode union_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates);
+  explicit IntersectNode(const UnionMode union_mode,
+                         const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;

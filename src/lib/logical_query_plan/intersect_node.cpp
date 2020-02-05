@@ -11,7 +11,9 @@
 
 namespace opossum {
 
-IntersectNode::IntersectNode(const UnionMode union_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates) : AbstractLQPNode(LQPNodeType::Intersect, join_predicates), union_mode(union_mode) {}
+IntersectNode::IntersectNode(const UnionMode union_mode,
+                             const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates)
+    : AbstractLQPNode(LQPNodeType::Intersect, join_predicates), union_mode(union_mode) {}
 
 std::string IntersectNode::description(const DescriptionMode mode) const {
   return "[IntersectNode] Mode: " + union_mode_to_string.left.at(union_mode);

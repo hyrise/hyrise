@@ -11,7 +11,9 @@
 
 namespace opossum {
 
-ExceptNode::ExceptNode(const UnionMode union_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates) : AbstractLQPNode(LQPNodeType::Except, join_predicates), union_mode(union_mode) {}
+ExceptNode::ExceptNode(const UnionMode union_mode,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates)
+    : AbstractLQPNode(LQPNodeType::Except, join_predicates), union_mode(union_mode) {}
 
 std::string ExceptNode::description(const DescriptionMode mode) const {
   return "[ExceptNode] Mode: " + union_mode_to_string.left.at(union_mode);
@@ -27,9 +29,7 @@ bool ExceptNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& ExceptNode::join_predicates() const {
-    return node_expressions;
-}
+const std::vector<std::shared_ptr<AbstractExpression>>& ExceptNode::join_predicates() const { return node_expressions; }
 
 size_t ExceptNode::_on_shallow_hash() const { return boost::hash_value(union_mode); }
 

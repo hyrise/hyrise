@@ -436,7 +436,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   Fail("Invalid enum value");
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(const std::shared_ptr<AbstractLQPNode>& node) const {
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto intersect_node = std::dynamic_pointer_cast<IntersectNode>(node);
 
   const auto input_operator_left = translate_node(node->left_input());
@@ -447,7 +448,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(const
   const auto predicate_operators = _create_set_predicates(node, join_predicates);
 
   const auto& primary_predicate_operator = predicate_operators.front();
-  std::vector<OperatorJoinPredicate> secondary_join_predicates(predicate_operators.cbegin() + 1, predicate_operators.cend());
+  std::vector<OperatorJoinPredicate> secondary_join_predicates(predicate_operators.cbegin() + 1,
+                                                               predicate_operators.cend());
 
   switch (intersect_node->union_mode) {
     case UnionMode::Positions:
@@ -457,10 +459,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(const
       Fail("Set Operations with the ALL operator are currently not supported");
   }
   Fail("Invalid enum value");
-
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(const std::shared_ptr<AbstractLQPNode>& node) const {
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto except_node = std::dynamic_pointer_cast<ExceptNode>(node);
 
   const auto input_operator_left = translate_node(node->left_input());
@@ -471,7 +473,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(const st
   const auto predicate_operators = _create_set_predicates(node, join_predicates);
 
   const auto& primary_predicate_operator = predicate_operators.front();
-  std::vector<OperatorJoinPredicate> secondary_join_predicates(predicate_operators.cbegin() + 1, predicate_operators.cend());
+  std::vector<OperatorJoinPredicate> secondary_join_predicates(predicate_operators.cbegin() + 1,
+                                                               predicate_operators.cend());
 
   switch (except_node->union_mode) {
     case UnionMode::Positions:
@@ -481,10 +484,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(const st
       Fail("Set Operations with the ALL operator are currently not supported");
   }
   Fail("Invalid enum value");
-
 }
 
-std::vector<OperatorJoinPredicate> LQPTranslator::_create_set_predicates(const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& join_expressions) const {
+std::vector<OperatorJoinPredicate> LQPTranslator::_create_set_predicates(
+    const std::shared_ptr<AbstractLQPNode>& node,
+    const std::vector<std::shared_ptr<AbstractExpression>>& join_expressions) const {
   std::vector<OperatorJoinPredicate> join_predicates;
   join_predicates.reserve(join_expressions.size());
 
