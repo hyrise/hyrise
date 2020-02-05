@@ -892,23 +892,24 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     if (include_null_left || include_null_right) {
       auto null_output_left = std::make_shared<PosList>();
       auto null_output_right = std::make_shared<PosList>();
-      null_output_left->reserve(_null_rows_left->size());
-      null_output_right->reserve(_null_rows_right->size());
 
       // Add the outer join rows which had a null value in their join column
       if (include_null_left) {
-        for (auto row_id_left : *_null_rows_left) {
+        null_output_left->reserve(_null_rows_left->size());
+        null_output_right->insert(null_output_right->end(), _null_rows_left->size(), NULL_ROW_ID);
+        for (const auto& row_id_left : *_null_rows_left) {
           null_output_left->push_back(row_id_left);
-          null_output_right->push_back(NULL_ROW_ID);
         }
       }
       if (include_null_right) {
-        for (auto row_id_right : *_null_rows_right) {
-          null_output_left->push_back(NULL_ROW_ID);
+        null_output_left->insert(null_output_left->end(), _null_rows_right->size(), NULL_ROW_ID);
+        null_output_right->reserve(_null_rows_right->size());
+        for (const auto& row_id_right : *_null_rows_right) {
           null_output_right->push_back(row_id_right);
         }
       }
 
+      // TODO(anyone): when chunks are marked as 
       _output_pos_lists_left.push_back(null_output_left);
       _output_pos_lists_right.push_back(null_output_right);
     }
@@ -926,6 +927,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto write_output_chunk = [this, pos_list_id, &output_chunks] {
         Segments segments;
         _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+        _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
         output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
       };
 
