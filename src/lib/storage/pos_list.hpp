@@ -85,11 +85,11 @@ class PosList : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::get_allocator;
 
   // Element access
-  RowID operator[](size_t n) const override {
+  RowID operator[](size_t n) const final {
     return Vector::operator[](n);
   }
 
-  RowID& operator[](size_t n) override {
+  RowID& operator[](size_t n) final {
     return Vector::operator[](n);
   }
 
