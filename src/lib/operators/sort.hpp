@@ -32,7 +32,7 @@ struct SortColumnDefinition final {
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
+  explicit Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
           size_t output_chunk_size = Chunk::DEFAULT_SIZE);
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
