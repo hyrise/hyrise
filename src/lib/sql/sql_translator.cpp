@@ -41,8 +41,10 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -313,9 +315,9 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
   if (set_operator.setType == hsql::kSetExcept) {
-    lqp = JoinNode::make(JoinMode::Except, join_predicates, left_input_lqp, right_input_lqp);
+    lqp = ExceptNode::make(UnionMode::Positions, join_predicates, left_input_lqp, right_input_lqp);
   } else if (set_operator.setType == hsql::kSetIntersect) {
-    lqp = JoinNode::make(JoinMode::Intersect, join_predicates, left_input_lqp, right_input_lqp);
+    lqp = IntersectNode::make(UnionMode::Positions, join_predicates, left_input_lqp, right_input_lqp);
   }
 
   if (!join_predicates.empty()) {
