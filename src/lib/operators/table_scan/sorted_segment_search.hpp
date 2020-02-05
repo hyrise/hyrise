@@ -26,8 +26,7 @@ class SortedSegmentSearch {
         _second_search_value{std::nullopt},
         _nullable{nullable},
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending},
-        _is_between_scan{false} {}
+        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
   // For SortedSegmentBetweenSearch
   SortedSegmentSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by, const bool nullable,
@@ -40,8 +39,7 @@ class SortedSegmentSearch {
         _second_search_value{right_value},
         _nullable{nullable},
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending},
-        _is_between_scan{true} {}
+        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
   /**
@@ -277,7 +275,7 @@ class SortedSegmentSearch {
  public:
   template <typename ResultConsumer>
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
-    if (_is_between_scan) {
+    if (_second_search_value) {
       // decrease the effective sort range by excluding null values based on their ordering (first or last)
       if (_nullable) {
         _exponential_search_for_nulls(_begin, _end);
@@ -316,7 +314,6 @@ class SortedSegmentSearch {
   const bool _nullable;
   const bool _is_ascending;
   const bool _is_nulls_first;
-  const bool _is_between_scan;
 };
 
 }  // namespace opossum
