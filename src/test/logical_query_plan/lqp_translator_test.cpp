@@ -299,7 +299,6 @@ TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
   ASSERT_TRUE(expression_b);
 }
 
-// TODO(anyone): Fix failing test.
 TEST_F(LQPTranslatorTest, Sort) {
   /**
    * Build LQP and translate to PQP

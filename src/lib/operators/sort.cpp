@@ -150,9 +150,7 @@ std::shared_ptr<const Table> Sort::_get_materialized_output(const std::shared_pt
   return output;
 }
 
-void Sort::_on_cleanup() {
-  // TODO(anyone): Implement, if necessary
-}
+void Sort::_on_cleanup() {}
 
 /**
  * Asserts that all column definitions are valid.
