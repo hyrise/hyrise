@@ -26,8 +26,8 @@ struct SortColumnDefinition final {
 };
 
 /**
- * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
- * maintain their relative order.
+ * Operator to sort a table by one or multiple columns. This implements a stable sort, i.e., rows that share the same
+ * value will maintain their relative order.
  * By passing multiple sort column definitions it is possible to sort multiple columns with one operator run.
  */
 class Sort : public AbstractReadOnlyOperator {
