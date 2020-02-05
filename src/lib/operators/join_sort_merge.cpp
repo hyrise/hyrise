@@ -923,17 +923,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
-      auto wrote_first_chunk = false;
-      auto write_output_chunk = [this, pos_list_id, &output_chunks, &wrote_first_chunk] {
+      auto write_output_chunk = [this, pos_list_id, &output_chunks] {
         Segments segments;
-        if (wrote_first_chunk && _output_pos_lists_left[pos_list_id]->empty()) {
+        if (_output_pos_lists_left[pos_list_id]->empty()) {
           // do not write empty chunks
           return;
         }
         _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
         _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
         output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
-        wrote_first_chunk = true;
       };
 
       if (write_output_concurrently) {
