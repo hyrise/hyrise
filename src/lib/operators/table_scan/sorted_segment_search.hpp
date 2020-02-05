@@ -149,7 +149,7 @@ class SortedSegmentSearch {
     // clang-format on
   }
 
-  // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
+  // This function sets the offsets that delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end_between_scan() {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
     if (_begin == _end) return;
