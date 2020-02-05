@@ -2624,7 +2624,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, SetOperationDoubleExcept) {
+/* TEST_F(SQLTranslatorTest, SetOperationDoubleExcept) {
   const auto actual_lqp = compile_query(
       "SELECT a FROM int_int_int_a "
       "EXCEPT "
@@ -2633,13 +2633,13 @@ TEST_F(SQLTranslatorTest, SetOperationDoubleExcept) {
       "SELECT c FROM int_int_int_c;");
 
   // clang-format off
-  const auto b_equals_c = equals_(int_int_int_b, int_int_int_c);
   const auto a_equals_b = equals_(int_int_int_a, int_int_int_b);
+  const auto b_equals_c = equals_(int_int_int_b, int_int_int_c);
   //const auto aliase = std::vector<std::string>{"a1"};
 
-  const auto query1 = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
-  const auto query2 = ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2);
-  const auto query3 = ProjectionNode::make(expression_vector())
+  const auto query1 = ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int);
+  const auto query2 = ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int);
+  const auto query3 = ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int);
 
   const auto join_lqp = JoinNode::make(JoinMode::Except, a_equals_a2, left_projection, right_projection);
   const auto projection_lqp = ProjectionNode::make(expression_vector(int_float_a), join_lqp);
@@ -2650,5 +2650,5 @@ TEST_F(SQLTranslatorTest, SetOperationDoubleExcept) {
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
-
+ */
 }  // namespace opossum
