@@ -909,7 +909,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
 
-      // TODO(anyone): when chunks are marked as 
       _output_pos_lists_left.push_back(null_output_left);
       _output_pos_lists_right.push_back(null_output_right);
     }
@@ -926,6 +925,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
       auto write_output_chunk = [this, pos_list_id, &output_chunks] {
         Segments segments;
+        if (_output_pos_lists_left[pos_list_id]->empty()) {
+          // do not write empty chunks
+          return;
+        }
         _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
         _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
         output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
@@ -941,6 +944,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+
+    // TODO(anyone): check if output is sorted for NULL-adding joins.
 
     return _sort_merge_join._build_output_table(std::move(output_chunks));
   }
