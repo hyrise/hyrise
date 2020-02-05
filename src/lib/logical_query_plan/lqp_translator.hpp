@@ -71,7 +71,9 @@ class LQPTranslator {
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  std::vector<OperatorJoinPredicate> _create_set_predicates(const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& join_expressions) const;
+  std::vector<OperatorJoinPredicate> _create_set_predicates(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& join_expressions) const;
 
   // Cache operator subtrees by LQP node to avoid redundantly executing
   //   - identical operators (operators below a diamond shape)

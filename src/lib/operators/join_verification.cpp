@@ -170,7 +170,6 @@ bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicat
   const auto variant_right = tuple_right[predicate.column_ids.second];
 
   if (variant_is_null(variant_left) || variant_is_null(variant_right)) {
-
     if (_mode == JoinMode::AntiNullAsTrue) {
       return true;
     }

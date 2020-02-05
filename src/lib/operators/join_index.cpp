@@ -90,8 +90,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _index_matches.resize(_index_input_table->chunk_count());
   _probe_matches.resize(_probe_input_table->chunk_count());
 
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::Except || _mode == JoinMode::Intersect;
+  const auto is_semi_or_anti_join = _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse ||
+                                    _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::Except ||
+                                    _mode == JoinMode::Intersect;
 
   const auto track_probe_matches = _mode == JoinMode::FullOuter ||
                                    (_mode == JoinMode::Left && _index_side == IndexSide::Right) ||

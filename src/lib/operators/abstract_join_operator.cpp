@@ -82,7 +82,8 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   }
 
   // Preparing output table by adding segments from right table
-  if (_mode != JoinMode::Semi && _mode != JoinMode::Intersect && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse && _mode != JoinMode::Except) {
+  if (_mode != JoinMode::Semi && _mode != JoinMode::Intersect && _mode != JoinMode::AntiNullAsTrue &&
+      _mode != JoinMode::AntiNullAsFalse && _mode != JoinMode::Except) {
     for (ColumnID column_id{0}; column_id < right_in_table->column_count(); ++column_id) {
       const auto nullable = (right_may_produce_null || right_in_table->column_is_nullable(column_id));
       output_column_definitions.emplace_back(right_in_table->column_name(column_id),
