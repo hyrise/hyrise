@@ -3,6 +3,8 @@
 #include <functional>
 #include <unordered_map>
 
+#include "boost/tuple/tuple.hpp"
+
 #include "types.hpp"
 
 namespace opossum {
@@ -16,6 +18,12 @@ class MetaTableManager : public Noncopyable {
   // Returns a sorted list of all meta table names (without prefix)
   const std::vector<std::string>& table_names() const;
 
+  bool has_table(const std::string& table_name) const;
+  bool table_is_mutable(const std::string& table_name) const;
+
+  void insert_into(const std::string& table_name, const std::string& value);
+  void delete_from(const std::string& table_name, const std::string& value);
+
   // Generates the meta table specified by table_name (which should not include the prefix)
   std::shared_ptr<Table> generate_table(const std::string& table_name) const;
 
@@ -26,6 +34,7 @@ class MetaTableManager : public Noncopyable {
   static std::shared_ptr<Table> generate_chunk_sort_orders_table();
   static std::shared_ptr<Table> generate_segments_table();
   static std::shared_ptr<Table> generate_accurate_segments_table();
+  static std::shared_ptr<Table> generate_plugins_table();
 
   // Returns name.starts_with(META_PREFIX) as stdlibc++ does not support starts_with yet.
   static bool is_meta_table_name(const std::string& name);
@@ -34,8 +43,21 @@ class MetaTableManager : public Noncopyable {
   friend class Hyrise;
   MetaTableManager();
 
+  static void _insert_into_plugins(const std::string& value);
+  static void _delete_from_plugins(const std::string& value);
+
   std::unordered_map<std::string, std::function<std::shared_ptr<Table>(void)>> _methods;
+  std::unordered_map< std::string,
+
+  tuple<
+  //std::shared_ptr<Table>(const std::string&)>, 2>> _mutating_methods;
+
+   std::function<std::shared_ptr<Table>(const std::string&)>,
+   std::function<std::shared_ptr<Table>(const std::string&)>>> _mutating_methods;
+
+
   std::vector<std::string> _table_names;
+  std::vector<std::string> _mutable_table_names;
 };
 
 }  // namespace opossum

@@ -10,10 +10,17 @@
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace {
 
 using namespace opossum;  // NOLINT
+
+#ifdef __APPLE__
+#define DYNAMIC_LIBRARY_SUFFIX ".dylib"
+#elif __linux__
+#define DYNAMIC_LIBRARY_SUFFIX ".so"
+#endif
 
 // TODO(anyone): #1968 introduced this namespace. With the expected growth of the meta table manager of time, there
 //               might be a large number of helper function that are only loosely related to the core functionality
@@ -89,25 +96,61 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
 namespace opossum {
 
-MetaTableManager::MetaTableManager() {
-  _methods["tables"] = &MetaTableManager::generate_tables_table;
+MetaTableManager::MetaTableManager()
+{  _methods["tables"] = &MetaTableManager::generate_tables_table;
   _methods["columns"] = &MetaTableManager::generate_columns_table;
   _methods["chunks"] = &MetaTableManager::generate_chunks_table;
   _methods["chunk_sort_orders"] = &MetaTableManager::generate_chunk_sort_orders_table;
   _methods["segments"] = &MetaTableManager::generate_segments_table;
   _methods["segments_accurate"] = &MetaTableManager::generate_accurate_segments_table;
+  _methods["plugins"] = &MetaTableManager::generate_plugins_table;
+
+  //const auto a = std::make_tuple(&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins);
+  //auto a =  {&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins};
+  tuple<std::function<std::shared_ptr<Table>(const std::string&)>,
+   std::function<std::shared_ptr<Table>(const std::string&)>>(&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins) a;
+
+  _mutating_methods["plugins"] = a;
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
     _table_names.emplace_back(table_name);
   }
   std::sort(_table_names.begin(), _table_names.end());
+
+  _mutable_table_names.reserve(_mutating_methods.size());
+  for (const auto& [table_name, _] : _mutating_methods) {
+    _mutable_table_names.emplace_back(table_name);
+  }
+  std::sort(_mutable_table_names.begin(), _mutable_table_names.end());
 }
 
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
 
+bool MetaTableManager::has_table(const std::string& table_name) const {
+  return _methods.count(table_name);
+}
+
+bool MetaTableManager::table_is_mutable(const std::string& table_name) const {
+  return _mutating_methods.count(table_name);
+}
+
+void MetaTableManager::insert_into(const std::string& table_name, const std::string& value) {
+  Assert(table_is_mutable(table_name), "Cannot insert into " + table_name);
+
+  _mutating_methods.at(table_name)[0](value);
+}
+
+void MetaTableManager::delete_from(const std::string& table_name, const std::string& value) {
+    Assert(table_is_mutable(table_name), "Cannot delete from " + table_name);
+
+    _mutating_methods.at(table_name)[1](value);
+   //(_mutating_methods.at(table_name).second)(value);
+}
+
 std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
   const auto table = _methods.at(table_name)();
+  table->last_chunk()->finalize();
   table->set_table_statistics(TableStatistics::from_table(*table));
   return table;
 }
@@ -227,6 +270,26 @@ std::shared_ptr<Table> MetaTableManager::generate_accurate_segments_table() {
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Full);
 
   return output_table;
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_plugins_table() {
+  const auto columns = TableColumnDefinitions{{"plugin_name", DataType::String, false}};
+
+  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
+
+  for (const auto& plugin : Hyrise::get().plugin_manager.plugin_names()) {
+    output_table->append({pmr_string{plugin}});
+  }
+
+  return output_table;
+}
+
+void MetaTableManager::_insert_into_plugins(const std::string& value) {
+  Hyrise::get().plugin_manager.load_plugin(value + DYNAMIC_LIBRARY_SUFFIX);
+}
+
+void MetaTableManager::_delete_from_plugins(const std::string& value) {
+  Hyrise::get().plugin_manager.unload_plugin(value);
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
