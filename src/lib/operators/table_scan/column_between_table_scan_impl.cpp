@@ -61,8 +61,8 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
     // ReferenceSegments are handled via position_filter
     if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
                   !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
-      auto typed_left_value = boost::get<ColumnDataType>(left_value);
-      auto typed_right_value = boost::get<ColumnDataType>(right_value);
+      const auto typed_left_value = boost::get<ColumnDataType>(left_value);
+      const auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
       with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
         auto between_comparator = [&](const auto& position) {
@@ -155,9 +155,8 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
                                 boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
 
-        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          _handle_search_results(begin, end, chunk_id, matches, position_filter);
-        });
+        sorted_segment_search.scan_sorted_segment(
+            [&](auto begin, auto end) { _handle_search_results(begin, end, chunk_id, matches, position_filter); });
       });
     }
   });

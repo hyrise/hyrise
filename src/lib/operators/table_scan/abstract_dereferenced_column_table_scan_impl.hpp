@@ -46,7 +46,7 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
 
   template <typename IteratorType>
   void _handle_search_results(IteratorType begin, IteratorType end, const ChunkID chunk_id, PosList& matches,
-                               const std::shared_ptr<const PosList>& position_filter) const {
+                              const std::shared_ptr<const PosList>& position_filter) const {
     if (begin == end) return;
 
     // General note: If the predicate is NotEquals, there might be two matching ranges. scan_sorted_segment
@@ -76,8 +76,7 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
         matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
       }
     }
-}
-
+  }
 };
 
 }  // namespace opossum
