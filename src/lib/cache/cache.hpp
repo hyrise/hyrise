@@ -91,8 +91,8 @@ class Cache {
   Iterator unsafe_end() { return _impl->end(); }
 
   // Returns a reference to the underlying cache.
-  AbstractCacheImpl<Key, Value>& unsafe_cache() { return *_impl; }
-  const AbstractCacheImpl<Key, Value>& unsafe_cache() const { return *_impl; }
+  AbstractCacheImpl<Key, Value, Hash, KeyEqual>& unsafe_cache() { return *_impl; }
+  const AbstractCacheImpl<Key, Value, Hash, KeyEqual>& unsafe_cache() const { return *_impl; }
 
  protected:
   // Underlying cache eviction strategy.
