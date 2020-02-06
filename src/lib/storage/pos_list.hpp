@@ -126,6 +126,10 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
+  Vector& as_vector() {
+    return static_cast<Vector&>(*this);
+  }
+
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override {
     // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
     return size() * sizeof(Vector::value_type);
@@ -149,24 +153,16 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
     return static_cast<const pmr_vector<RowID>&>(*this) == other;
   }
 
+  PosListIterator<true> begin() {
+    return PosListIterator<true>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
+  }
+
+  PosListIterator<true> end() {
+    return PosListIterator<true>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
+  }
 
  private:
   bool _references_single_chunk = false;
 };
-
-inline AbstractPosList::PosListIterator<true> AbstractPosList::begin() {
-  if (dynamic_cast<PosList*>(this)) {
-    return PosListIterator<true>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
-  }
-  Fail("asd");
-}
-
-inline AbstractPosList::PosListIterator<true> AbstractPosList::end() {
-  if (dynamic_cast<PosList*>(this)) {
-    return PosListIterator<true>(this, ChunkOffset{static_cast<ChunkOffset>(size())}, ChunkOffset{static_cast<ChunkOffset>(size())});
-  }
-  Fail("asd");
-}
-
 
 }  // namespace opossum

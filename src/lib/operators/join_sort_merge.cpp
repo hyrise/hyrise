@@ -821,7 +821,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Move the entries over the output pos list
     output->reserve(total_size);
     for (auto& pos_list : pos_lists) {
-      output->insert(output->end(), pos_list->begin(), pos_list->end());
+      output->insert(output->as_vector().end(), pos_list->as_vector().begin(), pos_list->as_vector().end());
     }
 
     return output;

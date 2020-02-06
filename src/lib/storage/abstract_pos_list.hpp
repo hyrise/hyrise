@@ -25,8 +25,7 @@ public:
     _max_size = max_size;
   }
 
-  PosListIterator() = default;
-
+  PosListIterator() = delete;
 
   void increment() { ++_chunk_offset; }
 
@@ -34,15 +33,13 @@ public:
 
   void advance(std::ptrdiff_t n) { _chunk_offset += n; }
 
-
   bool equal(const PosListIterator& other) const {
-    // assert + chunk offset compare
-    // DebugAssert()!!!
+    DebugAssert(_pl_pointer == other._pl_pointer, "You trusted me and I failed you.");
     return other._chunk_offset == _chunk_offset;
   }
 
   std::ptrdiff_t distance_to(const PosListIterator& other) const {
-    return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
+    return static_cast<std::ptrdiff_t>(other._chunk_offset - _chunk_offset);
   }
 
   DereferenceReturnType dereference() const;
@@ -67,14 +64,11 @@ public:
   virtual RowID operator[](size_t n) const = 0;
 
   PosListIterator<false> begin() const {
-    return PosListIterator<false>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
+    return PosListIterator<false>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
   }
 
-  PosListIterator<true> begin();
-  PosListIterator<true> end();
-
   PosListIterator<false> end() const {
-    return PosListIterator<false>(this, ChunkOffset{static_cast<ChunkOffset>(size())}, ChunkOffset{static_cast<ChunkOffset>(size())});
+    return PosListIterator<false>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
   }
 
   PosListIterator<false> cbegin() const {
@@ -96,6 +90,5 @@ public:
   // template <typename Functor>
   // void for_each(const Functor& functor) const;
 };
-
 
 }  // namespace opossum
