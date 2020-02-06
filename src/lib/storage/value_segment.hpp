@@ -42,11 +42,9 @@ class ValueSegment : public BaseValueSegment {
     return _values[chunk_offset];
   }
 
-  // Add a value to the end of the segment. Not thread-safe.
+  // Add a value to the end of the segment. Not thread-safe. May fail if ValueSegment was not initially created with
+  // sufficient capacity.
   void append(const AllTypeVariant& val) final;
-
-  // Allocate enough space to hold at least @param capacity entries. Not thread-safe.
-  void reserve(const size_t capacity) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.

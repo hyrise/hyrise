@@ -62,6 +62,8 @@ T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
 
 template <typename T>
 void ValueSegment<T>::append(const AllTypeVariant& val) {
+  Assert(size() < capacity(), "ValueSegment is full");
+
   bool is_null = variant_is_null(val);
 
   if (is_nullable()) {
@@ -73,12 +75,6 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
   Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
 
   _values.push_back(boost::get<T>(val));
-}
-
-template <typename T>
-void ValueSegment<T>::reserve(const size_t capacity) {
-  _values.reserve(capacity);
-  if (_null_values) _null_values->reserve(capacity);
 }
 
 template <typename T>

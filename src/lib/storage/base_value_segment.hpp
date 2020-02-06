@@ -26,7 +26,5 @@ class BaseValueSegment : public BaseSegment {
    */
   virtual const pmr_vector<bool>& null_values() const = 0;
   virtual pmr_vector<bool>& null_values() = 0;
-
-  virtual void reserve(const size_t capacity) = 0;
 };
 }  // namespace opossum

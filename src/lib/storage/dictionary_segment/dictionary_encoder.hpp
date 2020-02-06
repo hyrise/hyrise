@@ -77,8 +77,9 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       }
     }
 
-    // The dictionary size is incremented here to create the value ID for possible null values.
-    const auto max_value_id = dictionary->size() + 1u;
+    // While the highest value ID used for a value is (dictionary->size() - 1), we need to account for NULL values,
+    // encoded as (dictionary->size()).
+    const auto max_value_id = dictionary->size();
 
     const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(compress_vector(
         uncompressed_attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
