@@ -66,8 +66,6 @@ public:
 
   virtual RowID operator[](size_t n) const = 0;
 
-  virtual RowID& operator[](size_t n) = 0;
-
   PosListIterator<false> begin() const {
     return PosListIterator<false>(this, ChunkOffset{0}, ChunkOffset{static_cast<ChunkOffset>(size())});
   }
