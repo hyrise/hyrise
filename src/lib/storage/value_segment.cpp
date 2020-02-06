@@ -62,7 +62,7 @@ T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
 
 template <typename T>
 void ValueSegment<T>::append(const AllTypeVariant& val) {
-  Assert(size() < capacity(), "ValueSegment is full");
+  Assert(size() < _values.capacity(), "ValueSegment is full");
 
   bool is_null = variant_is_null(val);
 
