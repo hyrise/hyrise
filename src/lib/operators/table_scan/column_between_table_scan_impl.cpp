@@ -151,9 +151,10 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        auto sorted_segment_search =
-            SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
-                                boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
+        auto typed_left_value = boost::get<ColumnDataType>(left_value);
+        auto typed_right_value = boost::get<ColumnDataType>(right_value);
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable,
+                                                         predicate_condition, typed_left_value, typed_right_value);
 
         sorted_segment_search.scan_sorted_segment(
             [&](auto begin, auto end) { _handle_search_results(begin, end, chunk_id, matches, position_filter); });
