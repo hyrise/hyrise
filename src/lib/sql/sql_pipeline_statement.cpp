@@ -14,6 +14,7 @@
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"

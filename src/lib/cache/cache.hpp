@@ -90,12 +90,9 @@ class Cache {
   Iterator unsafe_begin() { return _impl->begin(); }
   Iterator unsafe_end() { return _impl->end(); }
 
-  // Returns the access frequency of a cached item (=1 for set(), +1 for each get()). Returns 0 for keys not being
-  // cache-resident.
-  size_t frequency(const Key& key) {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
-    return _impl->frequency(key);
-  }
+  // Returns a reference to the underlying cache.
+  AbstractCacheImpl<Key, Value>& unsafe_cache() { return *_impl; }
+  const AbstractCacheImpl<Key, Value>& unsafe_cache() const { return *_impl; }
 
  protected:
   // Underlying cache eviction strategy.

@@ -69,13 +69,13 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
     IndexMemoryConsumption
   Tested functions:
     size_t memory_consumption() const;
-  
+
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|
   |[A] index is empty               |    true |   false |
   |[B] index has NULL positions     |    true |   false |
   |[C] index has non-NULL positions |    true |   false |
-  
+
   Base Choice:
     A2, B1, C1
   Further derived combinations:
@@ -85,10 +85,10 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
     A1, B2, C2 <-alternative-<-+
 */
 TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
-  const auto& dict_segment_int_no_nulls = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {13, 37});
+  const auto& dict_segment_int_no_nulls = create_dict_segment_by_type<int32_t>(DataType::Int, {13, 37});
   const auto& dict_segment_int_nulls =
-      BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt});
-  const auto& dict_segment_int_empty = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {});
+      create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt});
+  const auto& dict_segment_int_empty = create_dict_segment_by_type<int32_t>(DataType::Int, {});
   const auto& index_int_empty =
       std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_empty}));
   const auto& index_int_no_nulls =

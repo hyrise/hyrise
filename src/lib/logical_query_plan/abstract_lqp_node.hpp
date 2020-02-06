@@ -20,6 +20,7 @@ enum class LQPNodeType {
   DropView,
   DropTable,
   DummyTable,
+  Export,
   Import,
   Insert,
   Join,
@@ -106,8 +107,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /** @} */
 
   /**
-   * @param input_node_mapping     if the LQP contains external expressions, a mapping for the nodes used by them needs
-   *                               to be provided
+   * @param input_node_mapping     If the LQP contains external expressions, a mapping for the nodes used by them needs
+   *                               to be provided.
    * @return                       A deep copy of the LQP this Node is the root of
    */
   std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping input_node_mapping = {}) const;
@@ -174,7 +175,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  protected:
   /**
    * Override to hash data fields in derived types. No override needed if derived expression has no
-   * data members.
+   * data members. We do not need to take care of the input nodes here since they are already handled
+   * by the calling methods.
    */
   virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
