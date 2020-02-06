@@ -100,34 +100,39 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
+const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(std::vector<std::shared_ptr<AbstractExpression>>& values) {
+    auto& unoptimized_lqp = get_unoptimized_logical_plan();
+
+    ParameterID parameter_id(0);
+
+    visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+        if (node) {
+            for (auto& root_expression : node->node_expressions) {
+                visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
+                    if (expression->type == ExpressionType::Value || expression->type == ExpressionType::List) {
+                        values.push_back(expression);
+                        expression = std::make_shared<PlaceholderExpression>(parameter_id);
+                        parameter_id++;
+                    }
+                    return ExpressionVisitation::VisitArguments;
+                });
+            }
+        }
+        return LQPVisitation::VisitInputs;
+    });
+
+    return unoptimized_lqp;
+}
+
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan) {
     return _optimized_logical_plan;
   }
 
-  auto unoptimized_lqp = get_unoptimized_logical_plan();
-
-  std::vector<std::shared_ptr<AbstractExpression>> values;
-  ParameterID parameter_id(0);
-
   const auto started_cache = std::chrono::high_resolution_clock::now();
 
-  visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
-    if (node) {
-      for (auto& root_expression : node->node_expressions) {
-        visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-          if (expression->type == ExpressionType::Value || expression->type == ExpressionType::List) {
-            values.push_back(expression);
-            expression = std::make_shared<PlaceholderExpression>(parameter_id);
-            parameter_id++;
-          }
-          return ExpressionVisitation::VisitArguments;
-        });
-      }
-    }
-    return LQPVisitation::VisitInputs;
-  });
-
+  std::vector<std::shared_ptr<AbstractExpression>> values;
+  const auto unoptimized_lqp = get_split_unoptimized_logical_plan(values);
 
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
@@ -162,7 +167,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   const auto done_optimize = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
 
-  std::vector<ParameterID> all_parameter_ids(parameter_id);
+  std::vector<ParameterID> all_parameter_ids(values.size());
   std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
   auto prepared_plan = std::make_shared<PreparedPlan>(optimized_without_values, all_parameter_ids);
 

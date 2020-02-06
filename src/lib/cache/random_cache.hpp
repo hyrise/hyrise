@@ -12,12 +12,12 @@ namespace opossum {
 
 // Generic cache implementation using a random eviction policy.
 // Note: This implementation is not thread-safe.
-template <typename Key, typename Value>
-class RandomCache : public AbstractCacheImpl<Key, Value> {
+template <typename Key, typename Value, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+class RandomCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
  public:
-  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::KeyValuePair;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::AbstractIterator;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
   class Iterator : public AbstractIterator {
    public:
@@ -26,7 +26,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
 
    private:
     friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+    friend class AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
     IteratorType _wrapped_iterator;
 
@@ -40,7 +40,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   };
 
   explicit RandomCache(size_t capacity)
-      : AbstractCacheImpl<Key, Value>(capacity), _gen(_rd()), _rand(0, static_cast<int>(capacity - 1)) {
+      : AbstractCacheImpl<Key, Value, Hash, KeyEqual>(capacity), _gen(_rd()), _rand(0, static_cast<int>(capacity - 1)) {
     _list.reserve(capacity);
   }
 
