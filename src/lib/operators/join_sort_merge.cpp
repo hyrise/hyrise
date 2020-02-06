@@ -816,7 +816,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // Add the segment data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
         // Create a pos_list referencing the original segment instead of the reference segment
-        // TODO(anyone): consider caching the pos list revolving as done in the hash join when it becomes a bottleneck here.
+        // TODO(anyone): consider caching of dereferenced pos lists (as done in the hash join) when derefencing
+        //               becomes a bottleneck here.
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
@@ -950,9 +951,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
 
     // Remove empty chunks which occur due to empty radix clusters or not matching tuples of clusters.
-    output_chunks.erase(std::remove_if(output_chunks.begin(), output_chunks.end(), [](const auto& output_chunk){
-      return !output_chunk || output_chunk->size() == 0;
-    }), output_chunks.end());
+    output_chunks.erase(
+        std::remove_if(output_chunks.begin(), output_chunks.end(),
+                       [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
+        output_chunks.end());
 
     // TODO(anyone): when setting chunk ordered by flags, check if output is really sorted for NULL-adding joins.
     return _sort_merge_join._build_output_table(std::move(output_chunks));
