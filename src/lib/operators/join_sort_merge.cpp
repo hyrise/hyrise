@@ -816,7 +816,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       // Add the segment data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
         // Create a pos_list referencing the original segment instead of the reference segment
-        // TODO: consider caching the pos list revolving as done in the hash join when it becomes a bottleneck here.
+        // TODO(anyone): consider caching the pos list revolving as done in the hash join when it becomes a bottleneck here.
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
