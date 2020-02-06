@@ -7,10 +7,13 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "all_type_variant.hpp"
+
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/placeholder_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -22,6 +25,8 @@
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
@@ -113,18 +118,39 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   bool contains_non_uniform_distribution = false;
 
-  visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+
+  visit_lqp(unoptimized_lqp, [&contains_non_uniform_distribution](const auto& node) {
     if (node) {
       const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
       if (table_node) {
         const auto &table_statistics = table_node->table_statistics;
-        for (auto &expression: table_node->column_expressions())
-        table_statistics->column_statistics[table_node->get_cloumn()]
 
+        for (auto &expression: table_node->column_expressions()) {
+          const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+          assert(column_expression);
+          const auto column_id = column_expression->column_reference.original_column_id();
+          std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
+
+          const std::string table_name = table_node->table_name;
+          const auto table = Hyrise::get().storage_manager.get_table(table_name);
+          auto data_type = table->column_data_type(column_id);
+          resolve_data_type(data_type, [&] (auto type) {
+            using ColumnDataType = typename decltype(type)::type;
+
+            std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+            if (!statistics->histogram->is_uniformly_distributed(0.1)) {
+              contains_non_uniform_distribution = true;
+            }
+          });
+        }
       }
     }
     return LQPVisitation::VisitInputs;
   });
+
+  std::cout << "==============================================" << std::endl;
+  std::cout << "==== contains_non_uniform_distribution: " << contains_non_uniform_distribution << "======" << std::endl;
+  std::cout << "==============================================" << std::endl;
 
 
   visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
