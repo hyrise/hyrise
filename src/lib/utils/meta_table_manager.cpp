@@ -96,8 +96,8 @@ auto gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
 namespace opossum {
 
-MetaTableManager::MetaTableManager()
-{  _methods["tables"] = &MetaTableManager::generate_tables_table;
+MetaTableManager::MetaTableManager() {
+  _methods["tables"] = &MetaTableManager::generate_tables_table;
   _methods["columns"] = &MetaTableManager::generate_columns_table;
   _methods["chunks"] = &MetaTableManager::generate_chunks_table;
   _methods["chunk_sort_orders"] = &MetaTableManager::generate_chunk_sort_orders_table;
@@ -108,7 +108,8 @@ MetaTableManager::MetaTableManager()
   //const auto a = std::make_tuple(&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins);
   //auto a =  {&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins};
   tuple<std::function<std::shared_ptr<Table>(const std::string&)>,
-   std::function<std::shared_ptr<Table>(const std::string&)>>(&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins) a;
+        std::function<std::shared_ptr<Table>(const std::string&)>>(&MetaTableManager::_insert_into_plugins,
+                                                                   &MetaTableManager::_delete_from_plugins) a;
 
   _mutating_methods["plugins"] = a;
 
@@ -127,9 +128,7 @@ MetaTableManager::MetaTableManager()
 
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
 
-bool MetaTableManager::has_table(const std::string& table_name) const {
-  return _methods.count(table_name);
-}
+bool MetaTableManager::has_table(const std::string& table_name) const { return _methods.count(table_name); }
 
 bool MetaTableManager::table_is_mutable(const std::string& table_name) const {
   return _mutating_methods.count(table_name);
@@ -142,10 +141,10 @@ void MetaTableManager::insert_into(const std::string& table_name, const std::str
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::string& value) {
-    Assert(table_is_mutable(table_name), "Cannot delete from " + table_name);
+  Assert(table_is_mutable(table_name), "Cannot delete from " + table_name);
 
-    _mutating_methods.at(table_name)[1](value);
-   //(_mutating_methods.at(table_name).second)(value);
+  _mutating_methods.at(table_name)[1](value);
+  //(_mutating_methods.at(table_name).second)(value);
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
