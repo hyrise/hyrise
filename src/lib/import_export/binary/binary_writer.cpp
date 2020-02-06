@@ -99,7 +99,8 @@ void BinaryWriter::write(const Table& table, const std::string& filename) {
 }
 
 void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
-  export_value(ofstream, static_cast<ChunkOffset>(table.target_chunk_size()));
+  const auto target_chunk_size = table.type() == TableType::Data ? table.target_chunk_size() : Chunk::DEFAULT_SIZE;
+  export_value(ofstream, static_cast<ChunkOffset>(target_chunk_size));
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 

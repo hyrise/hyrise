@@ -48,6 +48,7 @@ struct MvccData {
                             TransactionID new_transaction_id);
 
   size_t memory_usage() const;
+
  private:
   // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
   pmr_vector<CommitID> _begin_cids;                  // < commit id when record was added

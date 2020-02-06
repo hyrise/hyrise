@@ -45,7 +45,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     {
       const auto meta_table = storage_manager.get_table(prefix + meta_table_name);
       const auto expected_table = load_table(path + meta_table_name + "_updated.tbl");
-      EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);  // TODO verify
+      EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
   }
 
