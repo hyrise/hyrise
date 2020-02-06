@@ -16,7 +16,7 @@ namespace opossum {
 // inheritance. By making the inheritance private and this class final, we can assure that the problems that come with
 // a non-virtual destructor do not occur.
 
-class PosList : public AbstractPosList, private pmr_vector<RowID> {
+class PosList final : public AbstractPosList, private pmr_vector<RowID> {
  public:
   using Vector = pmr_vector<RowID>;
 

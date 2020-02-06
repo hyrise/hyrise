@@ -60,11 +60,12 @@ struct ChunkOffsetMapping {
  */
 
 
-template <typename Derived, typename Value>
+template <typename Derived, typename Value, bool PlainPosList = false>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessSegmentIterator(AbstractPosList::PosListIterator<> position_filter_begin,
-                                          AbstractPosList::PosListIterator<> position_filter_it)
+  using PosListIteratorType = std::conditional_t<PlainPosList, PosList::const_iterator, AbstractPosList::PosListIterator<>>;
+  explicit BasePointAccessSegmentIterator(PosListIteratorType position_filter_begin,
+                                          PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
@@ -93,8 +94,8 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   }
 
  private:
-  AbstractPosList::PosListIterator<> _position_filter_begin;
-  AbstractPosList::PosListIterator<> _position_filter_it;
+  PosListIteratorType _position_filter_begin;
+  PosListIteratorType _position_filter_it;
 };
 
 }  // namespace opossum

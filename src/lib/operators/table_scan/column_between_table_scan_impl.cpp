@@ -93,9 +93,11 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
    */
   // NOLINTNEXTLINE - cpplint is drunk
   if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-      static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
+    resolve_pos_list_type(position_filter, [&](auto pos) {
+      attribute_vector_iterable.with_iterators(pos, [&](auto left_it, auto left_end) {
+        static const auto always_true = [](const auto&) { return true; };
+        _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
+      });
     });
 
     return;

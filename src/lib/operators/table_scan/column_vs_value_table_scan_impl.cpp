@@ -122,18 +122,26 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };
-    iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
-      // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
-      // dictionary.size() anyway.
-      if (predicate_condition == PredicateCondition::Equals ||
-          predicate_condition == PredicateCondition::LessThanEquals ||
-          predicate_condition == PredicateCondition::LessThan) {
-        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
-      } else {
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      }
+
+
+    resolve_pos_list_type(position_filter, [&](auto pos) {
+      iterable.with_iterators(pos, [&](auto it, auto end) {
+        // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
+        // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
+        // dictionary.size() anyway.
+        if (predicate_condition == PredicateCondition::Equals ||
+            predicate_condition == PredicateCondition::LessThanEquals ||
+            predicate_condition == PredicateCondition::LessThan) {
+          _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
+        } else {
+          _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+        }
+      });
     });
+    
+
+
+
   });
 
 }

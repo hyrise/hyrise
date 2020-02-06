@@ -29,81 +29,83 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto referenced_table = _segment.referenced_table();
     const auto referenced_column_id = _segment.referenced_column_id();
 
-    const auto& pos_list = _segment.pos_list();
+    const auto& position_filter = _segment.pos_list();
+    resolve_pos_list_type(position_filter, [&](auto pos_list) {
 
-    const auto begin_it = pos_list->begin();
-    const auto end_it = pos_list->end();
+      const auto begin_it = pos_list->begin();
+      const auto end_it = pos_list->end();
 
-    // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
-    // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
-    // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
+      // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
+      // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
+      // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
 
-    if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
-      auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
+      if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
+        auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
 
-      bool functor_was_called = false;
+        bool functor_was_called = false;
 
-      if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
-        resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
-          using SegmentType = std::decay_t<decltype(typed_segment)>;
+        if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
+          resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
+            using SegmentType = std::decay_t<decltype(typed_segment)>;
 
-          // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
-          // compile time during development. While new segment types should be added here,
-#ifdef HYRISE_ERASE_DICTIONARY
-          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
-#endif
+            // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
+            // compile time during development. While new segment types should be added here,
+  #ifdef HYRISE_ERASE_DICTIONARY
+            if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
+  #endif
 
-#ifdef HYRISE_ERASE_RUNLENGTH
-          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
-#endif
+  #ifdef HYRISE_ERASE_RUNLENGTH
+            if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
+  #endif
 
-#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
-#endif
+  #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
+            if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
+  #endif
 
-#ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-          if constexpr (std::is_same_v<T, int32_t>) {
-            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
+  #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
+            if constexpr (std::is_same_v<T, int32_t>) {
+              if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
+            }
+  #endif
+
+            // Always erase LZ4Segment accessors
+            if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
+
+            if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+              const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+              segment_iterable.with_iterators(pos_list, functor);
+
+              functor_was_called = true;
+            } else {
+              Fail("Found ReferenceSegment pointing to ReferenceSegment");
+            }
+          });
+
+          if (!functor_was_called) {
+            PerformanceWarning("ReferenceSegmentIterable for referenced segment type erased by compile-time setting");
           }
-#endif
 
-          // Always erase LZ4Segment accessors
-          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
-
-          if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
-            const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
-            segment_iterable.with_iterators(pos_list, functor);
-
-            functor_was_called = true;
-          } else {
-            Fail("Found ReferenceSegment pointing to ReferenceSegment");
-          }
-        });
-
-        if (!functor_was_called) {
-          PerformanceWarning("ReferenceSegmentIterable for referenced segment type erased by compile-time setting");
+        } else {
+          PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
         }
 
+        if (functor_was_called) return;
+
+        // The functor was not called yet, because we did not instantiate specialized code for the segment type.
+
+        const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
+        segment_iterable.with_iterators(pos_list, functor);
       } else {
-        PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
+        using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
+
+        auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
+
+        auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
+        auto end = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, end_it};
+
+        functor(begin, end);
       }
-
-      if (functor_was_called) return;
-
-      // The functor was not called yet, because we did not instantiate specialized code for the segment type.
-
-      const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
-      segment_iterable.with_iterators(pos_list, functor);
-    } else {
-      using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
-
-      auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
-
-      auto begin = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
-      auto end = MultipleChunkIterator{referenced_table, referenced_column_id, accessors, begin_it, end_it};
-
-      functor(begin, end);
-    }
+    });
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -161,11 +163,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
-  class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentPosition<T>> {
+  template <typename PosListIteratorType>
+  class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator<PosListIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = AbstractPosList::PosListIterator<>;
+    using PosListIterator = PosListIteratorType;
 
    public:
     explicit MultipleChunkIterator(
