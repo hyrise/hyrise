@@ -2,8 +2,12 @@
 
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
+
+AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
+    : _column_definitions(column_definitions) {}
 
 const std::shared_ptr<Table> AbstractMetaTable::generate() const {
   const auto table = _on_generate();
@@ -24,14 +28,16 @@ bool AbstractMetaTable::can_update() { return false; }
 bool AbstractMetaTable::can_remove() { return false; }
 
 void AbstractMetaTable::_insert(const std::vector<AllTypeVariant>& values) {
-  Fail("Cannot insert into " + name() + ".");
+  Fail("Cannot insert into " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
 void AbstractMetaTable::_update(const AllTypeVariant& key, const std::vector<AllTypeVariant>& values) {
-  Fail("Cannot update " + name() + ".");
+  Fail("Cannot update " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
-void AbstractMetaTable::_remove(const AllTypeVariant& key) { Fail("Cannot delete from " + name() + "."); }
+void AbstractMetaTable::_remove(const AllTypeVariant& key) {
+  Fail("Cannot delete from " + MetaTableManager::META_PREFIX + name() + ".");
+}
 
 const TableColumnDefinitions& AbstractMetaTable::column_definitions() const { return _column_definitions; }
 

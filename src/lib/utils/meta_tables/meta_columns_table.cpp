@@ -5,11 +5,11 @@
 namespace opossum {
 
 MetaColumnsTable::MetaColumnsTable()
-    : _column_definitions(TableColumnDefinitions{{"table_name", DataType::String, false},
-                                                 {"column_count", DataType::Int, false},
-                                                 {"row_count", DataType::Long, false},
-                                                 {"chunk_count", DataType::Int, false},
-                                                 {"max_chunk_size", DataType::Long, false}}) {}
+    : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
+                                               {"column_count", DataType::Int, false},
+                                               {"row_count", DataType::Long, false},
+                                               {"chunk_count", DataType::Int, false},
+                                               {"max_chunk_size", DataType::Long, false}}) {}
 
 const std::string& MetaColumnsTable::name() const {
   static const auto name = std::string{"columns"};
