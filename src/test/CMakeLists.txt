@@ -220,6 +220,7 @@ set (
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     plugins/mvcc_delete_plugin_system_test.cpp
+    operators/set_operator_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
