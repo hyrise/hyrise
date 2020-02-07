@@ -108,6 +108,7 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
+    operators/set_operator_test.cpp
     optimizer/dp_ccp_test.cpp
     optimizer/greedy_operator_ordering_test.cpp
     optimizer/enumerate_ccp_test.cpp
@@ -220,7 +221,6 @@ set (
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     plugins/mvcc_delete_plugin_system_test.cpp
-    operators/set_operator_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
