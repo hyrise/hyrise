@@ -20,12 +20,15 @@ namespace opossum {
  */
 class AbstractMetaTable : private Noncopyable {
  public:
+  AbstractMetaTable();
   virtual ~AbstractMetaTable() = default;
 
   virtual const std::string& name() const = 0;
 
-  // Generates the meta table on the fly
-  virtual const std::shared_ptr<Table> generate() const;
+  /* Generates the meta table on the fly by calling _on_generate().
+   * It finalizes the last chunk of the table and sets table statistics.
+   */
+  const std::shared_ptr<Table> generate() const;
 
   const TableColumnDefinitions& column_definitions() const;
 
@@ -33,11 +36,14 @@ class AbstractMetaTable : private Noncopyable {
   static bool can_update();
   static bool can_remove();
 
+  // TO DO: should we move all implementations mutating methods to _on_operation and add Asserts for length and types of values here?
   [[noreturn]] void insert(const std::vector<AllTypeVariant>& values);
   [[noreturn]] void update(const AllTypeVariant& key, const std::vector<AllTypeVariant>& values);
   [[noreturn]] void remove(const AllTypeVariant& key);
 
  protected:
+  // This method actually generates the output table.
+  virtual std::shared_ptr<Table> _on_generate() const = 0;
   const TableColumnDefinitions _column_definitions;
 };
 
