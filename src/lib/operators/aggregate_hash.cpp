@@ -66,6 +66,8 @@ const AggregateKey& get_aggregate_key([[maybe_unused]] const KeysPerChunk<Aggreg
 
     return hash_keys[chunk_offset];
   } else {
+    // We have to return a reference to something, so we create a static EmptyAggregateKey here which is used by
+    // every call.
     static EmptyAggregateKey empty_aggregate_key;
     return empty_aggregate_key;
   }
