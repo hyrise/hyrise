@@ -2661,19 +2661,17 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
       "SELECT c FROM int_int_int;");
 
   // clang-format off
-  const auto a_projection = ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int); //nation
-  const auto b_projection = ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int); //region
-  const auto c_projection = ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int); //customer
+  const auto a_projection = ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int); 
+  const auto b_projection = ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int); 
+  const auto c_projection = ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int); 
 
   auto join_predicates_a_b = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates_a_b.emplace_back(equals_(int_int_int_a, int_int_int_b)); //nation-region
+  join_predicates_a_b.emplace_back(equals_(int_int_int_a, int_int_int_b)); 
 
   auto join_predicates_b_c = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates_b_c.emplace_back(equals_(int_int_int_b, int_int_int_c)); //region-customer
+  join_predicates_b_c.emplace_back(equals_(int_int_int_b, int_int_int_c)); 
 
   const auto except_lqp = ExceptNode::make(UnionMode::Positions, join_predicates_b_c, b_projection, c_projection);
-  
-  //const auto projection_lqp = ProjectionNode::make(expression_vector(int_float_a), lqp);
 
   const auto aggregate_lqp = 
           AggregateNode::make(expression_vector(int_int_int_b), expression_vector(), 
