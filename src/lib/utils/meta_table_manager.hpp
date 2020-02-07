@@ -48,13 +48,11 @@ class MetaTableManager : public Noncopyable {
 
   std::unordered_map<std::string, std::function<std::shared_ptr<Table>(void)>> _methods;
   std::unordered_map<std::string,
+                     std::array<std::function<std::shared_ptr<Table>(const std::string&)>, 2>> _mutating_methods;
 
-                     tuple<
-                         //std::shared_ptr<Table>(const std::string&)>, 2>> _mutating_methods;
-
-                         std::function<std::shared_ptr<Table>(const std::string&)>,
-                         std::function<std::shared_ptr<Table>(const std::string&)>>>
-      _mutating_methods;
+                         //std::function<std::shared_ptr<Table>(const std::string&)>,
+                         //std::function<std::shared_ptr<Table>(const std::string&)>>>
+      //_mutating_methods;
 
   std::vector<std::string> _table_names;
   std::vector<std::string> _mutable_table_names;

@@ -17,9 +17,9 @@ namespace {
 using namespace opossum;  // NOLINT
 
 #ifdef __APPLE__
-#define DYNAMIC_LIBRARY_SUFFIX ".dylib"
+constexpr char DYNAMIC_LIBRARY_SUFFIX[] = ".dylib";
 #elif __linux__
-#define DYNAMIC_LIBRARY_SUFFIX ".so"
+constexpr char DYNAMIC_LIBRARY_SUFFIX[] = ".so";
 #endif
 
 // TODO(anyone): #1968 introduced this namespace. With the expected growth of the meta table manager of time, there
@@ -106,12 +106,12 @@ MetaTableManager::MetaTableManager() {
   _methods["plugins"] = &MetaTableManager::generate_plugins_table;
 
   //const auto a = std::make_tuple(&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins);
-  //auto a =  {&MetaTableManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins};
-  tuple<std::function<std::shared_ptr<Table>(const std::string&)>,
-        std::function<std::shared_ptr<Table>(const std::string&)>>(&MetaTableManager::_insert_into_plugins,
-                                                                   &MetaTableManager::_delete_from_plugins) a;
+  //auto a =  {&MetaTabelManager::_insert_into_plugins, &MetaTableManager::_delete_from_plugins};
+  //tuple<std::function<std::shared_ptr<Table>(const std::string&)>,
+  //      std::function<std::shared_ptr<Table>(const std::string&)>>(&MetaTableManager::_insert_into_plugins,
+//                                                                   &MetaTableManager::_delete_from_plugins) a;
 
-  _mutating_methods["plugins"] = a;
+  //_mutating_methods["plugins"] = ;
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
@@ -135,9 +135,10 @@ bool MetaTableManager::table_is_mutable(const std::string& table_name) const {
 }
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::string& value) {
-  Assert(table_is_mutable(table_name), "Cannot insert into " + table_name);
+  //Assert(table_is_mutable(table_name), "Cannot insert into " + table_name);
+  std::cout << DYNAMIC_LIBRARY_SUFFIX << std::endl;
 
-  _mutating_methods.at(table_name)[0](value);
+  //_mutating_methods.at(table_name)[0](value);
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::string& value) {
