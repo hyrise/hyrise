@@ -3,8 +3,8 @@
 #include <functional>
 #include <unordered_map>
 
-#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "types.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace opossum {
 
@@ -31,7 +31,8 @@ class MetaTableManager : public Noncopyable {
 
   void insert_into(const std::string& table_name, const std::shared_ptr<Table>& values) const;
   void delete_from(const std::string& table_name, const std::shared_ptr<Table>& values) const;
-  void update(const std::string& table_name, const std::shared_ptr<Table>& fields, const std::shared_ptr<Table>& values) const;
+  void update(const std::string& table_name, const std::shared_ptr<Table>& fields,
+              const std::shared_ptr<Table>& values) const;
 
  protected:
   friend class Hyrise;
