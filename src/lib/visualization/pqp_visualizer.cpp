@@ -53,7 +53,8 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     // Print third column (relative operator duration)
     operator_breakdown_stream << "|";
     for (const auto& [_, nanoseconds] : duration_by_operator_name) {
-      operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) / total_nanoseconds.count() * 100) << " %\\l";
+      operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) / total_nanoseconds.count() * 100)
+                                << " %\\l";
     }
     operator_breakdown_stream << " \\l";
 
