@@ -2654,36 +2654,36 @@ TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
 
 TEST_F(SQLTranslatorTest, MultiSetOperations) {
   const auto actual_lqp = compile_query(
-      "SELECT a FROM int_int_int_a "
+      "SELECT a FROM int_int_int "
       "INTERSECT "
-      "SELECT b FROM int_int_int_b "
+      "SELECT b FROM int_int_int "
       "EXCEPT "
-      "SELECT c FROM int_int_int_c;");
+      "SELECT c FROM int_int_int;");
 
   // clang-format off
-  const auto a_projection = ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int);
-  const auto b_projection = ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int);
-  const auto c_projection = ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int);
+  const auto a_projection = ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int); //nation
+  const auto b_projection = ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int); //region
+  const auto c_projection = ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int); //customer
 
   auto join_predicates_a_b = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates_a_b.emplace_back(equals_(int_int_int_a, int_int_int_b));
+  join_predicates_a_b.emplace_back(equals_(int_int_int_a, int_int_int_b)); //nation-region
 
   auto join_predicates_b_c = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates_b_c.emplace_back(equals_(int_int_int_b, int_int_int_c));
+  join_predicates_b_c.emplace_back(equals_(int_int_int_b, int_int_int_c)); //region-customer
 
-  const auto excepted_lqp = ExceptNode::make(UnionMode::Positions, join_predicates_b_c, c_projection, b_projection);
+  const auto except_lqp = ExceptNode::make(UnionMode::Positions, join_predicates_b_c, b_projection, c_projection);
   
   //const auto projection_lqp = ProjectionNode::make(expression_vector(int_float_a), lqp);
 
-  const auto between_lqp = 
+  const auto aggregate_lqp = 
           AggregateNode::make(expression_vector(int_int_int_b), expression_vector(), 
-            ProjectionNode::make(expression_vector(int_int_int_c), excepted_lqp));
+            ProjectionNode::make(expression_vector(int_int_int_b), except_lqp));
 
-  const auto intesected_lqp = IntersectNode::make(UnionMode::Positions, join_predicates_a_b, a_projection, between_lqp);
+  const auto intesect_lqp = IntersectNode::make(UnionMode::Positions, join_predicates_a_b, a_projection, aggregate_lqp);
 
   const auto expected_lqp = 
           AggregateNode::make(expression_vector(int_int_int_a), expression_vector(), 
-            ProjectionNode::make(expression_vector(int_int_int_a), intesected_lqp));
+            ProjectionNode::make(expression_vector(int_int_int_a), intesect_lqp));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
