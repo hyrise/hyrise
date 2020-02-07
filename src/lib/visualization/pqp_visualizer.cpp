@@ -35,8 +35,13 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     std::stringstream operator_breakdown_stream;
     operator_breakdown_stream << "{Total by operator|{";
 
+    auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
+        _duration_by_operator_name.begin(), _duration_by_operator_name.end()};
+    std::sort(sorted_duration_by_operator_name.begin(), sorted_duration_by_operator_name.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.second.count() > rhs.second.count(); });
+
     // Print first column (operator name)
-    for (const auto& [operator_name, _] : duration_by_operator_name) {
+    for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
       operator_breakdown_stream << " " << operator_name << " \\r";
     }
     operator_breakdown_stream << "total\\r";
@@ -44,7 +49,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     // Print second column (operator duration) and track total duration
     operator_breakdown_stream << "|";
     auto total_nanoseconds = std::chrono::nanoseconds{};
-    for (const auto& [_, nanoseconds] : duration_by_operator_name) {
+    for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
       operator_breakdown_stream << " " << format_duration(nanoseconds) << " \\l";
       total_nanoseconds += nanoseconds;
     }
@@ -52,7 +57,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 
     // Print third column (relative operator duration)
     operator_breakdown_stream << "|";
-    for (const auto& [_, nanoseconds] : duration_by_operator_name) {
+    for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
       operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) / total_nanoseconds.count() * 100)
                                 << " %\\l";
     }
@@ -162,7 +167,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     info.pen_width = total.count();
   }
 
-  duration_by_operator_name[op->name()] += op->performance_data().walltime;
+  _duration_by_operator_name[op->name()] += op->performance_data().walltime;
 
   info.label = label;
   _add_vertex(op, info);

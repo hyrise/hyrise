@@ -33,7 +33,7 @@ class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
 
   void _add_operator(const std::shared_ptr<const AbstractOperator>& op);
 
-  std::unordered_map<std::string, std::chrono::nanoseconds> duration_by_operator_name;
+  std::unordered_map<std::string, std::chrono::nanoseconds> _duration_by_operator_name;
 };
 
 }  // namespace opossum
