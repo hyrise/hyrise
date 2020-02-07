@@ -64,15 +64,24 @@ for file in sorted(glob.glob('*-PQP.svg')):
 df = pd.DataFrame(all_operator_breakdowns).transpose()
 df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 
-df.loc["Total"] = df.sum() / df.count()
+
+df = df.fillna(0)
+
+# Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
+df.loc["Absolute"] = df.sum() / df.count()
 
 # Normalize data from nanoseconds to percentage of total cost (calculated by dividing the cells value by the total of
 # the row it appears in)
 df.iloc[:,0:] = df.iloc[:,0:].apply(lambda x: x / x.sum(), axis=1)
 
+# Calculate relative share of operator (i.e., weighing all benchmark items the same) - have to ignore the "Absolute"
+# row for that
+df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
+
+print(df)
+
 # Drop all operators that do not exceed 1% in any query
 df = df[df > .01].dropna(axis = 'columns', how = 'all')
-print(df)
 
 # Plot it
 ax = df.plot.bar(stacked=True, figsize=(2 + len(df) / 4, 4))
