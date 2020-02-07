@@ -5,22 +5,15 @@
 namespace opossum {
 
 /**
- * This is class for plugin control via a meta table.
- * Inserting loads a plugin, deleting unloads it.
+ * This is class for showing all sort orders of stored chunks via a meta table.
  */
-class MetaPluginsTable : public AbstractMetaTable {
+class MetaChunkOrdersTable : public AbstractMetaTable {
  public:
-  explicit MetaPluginsTable();
+  explicit MetaChunkOrdersTable();
 
   const std::string& name() const final;
 
   const TableColumnDefinitions& column_definitions() const;
-
-  static bool can_insert();
-  static bool can_remove();
-
-  void insert(const std::vector<AllTypeVariant>& values);
-  void remove(const AllTypeVariant& key);
 
  protected:
   std::shared_ptr<Table> _on_generate() const;

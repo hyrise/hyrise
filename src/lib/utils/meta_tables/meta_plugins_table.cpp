@@ -11,8 +11,8 @@ constexpr char DYNAMIC_LIBRARY_SUFFIX[] = ".so";
 
 namespace opossum {
 
-MetaPluginsTable::MetaPluginsTable() :
-	_column_definitions(TableColumnDefinitions{{"plugin_name", DataType::String, false}}) {}
+MetaPluginsTable::MetaPluginsTable()
+    : _column_definitions(TableColumnDefinitions{{"plugin_name", DataType::String, false}}) {}
 
 const std::string& MetaPluginsTable::name() const {
   static const auto name = std::string{"plugins"};
@@ -20,6 +20,7 @@ const std::string& MetaPluginsTable::name() const {
 }
 
 bool MetaPluginsTable::can_insert() { return true; }
+
 bool MetaPluginsTable::can_remove() { return true; }
 
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
@@ -37,7 +38,7 @@ void MetaPluginsTable::insert(const std::vector<AllTypeVariant>& values) {
   Assert(values.at(0).type() == typeid(pmr_string), "Data type must be string.");
 
   Hyrise::get().plugin_manager.load_plugin(boost::get<pmr_string>(values.at(0)) + DYNAMIC_LIBRARY_SUFFIX);
- }
+}
 
 void MetaPluginsTable::remove(const AllTypeVariant& key) {
   Assert(key.type() == typeid(pmr_string), "Data type must be string.");

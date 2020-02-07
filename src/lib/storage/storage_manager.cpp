@@ -51,9 +51,7 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
 
 bool StorageManager::has_table(const std::string& name) const {
   if (MetaTableManager::is_meta_table_name(name)) {
-    const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
-    return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
-                              name.substr(MetaTableManager::META_PREFIX.size()));
+    return Hyrise::get().meta_table_manager.has_table(name.substr(MetaTableManager::META_PREFIX.size()));
   }
   return _tables.count(name);
 }

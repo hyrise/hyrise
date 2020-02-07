@@ -18,7 +18,9 @@ bool AbstractMetaTable::can_update() { return false; }
 
 bool AbstractMetaTable::can_remove() { return false; }
 
-void AbstractMetaTable::insert(const std::vector<AllTypeVariant>& values) { Fail("Cannot insert into " + name() + "."); }
+void AbstractMetaTable::insert(const std::vector<AllTypeVariant>& values) {
+  Fail("Cannot insert into " + name() + ".");
+}
 
 void AbstractMetaTable::update(const AllTypeVariant& key, const std::vector<AllTypeVariant>& values) {
   Fail("Cannot update " + name() + ".");

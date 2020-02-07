@@ -566,8 +566,22 @@ set(
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
     utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_accurate_segments_table.cpp
+    utils/meta_tables/meta_accurate_segments_table.hpp
+    utils/meta_tables/meta_chunk_orders_table.cpp
+    utils/meta_tables/meta_chunk_orders_table.hpp
+    utils/meta_tables/meta_chunks_table.cpp
+    utils/meta_tables/meta_chunks_table.hpp
+    utils/meta_tables/meta_columns_table.cpp
+    utils/meta_tables/meta_columns_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
     utils/meta_tables/meta_plugins_table.hpp
+    utils/meta_tables/meta_segments_table.cpp
+    utils/meta_tables/meta_segments_table.hpp
+    utils/meta_tables/meta_tables_table.cpp
+    utils/meta_tables/meta_tables_table.hpp
+    utils/meta_tables/segment_meta_data.cpp
+    utils/meta_tables/segment_meta_data.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
