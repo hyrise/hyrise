@@ -154,37 +154,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable,
                                                          predicate_condition, boost::get<ColumnDataType>(value));
 
-        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          if (begin == end) return;
-
-          // General note: If the predicate is NotEquals, there might be two matching ranges. scan_sorted_segment
-          // combines these two ranges into a single one via boost::join(range_1, range_2).
-          // See sorted_segment_search.hpp for further details.
-
-          size_t output_idx = matches.size();
-
-          matches.resize(matches.size() + std::distance(begin, end));
-
-          /**
-           * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
-           * by calculating the offsets based on the first offset instead of calling chunk_offset()
-           * for every match.
-           * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
-           * NotEquals because the result might consist of 2 ranges.
-           */
-          if (position_filter || predicate_condition == PredicateCondition::NotEquals) {
-            for (; begin != end; ++begin) {
-              matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
-            }
-          } else {
-            const auto first_offset = begin->chunk_offset();
-            const auto distance = std::distance(begin, end);
-
-            for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-              matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
-            }
-          }
-        });
+        sorted_segment_search.scan_sorted_segment(
+            [&](auto begin, auto end) { _handle_search_results(begin, end, chunk_id, matches, position_filter); });
       });
     }
   });

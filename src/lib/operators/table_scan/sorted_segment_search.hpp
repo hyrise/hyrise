@@ -121,7 +121,7 @@ class SortedSegmentSearch {
   }
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
-  void _set_begin_and_end_value_scan() {
+  void _set_begin_and_end_positions_for_vs_value_scan() {
     if (_predicate_condition == PredicateCondition::Equals) {
       _begin = _get_first_bound(_first_search_value, _begin, _end);
       _end = _get_last_bound(_first_search_value, _begin, _end);
@@ -149,8 +149,8 @@ class SortedSegmentSearch {
     // clang-format on
   }
 
-  // This function sets the offsets that delimit the result set based on the predicate condition and the sort order
-  void _set_begin_and_end_between_scan() {
+  // This function sets the offset(s) that delimit the result set based on the predicate condition and the sort order
+  void _set_begin_and_end_positions_for_between_scan() {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
     if (_begin == _end) return;
 
@@ -168,9 +168,11 @@ class SortedSegmentSearch {
     }
 
     // This implementation uses behaviour which resembles std::equal_range's
-    // behaviour. However, std::equal_range returns all elements in range
-    // [first, last), which describes only the PredicateCondition::BetweenInclusive case.
-    // For the other PredicateConditions, different borders are required.
+    // behaviour since it also calculates a range containing all elements between
+    // the first and second search value. However, std::equal_range returns all
+    // elements in range [first, last), which describes only the
+    // PredicateCondition::BetweenInclusive case. For the other PredicateConditions,
+    // different borders are required.
     auto predicate_condition = _predicate_condition;
     auto first_search_value = _first_search_value;
     auto second_search_value = *_second_search_value;
@@ -270,7 +272,7 @@ class SortedSegmentSearch {
       if (_nullable) {
         _exponential_search_for_nulls(_begin, _end);
       }
-      _set_begin_and_end_between_scan();
+      _set_begin_and_end_positions_for_between_scan();
       result_consumer(_begin, _end);
     } else {
       // decrease the effective sort range by excluding null values based on their ordering
@@ -287,7 +289,7 @@ class SortedSegmentSearch {
       if (_predicate_condition == PredicateCondition::NotEquals) {
         _handle_not_equals(result_consumer);
       } else {
-        _set_begin_and_end_value_scan();
+        _set_begin_and_end_positions_for_vs_value_scan();
         result_consumer(_begin, _end);
       }
     }
