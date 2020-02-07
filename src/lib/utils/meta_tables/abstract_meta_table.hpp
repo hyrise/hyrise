@@ -37,7 +37,6 @@ class AbstractMetaTable : private Noncopyable {
   [[noreturn]] void update(const AllTypeVariant& key, const std::vector<AllTypeVariant>& values);
   [[noreturn]] void remove(const AllTypeVariant& key);
 
-
  protected:
   const TableColumnDefinitions _column_definitions;
 };
