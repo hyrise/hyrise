@@ -564,6 +564,8 @@ set(
     utils/make_bimap.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
+    utils/meta_tables/abstract_meta_table.cpp
+    utils/meta_tables/abstract_meta_table.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
