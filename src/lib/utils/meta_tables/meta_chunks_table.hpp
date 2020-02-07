@@ -9,7 +9,7 @@ namespace opossum {
  */
 class MetaChunksTable : public AbstractMetaTable {
  public:
-  explicit MetaChunksTable();
+  MetaChunksTable();
 
   const std::string& name() const final;
 

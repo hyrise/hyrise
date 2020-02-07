@@ -10,7 +10,7 @@ namespace opossum {
  */
 class MetaPluginsTable : public AbstractMetaTable {
  public:
-  explicit MetaPluginsTable();
+  MetaPluginsTable();
 
   const std::string& name() const final;
 
@@ -19,11 +19,12 @@ class MetaPluginsTable : public AbstractMetaTable {
   static bool can_insert();
   static bool can_remove();
 
-  void insert(const std::vector<AllTypeVariant>& values);
-  void remove(const AllTypeVariant& key);
-
  protected:
   std::shared_ptr<Table> _on_generate() const;
+
+  void _insert(const std::vector<AllTypeVariant>& values);
+  void _remove(const AllTypeVariant& key);
+
   const TableColumnDefinitions _column_definitions;
 };
 

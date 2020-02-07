@@ -33,14 +33,14 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
   return output_table;
 }
 
-void MetaPluginsTable::insert(const std::vector<AllTypeVariant>& values) {
+void MetaPluginsTable::_insert(const std::vector<AllTypeVariant>& values) {
   Assert(values.size() == _column_definitions.size(), "There needs to be one value for every column.");
   Assert(values.at(0).type() == typeid(pmr_string), "Data type must be string.");
 
   Hyrise::get().plugin_manager.load_plugin(boost::get<pmr_string>(values.at(0)) + DYNAMIC_LIBRARY_SUFFIX);
 }
 
-void MetaPluginsTable::remove(const AllTypeVariant& key) {
+void MetaPluginsTable::_remove(const AllTypeVariant& key) {
   Assert(key.type() == typeid(pmr_string), "Data type must be string.");
 
   Hyrise::get().plugin_manager.unload_plugin(std::string{boost::get<pmr_string>(key)} + DYNAMIC_LIBRARY_SUFFIX);

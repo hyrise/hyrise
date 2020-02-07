@@ -9,7 +9,7 @@ namespace opossum {
  */
 class MetaColumnsTable : public AbstractMetaTable {
  public:
-  explicit MetaColumnsTable();
+  MetaColumnsTable();
 
   const std::string& name() const final;
 

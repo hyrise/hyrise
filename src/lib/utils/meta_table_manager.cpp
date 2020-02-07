@@ -18,7 +18,7 @@ MetaTableManager::MetaTableManager() {
   meta_tables.push_back(new MetaAccurateSegmentsTable());
   meta_tables.push_back(new MetaPluginsTable());
 
-  for (auto table : meta_tables) {
+  for (auto& table : meta_tables) {
     _meta_tables[table->name()] = table;
   }
 
@@ -55,11 +55,11 @@ bool MetaTableManager::can_update(const std::string& table_name) const {
 }
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<Table>& values) const {
-  //TO DO
+  // TO DO
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<Table>& values) const {
-  //TO DO
+  // TO DO
 }
 
 void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<Table>& fields,

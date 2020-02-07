@@ -10,7 +10,7 @@ namespace opossum {
  */
 class MetaAccurateSegmentsTable : public AbstractMetaTable {
  public:
-  explicit MetaAccurateSegmentsTable();
+  MetaAccurateSegmentsTable();
 
   const std::string& name() const final;
 
