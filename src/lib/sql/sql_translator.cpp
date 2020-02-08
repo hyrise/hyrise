@@ -527,11 +527,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
       } else if (Hyrise::get().storage_manager.has_table(hsql_table_ref.name)) {
-        if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
-          lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
-        } else {
-          lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
-        }
+        lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
+
+      } else if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
+        lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
+
       } else if (Hyrise::get().storage_manager.has_view(hsql_table_ref.name)) {
         const auto view = Hyrise::get().storage_manager.get_view(hsql_table_ref.name);
         lqp = view->lqp;
@@ -659,12 +659,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
-  AssertInput(Hyrise::get().storage_manager.has_table(name), std::string{"Did not find a table with name "} + name);
   AssertInput(MetaTableManager::is_meta_table_name(name), std::string{"Did not find a meta table with name "} + name);
 
   _cacheable = false;
 
-  const auto meta_table = Hyrise::get().storage_manager.get_table(name);
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
 
   const auto static_table_node = StaticTableNode::make(meta_table);
   const auto validated_static_table_node = _validate_if_active(static_table_node);
@@ -1098,14 +1097,17 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
-    case hsql::ShowType::kShowTables:
-      return StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
+    case hsql::ShowType::kShowTables: {
+      const auto tables_meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+      return StaticTableNode::make(tables_meta_table);
+    }
     case hsql::ShowType::kShowColumns: {
-      const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
-      const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
+      const auto columns_meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
+      const auto static_table_node = StaticTableNode::make(columns_meta_table);
+      const auto table_name_column = lqp_column_({static_table_node, ColumnID{0}});
       const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
                                                                          value_(show_statement.name));
-      return PredicateNode::make(predicate, stored_table_node);
+      return PredicateNode::make(predicate, static_table_node);
     }
     default:
       FailInput("hsql::ShowType is not supported.");

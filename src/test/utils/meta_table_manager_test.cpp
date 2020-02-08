@@ -11,6 +11,7 @@ class MetaTableManagerTest : public BaseTest {};
 TEST_F(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
   auto& storage_manager = Hyrise::get().storage_manager;
+  auto& meta_table_manager = Hyrise::get().meta_table_manager;
 
   const auto prefix = MetaTableManager::META_PREFIX;
   const auto path = std::string{"resources/test_data/tbl/meta_tables/meta_"};
@@ -31,7 +32,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     storage_manager.add_table("int_int_int_null", int_int_int_null);
 
     {
-      const auto meta_table = storage_manager.get_table(prefix + meta_table_name);
+      const auto meta_table = meta_table_manager.generate_table(meta_table_name);
       const auto expected_table = load_table(path + meta_table_name + ".tbl");
       EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
@@ -43,7 +44,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
         .get_result_table();
 
     {
-      const auto meta_table = storage_manager.get_table(prefix + meta_table_name);
+      const auto meta_table = meta_table_manager.generate_table(meta_table_name);
       const auto expected_table = load_table(path + meta_table_name + "_updated.tbl");
       EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
@@ -54,13 +55,13 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     const auto int_int = load_table("resources/test_data/tbl/int_int.tbl", 100);
     storage_manager.add_table("int_int_sort", int_int);
 
-    const auto meta_table = storage_manager.get_table(prefix + "chunk_sort_orders");
+    const auto meta_table = meta_table_manager.generate_table("chunk_sort_orders");
     EXPECT_EQ(meta_table->row_count(), 0ul);
 
     storage_manager.get_table("int_int_sort")
         ->get_chunk(ChunkID{0})
         ->set_ordered_by({ColumnID{1}, OrderByMode::Ascending});
-    const auto meta_table_updated = storage_manager.get_table(prefix + "chunk_sort_orders");
+    const auto meta_table_updated = meta_table_manager.generate_table("chunk_sort_orders");
     EXPECT_EQ(meta_table_updated->row_count(), 1ul);
     EXPECT_EQ(meta_table_updated->get_value<int32_t>("chunk_id", 0), 0);
     EXPECT_EQ(meta_table_updated->get_value<int32_t>("column_id", 0), 1);

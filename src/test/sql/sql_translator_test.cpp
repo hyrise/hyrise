@@ -1856,7 +1856,8 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto actual_lqp = compile_query("SHOW TABLES");
 
-  const auto expected_lqp = StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto expected_lqp = StaticTableNode::make(meta_table);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1865,11 +1866,13 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
 
   // clang-format off
-  const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
-  const auto table_name_column = stored_table_node->get_column("table_name");
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
+  const auto static_table_node = StaticTableNode::make(meta_table);
+  const auto table_name_column_id = meta_table->column_id_by_name("table_name");
+  LQPColumnReference table_name_column{static_table_node, table_name_column_id};
   const auto expected_lqp =
       PredicateNode::make(equals_(table_name_column, "int_float"),
-        stored_table_node);
+        static_table_node);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1878,7 +1881,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
 TEST_F(SQLTranslatorTest, SelectMetaTable) {
   const auto actual_lqp = compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables");
 
-  const auto meta_table = Hyrise::get().storage_manager.get_table(MetaTableManager::META_PREFIX + "tables");
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
