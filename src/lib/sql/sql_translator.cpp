@@ -663,7 +663,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
 
   _cacheable = false;
 
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
+  const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
 
   const auto static_table_node = StaticTableNode::make(meta_table);
   const auto validated_static_table_node = _validate_if_active(static_table_node);
