@@ -20,14 +20,15 @@ namespace opossum {
  */
 class AbstractMetaTable : private Noncopyable {
  public:
-  AbstractMetaTable(const TableColumnDefinitions& column_definitions);
+  AbstractMetaTable();
+
   virtual ~AbstractMetaTable() = default;
 
   virtual const std::string& name() const = 0;
 
   /*
    * Generates the meta table on the fly by calling _on_generate().
-   * It finalizes the all chunks of the table and sets table statistics.
+   * It finalizes the last chunk of the table and sets table statistics.
    */
   const std::shared_ptr<Table> generate() const;
 

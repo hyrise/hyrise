@@ -5,11 +5,12 @@
 namespace opossum {
 
 MetaChunksTable::MetaChunksTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
-                                               {"chunk_id", DataType::Int, false},
-                                               {"row_count", DataType::Long, false},
-                                               {"invalid_row_count", DataType::Long, false},
-                                               {"cleanup_commit_id", DataType::Long, true}}) {}
+    : AbstractMetaTable(),
+      _column_definitions(TableColumnDefinitions{{"table_name", DataType::String, false},
+                                                 {"chunk_id", DataType::Int, false},
+                                                 {"row_count", DataType::Long, false},
+                                                 {"invalid_row_count", DataType::Long, false},
+                                                 {"cleanup_commit_id", DataType::Long, true}}) {}
 
 const std::string& MetaChunksTable::name() const {
   static const auto name = std::string{"chunks"};

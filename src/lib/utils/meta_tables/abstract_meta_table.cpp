@@ -6,14 +6,13 @@
 
 namespace opossum {
 
-AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
-    : _column_definitions(column_definitions) {}
+AbstractMetaTable::AbstractMetaTable() { std::cout << "construct" << std::endl; }
 
 const std::shared_ptr<Table> AbstractMetaTable::generate() const {
   const auto table = _on_generate();
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    table->get_chunk(chunk_id)->finalize();
+  if (table->chunk_count()) {
+    table->last_chunk()->finalize();
   }
 
   table->set_table_statistics(TableStatistics::from_table(*table));

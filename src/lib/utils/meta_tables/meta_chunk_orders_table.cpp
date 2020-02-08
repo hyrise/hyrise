@@ -5,10 +5,11 @@
 namespace opossum {
 
 MetaChunkOrdersTable::MetaChunkOrdersTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
-                                               {"chunk_id", DataType::Int, false},
-                                               {"column_id", DataType::Int, false},
-                                               {"order_mode", DataType::String, false}}) {}
+    : AbstractMetaTable(),
+      _column_definitions(TableColumnDefinitions{{"table_name", DataType::String, false},
+                                                 {"chunk_id", DataType::Int, false},
+                                                 {"column_id", DataType::Int, false},
+                                                 {"order_mode", DataType::String, false}}) {}
 
 const std::string& MetaChunkOrdersTable::name() const {
   static const auto name = std::string{"chunk_sort_orders"};
