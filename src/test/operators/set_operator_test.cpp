@@ -8,15 +8,15 @@
 #include "SQLParserResult.h"
 
 #include "hyrise.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "operators/abstract_join_operator.hpp"
-#include "operators/print.hpp"
-#include "operators/validate.hpp"
-#include "scheduler/job_task.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
+//#include "logical_query_plan/join_node.hpp"
+//#include "operators/abstract_join_operator.hpp"
+//#include "operators/print.hpp"
+//#include "operators/validate.hpp"
+//#include "scheduler/job_task.hpp"
+//#include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_plan_cache.hpp"
+//#include "sql/sql_plan_cache.hpp"
 
 namespace opossum {
 
@@ -53,22 +53,36 @@ namespace opossum {
         std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
 
         const std::string _intersect_query_a = "SELECT * FROM table_a INTERSECT SELECT * FROM table_b";
+        const std::string _intersect_query_b = "(SELECT * FROM table_a INTERSECT SELECT * FROM table_b) INTERSECT SELECT * FROM table_b";
         const std::string _except_query_a = "SELECT * FROM table_a EXCEPT SELECT * FROM table_b";
+        const std::string _multiple_set_operations_query_a = "SELECT * FROM table_a EXCEPT (SELECT * FROM table_b INTERSECT SELECT * FROM table_a)";
 
     };
 
-TEST_F(SetOperatorIntegrationTest, GetIntersectResultTable) {
+TEST_F(SetOperatorIntegrationTest, IntersectTest) {
 auto sql_pipeline = SQLPipelineBuilder{_intersect_query_a}.create_pipeline();
 const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-// EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
 EXPECT_TABLE_EQ_UNORDERED(table, _intersect_result);
 }
 
-TEST_F(SetOperatorIntegrationTest, GetExceptResultTable) {
+TEST_F(SetOperatorIntegrationTest, MultipleIntersectTest) {
+auto sql_pipeline = SQLPipelineBuilder{_intersect_query_b}.create_pipeline();
+const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+
+EXPECT_TABLE_EQ_UNORDERED(table, _intersect_result);
+}
+
+TEST_F(SetOperatorIntegrationTest, ExceptTest) {
 auto sql_pipeline = SQLPipelineBuilder{_except_query_a}.create_pipeline();
 const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
-// EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+
+EXPECT_TABLE_EQ_UNORDERED(table, _except_result);
+}
+
+TEST_F(SetOperatorIntegrationTest, MultipleSetOperatorsTest) {
+auto sql_pipeline = SQLPipelineBuilder{_multiple_set_operations_query_a}.create_pipeline();
+const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
 
 EXPECT_TABLE_EQ_UNORDERED(table, _except_result);
 }
