@@ -4,19 +4,8 @@
 
 #include "base_test.hpp"
 
-#include "SQLParser.h"
-#include "SQLParserResult.h"
-
 #include "hyrise.hpp"
-//#include "logical_query_plan/join_node.hpp"
-//#include "operators/abstract_join_operator.hpp"
-//#include "operators/print.hpp"
-//#include "operators/validate.hpp"
-//#include "scheduler/job_task.hpp"
-//#include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-//#include "sql/sql_plan_cache.hpp"
 
 namespace opossum {
 
