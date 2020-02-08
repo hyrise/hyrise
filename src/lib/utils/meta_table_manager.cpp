@@ -10,8 +10,8 @@
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  const std::list<std::shared_ptr<AbstractMetaTable>> meta_tables = {
-      std::make_shared<MetaTablesTable>(),           std::make_shared<MetaChunksTable>(),
+  const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {
+      std::make_shared<MetaTablesTable>(),           std::make_shared<MetaColumnsTable>(), std::make_shared<MetaChunksTable>(),
       std::make_shared<MetaChunkOrdersTable>(),      std::make_shared<MetaSegmentsTable>(),
       std::make_shared<MetaAccurateSegmentsTable>(), std::make_shared<MetaPluginsTable>(),
   };
@@ -63,6 +63,12 @@ void MetaTableManager::delete_from(const std::string& table_name, const std::sha
 void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<Table>& fields,
                               const std::shared_ptr<Table>& values) const {
   // TO DO
+}
+
+void MetaTableManager::_add(const std::shared_ptr<AbstractMetaTable>& table) {
+  _meta_tables[table->name()] = table;
+  _table_names.push_back(table->name());
+  std::sort(_table_names.begin(), _table_names.end());
 }
 
 }  // namespace opossum

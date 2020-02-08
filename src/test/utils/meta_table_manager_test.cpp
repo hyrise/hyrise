@@ -3,11 +3,109 @@
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/meta_accurate_segments_table.hpp"
+#include "utils/meta_tables/meta_chunk_orders_table.hpp"
+#include "utils/meta_tables/meta_chunks_table.hpp"
+#include "utils/meta_tables/meta_columns_table.hpp"
+#include "utils/meta_tables/meta_mock_table.hpp"
+#include "utils/meta_tables/meta_plugins_table.hpp"
+#include "utils/meta_tables/meta_segments_table.hpp"
+#include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
 
-class MetaTableManagerTest : public BaseTest {};
+using MetaTable = std::shared_ptr<AbstractMetaTable>;
+using MetaTables = std::vector<MetaTable>;
+using MetaTableNames = std::vector<std::string>;
 
+class MetaTableManagerTest : public BaseTest {
+ public:
+  static MetaTables meta_tables() {
+      return {
+      std::make_shared<MetaTablesTable>(),           std::make_shared<MetaColumnsTable>(), std::make_shared<MetaChunksTable>(),
+      std::make_shared<MetaChunkOrdersTable>(),      std::make_shared<MetaSegmentsTable>(),
+      std::make_shared<MetaAccurateSegmentsTable>(), std::make_shared<MetaPluginsTable>(),
+  };
+  }
+
+  static MetaTableNames meta_table_names() {
+    MetaTableNames names;
+    for (auto& table : MetaTableManagerTest::meta_tables()) {
+      names.push_back(table->name());
+    }
+
+    return names;
+  }
+
+  // We need this as the _add method of MetaTableManager is protected. Won't compile if _add is not called by test class.
+  static void add_meta_table(const MetaTable& table) {
+    Hyrise::get().meta_table_manager._add(table);
+  }
+
+ protected:
+  const std::string _test_file_path = "resources/test_data/tbl/meta_tables/meta_";
+  std::shared_ptr<Table> int_int;
+  std::shared_ptr<Table> int_int_int_null;
+
+  void SetUp() {
+    int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
+    int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
+    Hyrise::reset();
+    auto& storage_manager = Hyrise::get().storage_manager;
+    storage_manager.add_table("int_int", int_int);
+    storage_manager.add_table("int_int_int_null", int_int_int_null);
+  }
+};
+
+class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
+
+auto formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
+  auto stream = std::stringstream{};
+  stream << info.param->name();
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(MetaTable, MetaTableManagerMultiTablesTest,
+                         ::testing::ValuesIn(MetaTableManagerTest::meta_tables()), formatter);
+
+TEST_F(MetaTableManagerTest, ListAllTables) {
+  auto table_names = MetaTableManagerTest::meta_table_names();
+  std::sort(table_names.begin(), table_names.end());
+
+  EXPECT_EQ(Hyrise::get().meta_table_manager.table_names(), table_names);
+}
+
+TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
+  const auto mock_table = std::make_shared<MetaMockTable>();
+  auto& mtm = Hyrise::get().meta_table_manager;
+
+  MetaTableManagerTest::add_meta_table(mock_table);
+  mtm.insert_into(mock_table->name(), nullptr);
+  mtm.delete_from(mock_table->name(), nullptr);
+  mtm.update(mock_table->name(), nullptr, nullptr);
+
+  EXPECT_EQ(mock_table->insert_calls(), 1);
+  EXPECT_EQ(mock_table->remove_calls(), 1);
+  EXPECT_EQ(mock_table->update_calls(), 1);
+}
+
+TEST_P(MetaTableManagerMultiTablesTest, HasAllTables) {
+  EXPECT_TRUE(Hyrise::get().meta_table_manager.has_table(GetParam()->name()));
+}
+
+TEST_P(MetaTableManagerMultiTablesTest, ForwardsMutationInfo) {
+  const auto& table = GetParam();
+  const auto& mtm = Hyrise::get().meta_table_manager;
+  EXPECT_EQ(mtm.can_insert_into(table->name()), table->can_insert());
+  EXPECT_EQ(mtm.can_delete_from(table->name()), table->can_remove());
+  EXPECT_EQ(mtm.can_update(table->name()), table->can_update());
+}
+
+// TO DO: Make this nice and move to MetaTable tests. Avoid looping that can be replaced with parametrized test
 TEST_F(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
   auto& storage_manager = Hyrise::get().storage_manager;

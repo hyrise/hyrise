@@ -40,6 +40,7 @@ class AbstractMetaTable : private Noncopyable {
 
  protected:
   friend class MetaTableManager;
+  friend class MetaTableManagerTest;
   // This method actually generates the output table.
   virtual std::shared_ptr<Table> _on_generate() const = 0;
 

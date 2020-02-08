@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-AbstractMetaTable::AbstractMetaTable() { std::cout << "construct" << std::endl; }
+AbstractMetaTable::AbstractMetaTable() {}
 
 const std::shared_ptr<Table> AbstractMetaTable::generate() const {
   const auto table = _on_generate();
