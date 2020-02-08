@@ -1,7 +1,3 @@
-//
-// Created by Lukas Böhme on 17.12.19.
-//
-
 #include "table_generator.hpp"
 #include "storage/table.hpp"
 #include "constant_mappings.hpp"
