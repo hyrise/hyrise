@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * This is class for showing information of all stored segments via a meta table.
+ * This is a class for showing information of all stored segments via a meta table.
  * To get more accurate results, use MetaAccurateSegmentsTable.
  */
 class MetaSegmentsTable : public AbstractMetaTable {

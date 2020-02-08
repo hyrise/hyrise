@@ -541,6 +541,7 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
+    utils/abstract_setting.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_curry_override.hpp

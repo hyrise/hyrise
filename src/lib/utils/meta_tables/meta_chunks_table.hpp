@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * This is class for showing all stored chunks via a meta table.
+ * This is a class for showing all stored chunks via a meta table.
  */
 class MetaChunksTable : public AbstractMetaTable {
  public:

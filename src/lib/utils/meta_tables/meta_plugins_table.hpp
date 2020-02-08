@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * This is class for plugin control via a meta table.
+ * This is a class for plugin control via a meta table.
  * Inserting loads a plugin, deleting unloads it.
  */
 class MetaPluginsTable : public AbstractMetaTable {

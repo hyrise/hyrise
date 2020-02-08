@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * This is class that mocks the behavior of a meta table.
+ * This is a class that mocks the behavior of a meta table.
  * It can be useful in tests as it provides how often methods were called.
  */
 class MetaMockTable : public AbstractMetaTable {
