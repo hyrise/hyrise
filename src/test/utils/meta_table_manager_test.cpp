@@ -21,11 +21,10 @@ using MetaTableNames = std::vector<std::string>;
 class MetaTableManagerTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-      return {
-      std::make_shared<MetaTablesTable>(),           std::make_shared<MetaColumnsTable>(), std::make_shared<MetaChunksTable>(),
-      std::make_shared<MetaChunkOrdersTable>(),      std::make_shared<MetaSegmentsTable>(),
-      std::make_shared<MetaAccurateSegmentsTable>(), std::make_shared<MetaPluginsTable>(),
-  };
+    return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
+            std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkOrdersTable>(),
+            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
+            std::make_shared<MetaPluginsTable>()};
   }
 
   static MetaTableNames meta_table_names() {
@@ -37,10 +36,9 @@ class MetaTableManagerTest : public BaseTest {
     return names;
   }
 
-  // We need this as the _add method of MetaTableManager is protected. Won't compile if _add is not called by test class.
-  static void add_meta_table(const MetaTable& table) {
-    Hyrise::get().meta_table_manager._add(table);
-  }
+  // We need this as the _add method of MetaTableManager is protected.
+  // Won't compile if _add is not called by test class, which is a friend of MetaTableManager.
+  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager._add(table); }
 
  protected:
   const std::string _test_file_path = "resources/test_data/tbl/meta_tables/meta_";

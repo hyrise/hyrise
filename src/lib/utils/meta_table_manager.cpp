@@ -11,10 +11,10 @@ namespace opossum {
 
 MetaTableManager::MetaTableManager() {
   const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {
-      std::make_shared<MetaTablesTable>(),           std::make_shared<MetaColumnsTable>(), std::make_shared<MetaChunksTable>(),
-      std::make_shared<MetaChunkOrdersTable>(),      std::make_shared<MetaSegmentsTable>(),
-      std::make_shared<MetaAccurateSegmentsTable>(), std::make_shared<MetaPluginsTable>(),
-  };
+      std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
+      std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkOrdersTable>(),
+      std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
+      std::make_shared<MetaPluginsTable>()};
 
   for (const auto& table : meta_tables) {
     _meta_tables[table->name()] = table;

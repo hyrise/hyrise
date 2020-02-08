@@ -35,7 +35,6 @@ class MetaMockTable : public AbstractMetaTable {
   size_t _insert_calls;
   size_t _remove_calls;
   size_t _update_calls;
-
- };
+};
 
 }  // namespace opossum
