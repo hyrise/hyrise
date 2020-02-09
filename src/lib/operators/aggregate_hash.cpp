@@ -152,8 +152,11 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
       // If we have a value, use the aggregator lambda to update the current aggregate value for this group
       aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
 
-      // increase value counter
-      ++result.aggregate_count;
+      if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
+                    function == AggregateFunction::StandardDeviationSample) {
+        // increase value counter
+        ++result.aggregate_count;
+      }
 
       if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
         // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
@@ -239,13 +242,36 @@ void AggregateHash::_aggregate() {
       }
     }
 
-    // Now that we have the data structures in place, we can start the actual work
+    // Now that we have the data structures in place, we can start the actual work. We want to fill
+    // keys_per_chunk[chunk_id][chunk_offset] with something that uniquely identifies the group into which that
+    // position belongs. There are a couple of options here (cf. AggregateHash::_on_execute):
+    //
+    // 0 GROUP BY columns:   No partitioning needed; we don't reach this point because of the check for
+    //                       EmptyAggregateKey above
+    // 1 GROUP BY column:    The AggregateKey is one dimensional, i.e., the same as AggregateKeyEntry
+    // > 1 GROUP BY columns: The AggregateKey is multi-dimensional. The value in
+    //                       keys_per_chunk[chunk_id][chunk_offset] is subscripted with the index of the GROUP BY
+    //                       columns (not the same as the GROUP BY column_id)
+    //
+    // To generate a unique identifier, we create a map from the value found in the respective GROUP BY column to
+    // a unique uint64_t. The value 0 is reserved for NULL.
+    //
+    // This has the cost of a hashmap lookup and potential insert for each row and each GROUP BY column. There are
+    // some cases in which we can avoid this. These make use of the fact that we can only have 2^64 - 2*2^32 values
+    // in a table (due to INVALID_VALUE_ID and INVALID_CHUNK_OFFSET limiting the range of RowIDs).
+    //
+    // (1) For types smaller than AggregateKeyEntry, such as int32_t, their value range can be immediately mapped into
+    //     uint64_t. We cannot do the same for int64_t because we need to account for NULL values.
+    // (2) For strings not longer than five characters, there are 1+2^(1*8)+2^(2*8)+2^(3*8)+2^(4*8) potential values.
+    //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
+    //     integer. The calculation is described below.
+
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(_groupby_column_ids.size());
 
     for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
-      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk,
-                                                   chunk_count, this]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
+                                                   this]() {
         const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
         const auto data_type = input_table->column_data_type(groupby_column_id);
 
@@ -302,6 +328,12 @@ void AggregateHash::_aggregate() {
                                              std::equal_to<>, decltype(allocator)>(allocator);
             AggregateKeyEntry id_counter = 1u;
 
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+              // We store strings shorter than five characters without using the id_map. For that, we need to reserve
+              // the IDs used for short strings
+              id_counter = 5'000'000'000;
+            }
+
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               if (!chunk_in) continue;
@@ -316,15 +348,60 @@ void AggregateHash::_aggregate() {
                     keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
                   }
                 } else {
-                  auto inserted = id_map.try_emplace(position.value(), id_counter);
-                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
+                  auto id = AggregateKeyEntry{0} - 1;  // using max value for "unset"
+                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+                    const auto& string = position.value();
+                    if (string.size() < 5) {
+                      switch (string.size()) {
+                        //       NULL:              0
+                        //       str.length() == 0: 1
+                        //       str.length() == 1: 2 + (uint8_t) str            // maximum: 257
+                        //       str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793
+                        //       str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
+                        //       str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
+                        //       str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better
+                        //                          distinction
+                        case 0: {
+                          id = 1;
+                        } break;
+
+                        case 1: {
+                          id = 2 + string[0];
+                        } break;
+
+                        case 2: {
+                          id = 258 + (string[1] << 8) + string[0];
+                        } break;
+
+                        case 3: {
+                          id = 65'794 + (string[2] << 16) + (string[1] << 8) + string[0];
+                        } break;
+
+                        case 4: {
+                          id = 16'843'010 + (string[3] << 24) + (string[2] << 16) + (string[1] << 8) + string[0];
+                        } break;
+
+                          // TODO test with NULL, "", "\0", "longstring" ...
+                      }
+                    }
                   }
 
-                  // if the id_map didn't have the value as a key and a new element was inserted
-                  if (inserted.second) ++id_counter;
+                  if (id == AggregateKeyEntry{0} - 1) {
+                    // Could not take the shortcut above, either because we don't have a string or because it is too
+                    // long
+                    auto inserted = id_map.try_emplace(position.value(), id_counter);
+
+                    id = inserted.first->second;
+
+                    // if the id_map didn't have the value as a key and a new element was inserted
+                    if (inserted.second) ++id_counter;
+                  }
+
+                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                    keys_per_chunk[chunk_id][chunk_offset] = id;
+                  } else {
+                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
+                  }
                 }
 
                 ++chunk_offset;

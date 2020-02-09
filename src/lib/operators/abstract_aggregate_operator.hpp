@@ -19,6 +19,7 @@ class AggregateFunctionBuilder {
   void get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
+// TODO benchmark if NULLable check makes a difference here
 template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
  public:
