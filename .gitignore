@@ -42,5 +42,4 @@ cmake-build-*
 default.profdata
 default.profraw
 
-tpcds_cached_tables/
-/python/.ipynb_checkpoints
+*.ipynb_checkpoints
