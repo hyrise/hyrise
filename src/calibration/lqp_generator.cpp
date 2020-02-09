@@ -11,12 +11,7 @@ namespace opossum {
     void LQPGenerator::generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper>& table) {
       switch (operator_type) {
         case OperatorType::TableScan:
-          {
             _generate_table_scans(table);
-            if (_enable_column_vs_column_scans) {
-              _generate_column_vs_column_scans(table);
-            }
-          }
           return;
         case OperatorType::JoinHash:
           _generate_joins(table);
@@ -45,6 +40,10 @@ namespace opossum {
         const auto distribution = table->get_column_data_distribution(column_id);
         const auto step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
 
+        if (_enable_column_vs_column_scans) {
+           _generate_column_vs_column_scans(table);
+        }
+	      
         for (int selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) {
           // in this for-loop we iterate up and go from 100% selectivity to 0% by increasing the lower_bound in steps
           // for any step there
