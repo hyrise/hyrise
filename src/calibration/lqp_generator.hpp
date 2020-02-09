@@ -24,5 +24,6 @@ class LQPGenerator {
 
     void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper> &table,
                                           std::vector<std::shared_ptr<AbstractLQPNode>> &lqp_queue) const;
+
 };
 }

@@ -29,6 +29,7 @@ namespace opossum {
 
       std::vector<std::shared_ptr<AbstractLQPNode>> generated_lpqs;
 
+      // TODO remove the need of referencing columns by string
       const auto stored_table_node = StoredTableNode::make(table->get_name());
 
       const int column_count = table->get_table()->column_count();
@@ -36,6 +37,7 @@ namespace opossum {
       const auto column_data_types = table->get_table()->column_data_types();
 
       for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+
         // Column specific values
         const auto column = stored_table_node->get_column(column_names.at(column_id));
         const auto distribution = table->get_column_data_distribution(column_id);
@@ -141,5 +143,6 @@ namespace opossum {
                         stored_table_node->get_column(pair.second)
                 ), stored_table_node));
       }
+
     }
 }
