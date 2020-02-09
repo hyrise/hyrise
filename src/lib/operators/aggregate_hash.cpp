@@ -352,8 +352,7 @@ void AggregateHash::_aggregate() {
                   if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
                     if (string.size() < 5) {
-                      static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
-                                    "Calculation only valid for uint64_t");
+                      static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
 
                       const auto char_to_uint = [](const char in, const int bits) {
                         // chars may be signed or unsigned. For the calculation as described below, we need signed
@@ -362,19 +361,19 @@ void AggregateHash::_aggregate() {
                       };
 
                       switch (string.size()) {
-                        // Optimization for short strings (see above):
-                        //
-                        // NULL:              0
-                        // str.length() == 0: 1
-                        // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
-                        // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
-                        // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
-                        // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
-                        // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
-                        //
-                        // This could be extended to longer strings if the size of the input table (and thus the
-                        // maximum number of distinct strings) is taken into account. For now, let's not make it even
-                        // more complicated.
+                          // Optimization for short strings (see above):
+                          //
+                          // NULL:              0
+                          // str.length() == 0: 1
+                          // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
+                          // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
+                          // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
+                          // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
+                          // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
+                          //
+                          // This could be extended to longer strings if the size of the input table (and thus the
+                          // maximum number of distinct strings) is taken into account. For now, let's not make it even
+                          // more complicated.
 
                         case 0: {
                           id = uint64_t{1};
@@ -389,7 +388,8 @@ void AggregateHash::_aggregate() {
                         } break;
 
                         case 3: {
-                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
+                               char_to_uint(string[0], 0);
                         } break;
 
                         case 4: {
