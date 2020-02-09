@@ -10,11 +10,11 @@
 namespace opossum {
 
 /**
- * This node type represents the IMPORT / COPY FROM management command.
+ * This node type represents the COPY TO management command.
  */
-class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
+class ExportNode : public EnableMakeForLQPNode<ExportNode>, public BaseNonQueryNode {
  public:
-  ImportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
+  ExportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
