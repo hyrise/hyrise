@@ -32,15 +32,15 @@ int main() {
   const auto tables = table_generator.generate();
 
   auto const path_train = "./data/train";
-//  auto const path_test = "./data/test";
+  auto const path_test = "./data/test";
 
   const auto measurement_export = MeasurementExport(path_train);
   auto lqp_generator = LQPGenerator();
   const auto table_export = TableExport(path_train);
 
-//  const auto benchmark_builder = BenchmarkBuilder(path_test);
+  const auto benchmark_builder = BenchmarkBuilder(path_test);
 
-//  benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
+  benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
 
   for (const auto &table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
