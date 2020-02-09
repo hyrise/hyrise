@@ -287,7 +287,7 @@ void AggregateHash::_aggregate() {
               const auto base_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
               segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
-                const auto to_uint = [](const int32_t value) {
+                const auto int_to_uint = [](const int32_t value) {
                   // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
                   // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
                   // negative itself) to get a positive number.
@@ -300,13 +300,13 @@ void AggregateHash::_aggregate() {
                   if (position.is_null()) {
                     keys_per_chunk[chunk_id][chunk_offset] = 0;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset] = to_uint(position.value()) + 1;
+                    keys_per_chunk[chunk_id][chunk_offset] = int_to_uint(position.value()) + 1;
                   }
                 } else {
                   if (position.is_null()) {
                     keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
                   } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = to_uint(position.value()) + 1;
+                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
                   }
                 }
                 ++chunk_offset;
@@ -330,7 +330,7 @@ void AggregateHash::_aggregate() {
 
             if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
               // We store strings shorter than five characters without using the id_map. For that, we need to reserve
-              // the IDs used for short strings
+              // the IDs used for short strings (see below).
               id_counter = 5'000'000'000;
             }
 
@@ -352,36 +352,50 @@ void AggregateHash::_aggregate() {
                   if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
                     if (string.size() < 5) {
+                      static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>,
+                                    "Calculation only valid for uint64_t");
+
+                      const auto char_to_uint = [](const char in, const int bits) {
+                        // chars may be signed or unsigned. For the calculation as described below, we need signed
+                        // chars.
+                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
+                      };
+
                       switch (string.size()) {
-                        //       NULL:              0
-                        //       str.length() == 0: 1
-                        //       str.length() == 1: 2 + (uint8_t) str            // maximum: 257
-                        //       str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793
-                        //       str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
-                        //       str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
-                        //       str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better
-                        //                          distinction
+                        // Optimization for short strings (see above):
+                        //
+                        // NULL:              0
+                        // str.length() == 0: 1
+                        // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
+                        // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
+                        // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
+                        // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
+                        // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
+                        //
+                        // This could be extended to longer strings if the size of the input table (and thus the
+                        // maximum number of distinct strings) is taken into account. For now, let's not make it even
+                        // more complicated.
+
                         case 0: {
-                          id = 1;
+                          id = uint64_t{1};
                         } break;
 
                         case 1: {
-                          id = 2 + string[0];
+                          id = uint64_t{2} + char_to_uint(string[0], 0);
                         } break;
 
                         case 2: {
-                          id = 258 + (string[1] << 8) + string[0];
+                          id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
 
                         case 3: {
-                          id = 65'794 + (string[2] << 16) + (string[1] << 8) + string[0];
+                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
 
                         case 4: {
-                          id = 16'843'010 + (string[3] << 24) + (string[2] << 16) + (string[1] << 8) + string[0];
+                          id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
+                               char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
-
-                          // TODO test with NULL, "", "\0", "longstring" ...
                       }
                     }
                   }
