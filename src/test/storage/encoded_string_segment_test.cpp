@@ -127,7 +127,7 @@ auto encoded_string_segment_test_formatter = [](const ::testing::TestParamInfo<S
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
-                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::String, false)),
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::String, false)),
                          encoded_string_segment_test_formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {

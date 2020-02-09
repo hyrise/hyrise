@@ -260,6 +260,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
         case LQPNodeType::Delete:
+        case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
         case LQPNodeType::Predicate:

@@ -2,8 +2,8 @@
 
 #include "base_test.hpp"
 
-#include "logical_query_plan/stored_table_node.hpp"
 #include "all_parameter_variant.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
