@@ -153,7 +153,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
       aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
 
       if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
-                    function == AggregateFunction::StandardDeviationSample) {
+                    function == AggregateFunction::StandardDeviationSample) {  // NOLINT
         // increase value counter
         ++result.aggregate_count;
       }
@@ -328,7 +328,7 @@ void AggregateHash::_aggregate() {
                                              std::equal_to<>, decltype(allocator)>(allocator);
             AggregateKeyEntry id_counter = 1u;
 
-            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
               // We store strings shorter than five characters without using the id_map. For that, we need to reserve
               // the IDs used for short strings (see below).
               id_counter = 5'000'000'000;
@@ -349,12 +349,12 @@ void AggregateHash::_aggregate() {
                   }
                 } else {
                   auto id = AggregateKeyEntry{0} - 1;  // using max value for "unset"
-                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
                     const auto& string = position.value();
                     if (string.size() < 5) {
                       static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
 
-                      const auto char_to_uint = [](const char in, const int bits) {
+                      const auto char_to_uint = [](const char in, const uint bits) {
                         // chars may be signed or unsigned. For the calculation as described below, we need signed
                         // chars.
                         return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
