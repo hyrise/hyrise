@@ -347,7 +347,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
   auto sum = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 2u);
   EXPECT_EQ(accessed_offsets,
@@ -366,7 +366,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 
   auto sum = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 2u);
   EXPECT_EQ(accessed_offsets,
