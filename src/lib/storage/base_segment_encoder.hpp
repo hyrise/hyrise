@@ -19,10 +19,10 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
+class LZ4Encoder;
+
 /**
  * @brief Base class of all segment encoders
- *
- * Use the segment_encoder.template.hpp to add new implementations!
  */
 class BaseSegmentEncoder {
  public:
@@ -145,7 +145,10 @@ class SegmentEncoder : public BaseSegmentEncoder {
   VectorCompressionType vector_compression_type() const { return _vector_compression_type; }
 
  private:
-  VectorCompressionType _vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
+  // LZ4Encoder only supports SimdBp128 in order to reduce the compile time, see the comment in lz4_encoder.hpp.
+  VectorCompressionType _vector_compression_type = std::is_same_v<Derived, LZ4Encoder>
+                                                       ? VectorCompressionType::SimdBp128
+                                                       : VectorCompressionType::FixedSizeByteAligned;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }
