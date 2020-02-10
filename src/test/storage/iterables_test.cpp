@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
+#include "encoding_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
