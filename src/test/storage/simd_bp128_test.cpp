@@ -91,7 +91,6 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingAdvance) {
   auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
   EXPECT_NE(compressed_sequence, nullptr);
 
-
   auto seq_it = sequence.cbegin();
   auto compressed_seq_it = compressed_sequence->cbegin();
   EXPECT_EQ(*seq_it, *compressed_seq_it);
