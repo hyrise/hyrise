@@ -83,7 +83,9 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
     return begin <= index && index < end;
   }
 
-  size_t _index_relative_to_cached_meta_block(const size_t index) const { return index - _cached_meta_block_first_index; }
+  size_t _index_relative_to_cached_meta_block(const size_t index) const {
+    return index - _cached_meta_block_first_index;
+  }
 
   bool _is_index_after_or_within_cached_meta_block(const size_t index) const {
     return _cached_meta_block_first_index <= index;

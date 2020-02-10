@@ -19,6 +19,8 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   using Packing = SimdBp128Packing;
 
  public:
+  // The SimdBp128Iterators are very simple iterators that use the SimdBp128Decompressor to access single values via
+  // dereference() as the compressor already has to the logic to cache/extract blocks/meta blocks.
   explicit SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor, const size_t absolute_index = 0u)
       : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
 
