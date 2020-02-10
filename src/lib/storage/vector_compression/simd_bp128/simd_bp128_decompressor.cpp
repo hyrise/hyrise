@@ -21,6 +21,15 @@ SimdBp128Decompressor::SimdBp128Decompressor(const SimdBp128Decompressor& other)
       _cached_meta_info{other._cached_meta_info},
       _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
 
+SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other)
+    : _data{std::move(other._data)},
+      _size{std::move(other._size)},
+      _cached_meta_info_offset{std::move(other._cached_meta_info_offset)},
+      _cached_meta_block_first_index{std::move(other._cached_meta_block_first_index)},
+      _cached_block_first_index{std::move(other._cached_block_first_index)},
+      _cached_meta_info{std::move(other._cached_meta_info)},
+      _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
+
 void SimdBp128Decompressor::_read_meta_info(size_t meta_info_offset) {
   Packing::read_meta_info(_data->data() + meta_info_offset, _cached_meta_info.data());
 }

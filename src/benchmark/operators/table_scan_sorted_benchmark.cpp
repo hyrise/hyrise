@@ -84,6 +84,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
       const auto& chunk = table->get_chunk(chunk_id);
       chunk->finalize();
     }
+    if (encoding_type == EncodingType::FrameOfReference || encoding_type == EncodingType::Dictionary) {
+      ChunkEncoder::encode_all_chunks(table, {encoding_type, VectorCompressionType::SimdBp128});
+    }
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 

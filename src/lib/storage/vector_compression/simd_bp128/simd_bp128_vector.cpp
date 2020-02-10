@@ -17,9 +17,9 @@ std::unique_ptr<SimdBp128Decompressor> SimdBp128Vector::on_create_decompressor()
   return std::make_unique<SimdBp128Decompressor>(*this);
 }
 
-SimdBp128Iterator SimdBp128Vector::on_begin() const { return SimdBp128Iterator{&_data, _size, 0u}; }
+SimdBp128Iterator SimdBp128Vector::on_begin() const { return SimdBp128Iterator{on_create_decompressor(), 0u}; }
 
-SimdBp128Iterator SimdBp128Vector::on_end() const { return SimdBp128Iterator{&_data, _size, _size}; }
+SimdBp128Iterator SimdBp128Vector::on_end() const { return SimdBp128Iterator{on_create_decompressor(), _size}; }
 
 std::unique_ptr<const BaseCompressedVector> SimdBp128Vector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
