@@ -824,7 +824,7 @@ TEST_P(OperatorsTableScanTest, BinaryScanOnNullable) {
       {ColumnID{0}, PredicateCondition::LessThan, 1235, {123, 1234}},
       {ColumnID{0}, PredicateCondition::LessThanEquals, 1234, {123, 1234}}};
 
-  const auto table = get_int_float_with_null_op(Chunk::MAX_SIZE);
+  const auto table = get_int_float_with_null_op(Chunk::DEFAULT_SIZE);
   for (const auto& [column_id, predicate_condition, value, expected_values] : predicates) {
     const auto scan = create_table_scan(table, column_id, predicate_condition, value);
     scan->execute();
