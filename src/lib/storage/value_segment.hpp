@@ -65,6 +65,11 @@ class ValueSegment : public BaseValueSegment {
   // Return the number of entries in the segment.
   ChunkOffset size() const final;
 
+  // Resizes the ValueSegment, but does not allocate new memory. This is used by the Insert operator instead of
+  // immediately resizing the vector. The reason for that is that the thread sanitizer does not understand atomic
+  // resizes and our MVCC concept. As such, this method is part of tsan-ignore.txt.
+  void resize(const size_t size);
+
   // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 

@@ -112,6 +112,16 @@ ChunkOffset ValueSegment<T>::size() const {
 }
 
 template <typename T>
+void ValueSegment<T>::resize(const size_t size) {
+  DebugAssert(size > _values.size() && size <= _values.capacity(),
+              "ValueSegments should not be shrunk or resized beyond their original capacity");
+  _values.resize(size);
+  if (is_nullable()) {
+    _null_values->resize(size);
+  }
+}
+
+template <typename T>
 std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
   if (is_nullable()) {
