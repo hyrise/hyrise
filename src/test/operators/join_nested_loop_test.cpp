@@ -41,9 +41,10 @@ TEST_F(OperatorsJoinNestedLoopTest, DescriptionAndName) {
 
 TEST_F(OperatorsJoinNestedLoopTest, DeepCopy) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
-  const auto secondary_predicates = std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
-  const auto join_operator =
-      std::make_shared<JoinNestedLoop>(dummy_input, dummy_input, JoinMode::Left, primary_predicate, secondary_predicates);
+  const auto secondary_predicates =
+      std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
+  const auto join_operator = std::make_shared<JoinNestedLoop>(dummy_input, dummy_input, JoinMode::Left,
+                                                              primary_predicate, secondary_predicates);
   const auto abstract_join_operator_copy = join_operator->deep_copy();
   const auto join_operator_copy = std::dynamic_pointer_cast<JoinNestedLoop>(abstract_join_operator_copy);
 

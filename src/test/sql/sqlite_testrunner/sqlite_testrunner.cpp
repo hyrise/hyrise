@@ -130,14 +130,6 @@ void SQLiteTestRunner::SetUp() {
       Hyrise::get().storage_manager.add_table(table_name, table_cache_entry.table);
     }
   }
-
-  // Hyrise::get().topology.use_numa_topology();
-  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-
-  // Enable caches so that we can spot errors that only occur if a query is executed a second time.
-  // This second run is done implicitly when a different encoding is used.
-  Hyrise::get().default_pqp_cache = _pqp_cache;
-  Hyrise::get().default_lqp_cache = _lqp_cache;
 }
 
 std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
