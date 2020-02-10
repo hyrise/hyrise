@@ -67,7 +67,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     auto uncompressed_attribute_vector = pmr_vector<uint32_t>{null_values.size(), allocator};
     auto values_iter = dense_values.cbegin();
-    for (auto current_position = size_t{0}; current_position < null_values.size(); ++current_position) {
+    const auto null_values_size = null_values.size();
+    for (auto current_position = size_t{0}; current_position < null_values_size; ++current_position) {
       if (!null_values[current_position]) {
         const auto value_id = _get_value_id(dictionary, *values_iter);
         uncompressed_attribute_vector[current_position] = value_id;

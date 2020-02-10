@@ -104,7 +104,6 @@ void Chunk::finalize() {
       _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
     }
 
-    // Do not use begin_cids.end() because that vector is pre-allocated and might be larger than the chunk
     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
            "finalized before all transactions committed/rolled back.");

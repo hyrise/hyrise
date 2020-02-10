@@ -52,7 +52,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
         // Calculate metric 2 – Chunk Hotness
         CommitID highest_end_commit_id = CommitID{0};
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+        const auto chunk_size = chunk->size();
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           const auto commit_id = chunk->mvcc_data()->get_end_cid(chunk_offset);
           if (commit_id != MvccData::MAX_COMMIT_ID && commit_id > highest_end_commit_id) {
             highest_end_commit_id = commit_id;

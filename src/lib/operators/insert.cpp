@@ -130,12 +130,14 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       {
         const auto& mvcc_data = target_chunk->mvcc_data();
         const auto transaction_id = context->transaction_id();
-        for (auto target_chunk_offset = target_chunk->size();
-             target_chunk_offset < target_chunk->size() + num_rows_for_target_chunk; ++target_chunk_offset) {
+        const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
+        for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
-        std::atomic_thread_fence(std::memory_order_seq_cst);
       }
+
+      // Make sure the MVCC data is written before the first segment (and thus the chunk) is resized
+      std::atomic_thread_fence(std::memory_order_seq_cst);
 
       // Grow data Segments.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
@@ -163,7 +165,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           }
         });
 
-        // Make sure the first columns rewrite actually happens last and doesn't get reordered.
+        // Make sure the first column's resize actually happens last and doesn't get reordered.
         std::atomic_thread_fence(std::memory_order_seq_cst);
       }
 

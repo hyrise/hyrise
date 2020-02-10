@@ -38,7 +38,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
 #elif _LIBCPP_VERSION
       lib_suffix = "_libcpp";
 #else
-      static_assert("Unknown c++ library");
+      static_assert(false, "Unknown c++ library");
 #endif
     }
 
