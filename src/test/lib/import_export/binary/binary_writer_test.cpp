@@ -428,7 +428,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE);
   auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
                       opossum::NULL_VALUE};
 
