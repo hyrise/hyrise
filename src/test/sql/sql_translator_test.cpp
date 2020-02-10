@@ -1870,8 +1870,8 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   // clang-format off
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
   const auto static_table_node = StaticTableNode::make(meta_table);
-  const auto table_name_column_id = meta_table->column_id_by_name("table_name");
-  LQPColumnReference table_name_column{static_table_node, table_name_column_id};
+  const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
+
   const auto expected_lqp =
       PredicateNode::make(equals_(table_name_column, "int_float"),
         static_table_node);
@@ -1885,6 +1885,23 @@ TEST_F(SQLTranslatorTest, SelectMetaTable) {
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
+  const auto actual_lqp = compile_query("SELECT table_name FROM (SELECT table_name, column_count FROM " +
+                                        MetaTableManager::META_PREFIX + "tables) as subquery");
+
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto static_table_node = StaticTableNode::make(meta_table);
+
+  const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
+  const LQPColumnReference column_count_column{static_table_node, meta_table->column_id_by_name("column_count")};
+
+  const auto expected_subquery_lqp =
+      ProjectionNode::make(expression_vector(table_name_column, column_count_column), static_table_node);
+  const auto expected_lqp = ProjectionNode::make(expression_vector(table_name_column), expected_subquery_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
