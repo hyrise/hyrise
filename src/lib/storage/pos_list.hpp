@@ -64,10 +64,11 @@ struct PosList final : private pmr_vector<RowID> {
           [&]() {
             if (size() == 0) return true;
             const auto& common_chunk_id = (*this)[0].chunk_id;
+            if (common_chunk_id == INVALID_CHUNK_ID) return false;
             return std::all_of(cbegin(), cend(),
                                [&](const auto& row_id) { return row_id.chunk_id == common_chunk_id; });
           }(),
-          "Chunk was marked as referencing only a single chunk, but references more");
+          "Chunk was marked as referencing only a single chunk, but references more (or only NULL values)");
     }
     return _references_single_chunk;
   }
