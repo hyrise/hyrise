@@ -74,7 +74,8 @@ class SQLTranslatorTest : public BaseTest {
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-    const auto lqps = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+    const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+    const auto lqps = translation_result.first;
 
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
@@ -87,9 +88,10 @@ class SQLTranslatorTest : public BaseTest {
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
     SQLTranslator sql_translator{UseMvcc::No};
-    const auto lqps = sql_translator.translate_parser_result(parser_result);
+    const auto translation_result = sql_translator.translate_parser_result(parser_result);
+    const auto lqps = translation_result.first;
     Assert(lqps.size() == 1, "Expected just one LQP");
-    return {lqps.at(0), sql_translator.parameter_ids_of_value_placeholders()};
+    return {lqps.at(0), translation_result.second.parameter_ids_of_value_placeholders};
   }
 
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
@@ -1681,7 +1683,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
 
   SQLTranslator sql_translator{UseMvcc::No};
 
-  const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
+  const auto actual_lqp = sql_translator.translate_parser_result(parser_result).first.at(0);
 
   // clang-format off
   const auto parameter_int_float_b = correlated_parameter_(ParameterID{1}, int_float_b);
@@ -1776,8 +1778,8 @@ TEST_F(SQLTranslatorTest, UseMvcc) {
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  const auto lqp_a = SQLTranslator{UseMvcc::No}.translate_parser_result(parser_result).at(0);
-  const auto lqp_b = SQLTranslator{UseMvcc::Yes}.translate_parser_result(parser_result).at(0);
+  const auto lqp_a = SQLTranslator{UseMvcc::No}.translate_parser_result(parser_result).first.at(0);
+  const auto lqp_b = SQLTranslator{UseMvcc::Yes}.translate_parser_result(parser_result).first.at(0);
 
   EXPECT_FALSE(lqp_is_validated(lqp_a));
   EXPECT_TRUE(lqp_is_validated(lqp_b));

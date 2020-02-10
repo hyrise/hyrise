@@ -136,19 +136,10 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
                     std::unordered_map<std::string, std::shared_ptr<LQPView>>{}) {}
 
-std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
-  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
-  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
-
-  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
-    parameter_ids[value_placeholder_id] = parameter_id;
-  }
-
-  return parameter_ids;
-}
-
-std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_result(
+std::pair<std::vector<std::shared_ptr<AbstractLQPNode>>, TranslationInfo> SQLTranslator::translate_parser_result(
     const hsql::SQLParserResult& result) {
+  _cacheable = true;
+
   std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
@@ -157,7 +148,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_re
     result_nodes.push_back(result_node);
   }
 
-  return result_nodes;
+  return std::make_pair(result_nodes, TranslationInfo{_cacheable, _parameter_ids_of_value_placeholders()});
 }
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
@@ -680,8 +671,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
 
   return validated_static_table_node;
 }
-
-bool SQLTranslator::cacheable() { return _cacheable; }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_mode(join.type);
@@ -1219,9 +1208,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 
   auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
-  const auto lqp = prepared_plan_translator.translate_parser_result(parse_result).at(0);
+  const auto translation_result = prepared_plan_translator.translate_parser_result(parse_result);
 
-  const auto parameter_ids = prepared_plan_translator.parameter_ids_of_value_placeholders();
+  const auto lqp = translation_result.first.at(0);
+
+  const auto parameter_ids = translation_result.second.parameter_ids_of_value_placeholders;
 
   const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
 
@@ -1684,6 +1675,17 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
     expressions.emplace_back(element.expression);
   }
   return expressions;
+}
+
+std::vector<ParameterID> SQLTranslator::_parameter_ids_of_value_placeholders() const {
+  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
+
+  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
+    parameter_ids[value_placeholder_id] = parameter_id;
+  }
+
+  return parameter_ids;
 }
 
 SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression)

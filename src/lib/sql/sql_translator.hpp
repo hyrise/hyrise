@@ -20,6 +20,11 @@ namespace opossum {
 class AggregateNode;
 class LQPSubqueryExpression;
 
+struct TranslationInfo {
+  bool cacheable;
+  std::vector<ParameterID> parameter_ids_of_value_placeholders;
+};
+
 /**
  * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
  *
@@ -36,22 +41,16 @@ class SQLTranslator final {
   explicit SQLTranslator(const UseMvcc use_mvcc);
 
   /**
-   * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
-   */
-  std::vector<ParameterID> parameter_ids_of_value_placeholders() const;
-
-  /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
    */
-  std::vector<std::shared_ptr<AbstractLQPNode>> translate_parser_result(const hsql::SQLParserResult& result);
+  std::pair<std::vector<std::shared_ptr<AbstractLQPNode>>, TranslationInfo> translate_parser_result(
+      const hsql::SQLParserResult& result);
 
   /**
    * Translate an Expression AST into a Hyrise-expression. No columns can be referenced in expressions translated by
    * this call.
    */
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
-
-  bool cacheable();
 
  private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
@@ -175,15 +174,20 @@ class SQLTranslator final {
       const std::vector<SelectListElement>& select_list_elements);
 
  private:
+  /**
+  * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
+  */
+  std::vector<ParameterID> _parameter_ids_of_value_placeholders() const;
+
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;
+  bool _cacheable{true};
   std::shared_ptr<SQLIdentifierResolver> _sql_identifier_resolver;
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
   std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
-  bool _cacheable{true};
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<SelectListElement> _inflated_select_list_elements;
