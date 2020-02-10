@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& table)
-    : BaseNonQueryNode(LQPNodeType::StaticTable), table(table) {}
+StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& table, const bool copyable)
+    : BaseNonQueryNode(LQPNodeType::StaticTable), table(table), _copyable(copyable) {}
 
 std::string StaticTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
@@ -56,6 +56,7 @@ size_t StaticTableNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+  Assert(_copyable, "StaticTableNode cannot be shallow copied");
   return StaticTableNode::make(table);
 }
 

@@ -13,7 +13,7 @@ namespace opossum {
  */
 class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
  public:
-  explicit StaticTableNode(const std::shared_ptr<Table>& table);
+  explicit StaticTableNode(const std::shared_ptr<Table>& table, const bool copyable = true);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
@@ -24,6 +24,7 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Bas
 
  protected:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
+  const bool _copyable;
 
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

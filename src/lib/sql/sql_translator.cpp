@@ -659,7 +659,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
 
-  const auto static_table_node = StaticTableNode::make(meta_table);
+  const auto static_table_node = StaticTableNode::make(meta_table, false);
   const auto validated_static_table_node = _validate_if_active(static_table_node);
 
   // Publish the columns of the table in the SQLIdentifierResolver
@@ -1211,6 +1211,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
   const auto translation_result = prepared_plan_translator.translate_parser_result(parse_result);
+  Assert(translation_result.second.cacheable, "Non-cacheable LQP nodes can't be part of prepared statements");
 
   const auto lqp = translation_result.first.at(0);
 
