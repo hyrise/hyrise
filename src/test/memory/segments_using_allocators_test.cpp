@@ -25,7 +25,7 @@ class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resour
     std::free(p);  // NOLINT
   }
 
-  bool do_is_equal(const memory_resource& other) const noexcept override { return false; }
+  bool do_is_equal(const memory_resource& other) const noexcept override { Fail("Not implemented"); }
 };
 
 class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType, SegmentEncodingSpec>> {
