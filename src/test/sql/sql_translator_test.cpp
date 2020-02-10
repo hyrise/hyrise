@@ -1889,6 +1889,33 @@ TEST_F(SQLTranslatorTest, SelectMetaTable) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectMetaTableWithClause) {
+  const auto actual_lqp = compile_query(
+      "WITH "
+      "wq AS (SELECT * FROM " +
+      MetaTableManager::META_PREFIX +
+      "tables) "
+      "SELECT * FROM wq");
+
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+
+  const auto expected_lqp = StaticTableNode::make(meta_table);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, MetaTablePrepareWithoutParameters) {
+  const auto prepared_plan_lqp =
+      compile_query("PREPARE some_prepared_plan FROM 'SELECT * FROM " + MetaTableManager::META_PREFIX + "tables'");
+  const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_plan_lqp, std::vector<ParameterID>{});
+
+  Hyrise::get().storage_manager.add_prepared_plan("some_prepared_plan", prepared_plan);
+
+  const auto actual_lqp = compile_query("EXECUTE some_prepared_plan");
+
+  EXPECT_LQP_EQ(actual_lqp, prepared_plan_lqp);
+}
+
 TEST_F(SQLTranslatorTest, DMLOnMetatables) {
   EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
   EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);

@@ -652,6 +652,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   AssertInput(MetaTableManager::is_meta_table_name(name), std::string{"Did not find a meta table with name "} + name);
 
+  // MetaTables are non-cacheable because they might contain information about the general system state
+  // that can change at any time
   _cacheable = false;
 
   const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
