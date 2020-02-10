@@ -351,7 +351,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
   EXPECT_EQ(sum, 24'825u);
   EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}, ChunkOffset{4}}));
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased) {
@@ -370,7 +370,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 
   EXPECT_EQ(sum, 24'825u);
   EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}, ChunkOffset{4}}));
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 // Value Segment Tests
