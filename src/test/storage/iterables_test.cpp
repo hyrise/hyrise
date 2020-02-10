@@ -345,7 +345,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
-  auto sum = uint32_t{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
   iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
@@ -364,7 +364,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::Yes>{*reference_segment};
 
-  auto sum = uint32_t{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
   iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
