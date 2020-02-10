@@ -664,7 +664,7 @@ set_source_files_properties(
 # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
-target_link_libraries_system_private(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
