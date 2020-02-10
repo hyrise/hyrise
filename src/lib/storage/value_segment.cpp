@@ -126,11 +126,7 @@ template <typename T>
 size_t ValueSegment<T>::memory_usage([[maybe_unused]] const MemoryUsageCalculationMode mode) const {
   auto null_value_vector_size = size_t{0};
   if (_null_values) {
-    null_value_vector_size = _null_values->capacity() * sizeof(bool);
-    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    null_value_vector_size =
-        sizeof(_null_values) + (_null_values->capacity() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1
-                                                                    : null_value_vector_size / CHAR_BIT);
+    null_value_vector_size = _null_values->capacity() / CHAR_BIT;
   }
 
   const auto common_elements_size = sizeof(*this) + null_value_vector_size;
