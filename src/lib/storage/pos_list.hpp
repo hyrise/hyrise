@@ -65,8 +65,9 @@ struct PosList final : private pmr_vector<RowID> {
             if (size() == 0) return true;
             const auto& common_chunk_id = (*this)[0].chunk_id;
             if (common_chunk_id == INVALID_CHUNK_ID) return false;
-            return std::all_of(cbegin(), cend(),
-                               [&](const auto& row_id) { return row_id.chunk_id == common_chunk_id && row_id.chunk_offset == INVALID_CHUNK_OFFSET; });
+            return std::all_of(cbegin(), cend(), [&](const auto& row_id) {
+              return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
+            });
           }(),
           "PosList was marked as referencing a single chunk, but references more or the PosList contains NULL values");
     }
