@@ -859,7 +859,8 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
                                               "alongstring",
                                               "anotherlongstring"};
 
-  const auto value_segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  auto values_copy = values;
+  const auto value_segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values_copy));
 
   const auto table_definitions = TableColumnDefinitions{{"a", DataType::String, true}};
   const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
