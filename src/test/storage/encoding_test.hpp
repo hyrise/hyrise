@@ -2,6 +2,9 @@
 
 #include <memory>
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
+
 #include "base_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
@@ -15,8 +18,8 @@ namespace opossum {
 class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path,
-                                                  ChunkOffset max_chunk_size = Chunk::MAX_SIZE) {
-    const auto table = load_table(path, max_chunk_size);
+                                                  ChunkOffset target_chunk_size = Chunk::DEFAULT_SIZE) {
+    const auto table = load_table(path, target_chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), EncodingType::Unencoded};
 
@@ -30,5 +33,16 @@ class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return table;
   }
 };
+
+void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec);
+
+inline std::string all_segment_encoding_specs_formatter(
+    const testing::TestParamInfo<EncodingTest::ParamType>& param_info) {
+  std::stringstream stringstream;
+  stringstream << param_info.param;
+  auto string = stringstream.str();
+  boost::remove_erase_if(string, boost::is_any_of("() -"));
+  return string;
+}
 
 }  // namespace opossum
