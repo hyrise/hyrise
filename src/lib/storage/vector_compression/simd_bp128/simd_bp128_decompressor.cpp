@@ -21,7 +21,7 @@ SimdBp128Decompressor::SimdBp128Decompressor(const SimdBp128Decompressor& other)
       _cached_meta_info{other._cached_meta_info},
       _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
 
-SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other)
+SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other) noexcept
     : _data{other._data},
       _size{other._size},
       _cached_meta_info_offset{other._cached_meta_info_offset},
