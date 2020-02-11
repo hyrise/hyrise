@@ -241,21 +241,20 @@ class SortedSegmentSearch {
    *
    * Note: All comments within this method are written from the point of ascendingly ordered ranges.
    */
-  void _handle_not_equals(const ChunkID chunk_id,
-                          PosList& matches,
-                          const std::shared_ptr<const PosList>& position_filter) {
+  template <typename ResultConsumer>
+  void _handle_not_equals(const ResultConsumer& result_consumer) {
     const auto first_bound = _get_first_bound(_first_search_value, _begin, _end);
     if (first_bound == _end) {
       // Neither the _search_value nor anything greater than it are found. Call the result_consumer on the whole range
       // and skip the call to _get_last_bound().
-      _write_rows_to_matches(_begin, _end, chunk_id, matches, position_filter);
+      result_consumer(_begin, _end);
       return;
     }
 
     if (first_bound->value() != _first_search_value) {
       // If the first value >= _search_value is not equal to _search_value, then _search_value doesn't occur at all.
       // Call the result_consumer on the whole range and skip the call to _get_last_bound().
-      _write_rows_to_matches(_begin, _end, chunk_id, matches, position_filter);
+      result_consumer(_begin, _end);
       return;
     }
 
@@ -265,33 +264,32 @@ class SortedSegmentSearch {
     if (last_bound == _end) {
       // If no value > _search_value is found, call the result_consumer from start to first occurrence and skip the
       // need for boost::join().
-      _write_rows_to_matches(_begin, first_bound, chunk_id, matches, position_filter);
+      result_consumer(_begin, first_bound);
       return;
     }
 
     if (first_bound == _begin) {
       // If _search_value is right at the start, call the result_consumer from the first value > _search_value
       // to end and skip the need for boost::join().
-      _write_rows_to_matches(last_bound, _end, chunk_id, matches, position_filter);
+      result_consumer(last_bound, _end);
       return;
     }
 
     const auto range = boost::range::join(boost::make_iterator_range(_begin, first_bound),
                                           boost::make_iterator_range(last_bound, _end));
-    _write_rows_to_matches(range.begin(), range.end(), chunk_id, matches, position_filter);
+    result_consumer(range.begin(), range.end());
   }
 
  public:
-  void scan_sorted_segment(const ChunkID chunk_id,
-                           PosList& matches,
-                           const std::shared_ptr<const PosList>& position_filter) {
+  template <typename ResultConsumer>
+  void scan_sorted_segment(const ResultConsumer& result_consumer) {
     if (_second_search_value) {
       // decrease the effective sort range by excluding null values based on their ordering (first or last)
       if (_nullable) {
         _exponential_search_for_nulls(_begin, _end);
       }
       _set_begin_and_end_positions_for_between_scan();
-      _write_rows_to_matches(_begin, _end, chunk_id, matches, position_filter);
+      result_consumer(_begin, _end);
     } else {
       // decrease the effective sort range by excluding null values based on their ordering
       if (_is_nulls_first) {
@@ -305,10 +303,10 @@ class SortedSegmentSearch {
       }
 
       if (_predicate_condition == PredicateCondition::NotEquals) {
-        _handle_not_equals(chunk_id, matches, position_filter);
+        _handle_not_equals(result_consumer);
       } else {
         _set_begin_and_end_positions_for_vs_value_scan();
-        _write_rows_to_matches(_begin, _end, chunk_id, matches, position_filter);
+        result_consumer(_begin, _end);
       }
     }
   }
@@ -333,7 +331,7 @@ class SortedSegmentSearch {
      * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
      * NotEquals because the result might consist of 2 ranges.
      */
-    if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
+    if (position_filter || predicate_condition == PredicateCondition::NotEquals) {
       for (; begin != end; ++begin) {
         matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
       }
@@ -349,7 +347,7 @@ class SortedSegmentSearch {
 
 
 private:
-  // _begin and _end will be modified to match the search range and will used directly to write the results, except when
+  // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer, except when
   // handling NotEquals (see _handle_not_equals).
   IteratorType _begin;
   IteratorType _end;
