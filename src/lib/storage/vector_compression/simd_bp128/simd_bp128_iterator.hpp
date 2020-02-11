@@ -23,24 +23,11 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   // blocks/meta blocks) to allow STL algorithms (e.g., std::lower_bound) to be used on a compressed vector. However,
   // please be aware of #1531. Other vector compression containers such as FSBA use std::vector for the underlying data
   // and do thus not require an additional iterator.
-  explicit SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor, const size_t absolute_index = 0u)
-      : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
+  explicit SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor, const size_t absolute_index = 0u);
+  SimdBp128Iterator(const SimdBp128Iterator& other);
+  SimdBp128Iterator(SimdBp128Iterator&& other);
 
-  SimdBp128Iterator(const SimdBp128Iterator& other)
-      : _decompressor{std::make_unique<SimdBp128Decompressor>(SimdBp128Decompressor(*other._decompressor))},
-        _absolute_index{other._absolute_index} {}
-
-  SimdBp128Iterator(SimdBp128Iterator&& other)
-      : _decompressor{std::move(other._decompressor)}, _absolute_index{std::move(other._absolute_index)} {}
-
-  SimdBp128Iterator& operator=(const SimdBp128Iterator& other) {
-    if (this == &other) return *this;
-
-    _decompressor = std::make_unique<SimdBp128Decompressor>(SimdBp128Decompressor(*other._decompressor));
-    _absolute_index = other._absolute_index;
-    return *this;
-  }
-
+  SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
   SimdBp128Iterator& operator=(SimdBp128Iterator&& other) = default;
 
   ~SimdBp128Iterator() = default;
@@ -48,17 +35,12 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_absolute_index; }
-
-  void decrement() { --_absolute_index; }
-
-  void advance(std::ptrdiff_t n) { _absolute_index += n; }
-
-  bool equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
-
-  std::ptrdiff_t distance_to(const SimdBp128Iterator& other) const { return other._absolute_index - _absolute_index; }
-
-  uint32_t dereference() const { return _decompressor->get(_absolute_index); }
+  void increment();
+  void decrement();
+  void advance(std::ptrdiff_t n);
+  bool equal(const SimdBp128Iterator& other) const;
+  std::ptrdiff_t distance_to(const SimdBp128Iterator& other) const;
+  uint32_t dereference() const;
 
  private:
   std::unique_ptr<SimdBp128Decompressor> _decompressor;

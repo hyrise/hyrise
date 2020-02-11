@@ -525,6 +525,7 @@ set(
     storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp
     storage/vector_compression/simd_bp128/simd_bp128_decompressor.cpp
     storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp
+    storage/vector_compression/simd_bp128/simd_bp128_iterator.cpp
     storage/vector_compression/simd_bp128/simd_bp128_iterator.hpp
     storage/vector_compression/simd_bp128/simd_bp128_packing.cpp
     storage/vector_compression/simd_bp128/simd_bp128_packing.hpp
