@@ -237,7 +237,7 @@ class SortedSegmentSearch {
    * The function contains four early outs. These are all only for performance reasons and, if removed, would not
    * change the functionality.
    *
-   * Note: All comments within this method are written from the point of ascendingly ordered ranges.
+   * Note: All comments within this method are written from the point of ranges in ascending order.
    */
   template <typename ResultConsumer>
   void _handle_not_equals(const ResultConsumer& result_consumer) {
