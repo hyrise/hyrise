@@ -184,11 +184,9 @@ class SortedSegmentSearch {
     }
 
     // This implementation uses behaviour which resembles std::equal_range's
-    // behaviour since it also calculates a range containing all elements between
-    // the first and second search value. However, std::equal_range returns all
-    // elements in range [first, last), which describes only the
-    // PredicateCondition::BetweenInclusive case. For the other PredicateConditions,
-    // different borders are required.
+    // behaviour since it, too, calculates two different bounds.
+    // However, equal_range is designed to compare to a single search value,
+    // whereas in this case, the upper and lower search value (if given) will differ.
     auto predicate_condition = _predicate_condition;
     auto first_search_value = _first_search_value;
     auto second_search_value = *_second_search_value;
@@ -316,9 +314,9 @@ class SortedSegmentSearch {
                               const std::shared_ptr<const PosList>& position_filter) const {
     if (begin == end) return;
 
-    // General note: If the predicate is NotEquals, there might be two matching ranges. scan_sorted_segment
-    // combines these two ranges into a single one via boost::join(range_1, range_2).
-    // See sorted_segment_search.hpp for further details.
+    // General note: If the predicate is NotEquals, there might be two ranges that match.
+    // These two ranges might have been combined into a single one via boost::join(range_1, range_2).
+    // See _handle_not_equals for further details.
 
     size_t output_idx = matches.size();
 
