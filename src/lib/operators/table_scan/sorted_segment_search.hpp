@@ -133,18 +133,34 @@ class SortedSegmentSearch {
     // clang-format off
     if (_is_ascending) {
       switch (_predicate_condition) {
-        case PredicateCondition::GreaterThanEquals: _begin = _get_first_bound(_first_search_value, _begin, _end); return; // NOLINT
-        case PredicateCondition::GreaterThan: _begin = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::LessThanEquals: _end = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::LessThan: _end = _get_first_bound(_first_search_value, _begin, _end); return;
+        case PredicateCondition::GreaterThanEquals:
+          _begin = _get_first_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::GreaterThan:
+          _begin = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::LessThanEquals:
+          _end = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::LessThan:
+          _end = _get_first_bound(_first_search_value, _begin, _end);
+          return;
         default: Fail("Unsupported predicate condition encountered");
       }
     } else {
       switch (_predicate_condition) {
-        case PredicateCondition::LessThanEquals: _begin = _get_first_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::LessThan: _begin = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::GreaterThanEquals: _end = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::GreaterThan: _end = _get_first_bound(_first_search_value, _begin, _end); return;
+        case PredicateCondition::LessThanEquals:
+          _begin = _get_first_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::LessThan:
+          _begin = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::GreaterThanEquals:
+          _end = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::GreaterThan:
+          _end = _get_first_bound(_first_search_value, _begin, _end);
+          return;
         default: Fail("Unsupported predicate condition encountered");
       }
     }
