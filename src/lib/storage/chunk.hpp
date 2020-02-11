@@ -42,10 +42,15 @@ class Chunk : private Noncopyable {
   // as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
+  // For a new chunk, this is the size of the pre-allocated ValueSegments. This is only relevant for chunks that
+  // contain data. Chunks that contain reference segments do not use the table's target_chunk_size at all.
+  //
   // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
-  // feel free to re-evaluate this. This is only relevant for chunks that contain data. Chunks that contain reference
-  // segments do not use the table's target_chunk_size at all.
-  static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
+  // feel free to re-evaluate this. 2^16 is a good size because it means that on a unique column, dictionary
+  // requires up to 16 bits for the value ids. A chunk size of 100'000 would put us just slightly over that 16 bits,
+  // meaning that FixedSizeByteAligned vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
+  // account for NULL being encoded as a separate value id.
+  static constexpr ChunkOffset DEFAULT_SIZE = 65'535;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});

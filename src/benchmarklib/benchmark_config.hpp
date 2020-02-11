@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "encoding_config.hpp"
+#include "storage/chunk.hpp"
 
 namespace opossum {
 
@@ -28,7 +29,7 @@ class BenchmarkConfig {
   static BenchmarkConfig get_default_config();
 
   BenchmarkMode benchmark_mode = BenchmarkMode::Ordered;
-  ChunkOffset chunk_size = 100'000;
+  ChunkOffset chunk_size = Chunk::DEFAULT_SIZE;
   EncodingConfig encoding_config = EncodingConfig{};
   bool indexes = false;
   int64_t max_runs = -1;
