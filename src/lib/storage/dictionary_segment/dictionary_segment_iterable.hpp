@@ -41,14 +41,14 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
-      using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
+      using ZsDecompressorType = std::decay_t<decltype(decompressor)>;
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
 
       auto begin = PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), std::move(decompressor), position_filter->cbegin(),
           position_filter->cbegin()};
       auto end = PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), nullptr, position_filter->cbegin(), position_filter->cend()};
+          _dictionary->cbegin(), _segment.null_value_id(), std::nullopt, position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
   }
@@ -116,7 +116,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
-                        const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
+                        std::optional<ZsDecompressorType> attribute_decompressor,
                         PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
@@ -142,7 +142,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
    private:
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
-    std::shared_ptr<ZsDecompressorType> _attribute_decompressor;
+    mutable std::optional<ZsDecompressorType> _attribute_decompressor;
   };
 
  private:

@@ -23,7 +23,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   // blocks/meta blocks) to allow STL algorithms (e.g., std::lower_bound) to be used on a compressed vector. However,
   // please be aware of #1531. Other vector compression containers such as FSBA use std::vector for the underlying data
   // and do thus not require an additional iterator.
-  explicit SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor, const size_t absolute_index = 0u);
+  explicit SimdBp128Iterator(SimdBp128Decompressor&& decompressor, const size_t absolute_index = 0u);
   SimdBp128Iterator(const SimdBp128Iterator& other);
   SimdBp128Iterator(SimdBp128Iterator&& other);
 
@@ -43,7 +43,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   uint32_t dereference() const;
 
  private:
-  std::unique_ptr<SimdBp128Decompressor> _decompressor;
+  mutable SimdBp128Decompressor _decompressor;
   size_t _absolute_index;
 };
 

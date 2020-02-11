@@ -30,6 +30,10 @@ SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other) noex
       _cached_meta_info{other._cached_meta_info},
       _cached_block{std::move(other._cached_block)} {}
 
+SimdBp128Decompressor& SimdBp128Decompressor::operator=(SimdBp128Decompressor&& other) {
+  return *this;
+}
+
 void SimdBp128Decompressor::_read_meta_info(const size_t meta_info_offset) {
   Packing::read_meta_info(_data->data() + meta_info_offset, _cached_meta_info.data());
 }

@@ -30,11 +30,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
-      using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
+      using ZsDecompressorType = std::decay_t<decltype(decompressor)>;
 
       auto begin = PointAccessIterator<ZsDecompressorType>{_null_value_id, std::move(decompressor),
                                                            position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, nullptr, position_filter->cbegin(),
+      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, std::nullopt, position_filter->cbegin(),
                                                          position_filter->cend()};
       functor(begin, end);
     });
@@ -94,13 +94,13 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>, SegmentPosition<ValueID>> {
    public:
     using ValueType = ValueID;
-    PointAccessIterator(const ValueID null_value_id, const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
+    PointAccessIterator(const ValueID null_value_id, std::optional<ZsDecompressorType> attribute_decompressor,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
                                          SegmentPosition<ValueID>>{std::move(position_filter_begin),
                                                                    std::move(position_filter_it)},
           _null_value_id{null_value_id},
-          _attribute_decompressor{attribute_decompressor} {}
+          _attribute_decompressor{std::move(attribute_decompressor)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -117,7 +117,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
    private:
     const ValueID _null_value_id;
-    std::shared_ptr<ZsDecompressorType> _attribute_decompressor;
+    mutable std::optional<ZsDecompressorType> _attribute_decompressor;
   };
 };
 

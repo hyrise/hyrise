@@ -2,12 +2,12 @@
 
 namespace opossum {
 
-SimdBp128Iterator::SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor,
-		                              const size_t absolute_index)
+SimdBp128Iterator::SimdBp128Iterator(SimdBp128Decompressor&& decompressor,
+		                     const size_t absolute_index)
     : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
 
 SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
-    : _decompressor{std::make_unique<SimdBp128Decompressor>(SimdBp128Decompressor(*other._decompressor))},
+    : _decompressor{SimdBp128Decompressor(other._decompressor)},
       _absolute_index{other._absolute_index} {}
 
 SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other)
@@ -16,7 +16,7 @@ SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other)
 SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
   if (this == &other) return *this;
 
-  _decompressor = std::make_unique<SimdBp128Decompressor>(SimdBp128Decompressor(*other._decompressor));
+  _decompressor = SimdBp128Decompressor(other._decompressor);
   _absolute_index = other._absolute_index;
   return *this;
 }
@@ -29,8 +29,10 @@ void SimdBp128Iterator::advance(std::ptrdiff_t n) { _absolute_index += n; }
 
 bool SimdBp128Iterator::equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
 
-std::ptrdiff_t SimdBp128Iterator::distance_to(const SimdBp128Iterator& other) const { return other._absolute_index - _absolute_index; }
+std::ptrdiff_t SimdBp128Iterator::distance_to(const SimdBp128Iterator& other) const {
+  return other._absolute_index - _absolute_index;
+}
 
-uint32_t SimdBp128Iterator::dereference() const { return _decompressor->get(_absolute_index); }
+uint32_t SimdBp128Iterator::dereference() const { return _decompressor.get(_absolute_index); }
 
 }  // namespace opossum

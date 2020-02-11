@@ -32,7 +32,7 @@ class SimdBp128Vector : public CompressedVector<SimdBp128Vector> {
   size_t on_data_size() const;
 
   std::unique_ptr<BaseVectorDecompressor> on_create_base_decompressor() const;
-  std::unique_ptr<SimdBp128Decompressor> on_create_decompressor() const;
+  SimdBp128Decompressor on_create_decompressor() const;
 
   SimdBp128Iterator on_begin() const;
   SimdBp128Iterator on_end() const;
