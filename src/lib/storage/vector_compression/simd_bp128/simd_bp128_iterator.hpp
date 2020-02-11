@@ -23,11 +23,11 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   explicit SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor, const size_t absolute_index = 0u)
       : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
 
-  explicit SimdBp128Iterator(const SimdBp128Iterator& other)
+  SimdBp128Iterator(const SimdBp128Iterator& other)
       : _decompressor{std::make_unique<SimdBp128Decompressor>(SimdBp128Decompressor(*other._decompressor))},
         _absolute_index{other._absolute_index} {}
 
-  explicit SimdBp128Iterator(SimdBp128Iterator&& other)
+  SimdBp128Iterator(SimdBp128Iterator&& other)
       : _decompressor{std::move(other._decompressor)}, _absolute_index{std::move(other._absolute_index)} {}
 
   SimdBp128Iterator& operator=(const SimdBp128Iterator& other) {

@@ -18,10 +18,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin = Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(),
-                          _segment.end_positions()->cbegin(), _segment.end_positions()->cbegin(), ChunkOffset{0}};
-    auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(),
-                        _segment.end_positions()->cbegin(), static_cast<ChunkOffset>(_segment.size())};
+    auto begin = Iterator{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(), ChunkOffset{0}};
+    auto end = Iterator{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(), static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }
@@ -52,13 +50,16 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
    public:
-    explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
-                      const EndPositionIterator& end_position_it, const EndPositionIterator& end_position_begin_it,
+    explicit Iterator(const pmr_vector<T>* values, const pmr_vector<bool>* null_values,
+                      const pmr_vector<ChunkOffset>* end_positions,
                       const ChunkOffset chunk_offset)
-        : _value_it{value_it},
-          _null_value_it{null_value_it},
-          _end_position_it{end_position_it},
-          _end_position_it_begin{end_position_begin_it},
+        : _values{values},
+          _null_values{null_values},
+          _end_positions{end_positions},
+          _value_it{values->cbegin()},
+          _null_value_it{null_values->cbegin()},
+          _end_position_it{end_positions->cbegin()},
+          _end_position_it_begin{end_positions->cbegin()},
           _chunk_offset{chunk_offset} {}
 
    private:
@@ -86,17 +87,15 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void advance(std::ptrdiff_t n) {
-      PerformanceWarning("Using repeated increment/decrement for random access");
-      // The easy way for now
-      if (n < 0) {
-        for (std::ptrdiff_t i = n; i < 0; ++i) {
-          decrement();
-        }
-      } else {
-        for (std::ptrdiff_t i = 0; i < n; ++i) {
-          increment();
-        }
-      }
+      _chunk_offset += n;
+
+      const auto end_position = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), _chunk_offset);
+      const auto jump_distance_from_begin = std::distance(_end_positions->cbegin(), end_position);
+      const auto current_distance_from_begin = std::distance(_end_positions->cbegin(), _end_position_it);
+      const auto jump_distance = jump_distance_from_begin - current_distance_from_begin;
+      _value_it += jump_distance;
+      _null_value_it += jump_distance;
+      _end_position_it += jump_distance;
     }
 
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
@@ -108,6 +107,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
 
    private:
+    const pmr_vector<T>* _values;
+    const pmr_vector<bool>* _null_values;
+    const pmr_vector<ChunkOffset>* _end_positions;
+
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
@@ -153,7 +156,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
-      const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) { return offset < current; };
+      const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) {
+        // TODO: do not linearily increase for large segments
+        return offset < current;
+      };
 
       auto end_position_it = _end_positions->cend();
 
