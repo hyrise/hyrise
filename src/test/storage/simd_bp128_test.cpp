@@ -85,9 +85,9 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
 // Test that the iterator's advance() method works as expected. Creating a sufficiently large vector to ensure that
 // accesses span multiple bounds. Note, as of February 2020, an issue with proxy iterators being only InputOperators
 // leads to the problem that STL functionality (e.g., std::advance) does not use the iterator's advance() method to
-// move n steps but rather calls increment()/decrement() n times (see issue #2017).
-// This test tests (in addition to the advance tests in the CompressedVectorTest) large advances over meta blocks for
-// varying bit sizes (GetParam()).
+// move n steps but rather calls increment()/decrement() n times (see issue #1531).
+// Tests that advancing the iterators with step sizes >1 works for SIMD-BP128 vectors. Supplements CompressedVectorTest
+// in that different bit sizes are tested.
 TEST_P(SimdBp128Test, DecompressSequenceUsingAdvance) {
   const auto sequence = generate_sequence(SimdBp128Packing::meta_block_size * 2 + 17);
   const auto compressed_sequence_base = compress(sequence);

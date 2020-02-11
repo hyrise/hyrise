@@ -19,8 +19,10 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   using Packing = SimdBp128Packing;
 
  public:
-  // The SimdBp128Iterators are very simple iterators that use the SimdBp128Decompressor to access single values via
-  // dereference() as the compressor already has to the logic to cache/extract blocks/meta blocks.
+  // The SimdBp128Iterator simply wraps a SimdBp128Decompressor (which implements the logic to cache and extract
+  // blocks/meta blocks) to allow STL algorithms (e.g., std::lower_bound) to be used on a compressed vector. However,
+  // please be aware of #1531. Other vector compression containers such as FSBA use std::vector for the underlying data
+  // and do thus not require an additional iterator.
   explicit SimdBp128Iterator(std::unique_ptr<SimdBp128Decompressor>&& decompressor, const size_t absolute_index = 0u)
       : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
 

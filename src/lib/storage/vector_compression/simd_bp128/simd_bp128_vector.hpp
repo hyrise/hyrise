@@ -13,10 +13,11 @@ namespace opossum {
 /**
  * @brief Bit-packed vector with varying bit length
  *
- * Values are compressed in blocks of 128 integers. Each block has its own bit-length.
- * Sixteen blocks combine to form a meta block of 2048 values. Bit-length information
- * are stored per meta block in 128 bit (8 bit for each bit length) in front of the
- * sixteen compressed blocks.
+ * Values are compressed in blocks of 128 integers. Each block has its own bit-length. Each block has its own
+ * bit-length. For example, a vector with sorted values uses a lower bit-length at the beginning than at the end. This
+ * allows to compress a vector further than using the same bit-length for the whole vector. Sixteen blocks combine to
+ * form a meta block of 2048 values. Bit-length information are stored per meta block in 128 bit (8 bit for each bit
+ * length) in front of the sixteen compressed blocks.
  *
  * @see SimdBp128Packing for more information
  */
