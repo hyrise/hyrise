@@ -61,8 +61,8 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
     // ReferenceSegments are handled via position_filter
     if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
                   !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
-      auto typed_left_value = boost::get<ColumnDataType>(left_value);
-      auto typed_right_value = boost::get<ColumnDataType>(right_value);
+      const auto typed_left_value = boost::get<ColumnDataType>(left_value);
+      const auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
       with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
         auto between_comparator = [&](const auto& position) {
@@ -151,36 +151,13 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
     } else {
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
-        auto sorted_segment_search =
-            SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable, predicate_condition,
-                                boost::get<ColumnDataType>(left_value), boost::get<ColumnDataType>(right_value));
+        const auto typed_left_value = boost::get<ColumnDataType>(left_value);
+        const auto typed_right_value = boost::get<ColumnDataType>(right_value);
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable,
+                                                         predicate_condition, typed_left_value, typed_right_value);
 
-        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          size_t output_idx = matches.size();
-          auto result_size = std::distance(begin, end);
-
-          matches.resize(matches.size() + result_size);
-
-          /**
-             * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
-             * by calculating the offsets based on the first offset instead of calling chunk_offset()
-             * for every match.
-             * ChunkOffsets in position_filter are not necessarily continuous, therefore we need to use the iterator.
-             */
-          if (position_filter) {
-            for (; begin != end; ++begin) {
-              matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
-            }
-          } else {
-            if (result_size > 0) {
-              const auto first_offset = begin->chunk_offset();
-
-              for (auto chunk_offset = 0; chunk_offset < result_size; ++chunk_offset) {
-                matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
-              }
-            }
-          }
-        });
+        sorted_segment_search.scan_sorted_segment(
+            [&](auto begin, auto end) { _handle_search_results(begin, end, chunk_id, matches, position_filter); });
       });
     }
   });

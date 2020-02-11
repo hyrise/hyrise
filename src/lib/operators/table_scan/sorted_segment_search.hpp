@@ -26,8 +26,7 @@ class SortedSegmentSearch {
         _second_search_value{std::nullopt},
         _nullable{nullable},
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending},
-        _is_between_scan{false} {}
+        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
   // For SortedSegmentBetweenSearch
   SortedSegmentSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by, const bool nullable,
@@ -40,8 +39,7 @@ class SortedSegmentSearch {
         _second_search_value{right_value},
         _nullable{nullable},
         _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending},
-        _is_between_scan{true} {}
+        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
 
  private:
   /**
@@ -123,7 +121,7 @@ class SortedSegmentSearch {
   }
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
-  void _set_begin_and_end_value_scan() {
+  void _set_begin_and_end_positions_for_vs_value_scan() {
     if (_predicate_condition == PredicateCondition::Equals) {
       _begin = _get_first_bound(_first_search_value, _begin, _end);
       _end = _get_last_bound(_first_search_value, _begin, _end);
@@ -167,80 +165,72 @@ class SortedSegmentSearch {
     // clang-format on
   }
 
-  // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
-  void _set_begin_and_end_between_scan() {
+  // This function sets the offset(s) that delimit the result set based on the predicate condition and the sort order
+  void _set_begin_and_end_positions_for_between_scan() {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
     if (_begin == _end) return;
 
-    if (_is_ascending) {
-      // early out everything matches
-      if (_begin->value() > _first_search_value && (_end - 1)->value() < *_second_search_value) {
-        return;
-      }
+    auto first_value = _begin->value();
+    auto last_value = (_end - 1)->value();
+    if (!_is_ascending) std::swap(first_value, last_value);
 
-      // early out nothing matches
-      if (_begin->value() > *_second_search_value || (_end - 1)->value() < _first_search_value) {
-        _begin = _end;
-        return;
-      }
-    } else {
-      // early out everything matches
-      if (_begin->value() < *_second_search_value && (_end - 1)->value() > _first_search_value) {
-        return;
-      }
-      // early out nothing matches
-      if ((_end - 1)->value() > *_second_search_value || _begin->value() < _first_search_value) {
-        _begin = _end;
-        return;
-      }
+    // early out everything matches
+    if (first_value > _first_search_value && last_value < *_second_search_value) return;
+
+    // early out nothing matches
+    if (first_value > *_second_search_value || last_value < _first_search_value) {
+      _begin = _end;
+      return;
     }
 
     // This implementation uses behaviour which resembles std::equal_range's
-    // behaviour. However, std::equal_range returns all elements in range
-    // [first, last), which describes only the PredicateCondition::BetweenInclusive case.
-    // For the other PredicateConditions, different borders are required.
-    if (_is_ascending) {
+    // behaviour since it also calculates a range containing all elements between
+    // the first and second search value. However, std::equal_range returns all
+    // elements in range [first, last), which describes only the
+    // PredicateCondition::BetweenInclusive case. For the other PredicateConditions,
+    // different borders are required.
+    auto predicate_condition = _predicate_condition;
+    auto first_search_value = _first_search_value;
+    auto second_search_value = *_second_search_value;
+
+    // exchange predicate conditions and search values if descending
+    if (!_is_ascending) {
       switch (_predicate_condition) {
-        case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(_first_search_value, _begin, _end);
-          _end = _get_last_bound(*_second_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_last_bound(_first_search_value, _begin, _end);
-          _end = _get_last_bound(*_second_search_value, _begin, _end);
-          return;
+        case PredicateCondition::BetweenLowerExclusive:
+          predicate_condition = PredicateCondition::BetweenUpperExclusive;
+          break;
         case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_first_bound(_first_search_value, _begin, _end);
-          _end = _get_first_bound(*_second_search_value, _begin, _end);
-          return;
+          predicate_condition = PredicateCondition::BetweenLowerExclusive;
+          break;
+        case PredicateCondition::BetweenInclusive:
         case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(_first_search_value, _begin, _end);
-          _end = _get_first_bound(*_second_search_value, _begin, _end);
-          return;
+          break;
         default:
           Fail("Unsupported predicate condition encountered");
       }
-    } else {
-      switch (_predicate_condition) {
-        case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(*_second_search_value, _begin, _end);
-          _end = _get_last_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_first_bound(*_second_search_value, _begin, _end);
-          _end = _get_first_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_last_bound(*_second_search_value, _begin, _end);
-          _end = _get_last_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(*_second_search_value, _begin, _end);
-          _end = _get_first_bound(_first_search_value, _begin, _end);
-          return;
-        default:
-          Fail("Unsupported predicate condition encountered");
-      }
+
+      std::swap(first_search_value, second_search_value);
+    }
+
+    switch (predicate_condition) {
+      case PredicateCondition::BetweenInclusive:
+        _begin = _get_first_bound(first_search_value, _begin, _end);
+        _end = _get_last_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
+        _begin = _get_last_bound(first_search_value, _begin, _end);
+        _end = _get_last_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenUpperExclusive:
+        _begin = _get_first_bound(first_search_value, _begin, _end);
+        _end = _get_first_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenExclusive:
+        _begin = _get_last_bound(first_search_value, _begin, _end);
+        _end = _get_first_bound(second_search_value, _begin, _end);
+        return;
+      default:
+        Fail("Unsupported predicate condition encountered");
     }
   }
 
@@ -293,12 +283,12 @@ class SortedSegmentSearch {
  public:
   template <typename ResultConsumer>
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
-    if (_is_between_scan) {
+    if (_second_search_value) {
       // decrease the effective sort range by excluding null values based on their ordering (first or last)
       if (_nullable) {
         _exponential_search_for_nulls(_begin, _end);
       }
-      _set_begin_and_end_between_scan();
+      _set_begin_and_end_positions_for_between_scan();
       result_consumer(_begin, _end);
     } else {
       // decrease the effective sort range by excluding null values based on their ordering
@@ -315,7 +305,7 @@ class SortedSegmentSearch {
       if (_predicate_condition == PredicateCondition::NotEquals) {
         _handle_not_equals(result_consumer);
       } else {
-        _set_begin_and_end_value_scan();
+        _set_begin_and_end_positions_for_vs_value_scan();
         result_consumer(_begin, _end);
       }
     }
@@ -332,7 +322,6 @@ class SortedSegmentSearch {
   const bool _nullable;
   const bool _is_ascending;
   const bool _is_nulls_first;
-  const bool _is_between_scan;
 };
 
 }  // namespace opossum
