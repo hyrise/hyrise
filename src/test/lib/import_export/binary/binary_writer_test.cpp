@@ -125,6 +125,9 @@ TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   BinaryWriter::write(*(scan->get_output()), filename);
 
   EXPECT_TRUE(file_exists(filename));
+
+  // Because reference tables are materialized and stored as if they were value segments, the binary dump will
+  // contain the default chunk size.
   EXPECT_TRUE(compare_files(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
