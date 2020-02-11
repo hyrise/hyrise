@@ -172,7 +172,30 @@ class SortedSegmentSearch {
 
     auto first_value = _begin->value();
     auto last_value = (_end - 1)->value();
-    if (!_is_ascending) std::swap(first_value, last_value);
+
+    auto predicate_condition = _predicate_condition;
+    auto first_search_value = _first_search_value;
+    auto second_search_value = *_second_search_value;
+
+    // if descending: exchange predicate conditions, search values and first/last values
+    if (!_is_ascending) {
+      switch (_predicate_condition) {
+        case PredicateCondition::BetweenLowerExclusive:
+          predicate_condition = PredicateCondition::BetweenUpperExclusive;
+          break;
+        case PredicateCondition::BetweenUpperExclusive:
+          predicate_condition = PredicateCondition::BetweenLowerExclusive;
+          break;
+        case PredicateCondition::BetweenInclusive:
+        case PredicateCondition::BetweenExclusive:
+          break;
+        default:
+        Fail("Unsupported predicate condition encountered");
+      }
+
+      std::swap(first_value, last_value);
+      std::swap(first_search_value, second_search_value);
+    }
 
     // early out everything matches
     if (first_value > _first_search_value && last_value < *_second_search_value) return;
@@ -187,29 +210,6 @@ class SortedSegmentSearch {
     // behaviour since it, too, calculates two different bounds.
     // However, equal_range is designed to compare to a single search value,
     // whereas in this case, the upper and lower search value (if given) will differ.
-    auto predicate_condition = _predicate_condition;
-    auto first_search_value = _first_search_value;
-    auto second_search_value = *_second_search_value;
-
-    // exchange predicate conditions and search values if descending
-    if (!_is_ascending) {
-      switch (_predicate_condition) {
-        case PredicateCondition::BetweenLowerExclusive:
-          predicate_condition = PredicateCondition::BetweenUpperExclusive;
-          break;
-        case PredicateCondition::BetweenUpperExclusive:
-          predicate_condition = PredicateCondition::BetweenLowerExclusive;
-          break;
-        case PredicateCondition::BetweenInclusive:
-        case PredicateCondition::BetweenExclusive:
-          break;
-        default:
-          Fail("Unsupported predicate condition encountered");
-      }
-
-      std::swap(first_search_value, second_search_value);
-    }
-
     switch (predicate_condition) {
       case PredicateCondition::BetweenInclusive:
         _begin = _get_first_bound(first_search_value, _begin, _end);
