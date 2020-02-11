@@ -348,7 +348,7 @@ void AggregateHash::_aggregate() {
                     keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
                   }
                 } else {
-                  auto id = AggregateKeyEntry{0} - 1;  // using max value for "unset"
+                  auto id = AggregateKeyEntry{0} - 1;                          // using max value for "unset"
                   if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
                     const auto& string = position.value();
                     if (string.size() < 5) {
