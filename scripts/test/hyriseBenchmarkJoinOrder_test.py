@@ -78,6 +78,7 @@ def main():
   arguments["--compression"] = "'SIMD-BP128'"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
+  arguments["--chunk_size"] = "100000"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
