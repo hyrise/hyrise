@@ -311,7 +311,8 @@ class SortedSegmentSearch {
     }
   }
 
-  void _write_rows_to_matches(IteratorType begin, IteratorType end, const ChunkID chunk_id, PosList& matches,
+  template <typename ResultIteratorType>
+  void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id, PosList& matches,
                               const std::shared_ptr<const PosList>& position_filter) const {
     if (begin == end) return;
 
