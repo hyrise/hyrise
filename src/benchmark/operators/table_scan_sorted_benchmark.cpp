@@ -74,7 +74,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
     const auto first = values.cbegin() + CHUNK_SIZE * chunk_index;
     const auto last = values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
-    std::vector<Type> value_vector = std::vector(first, last);
+    std::vector<Type> value_vector = pmr_vector<Type>(first, last);
     if (mode == "SortedDescending") {
       std::reverse(value_vector.begin(), value_vector.end());
     }

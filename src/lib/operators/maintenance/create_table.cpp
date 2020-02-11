@@ -69,7 +69,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<CreateTable>(table_name, if_not_exists, _input_left);
+  return std::make_shared<CreateTable>(table_name, if_not_exists, copied_input_left);
 }
 
 void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

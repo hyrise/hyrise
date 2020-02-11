@@ -97,8 +97,8 @@ class CsvConverter : public BaseCsvConverter {
    * csv characters.
    */
   std::function<T(const std::string&)> _get_conversion_function();
-  pmr_concurrent_vector<T> _parsed_values;
-  pmr_concurrent_vector<bool> _null_values;
+  pmr_vector<T> _parsed_values;
+  pmr_vector<bool> _null_values;
   const bool _is_nullable;
   ParseConfig _config;
 };
