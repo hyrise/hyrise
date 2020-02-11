@@ -329,7 +329,7 @@ class SortedSegmentSearch {
      * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
      * NotEquals because the result might consist of 2 ranges.
      */
-    if (position_filter || predicate_condition == PredicateCondition::NotEquals) {
+    if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
       for (; begin != end; ++begin) {
         matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
       }
