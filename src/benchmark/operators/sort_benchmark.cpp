@@ -61,8 +61,8 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
   warm_up->execute();
   for (auto _ : state) {
     if (multi_column_sort) {
-      std::vector<SortColumnDefinition> sort_definitions = {{ColumnID{0}, OrderByMode::Ascending},
-                                                            {ColumnID{1}, OrderByMode::Descending}};
+      const auto sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
+                                                                       SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
       auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
       sort->execute();
     } else {

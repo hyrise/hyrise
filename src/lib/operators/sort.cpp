@@ -212,7 +212,7 @@ class Sort::SortImpl {
 
  protected:
   // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(std::shared_ptr<PosList> pos_list = nullptr) {
+  void _materialize_sort_column(const std::shared_ptr<PosList>& pos_list = nullptr) {
     auto& row_id_value_vector = *_row_id_value_vector;
     row_id_value_vector.reserve(_table_in->row_count());
 
