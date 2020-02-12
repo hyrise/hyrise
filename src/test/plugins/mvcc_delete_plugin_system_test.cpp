@@ -38,7 +38,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     // Add three chunks and fill them with values from 0-599
     auto begin_value = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
-      std::vector<int> values(CHUNK_SIZE);
+      pmr_vector<int32_t> values(CHUNK_SIZE);
       std::iota(values.begin(), values.end(), begin_value);
 
       const auto value_segment = std::make_shared<ValueSegment<int>>(std::move(values));

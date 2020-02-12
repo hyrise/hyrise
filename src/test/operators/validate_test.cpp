@@ -60,11 +60,11 @@ class OperatorsValidateTest : public BaseTest {
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
-    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+    auto mvcc_data = chunk->mvcc_data();
 
     for (auto i = 0u; i < chunk->size(); ++i) {
-      mvcc_data->begin_cids[i] = 0u;
-      mvcc_data->end_cids[i] = MvccData::MAX_COMMIT_ID;
+      mvcc_data->set_begin_cid(i, 0u);
+      mvcc_data->set_end_cid(i, MvccData::MAX_COMMIT_ID);
     }
   }
 }
@@ -72,7 +72,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
 void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID end_cid) {
   auto chunk = table.get_chunk(row.chunk_id);
 
-  chunk->get_scoped_mvcc_data_lock()->end_cids[row.chunk_offset] = end_cid;
+  chunk->mvcc_data()->set_end_cid(row.chunk_offset, end_cid);
   chunk->increase_invalid_row_count(1);
 }
 

@@ -31,8 +31,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_concurrent_vector<T> result(values.size());
+pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
+  pmr_vector<T> result(values.size());
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
