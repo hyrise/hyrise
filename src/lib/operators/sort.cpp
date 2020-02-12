@@ -55,15 +55,18 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       if (is_last_sorting_run) {
         auto materialization = std::make_shared<SortImplMaterializeOutput<ColumnDataType>>(
             input_table_left(), row_id_value_vector, _output_chunk_size);
-        output = materialization->execute();
 
-        // TODO(anyone): Re-enable setting of ordered_by on the chunk(s)
-        /*
-        const auto chunk_count = output->chunk_count();
+        std::shared_ptr<Table> output_mutable = materialization->execute();
+
+        // Set the ordered_by attribute of the output's chunks to the column the chunk was sorted by last (because this
+        // is the column that the chunk is ordered by in any case; whereas it is not necessarily sorted by the other
+        // columns -- on their own -- as well).
+        const auto chunk_count = output_mutable->chunk_count();
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          output->get_chunk(chunk_id)->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+          output_mutable->get_chunk(chunk_id)->set_ordered_by(
+              std::make_pair(sort_definition.column, sort_definition.order_by_mode));
         }
-        */
+        output = output_mutable;
       } else {
         previously_sorted_pos_list.reset();
         previously_sorted_pos_list = std::make_shared<PosList>();
