@@ -32,7 +32,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     _sort_definition_data_types[column_id] = input_table_left()->column_data_type(sort_definition.column);
   }
 
-  std::shared_ptr<Table> output = std::shared_ptr<Table>(nullptr);
+  std::shared_ptr<const Table> output = input_table_left();
   std::shared_ptr<PosList> previously_sorted_pos_list = std::shared_ptr<PosList>(nullptr);
 
   _validate_sort_definitions();
