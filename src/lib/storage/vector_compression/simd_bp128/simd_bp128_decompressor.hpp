@@ -32,6 +32,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   SimdBp128Decompressor(const SimdBp128Decompressor& other);
   SimdBp128Decompressor(SimdBp128Decompressor&& other) noexcept;
 
+  SimdBp128Decompressor& operator=(const SimdBp128Decompressor& other);
   SimdBp128Decompressor& operator=(SimdBp128Decompressor&& other);
 
   ~SimdBp128Decompressor() = default;
@@ -142,7 +143,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
 
  private:
   const pmr_vector<uint128_t>* _data;
-  const size_t _size;
+  size_t _size;
 
   // Cached meta info’s offset into the compressed vector
   size_t _cached_meta_info_offset;

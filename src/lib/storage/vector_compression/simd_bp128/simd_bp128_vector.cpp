@@ -10,7 +10,7 @@ size_t SimdBp128Vector::on_size() const { return _size; }
 size_t SimdBp128Vector::on_data_size() const { return sizeof(uint128_t) * _data.size(); }
 
 std::unique_ptr<BaseVectorDecompressor> SimdBp128Vector::on_create_base_decompressor() const {
-  return std::make_unique<BaseVectorDecompressor>(on_create_decompressor());
+  return std::make_unique<SimdBp128Decompressor>(*this);
 }
 
 SimdBp128Decompressor SimdBp128Vector::on_create_decompressor() const {

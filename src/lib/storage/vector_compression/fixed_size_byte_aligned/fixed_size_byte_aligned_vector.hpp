@@ -34,7 +34,9 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
   size_t on_size() const { return _data.size(); }
   size_t on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
-  auto on_create_base_decompressor() const { return std::make_unique<BaseVectorDecompressor>(on_create_decompressor()); }
+  auto on_create_base_decompressor() const {
+    return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data);
+  }
 
   auto on_create_decompressor() const {
     return FixedSizeByteAlignedDecompressor<UnsignedIntType>(_data);

@@ -11,7 +11,7 @@ SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
       _absolute_index{other._absolute_index} {}
 
 SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other)
-    : _decompressor{std::move(other._decompressor)}, _absolute_index{std::move(other._absolute_index)} {}
+    : _decompressor{std::move(other._decompressor)}, _absolute_index{other._absolute_index} {}
 
 SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
   if (this == &other) return *this;
