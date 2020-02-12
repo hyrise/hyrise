@@ -19,10 +19,12 @@ class MatchesAllPosList : public AbstractPosList {
   }
 
   virtual ChunkID common_chunk_id() const override {
+    DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "common_chunk_id called on invalid chunk id");
     return _common_chunk_id;
   }
 
   virtual RowID operator[](size_t n) const override {
+    DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "operator[] called on invalid chunk id");
     return RowID{_common_chunk_id, static_cast<ChunkOffset>(n)};
   }
 
