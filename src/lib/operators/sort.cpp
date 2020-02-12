@@ -222,7 +222,7 @@ class Sort::SortImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
-  std::shared_ptr<std::vector<RowIDValuePair>> sort_one_column(std::shared_ptr<PosList> pos_list = nullptr) {
+  std::shared_ptr<std::vector<RowIDValuePair>> sort_one_column(const std::shared_ptr<PosList>& pos_list = nullptr) {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column(pos_list);
 
