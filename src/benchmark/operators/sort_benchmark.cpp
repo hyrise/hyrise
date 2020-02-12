@@ -19,24 +19,21 @@
 
 namespace opossum {
 
-static std::shared_ptr<Table> generate_custom_table(
-    const size_t row_count, const ChunkOffset chunk_size, const DataType data_type = DataType::Int,
-    const std::optional<std::vector<std::string>>& column_names = std::nullopt,
-    const std::optional<float> null_ratio = std::nullopt) {
+static std::shared_ptr<Table> generate_custom_table(const size_t row_count, const ChunkOffset chunk_size,
+                                                    const DataType data_type = DataType::Int,
+                                                    const std::optional<float> null_ratio = std::nullopt) {
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   size_t num_columns = 2;
-  if (column_names.has_value()) {
-    num_columns = column_names.value().size();
-  }
 
   const int max_different_value = 10'000;
   const std::vector<DataType> column_data_types = {num_columns, data_type};
 
-  return table_generator->generate_table(
-      {num_columns, {ColumnDataDistribution::make_uniform_config(0.0, max_different_value)}}, column_data_types,
-      row_count, chunk_size, std::vector<SegmentEncodingSpec>(num_columns, {EncodingType::Unencoded}), column_names,
-      UseMvcc::Yes, null_ratio);
+  std::vector<ColumnSpecification> column_specifications = std::vector(
+      num_columns, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, max_different_value), data_type,
+                                       {EncodingType::Unencoded}, std::nullopt, null_ratio));
+
+  return table_generator->generate_table(column_specifications, row_count, chunk_size, UseMvcc::Yes);
 }
 
 static void make_reference_table(std::shared_ptr<TableWrapper> table_wrapper) {
@@ -48,14 +45,12 @@ static void make_reference_table(std::shared_ptr<TableWrapper> table_wrapper) {
 }
 
 static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, const ChunkOffset chunk_size = 2'000,
-                    const DataType data_type = DataType::Int,
-                    const std::optional<std::vector<std::string>>& column_names = std::nullopt,
-                    const std::optional<float> null_ratio = std::nullopt, const bool multi_column_sort = true,
-                    const bool use_reference_segment = false) {
+                    const DataType data_type = DataType::Int, const std::optional<float> null_ratio = std::nullopt,
+                    const bool multi_column_sort = true, const bool use_reference_segment = false) {
   micro_benchmark_clear_cache();
 
   auto table_wrapper =
-      std::make_shared<TableWrapper>(generate_custom_table(row_count, chunk_size, data_type, column_names, null_ratio));
+      std::make_shared<TableWrapper>(generate_custom_table(row_count, chunk_size, data_type, null_ratio));
   table_wrapper->execute();
   if (use_reference_segment) {
     make_reference_table(table_wrapper);
@@ -86,22 +81,22 @@ static void BM_SortWithVaryingRowCount(benchmark::State& state) {
 
 static void BM_SortWithVaryingRowCountTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, std::nullopt, true);
+  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, true);
 }
 
 static void BM_SortWithNullValues(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, std::optional<float>{0.2});
+  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::optional<float>{0.2});
 }
 
 static void BM_SortWithReferenceSegments(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, std::nullopt, false, true);
+  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, false, true);
 }
 
 static void BM_SortWithReferenceSegmentsTwoColumns(benchmark::State& state) {
   const size_t row_count = state.range(0);
-  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, std::nullopt, true, true);
+  BM_Sort(state, row_count, ChunkOffset{2'000}, DataType::Int, std::nullopt, true, true);
 }
 
 static void BM_SortWithStrings(benchmark::State& state) {
