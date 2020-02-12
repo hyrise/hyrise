@@ -134,7 +134,7 @@ std::shared_ptr<AbstractPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) 
       range_end = index->lower_bound(_right_values);
 
       const auto matches_size = std::distance(range_begin, range_end);
-      auto chunk_offsets = singleChunkPosList->get_offsets();
+      auto& chunk_offsets = singleChunkPosList->get_offsets();
       chunk_offsets.resize(matches_size);
 
       for (auto matches_position = 0; matches_position < matches_size; ++matches_position) {
@@ -192,9 +192,7 @@ std::shared_ptr<AbstractPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) 
 
   DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
 
-
-  // TODO: final_matches_size should consider matches before
-  auto chunk_offsets = singleChunkPosList->get_offsets();
+  auto& chunk_offsets = singleChunkPosList->get_offsets();
   const auto previous_matches_size = chunk_offsets.size();
   const auto matches_size = previous_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
   chunk_offsets.resize(matches_size);
