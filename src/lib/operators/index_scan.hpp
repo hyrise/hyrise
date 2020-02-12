@@ -8,6 +8,7 @@
 #include "storage/index/segment_index_type.hpp"
 #include "storage/pos_list.hpp"
 #include "types.hpp"
+#include "storage/single_chunk_pos_list.hpp"
 
 namespace opossum {
 
