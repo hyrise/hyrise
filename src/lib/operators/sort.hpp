@@ -18,7 +18,7 @@ namespace opossum {
  * Defines in which order a certain column should be sorted.
  */
 struct SortColumnDefinition final {
-  SortColumnDefinition(const ColumnID& column, const OrderByMode order_by_mode = OrderByMode::Ascending)
+  explicit SortColumnDefinition(const ColumnID& column, const OrderByMode order_by_mode = OrderByMode::Ascending)
       : column(column), order_by_mode(order_by_mode) {}
 
   const ColumnID column;
@@ -26,14 +26,14 @@ struct SortColumnDefinition final {
 };
 
 /**
- * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
- * maintain their relative order.
+ * Operator to sort a table by one or multiple columns. This implements a stable sort, i.e., rows that share the same
+ * value will maintain their relative order.
  * By passing multiple sort column definitions it is possible to sort multiple columns with one operator run.
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
   Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-          size_t output_chunk_size = Chunk::DEFAULT_SIZE);
+       size_t output_chunk_size = Chunk::DEFAULT_SIZE);
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
 

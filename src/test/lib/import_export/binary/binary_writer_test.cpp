@@ -125,6 +125,9 @@ TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   BinaryWriter::write(*(scan->get_output()), filename);
 
   EXPECT_TRUE(file_exists(filename));
+
+  // Because reference tables are materialized and stored as if they were value segments, the binary dump will
+  // contain the default chunk size.
   EXPECT_TRUE(compare_files(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
@@ -402,7 +405,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
@@ -428,7 +431,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 100'000);
   auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
                       opossum::NULL_VALUE};
 

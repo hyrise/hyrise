@@ -37,6 +37,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     auto sort_definition = _sort_definitions[column_id];
     _sort_definition_data_types[column_id] = input_table_left()->column_data_type(sort_definition.column);
   }
+  _sort_definition_data_types.resize(_sort_definitions.size());
+  for (auto column_id = ColumnID{0}; column_id < _sort_definitions.size(); ++column_id) {
+    auto sort_definition = _sort_definitions[column_id];
+    _sort_definition_data_types[column_id] = input_table_left()->column_data_type(sort_definition.column);
+  }
   _validate_sort_definitions();
 
   std::shared_ptr<PosList> merged_pos_list = nullptr;
@@ -140,8 +145,8 @@ std::shared_ptr<const Table> Sort::_get_materialized_output(const std::shared_pt
       auto chunk_it = output_segments_by_chunk.begin();
       auto chunk_offset_out = 0u;
 
-      auto value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
-      auto value_segment_null_vector = pmr_concurrent_vector<bool>();
+      auto value_segment_value_vector = pmr_vector<ColumnDataType>();
+      auto value_segment_null_vector = pmr_vector<bool>();
 
       value_segment_value_vector.reserve(row_count_out);
       value_segment_null_vector.reserve(row_count_out);
@@ -184,8 +189,8 @@ std::shared_ptr<const Table> Sort::_get_materialized_output(const std::shared_pt
           auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                               std::move(value_segment_null_vector));
           chunk_it->push_back(value_segment);
-          value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
-          value_segment_null_vector = pmr_concurrent_vector<bool>();
+          value_segment_value_vector = pmr_vector<ColumnDataType>();
+          value_segment_null_vector = pmr_vector<bool>();
           ++chunk_it;
         }
       }
@@ -206,9 +211,7 @@ std::shared_ptr<const Table> Sort::_get_materialized_output(const std::shared_pt
   return output;
 }
 
-void Sort::_on_cleanup() {
-  // TODO(anyone): Implement, if necessary.
-}
+void Sort::_on_cleanup() {}
 
 /**
  * Asserts that all column definitions are valid.
@@ -358,7 +361,7 @@ class Sort::SortImpl {
     if (pos_list) {
       auto segment_ptr_and_accessor_by_chunk_id =
           std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
+              std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
       segment_ptr_and_accessor_by_chunk_id.reserve(_table_in->chunk_count());
 
       // When there was a preceding sorting run, we materialize according to the passed PosList.

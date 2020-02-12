@@ -128,8 +128,9 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStable) {
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2);
 
-  std::vector<SortColumnDefinition> sort_definitions = {{ColumnID{0}, OrderByMode::Ascending},
-                                                        {ColumnID{1}, OrderByMode::Ascending}};
+  auto sort_definitions =
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
+                                         SortColumnDefinition{ColumnID{1}, OrderByMode::Ascending}}};
   auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
   sort->execute();
 
@@ -142,8 +143,9 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2);
 
-  std::vector<SortColumnDefinition> sort_definitions = {{ColumnID{0}, OrderByMode::Ascending},
-                                                        {ColumnID{1}, OrderByMode::Descending}};
+  auto sort_definitions =
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
+                                         SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
   auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
   sort->execute();
 
