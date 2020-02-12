@@ -12,6 +12,8 @@ class MatchesAllPosList : public AbstractPosList {
 
   MatchesAllPosList& operator=(MatchesAllPosList&& other) = default;
 
+  MatchesAllPosList() = delete;
+
   virtual bool references_single_chunk() const override {
     return true;
   }
