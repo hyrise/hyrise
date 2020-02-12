@@ -40,7 +40,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   void _validate_input();
   std::shared_ptr<AbstractTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
-  PosList _scan_chunk(const ChunkID chunk_id);
+  std::shared_ptr<AbstractPosList> _scan_chunk(const ChunkID chunk_id);
 
  private:
   const SegmentIndexType _index_type;

@@ -406,6 +406,7 @@ set(
     statistics/attribute_statistics.hpp
     storage/abstract_pos_list.hpp
     storage/abstract_pos_list.cpp
+    storage/single_chunk_pos_list.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp

@@ -79,7 +79,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     const auto chunk = _in_table->get_chunk(chunk_id);
     if (!chunk) return;
 
-    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+    const auto matches_out = _scan_chunk(chunk_id);
     if (matches_out->empty()) return;
 
     Segments segments;
@@ -111,14 +111,14 @@ void IndexScan::_validate_input() {
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
+std::shared_ptr<AbstractPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
   auto range_begin = AbstractIndex::Iterator{};
   auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
-  auto matches_out = PosList{};
+  std::shared_ptr<AbstractPosList> matches_out;
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
   Assert(index, "Index of specified type not found for segment (vector).");
@@ -134,6 +134,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_begin = index->cbegin();
       range_end = index->lower_bound(_right_values);
 
+      matches_out = std::make_shared<PosList>();
       matches_out.reserve(std::distance(range_begin, range_end));
       std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
 
@@ -187,18 +188,20 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   }
 
   DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
-  matches_out.guarantee_single_chunk();
 
-  const auto current_matches_size = matches_out.size();
-  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
+  // Create SingleChunkPosList
+  const auto singleChunkPosList = SingleChunkPosList(chunk_id);
+  auto chunk_offsets = singleChunkPosList.get_offsets();
+
+  const auto matches_size = static_cast<size_t>(std::distance(range_begin, range_end));
   matches_out.resize(final_matches_size);
 
   for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
-    matches_out[matches_position] = RowID{chunk_id, *range_begin};
+    chunk_offsets[matches_position] = *range_begin;
     range_begin++;
   }
 
-  return matches_out;
+  return std::make_shared<AbstractPosList>(singleChunkPosList);
 }
 
 }  // namespace opossum
