@@ -73,12 +73,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         }
       }
     });
-
-    return output;
   }
 
-  Assert(previously_sorted_pos_list, "Not expecting a null previously_sorted_pos_list pointer here");
-  return _get_materialized_output(previously_sorted_pos_list);
+  return output;
 }
 
 void Sort::_on_cleanup() {}
