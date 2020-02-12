@@ -51,8 +51,8 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentPosition<ValueID>> {
    public:
     using ValueType = ValueID;
-    explicit Iterator(const ValueID null_value_id, ZsIteratorType attribute_it, ChunkOffset chunk_offset)
-        : _null_value_id{null_value_id}, _attribute_it{attribute_it}, _chunk_offset{chunk_offset} {}
+    explicit Iterator(const ValueID null_value_id, ZsIteratorType&& attribute_it, ChunkOffset chunk_offset)
+        : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -95,7 +95,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
    public:
     using ValueType = ValueID;
     PointAccessIterator(const ValueID null_value_id, const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
-                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+                        const PosList::const_iterator&& position_filter_begin, PosList::const_iterator&& position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
                                          SegmentPosition<ValueID>>{std::move(position_filter_begin),
                                                                    std::move(position_filter_it)},
