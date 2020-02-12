@@ -137,7 +137,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             }
           }
 
-          std::vector<bool> null_values;
+          pmr_vector<bool> null_values;
 
           /**
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
@@ -172,7 +172,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
           if (column_specifications[column_index].null_ratio) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
-                create_typed_segment_values<ColumnDataType>(values), null_values);
+                create_typed_segment_values<ColumnDataType>(values), std::move(null_values));
           } else {
             value_segment =
                 std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
