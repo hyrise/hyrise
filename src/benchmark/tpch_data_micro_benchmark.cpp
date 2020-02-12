@@ -15,6 +15,8 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/encoding_type.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "operators/index_scan.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -27,7 +29,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = Hyrise::get().storage_manager;
-    const auto scale_factor = 0.01f;
+    const auto scale_factor = 1.f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -43,6 +45,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _table_wrapper_map = create_table_wrappers(sm);
 
     auto lineitem_table = sm.get_table("lineitem");
+
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
@@ -122,6 +125,51 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
   LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan)(benchmark::State& state) {
+
+    auto& sm = Hyrise::get().storage_manager;
+    auto lineitem_table = sm.get_table("lineitem");
+
+    // Generate an index to benchmark the indexScan
+    std::vector<ColumnID> _indexColumnIDs = { ColumnID{10} };
+    lineitem_table->create_index<GroupKeyIndex>(_indexColumnIDs); // TODO: GroupKeyIndex statt BTreeIndex
+    // Roughly after _tpchq6_shipdate_less_predicate
+  const std::vector<ColumnID> left_column_ids = { ColumnID{10}};
+  const std::vector<AllTypeVariant> right_values = { "1995-01-01" };
+  for (auto _ : state) {
+    const auto table_scan = std::make_shared<IndexScan>(
+            _table_wrapper_map.at("lineitem"),
+            SegmentIndexType::GroupKey,
+            left_column_ids,
+            PredicateCondition::LessThan,
+            right_values
+            );
+    table_scan->execute();
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6IndexScan_Matches_All_Predicate)(benchmark::State& state) {
+
+    auto& sm = Hyrise::get().storage_manager;
+    auto lineitem_table = sm.get_table("lineitem");
+
+    // Generate an index to benchmark the indexScan
+    std::vector<ColumnID> _indexColumnIDs = { ColumnID{10} };
+    lineitem_table->create_index<GroupKeyIndex>(_indexColumnIDs);
+    const std::vector<ColumnID> left_column_ids = { ColumnID{10}};
+    const std::vector<AllTypeVariant> right_values = { "1600-01-01" };
+    for (auto _ : state) {
+        const auto table_scan = std::make_shared<IndexScan>(
+                _table_wrapper_map.at("lineitem"),
+                SegmentIndexType::GroupKey,
+                left_column_ids,
+                PredicateCondition::NotEquals,
+                right_values
+        );
+        table_scan->execute();
+    }
+}
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {
