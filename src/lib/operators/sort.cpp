@@ -50,9 +50,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
                                                            sort_definition.order_by_mode, _output_chunk_size);
       const auto row_id_value_vector = sort_single_col_impl.sort_one_column(previously_sorted_pos_list);
 
+      // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
+      // full and create the next one. Each chunk is filled row by row.
       if (is_last_sorting_run) {
-        // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
-        // full and create the next one. Each chunk is filled row by row.
         auto materialization = std::make_shared<SortImplMaterializeOutput<ColumnDataType>>(
             input_table_left(), row_id_value_vector, _output_chunk_size);
         output = materialization->execute();
