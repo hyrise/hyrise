@@ -345,7 +345,7 @@ CREATE VIEW someview AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c
 
 -- TABLES
 DROP TABLE IF EXISTS t; CREATE TABLE t (a INT); INSERT INTO t (a) VALUES (1); CREATE TABLE IF NOT EXISTS t (b INT); SELECT * FROM t;
-CREATE TABLE sometable AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a; SELECT * FROM sometable;
+DROP TABLE IF EXISTS sometable; CREATE TABLE sometable AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a; SELECT * FROM sometable;
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;
