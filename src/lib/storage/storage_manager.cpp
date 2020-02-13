@@ -307,8 +307,6 @@ void StorageManager::apply_partitioning() {
 
             const auto row_count = table->row_count();
             for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
-              if (row_idx % 1000000 == 0) std::cout << "column " << column_id << " / row_idx " << row_idx << std::endl; 
-
               const auto [chunk_id, chunk_offset] = row_id_by_row_idx[row_idx];
               const auto partition_id = partition_by_row_idx[row_idx];
 
