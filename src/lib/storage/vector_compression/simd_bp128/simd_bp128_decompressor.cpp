@@ -27,7 +27,7 @@ SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other) noex
       _cached_meta_info_offset{other._cached_meta_info_offset},
       _cached_meta_block_first_index{other._cached_meta_block_first_index},
       _cached_block_first_index{other._cached_block_first_index},
-      _cached_meta_info{std::move(other._cached_meta_info)},
+      _cached_meta_info{other._cached_meta_info},
       _cached_block{std::move(other._cached_block)} {}
 
 SimdBp128Decompressor& SimdBp128Decompressor::operator=(const SimdBp128Decompressor& other) {
@@ -51,7 +51,7 @@ SimdBp128Decompressor& SimdBp128Decompressor::operator=(SimdBp128Decompressor&& 
     _cached_meta_info_offset = other._cached_meta_info_offset;
     _cached_meta_block_first_index = other._cached_meta_block_first_index;
     _cached_block_first_index = other._cached_block_first_index;
-    _cached_meta_info = std::move(other._cached_meta_info);
+    _cached_meta_info = other._cached_meta_info;
     _cached_block = std::move(other._cached_block);
   }
 

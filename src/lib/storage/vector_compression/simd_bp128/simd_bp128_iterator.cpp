@@ -19,18 +19,21 @@ SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) 
   return *this;
 }
 
-void SimdBp128Iterator::increment() { ++_absolute_index; }
+// As we use boost's iterator facades, we cannot use _increment().
+void SimdBp128Iterator::increment() { ++_absolute_index; }  // NOLINT
 
-void SimdBp128Iterator::decrement() { --_absolute_index; }
+void SimdBp128Iterator::decrement() { --_absolute_index; }  // NOLINT
 
-void SimdBp128Iterator::advance(std::ptrdiff_t n) { _absolute_index += n; }
+void SimdBp128Iterator::advance(std::ptrdiff_t n) { _absolute_index += n; }  // NOLINT
 
-bool SimdBp128Iterator::equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
+bool SimdBp128Iterator::equal(const SimdBp128Iterator& other) const {  // NOLINT
+  return _absolute_index == other._absolute_index;
+}
 
-std::ptrdiff_t SimdBp128Iterator::distance_to(const SimdBp128Iterator& other) const {
+std::ptrdiff_t SimdBp128Iterator::distance_to(const SimdBp128Iterator& other) const {  // NOLINT
   return other._absolute_index - _absolute_index;
 }
 
-uint32_t SimdBp128Iterator::dereference() const { return _decompressor.get(_absolute_index); }
+uint32_t SimdBp128Iterator::dereference() const { return _decompressor.get(_absolute_index); }  // NOLINT
 
 }  // namespace opossum
