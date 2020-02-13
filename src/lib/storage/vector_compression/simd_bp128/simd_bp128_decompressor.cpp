@@ -44,7 +44,7 @@ SimdBp128Decompressor& SimdBp128Decompressor::operator=(const SimdBp128Decompres
   return *this;
 }
 
-SimdBp128Decompressor& SimdBp128Decompressor::operator=(SimdBp128Decompressor&& other) {
+SimdBp128Decompressor& SimdBp128Decompressor::operator=(SimdBp128Decompressor&& other) noexcept {
   if (&other != this) {
     _data = other._data;
     _size = other._size;

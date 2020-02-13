@@ -8,7 +8,7 @@ SimdBp128Iterator::SimdBp128Iterator(SimdBp128Decompressor&& decompressor, const
 SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
     : _decompressor{SimdBp128Decompressor(other._decompressor)}, _absolute_index{other._absolute_index} {}
 
-SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other)
+SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other) noexcept
     : _decompressor{std::move(other._decompressor)}, _absolute_index{other._absolute_index} {}
 
 SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
