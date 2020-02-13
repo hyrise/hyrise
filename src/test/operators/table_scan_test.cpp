@@ -139,7 +139,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int, false);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data);
+    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, 100'000);
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i});
