@@ -280,7 +280,7 @@ void StorageManager::apply_partitioning() {
     }
 
     // Write segments
-    auto segments_by_partition = std::vector<Segments>(total_num_partitions);
+    auto segments_by_partition = std::vector<Segments>(total_num_partitions, Segments(table->column_count()));
     {
       std::cout << "\tWriting partitioned columns in parallel" << std::flush;
       Timer timer;
@@ -306,6 +306,8 @@ void StorageManager::apply_partitioning() {
             }
 
             for (auto row_idx = size_t{0}; row_idx < table->row_count(); ++row_idx) {
+              if (row_idx % 1000000 == 0) std::cout << "column " << column_id << " / row_idx " << row_idx << std::endl; 
+
               const auto [chunk_id, chunk_offset] = row_id_by_row_idx[row_idx];
               const auto partition_id = partition_by_row_idx[row_idx];
 
@@ -316,7 +318,7 @@ void StorageManager::apply_partitioning() {
 
             for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
               auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values_by_partition[partition_id]));
-              segments_by_partition[partition_id].emplace_back(value_segment);
+              segments_by_partition[partition_id][column_id] = value_segment;
             }
           });
         }));
@@ -331,6 +333,7 @@ void StorageManager::apply_partitioning() {
     auto new_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
     for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
       const auto& segments = segments_by_partition[partition_id];
+      // Note that this makes all rows that have been deleted visible again
       auto mvcc_data = std::make_shared<MvccData>(segments[0]->size(), CommitID{0});
       new_table->append_chunk(segments, mvcc_data);
       new_table->last_chunk()->finalize();
