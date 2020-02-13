@@ -68,12 +68,11 @@ struct PosList final : private pmr_vector<RowID> {
           [&]() {
             if (size() == 0) return true;
             const auto& common_chunk_id = (*this)[0].chunk_id;
-            if (common_chunk_id == INVALID_CHUNK_ID) return false;
             return std::all_of(cbegin(), cend(), [&](const auto& row_id) {
               return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
             });
           }(),
-          "PosList was marked as referencing a single chunk, but references more or the PosList contains NULL values");
+          "PosList was marked as referencing a single chunk, but references more");
     }
     return _references_single_chunk;
   }
@@ -83,6 +82,7 @@ struct PosList final : private pmr_vector<RowID> {
     DebugAssert(references_single_chunk(),
                 "Can only retrieve the common_chunk_id if the PosList is guaranteed to reference a single chunk.");
     Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
+    Assert((*this)[0].chunk_id != INVALID_CHUNK_ID, "PosList that references_single_chunk must not contain NULL");
     return (*this)[0].chunk_id;
   }
 
