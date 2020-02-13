@@ -281,11 +281,21 @@ void StorageManager::apply_partitioning() {
 
     // Write segments
     auto segments_by_partition = std::vector<Segments>(total_num_partitions);
+
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       std::cout << "\tWriting partitioned column " << table->column_name(column_id) << std::flush;
       Timer timer;
       resolve_data_type(table->column_data_type(column_id), [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
+
+        auto original_dictionary_segments = std::vector<std::shared_ptr<const DictionarySegment<ColumnDataType>>>(table->chunk_count());
+        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto& original_chunk = table->get_chunk(chunk_id);
+          const auto& original_segment = original_chunk->get_segment(column_id);
+          const auto& original_dictionary_segment = std::static_pointer_cast<const DictionarySegment<ColumnDataType>>(original_segment);
+
+          original_dictionary_segments[chunk_id] = original_dictionary_segment;
+        }
 
         auto values_by_partition = std::vector<pmr_vector<ColumnDataType>>(total_num_partitions);
         for (auto& values : values_by_partition) {
@@ -296,11 +306,9 @@ void StorageManager::apply_partitioning() {
           const auto [chunk_id, chunk_offset] = row_id_by_row_idx[row_idx];
           const auto partition_id = partition_by_row_idx[row_idx];
 
-          const auto& original_chunk = table->get_chunk(chunk_id);
-          const auto& original_segment = original_chunk->get_segment(column_id);
-          const auto& original_dictionary_segment = static_cast<const DictionarySegment<ColumnDataType>&>(*original_segment);
+          const auto& original_dictionary_segment = original_dictionary_segments[chunk_id];
 
-          values_by_partition[partition_id].emplace_back(*original_dictionary_segment.get_typed_value(chunk_offset));
+          values_by_partition[partition_id].emplace_back(*original_dictionary_segment->get_typed_value(chunk_offset));
         }
 
         for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
