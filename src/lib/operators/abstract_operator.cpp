@@ -61,6 +61,7 @@ void AbstractOperator::execute() {
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
 
+  // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
     if (lqp_node) {
       [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
