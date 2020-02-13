@@ -218,6 +218,7 @@ void StorageManager::apply_partitioning() {
     const auto& dimensions = entry.value();
 
     auto partition_by_row_idx = std::vector<size_t>(table->row_count());
+    auto row_id_by_row_idx = std::vector<RowID>(table->row_count());
 
     auto total_num_partitions = size_t{1};
 
@@ -247,6 +248,7 @@ void StorageManager::apply_partitioning() {
             segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
               Assert(!position.is_null(), "Partitioning on NULL values not yet supported");
               materialized.emplace_back(std::pair<ColumnDataType, size_t>{position.value(), row_idx});
+              row_id_by_row_idx[row_idx] = RowID{chunk_id, position.chunk_offset()};
 
               ++row_idx;
             });
@@ -277,6 +279,7 @@ void StorageManager::apply_partitioning() {
       std::cout << "\t\tdone (" << timer.lap_formatted() << ")" << std::endl;
     }
 
+    // Write segments
     auto segments_by_partition = std::vector<Segments>(total_num_partitions);
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       std::cout << "\tWriting partitioned column " << table->column_name(column_id) << std::flush;
@@ -290,8 +293,14 @@ void StorageManager::apply_partitioning() {
         }
 
         for (auto row_idx = size_t{0}; row_idx < table->row_count(); ++row_idx) {
+          const auto [chunk_id, chunk_offset] = row_id_by_row_idx[row_idx];
           const auto partition_id = partition_by_row_idx[row_idx];
-          values_by_partition[partition_id].emplace_back(table->get_value<ColumnDataType>(column_id, row_idx));
+
+          const auto& original_chunk = table->get_chunk(chunk_id);
+          const auto& original_segment = original_chunk->get_segment(column_id);
+          const auto& original_dictionary_segment = static_cast<const DictionarySegment<ColumnDataType>&>(*original_segment);
+
+          values_by_partition[partition_id].emplace_back(*original_dictionary_segment.get_typed_value(chunk_offset));
         }
 
         for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
@@ -323,11 +332,9 @@ void StorageManager::apply_partitioning() {
       std::cout << "Generating statistics" << std::flush;
       Timer timer;
       drop_table(table_name);
-      add_table(table_name, table);
+      add_table(table_name, new_table);
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
-
-    // Print::print(new_table);
   }
 }
 

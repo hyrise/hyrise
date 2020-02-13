@@ -962,6 +962,10 @@ int Console::_unload_plugin(const std::string& input) {
 int Console::_partition(const std::string& input) {
   Hyrise::get().storage_manager.apply_partitioning();
 
+  // Clear caches so that the ChunkPruningRule is run again
+  _lqp_cache->clear();
+  _pqp_cache->clear();
+
   return ReturnCode::Ok;
 }
 
