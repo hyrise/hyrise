@@ -402,7 +402,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   const auto default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
 
   // TPC-C does not support binary caching
-  const auto default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? true : false);
+  const auto default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
