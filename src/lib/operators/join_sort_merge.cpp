@@ -911,6 +911,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
 
+      DebugAssert(null_output_left->size() == null_output_right->size(), "Null positions lists are expected to be of equal length.");
       if (!null_output_left->empty()) {
         _output_pos_lists_left.push_back(null_output_left);
         _output_pos_lists_right.push_back(null_output_right);
@@ -950,13 +951,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Wait for all chunk creation tasks to finish
     Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
 
-    // Remove empty chunks which occur due to empty radix clusters or not matching tuples of clusters.
+    // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(
         std::remove_if(output_chunks.begin(), output_chunks.end(),
                        [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
         output_chunks.end());
 
-    // TODO(anyone): when setting chunk ordered by flags, check if output is really sorted for NULL-adding joins.
     return _sort_merge_join._build_output_table(std::move(output_chunks));
   }
 };
