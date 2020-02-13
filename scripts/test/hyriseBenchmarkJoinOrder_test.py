@@ -20,7 +20,6 @@ def main():
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Unencoded'"
   arguments["--clients"] = "1"
-  arguments["--cache_binary_tables"] = "true"
   arguments["--scheduler"] = "false"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")

@@ -41,7 +41,7 @@ class BenchmarkConfig {
   uint32_t clients = 1;
   bool enable_visualization = false;
   bool verify = false;
-  bool cache_binary_tables = false;
+  bool cache_binary_tables = true;
   bool sql_metrics = false;
 
   static const char* description;

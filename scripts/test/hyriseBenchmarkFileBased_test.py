@@ -22,7 +22,6 @@ def main():
   arguments["--encoding"] = "'Unencoded'"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
-  arguments["--cache_binary_tables"] = "true"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
