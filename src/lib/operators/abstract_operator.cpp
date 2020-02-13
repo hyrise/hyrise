@@ -81,9 +81,9 @@ void AbstractOperator::execute() {
                     std::string{"Mismatching number of output columns for "} + name());
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
           if (_type != OperatorType::Alias) {
-            const auto lqp_type = lqp_expressions[column_id]->data_type();
-            const auto pqp_type = _output->column_data_type(column_id);
-            const auto pqp_name = _output->column_name(column_id);
+            [[maybe_unused]] const auto lqp_type = lqp_expressions[column_id]->data_type();
+            [[maybe_unused]] const auto pqp_type = _output->column_data_type(column_id);
+            [[maybe_unused]] const auto pqp_name = _output->column_name(column_id);
             DebugAssert(pqp_type == lqp_type,
                         std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
           }
