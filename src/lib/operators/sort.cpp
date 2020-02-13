@@ -169,7 +169,7 @@ class Sort::MergeImpl {
 
     for (ChunkID chunk_id{0u}; chunk_id < value_vectors.size(); ++chunk_id) {
       const auto& value_vector = value_vectors[chunk_id];
-      if (value_vector->size() > 0) {
+      if (!value_vector->empty()) {
         value_iterators.emplace_back(chunk_id, value_vectors[chunk_id]->begin());
       }
     }
@@ -187,7 +187,7 @@ class Sort::MergeImpl {
     }
 
     // Step 1: Merge non-NULL values
-    while (value_iterators.size() != 0) {
+    while (!value_iterators.empty()) {
       RowIDValuePair compare_result = *(value_iterators[0].second);
       uint32_t pos_list_id_of_compare_result_iterator = 0;
       ChunkID chunk_id_of_compare_result = value_iterators[0].first;
@@ -235,6 +235,7 @@ class Sort::MergeImpl {
     return merged_vector;
   }
 
+ protected:
   const std::shared_ptr<const Table> _table_in;
 
   // column to sort by
@@ -386,7 +387,7 @@ class Sort::SortImpl {
  protected:
   // Completely materializes the sort column to create a vector of RowID-Value pairs.
   void _materialize_sort_column(std::optional<ChunkID> chunk_id = std::nullopt,
-                                std::shared_ptr<PosList> pos_list = nullptr) {
+                                const std::shared_ptr<PosList>& pos_list = nullptr) {
     auto& row_id_value_vector = *_row_id_value_vector;
 
     if (chunk_id.has_value()) {
