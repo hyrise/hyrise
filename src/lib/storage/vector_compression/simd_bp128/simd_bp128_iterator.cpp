@@ -2,13 +2,11 @@
 
 namespace opossum {
 
-SimdBp128Iterator::SimdBp128Iterator(SimdBp128Decompressor&& decompressor,
-		                     const size_t absolute_index)
+SimdBp128Iterator::SimdBp128Iterator(SimdBp128Decompressor&& decompressor, const size_t absolute_index)
     : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
 
 SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
-    : _decompressor{SimdBp128Decompressor(other._decompressor)},
-      _absolute_index{other._absolute_index} {}
+    : _decompressor{SimdBp128Decompressor(other._decompressor)}, _absolute_index{other._absolute_index} {}
 
 SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other)
     : _decompressor{std::move(other._decompressor)}, _absolute_index{other._absolute_index} {}

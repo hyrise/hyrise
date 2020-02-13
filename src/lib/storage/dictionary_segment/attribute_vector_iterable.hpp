@@ -33,8 +33,8 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
       auto begin = PointAccessIterator<ZsDecompressorType>{_null_value_id, vector.create_decompressor(),
                                                            position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, vector.create_decompressor(), position_filter->cbegin(),
-                                                         position_filter->cend()};
+      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, vector.create_decompressor(),
+                                                         position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
   }
@@ -94,7 +94,8 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
    public:
     using ValueType = ValueID;
     PointAccessIterator(const ValueID null_value_id, ZsDecompressorType&& attribute_decompressor,
-                        const PosList::const_iterator&& position_filter_begin, PosList::const_iterator&& position_filter_it)
+                        const PosList::const_iterator&& position_filter_begin,
+                        PosList::const_iterator&& position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
                                          SegmentPosition<ValueID>>{std::move(position_filter_begin),
                                                                    std::move(position_filter_it)},
@@ -107,8 +108,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     SegmentPosition<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto value_id =
-          static_cast<ValueID>(_attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk));
+      const auto value_id = static_cast<ValueID>(_attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
 
       return {value_id, is_null, chunk_offsets.offset_in_poslist};

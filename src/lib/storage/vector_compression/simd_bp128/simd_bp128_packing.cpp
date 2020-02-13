@@ -141,7 +141,13 @@ void SimdBp128Packing::read_meta_info(const uint128_t* in, uint8_t* out) {
   const auto simd_in = reinterpret_cast<const simd_type*>(in);
   auto simd_out = reinterpret_cast<simd_type*>(out);
 
+  std::cout << "initial addresses >> in " << in << " out " << static_cast<void*>(out) << std::endl;
+  std::cout << "new addresses >> in " << simd_in << " out " << simd_out << std::endl;
+
+  // auto out2 = reinterpret_cast<const uint128_t*>(out);
+
   *simd_out = *simd_in;
+  // *out2 = *in;
 }
 
 void SimdBp128Packing::pack_block(const uint32_t* in, uint128_t* out, const uint8_t bit_size) {

@@ -13,9 +13,7 @@ std::unique_ptr<BaseVectorDecompressor> SimdBp128Vector::on_create_base_decompre
   return std::make_unique<SimdBp128Decompressor>(*this);
 }
 
-SimdBp128Decompressor SimdBp128Vector::on_create_decompressor() const {
-  return SimdBp128Decompressor(*this);
-}
+SimdBp128Decompressor SimdBp128Vector::on_create_decompressor() const { return SimdBp128Decompressor(*this); }
 
 SimdBp128Iterator SimdBp128Vector::on_begin() const { return SimdBp128Iterator{on_create_decompressor(), 0u}; }
 
