@@ -181,7 +181,8 @@ class Sort::MergeImpl {
     if (!nulls_last) {
       for (ChunkID chunk_id{0u}; chunk_id < null_vectors.size(); ++chunk_id) {
         const auto null_vector = *null_vectors[chunk_id];
-        std::transform(std::begin(null_vector), std::end(null_vector), std::back_inserter(*merged_vector));
+        std::transform(std::begin(null_vector), std::end(null_vector), std::back_inserter(*merged_vector),
+                       [](auto const& pair) { return pair; });
       }
     }
 
@@ -226,7 +227,8 @@ class Sort::MergeImpl {
     if (nulls_last) {
       for (ChunkID chunk_id{0u}; chunk_id < null_vectors.size(); ++chunk_id) {
         const auto null_vector = *null_vectors[chunk_id];
-        std::transform(std::begin(null_vector), std::end(null_vector), std::back_inserter(*merged_vector));
+        std::transform(std::begin(null_vector), std::end(null_vector), std::back_inserter(*merged_vector),
+                       [](auto const& pair) { return pair; });
       }
     }
 
