@@ -361,7 +361,7 @@ class Sort::SortImpl {
     if (pos_list) {
       auto segment_ptr_and_accessor_by_chunk_id =
           std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-              std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
+                                                std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
       segment_ptr_and_accessor_by_chunk_id.reserve(_table_in->chunk_count());
 
       // When there was a preceding sorting run, we materialize according to the passed PosList.
@@ -395,9 +395,7 @@ class Sort::SortImpl {
         }
       }
     } else {
-      if (chunk_id.has_value()) {
-        // TODO(anyone): Reduce code duplication with else branch below.
-        const auto chunk = _table_in->get_chunk(chunk_id.value());
+      std::function<void(const std::shared_ptr<const opossum::Chunk>)> materialize_chunk = [&](const auto& chunk) {
         Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
         auto base_segment = chunk->get_segment(_column_id);
@@ -409,21 +407,16 @@ class Sort::SortImpl {
             row_id_value_vector.emplace_back(RowID{chunk_id.value(), position.chunk_offset()}, position.value());
           }
         });
+      };
+
+      if (chunk_id.has_value()) {
+        const auto chunk = _table_in->get_chunk(chunk_id.value());
+        materialize_chunk(chunk);
       } else {
         const auto chunk_count = _table_in->chunk_count();
         for (ChunkID chunk_idx{0}; chunk_idx < chunk_count; ++chunk_idx) {
           const auto chunk = _table_in->get_chunk(chunk_idx);
-          Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
-
-          auto base_segment = chunk->get_segment(_column_id);
-
-          segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
-            if (position.is_null()) {
-              null_value_rows.emplace_back(RowID{chunk_idx, position.chunk_offset()}, SortColumnType{});
-            } else {
-              row_id_value_vector.emplace_back(RowID{chunk_idx, position.chunk_offset()}, position.value());
-            }
-          });
+          materialize_chunk(chunk);
         }
       }
     }
