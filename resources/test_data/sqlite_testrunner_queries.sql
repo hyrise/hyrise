@@ -200,6 +200,7 @@ SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 2
 
 -- JOIN multiple tables
 SELECT * FROM mixed_null AS t1 INNER JOIN id_int_int_int_100 AS t2 ON t1.b = t2.a INNER JOIN mixed AS t3 ON t1.b = t3.b;
+SELECT * FROM id_int_int_int_100 t1 LEFT JOIN id_int_int_int_100 t2 ON t1.a != t2.a AND t1.b != t2.b
 
 -- Make sure that name-to-id-resolving works fine.
 SELECT t1.a, t1.b, t2.b, t3.a FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a;
@@ -340,6 +341,9 @@ CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int
 CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
 CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
 CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM id_int_int_int_100 WHERE a > 10; SELECT a1, a2 FROM alias_view;
+
+-- TABLES
+DROP TABLE IF EXISTS t; CREATE TABLE t (a INT); INSERT INTO t (a) VALUES (1); CREATE TABLE IF NOT EXISTS t (b INT); SELECT * FROM t;
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;

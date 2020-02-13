@@ -724,8 +724,8 @@ void AggregateHash::_write_groupby_output(PosList& pos_list) {
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;
 
-      auto values = pmr_concurrent_vector<ColumnDataType>(pos_list.size());
-      auto null_values = pmr_concurrent_vector<bool>(pos_list.size());
+      auto values = pmr_vector<ColumnDataType>(pos_list.size());
+      auto null_values = pmr_vector<bool>(pos_list.size());
       std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>> accessors(input_table->chunk_count());
 
       auto output_offset = ChunkOffset{0};
