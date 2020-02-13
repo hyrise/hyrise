@@ -2,6 +2,7 @@
 #include <string>
 #include <utility>
 
+#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "operators/limit.hpp"
@@ -26,6 +27,49 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 
   for (const auto& plan : plans) {
     _build_subtree(plan, visualized_ops);
+  }
+
+  {
+    // Print the "Total by operator" box using graphviz's record type. Using HTML labels would be slightly nicer, but
+    // boost always encloses the label in quotes, which breaks them.
+    std::stringstream operator_breakdown_stream;
+    operator_breakdown_stream << "{Total by operator|{";
+
+    auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
+        _duration_by_operator_name.begin(), _duration_by_operator_name.end()};
+    std::sort(sorted_duration_by_operator_name.begin(), sorted_duration_by_operator_name.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.second.count() > rhs.second.count(); });
+
+    // Print first column (operator name)
+    for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
+      operator_breakdown_stream << " " << operator_name << " \\r";
+    }
+    operator_breakdown_stream << "total\\r";
+
+    // Print second column (operator duration) and track total duration
+    operator_breakdown_stream << "|";
+    auto total_nanoseconds = std::chrono::nanoseconds{};
+    for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
+      operator_breakdown_stream << " " << format_duration(nanoseconds) << " \\l";
+      total_nanoseconds += nanoseconds;
+    }
+    operator_breakdown_stream << " " << format_duration(total_nanoseconds) << " \\l";
+
+    // Print third column (relative operator duration)
+    operator_breakdown_stream << "|";
+    for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
+      operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) / total_nanoseconds.count() * 100)
+                                << " %\\l";
+    }
+    operator_breakdown_stream << " \\l";
+
+    operator_breakdown_stream << "}}";
+
+    VizVertexInfo vertex_info = _default_vertex;
+    vertex_info.shape = "record";
+    vertex_info.label = operator_breakdown_stream.str();
+
+    boost::add_vertex(vertex_info, _graph);
   }
 }
 
@@ -67,7 +111,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
       _visualize_subqueries(op, limit->row_count_expression(), visualized_ops);
     } break;
 
-    default: {}  // OperatorType has no expressions
+    default: {
+    }  // OperatorType has no expressions
   }
 }
 
@@ -99,7 +144,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
 
     stream << std::to_string(output->row_count()) + " row(s)/";
     stream << std::to_string(output->chunk_count()) + " chunk(s)/";
-    stream << format_bytes(output->estimate_memory_usage());
+    stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
 
     info.label = stream.str();
 
@@ -121,6 +166,8 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     label += "\n\n" + format_duration(total);
     info.pen_width = total.count();
   }
+
+  _duration_by_operator_name[op->name()] += op->performance_data().walltime;
 
   info.label = label;
   _add_vertex(op, info);

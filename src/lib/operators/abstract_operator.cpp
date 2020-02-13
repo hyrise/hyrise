@@ -30,7 +30,7 @@ void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
-  DebugAssert(!_output, "Operator has already been executed");
+  DebugAssert(_performance_data->walltime.count() == 0, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -195,7 +195,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
       fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
                 << output->column_count() << " column(s)/";
 
-      fn_stream << format_bytes(output->estimate_memory_usage());
+      fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
       fn_stream << "/";
       fn_stream << abstract_operator.performance_data() << ")";
     }

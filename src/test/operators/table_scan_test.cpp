@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -140,7 +139,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int, false);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data);
+    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, 100'000);
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i});
@@ -259,14 +258,14 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> _int_int_partly_compressed;
 };
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto table_scan_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::FrameOfReference),
-                         formatter);
+                         table_scan_test_formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
@@ -825,7 +824,7 @@ TEST_P(OperatorsTableScanTest, BinaryScanOnNullable) {
       {ColumnID{0}, PredicateCondition::LessThan, 1235, {123, 1234}},
       {ColumnID{0}, PredicateCondition::LessThanEquals, 1234, {123, 1234}}};
 
-  const auto table = get_int_float_with_null_op(Chunk::MAX_SIZE);
+  const auto table = get_int_float_with_null_op(Chunk::DEFAULT_SIZE);
   for (const auto& [column_id, predicate_condition, value, expected_values] : predicates) {
     const auto scan = create_table_scan(table, column_id, predicate_condition, value);
     scan->execute();

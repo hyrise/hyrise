@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -154,6 +153,42 @@ TEST_F(OperatorsProjectionTest, SetParameters) {
   ASSERT_TRUE(correlated_parameter_expression);
   EXPECT_TRUE(correlated_parameter_expression->value());
   EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});
+}
+
+TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
+  // Checks that instead of materializing all values in an imperfectly forwarded DictionarySegment, the dictionary
+  // is re-used and only the attribute vector is materialized.
+
+  auto dict_table = load_table("resources/test_data/tbl/int_float4.tbl", 3);
+  ChunkEncoder::encode_all_chunks(dict_table, EncodingType::Dictionary);
+  auto table_wrapper = std::make_shared<TableWrapper>(dict_table);
+  table_wrapper->execute();
+
+  const auto table_scan = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::Equals, 123456);
+  table_scan->execute();
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  projection->execute();
+
+  const auto input_segment = dict_table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  const auto input_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(input_segment);
+  ASSERT_TRUE(input_dictionary_segment);
+
+  const auto& output_table = projection->get_output();
+  ASSERT_EQ(output_table->chunk_count(), 3);
+
+  // Note that column a now has column id 1
+  const auto output_segment = output_table->get_chunk(ChunkID{0})->get_segment(ColumnID{1});
+  const auto output_dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(output_segment);
+  ASSERT_TRUE(output_dictionary_segment);
+
+  EXPECT_TRUE(output_dictionary_segment->dictionary() == input_dictionary_segment->dictionary());
+
+  const auto& output_attribute_vector = output_dictionary_segment->attribute_vector();
+  EXPECT_EQ(output_attribute_vector->size(), 1);
+
+  const auto output_attribute_vector_decompressor = output_attribute_vector->create_base_decompressor();
+  EXPECT_EQ(output_attribute_vector_decompressor->get(0), ValueID{1});
 }
 
 }  // namespace opossum

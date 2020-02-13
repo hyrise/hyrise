@@ -1,8 +1,6 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -14,7 +12,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class MockNodeTest : public ::testing::Test {
+class MockNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{

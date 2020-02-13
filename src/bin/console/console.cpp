@@ -24,12 +24,11 @@
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
+#include "import_export/file_type.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "operators/export_binary.hpp"
-#include "operators/export_csv.hpp"
+#include "operators/export.hpp"
 #include "operators/get_table.hpp"
-#include "operators/import_binary.hpp"
-#include "operators/import_csv.hpp"
+#include "operators/import.hpp"
 #include "operators/print.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
@@ -400,7 +399,7 @@ int Console::_help(const std::string&) {
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
+  out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
   out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
@@ -451,11 +450,11 @@ int Console::_generate_tpcc(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto num_warehouses = std::stoi(arguments[1]);
+  auto num_warehouses = std::stoull(arguments.at(0));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -476,11 +475,11 @@ int Console::_generate_tpch(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto scale_factor = std::stof(arguments[0]);
+  auto scale_factor = std::stof(arguments.at(0));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -500,11 +499,11 @@ int Console::_generate_tpcds(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
+  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments.at(0)));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -522,50 +521,24 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const auto filepath = std::filesystem::path{arguments[0]};
-  const auto extension = std::string{filepath.extension()};
-
-  const auto tablename = arguments.size() >= 2 ? arguments[1] : std::string{filepath.stem()};
+  const auto filepath = std::filesystem::path{arguments.at(0)};
+  const auto tablename = arguments.size() >= 2 ? arguments.at(1) : std::string{filepath.stem()};
 
   out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
-  auto& storage_manager = Hyrise::get().storage_manager;
-  if (storage_manager.has_table(tablename)) {
-    storage_manager.drop_table(tablename);
-    out("Table " + tablename + " already existed. Replacing it.\n");
+  if (Hyrise::get().storage_manager.has_table(tablename)) {
+    out("Table \"" + tablename + "\" already existed. Replacing it.\n");
   }
 
-  if (extension == ".csv") {
-    auto importer = std::make_shared<ImportCsv>(filepath, Chunk::DEFAULT_SIZE, tablename);
-    try {
-      importer->execute();
-    } catch (const std::exception& exception) {
-      out("Error: Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-  } else if (extension == ".tbl") {
-    try {
-      auto table = load_table(filepath);
-
-      Hyrise::get().storage_manager.add_table(tablename, table);
-    } catch (const std::exception& exception) {
-      out("Error: Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-  } else if (extension == ".bin") {
-    auto importer = std::make_shared<ImportBinary>(filepath, tablename);
-    try {
-      importer->execute();
-    } catch (const std::exception& exception) {
-      out("Error: Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
-      return ReturnCode::Error;
-    }
-  } else {
-    out("Error: Unsupported file extension '" + extension + "'\n");
+  try {
+    auto importer = std::make_shared<Import>(filepath, tablename, Chunk::DEFAULT_SIZE);
+    importer->execute();
+  } catch (const std::exception& exception) {
+    out("Error: Exception thrown while importing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
-  const std::string encoding = arguments.size() == 3 ? arguments[2] : "Unencoded";
+  const std::string encoding = arguments.size() == 3 ? arguments.at(2) : "Unencoded";
 
   const auto encoding_type = encoding_type_to_string.right.find(encoding);
   if (encoding_type == encoding_type_to_string.right.end()) {
@@ -609,8 +582,8 @@ int Console::_export_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& tablename = arguments[0];
-  const std::string& filepath = arguments[1];
+  const std::string& tablename = arguments.at(0);
+  const std::string& filepath = arguments.at(1);
 
   auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
@@ -618,25 +591,13 @@ int Console::_export_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  std::vector<std::string> file_parts;
-  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
-  const std::string& extension = file_parts.back();
-
-  out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  out("Exporting \"" + tablename + "\" into \"" + filepath + "\" ...\n");
   auto get_table = std::make_shared<GetTable>(tablename);
   get_table->execute();
 
   try {
-    if (extension == "bin") {
-      auto exporter = std::make_shared<ExportBinary>(get_table, filepath);
-      exporter->execute();
-    } else if (extension == "csv") {
-      auto exporter = std::make_shared<ExportCsv>(get_table, filepath);
-      exporter->execute();
-    } else {
-      out("Exporting to extension \"" + extension + "\" is not supported.\n");
-      return ReturnCode::Error;
-    }
+    auto exporter = std::make_shared<Export>(get_table, filepath);
+    exporter->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
@@ -962,7 +923,7 @@ int Console::_load_plugin(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_path_str = arguments[0];
+  const std::string& plugin_path_str = arguments.at(0);
 
   const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
@@ -983,7 +944,7 @@ int Console::_unload_plugin(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_name = arguments[0];
+  const std::string& plugin_name = arguments.at(0);
 
   Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 

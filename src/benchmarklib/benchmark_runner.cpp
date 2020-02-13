@@ -28,8 +28,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  SQLPipelineBuilder::default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  SQLPipelineBuilder::default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
@@ -371,7 +371,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   // Gather information on the (estimated) table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->estimate_memory_usage();
+    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled);
   }
 
   nlohmann::json summary{
@@ -408,11 +408,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("help", "print a summary of CLI options")
     ("full_help", "print more detailed information about configuration options")
     ("r,runs", "Maximum number of runs per item, negative values mean infinity", cxxopts::value<int64_t>()->default_value("-1")) // NOLINT
-    ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
+    ("c,chunk_size", "Chunk size", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
-    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value(default_mode)) // NOLINT
+    ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode)) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT

@@ -215,6 +215,8 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::CreateView:
       case LQPNodeType::DropView:
       case LQPNodeType::DummyTable:
+      case LQPNodeType::Export:
+      case LQPNodeType::Import:
       case LQPNodeType::Join:
       case LQPNodeType::Limit:
       case LQPNodeType::Predicate:

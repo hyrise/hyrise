@@ -4,8 +4,7 @@
 #include <random>
 #include <sstream>
 
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "encoding_test.hpp"
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -24,13 +23,13 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   static constexpr auto row_count = size_t{1u} << 10;
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     for (auto index = size_t{0u}; index < row_count; ++index) {
       null_values[index] = index % 4 == 0;
@@ -40,7 +39,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
 
     for (auto index = size_t{0u}; index < row_count; ++index) {
       if (index % 3 == 0) {
@@ -56,8 +55,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     for (auto index = 0u; index < row_count; ++index) {
       null_values[index] = index % 4 == 0;
@@ -112,7 +111,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+auto encoded_string_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   const auto spec = info.param;
 
   auto stream = std::stringstream{};
@@ -128,8 +127,8 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
-                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::String, false)),
-                         formatter);
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::String, false)),
+                         encoded_string_segment_test_formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_value_segment();
@@ -303,11 +302,6 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
   encoded_segment =
       this->encode_segment(value_segment, DataType::String,
                            SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-
-  encoded_segment =
-      this->encode_segment(value_segment, DataType::String,
-                           SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 
   encoded_segment = this->encode_segment(

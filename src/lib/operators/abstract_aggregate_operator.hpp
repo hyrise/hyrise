@@ -8,23 +8,6 @@
 
 namespace opossum {
 
-/**
- * Aggregates are defined by the column (ColumnID for Operators, LQPColumnReference in LQP) they operate on and the aggregate
- * function they use. COUNT() is the exception that does not necessarily use a column, which is why column is optional.
- *   COUNT(*) does not use a column and returns the number of rows
- *   COUNT(<column>) does use a column and returns the number of rows with non-null values in <column>
- * Optionally, an alias can be specified for the columns holding the result of an aggregate function.
- *
- * Further, the aggregate operator is used to perform DISTINCT operations. This functionality is achieved by having no aggregates.
- */
-struct AggregateColumnDefinition final {
-  AggregateColumnDefinition(const ColumnID& column, const AggregateFunction function)
-      : column(column), function(function) {}
-
-  const ColumnID column;
-  const AggregateFunction function;
-};
-
 /*
 The AggregateFunctionBuilder is used to create the lambda function that will be used by
 the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
@@ -141,6 +124,20 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Any> {
+ public:
+  auto get_aggregate_function() {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {
+      // ANY() is expected to be only executed on groups whose values are all equal.
+      DebugAssert(!current_primary_aggregate || *current_primary_aggregate == new_value,
+                  "ANY() expects all values in the group to be equal.");
+      current_primary_aggregate = new_value;
+    };
+  }
+};
+
+template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
@@ -161,10 +158,10 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 class AbstractAggregateOperator : public AbstractReadOnlyOperator {
  public:
   AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
-                            const std::vector<AggregateColumnDefinition>& aggregates,
+                            const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                             const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::vector<AggregateColumnDefinition>& aggregates() const;
+  const std::vector<std::shared_ptr<AggregateExpression>>& aggregates() const;
 
   const std::vector<ColumnID>& groupby_column_ids() const;
 
@@ -176,7 +173,7 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
   void _validate_aggregates() const;
 
   Segments _output_segments;
-  const std::vector<AggregateColumnDefinition> _aggregates;
+  const std::vector<std::shared_ptr<AggregateExpression>> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   TableColumnDefinitions _output_column_definitions;

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -11,13 +11,12 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
-#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class OptimizerTest : public ::testing::Test {
+class OptimizerTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");

@@ -74,11 +74,16 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
     const auto first = values.cbegin() + CHUNK_SIZE * chunk_index;
     const auto last = values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
-    const auto value_segment = std::make_shared<ValueSegment<Type>>(std::vector(first, last));
+    const auto value_segment = std::make_shared<ValueSegment<Type>>(pmr_vector<Type>(first, last));
     table->append_chunk({value_segment});
   }
 
   if (encoding_type != EncodingType::Unencoded) {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      chunk->finalize();
+    }
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 

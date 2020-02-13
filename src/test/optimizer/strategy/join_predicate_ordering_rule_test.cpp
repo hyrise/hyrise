@@ -1,9 +1,6 @@
 #include <numeric>
 
-#include "gtest/gtest.h"
-
 #include "strategy_base_test.hpp"
-#include "testing_assert.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
