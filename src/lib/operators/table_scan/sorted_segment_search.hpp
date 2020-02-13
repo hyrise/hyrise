@@ -190,7 +190,7 @@ class SortedSegmentSearch {
         case PredicateCondition::BetweenExclusive:
           break;
         default:
-        Fail("Unsupported predicate condition encountered");
+          Fail("Unsupported predicate condition encountered");
       }
 
       std::swap(first_value, last_value);
@@ -310,8 +310,8 @@ class SortedSegmentSearch {
   }
 
   template <typename ResultIteratorType>
-  void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id, PosList& matches,
-                              const std::shared_ptr<const PosList>& position_filter) const {
+  void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id,
+                              PosList& matches, const std::shared_ptr<const PosList>& position_filter) const {
     if (begin == end) return;
 
     // General note: If the predicate is NotEquals, there might be two ranges that match.
@@ -343,8 +343,7 @@ class SortedSegmentSearch {
     }
   }
 
-
-private:
+ private:
   // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer, except when
   // handling NotEquals (see _handle_not_equals).
   IteratorType _begin;

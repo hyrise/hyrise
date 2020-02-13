@@ -155,7 +155,8 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
                                                          predicate_condition, boost::get<ColumnDataType>(value));
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter); });
+          sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter);
+        });
       });
     }
   });
