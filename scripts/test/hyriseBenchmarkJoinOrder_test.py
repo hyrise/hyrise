@@ -32,7 +32,6 @@ def main():
   benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Unencoded'")
-  benchmark.expect_exact("Chunk size is 100000")
   benchmark.expect_exact("Max runs per item is 100")
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("No warmup runs are performed")
@@ -79,6 +78,7 @@ def main():
   arguments["--compression"] = "'SIMD-BP128'"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
+  arguments["--chunk_size"] = "100000"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
