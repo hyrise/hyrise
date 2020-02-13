@@ -960,15 +960,6 @@ int Console::_unload_plugin(const std::string& input) {
 }
 
 int Console::_partition(const std::string& input) {
-  auto arguments = trim_and_split(input);
-
-  if (arguments.size() != 0) {
-    out("Usage:\n");
-    out("  partition\n");
-    out("  (partitioning.json must be present in current working directory)\n");
-    return ReturnCode::Error;
-  }
-
   Hyrise::get().storage_manager.apply_partitioning();
 
   return ReturnCode::Ok;
