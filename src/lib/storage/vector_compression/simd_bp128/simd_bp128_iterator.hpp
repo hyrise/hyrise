@@ -25,7 +25,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   // and do thus not require an additional iterator.
   explicit SimdBp128Iterator(SimdBp128Decompressor&& decompressor, const size_t absolute_index = 0u);
   SimdBp128Iterator(const SimdBp128Iterator& other);
-  SimdBp128Iterator(SimdBp128Iterator&& other);
+  SimdBp128Iterator(SimdBp128Iterator&& other) noexcept;
 
   SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
   SimdBp128Iterator& operator=(SimdBp128Iterator&& other) = default;

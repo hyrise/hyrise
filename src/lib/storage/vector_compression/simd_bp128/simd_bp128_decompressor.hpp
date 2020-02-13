@@ -33,7 +33,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   SimdBp128Decompressor(SimdBp128Decompressor&& other) noexcept;
 
   SimdBp128Decompressor& operator=(const SimdBp128Decompressor& other);
-  SimdBp128Decompressor& operator=(SimdBp128Decompressor&& other);
+  SimdBp128Decompressor& operator=(SimdBp128Decompressor&& other) noexcept;
 
   ~SimdBp128Decompressor() = default;
 
