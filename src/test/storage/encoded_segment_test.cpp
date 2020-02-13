@@ -7,6 +7,7 @@
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/encoding_test.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -41,7 +42,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment() { return create_int_value_segment(row_count()); }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment(size_t row_count) {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
+    auto values = pmr_vector<int32_t>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -58,8 +59,8 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_with_null_value_segment(size_t row_count) {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<int32_t>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -132,7 +133,7 @@ INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
                          encoded_segment_test_formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
@@ -256,7 +257,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 }
 
 TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
@@ -305,7 +306,7 @@ TEST_F(EncodedSegmentTest, SegmentReencoding) {
 // Testing the internal data structures of Run Length-encoded segments for monotonically increasing values
 TEST_F(EncodedSegmentTest, RunLengthEncodingMonotonicallyIncreasing) {
   constexpr auto row_count = int32_t{100};
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
 
   for (auto row_id = int32_t{0u}; row_id < row_count; ++row_id) {
     values[row_id] = row_id;
@@ -331,7 +332,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingVaryingRuns) {
   constexpr auto long_value_element_repititions = 10;
   constexpr auto single_value_runs_increasing =
       row_count - single_value_runs_decreasing - long_value_runs * long_value_element_repititions;
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
 
   // fill first ten values with decreasing values
   for (auto row_id = int32_t{0u}; row_id < single_value_runs_decreasing; ++row_id) {
@@ -391,8 +392,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   constexpr auto long_runs = 9;
   constexpr auto elements_per_long_run = 10;
   constexpr auto short_runs = 10;
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
-  auto null_values = pmr_concurrent_vector<bool>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
+  auto null_values = pmr_vector<bool>(row_count);
 
   // the next 9 values are repeated 10 times each (i.e., 90 values)
   auto row_id = 0;
@@ -455,8 +456,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
   constexpr auto row_count = int32_t{20};
   constexpr auto run_count = 2;
   constexpr auto value_repititions = 10;
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
-  auto null_values = pmr_concurrent_vector<bool>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
+  auto null_values = pmr_vector<bool>(row_count);
 
   // two value runs, 10 each
   auto row_id = size_t{0};
@@ -510,8 +511,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
 TEST_F(EncodedSegmentTest, FrameOfReference) {
   constexpr auto row_count = int32_t{17};
   constexpr auto minimum = int32_t{5};
-  auto values = pmr_concurrent_vector<int32_t>(row_count);
-  auto null_values = pmr_concurrent_vector<bool>(row_count);
+  auto values = pmr_vector<int32_t>(row_count);
+  auto null_values = pmr_vector<bool>(row_count);
 
   for (auto row_id = int32_t{0u}; row_id < row_count; ++row_id) {
     values[row_id] = minimum + row_id;

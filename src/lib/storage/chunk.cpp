@@ -49,8 +49,10 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
-  // Do this first to ensure that the first thing to exist in a row is the MVCC data.
-  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, INVALID_TRANSACTION_ID, CommitID{0});
+  if (has_mvcc_data()) {
+    // Make the row visible - mvcc_data has been pre-allocated
+    mvcc_data()->set_begin_cid(size(), CommitID{0});
+  }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
@@ -80,12 +82,6 @@ ChunkOffset Chunk::size() const {
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 
-SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
-  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
-
-  return {*_mvcc_data, _mvcc_data->_mutex};
-}
-
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
@@ -101,11 +97,14 @@ void Chunk::finalize() {
   _is_mutable = false;
 
   if (has_mvcc_data()) {
-    auto mvcc = get_scoped_mvcc_data_lock();
-    Assert(!mvcc->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
+    const auto chunk_size = size();
+    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
+    _mvcc_data->max_begin_cid = CommitID{0};
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
+    }
 
-    mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
-    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID,
+    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
            "finalized before all transactions committed/rolled back.");
   }
@@ -183,10 +182,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   // TODO(anybody) Index memory usage missing
 
   if (_mvcc_data) {
-    bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);
-    bytes += _mvcc_data->tids.size() * sizeof(decltype(_mvcc_data->tids)::value_type);
-    bytes += _mvcc_data->begin_cids.size() * sizeof(decltype(_mvcc_data->begin_cids)::value_type);
-    bytes += _mvcc_data->end_cids.size() * sizeof(decltype(_mvcc_data->end_cids)::value_type);
+    bytes += _mvcc_data->memory_usage();
   }
 
   return bytes;
