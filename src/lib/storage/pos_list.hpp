@@ -53,8 +53,12 @@ struct PosList final : private pmr_vector<RowID> {
 
   PosList& operator=(PosList&& other) = default;
 
-  // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
-  // to enable some optimizations.
+  // If we know that all entries in the PosList share a single ChunkID, we can optimize the indirection by retrieving
+  // the respective chunk once and using only the ChunkOffsets to access values. As the consumer will likely call
+  // table->get_chunk(common_chunk_id), we require that the common chunk id is valid, i.e., the PosList contains no NULL
+  // values. Note that this is not about NULL values being referenced, but about NULL value contained in the PosList
+  // itself.
+
   void guarantee_single_chunk() { _references_single_chunk = true; }
 
   // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
