@@ -127,6 +127,8 @@ class Console : public Singleton<Console> {
   int _load_plugin(const std::string& args);
   int _unload_plugin(const std::string& input);
 
+  int _partition(const std::string& input);
+
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);
 

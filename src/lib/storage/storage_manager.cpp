@@ -1,6 +1,9 @@
 #include "storage_manager.hpp"
 
+#include <boost/container/small_vector.hpp>
+#include <fstream>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <utility>
 #include <vector>
@@ -10,11 +13,15 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/print.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -197,6 +204,131 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
   }
 
   return stream;
+}
+
+void StorageManager::apply_partitioning() {
+  std::ifstream file("partitioning.json");
+  nlohmann::json json;
+  file >> json;
+
+  for (const auto& entry : json.items()) {
+    const auto& table_name = entry.key();
+    const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+    std::cout << "Partitioning " << table_name << std::endl;
+    const auto& dimensions = entry.value();
+
+    auto partition_by_row_idx = std::vector<size_t>(table->row_count());
+
+    auto total_num_partitions = size_t{1};
+
+    for (auto dimension_id = size_t{0}; dimension_id < dimensions.size(); ++dimension_id) {
+      const auto& dimension = dimensions[dimension_id];
+      const auto partition_count = static_cast<size_t>(dimension["partitions"]);
+      total_num_partitions *= partition_count;
+
+      std::cout << "\tCalculating boundaries for " << dimension["column_name"] << " with " << partition_count << " partitions" << std::endl;
+      Timer timer;
+
+      Assert(partition_count < table->row_count(), "Partition count must be smaller than table size");
+
+      const auto column_id = table->column_id_by_name(dimension["column_name"]);
+      resolve_data_type(table->column_data_type(column_id), [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+
+        auto materialized = std::vector<std::pair<ColumnDataType, size_t>>{};
+        materialized.reserve(table->row_count());
+
+        {
+          auto row_idx = size_t{0};
+          for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+            const auto& chunk = table->get_chunk(chunk_id);
+            const auto& segment = chunk->get_segment(column_id);
+
+            segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+              Assert(!position.is_null(), "Partitioning on NULL values not yet supported");
+              materialized.emplace_back(std::pair<ColumnDataType, size_t>{position.value(), row_idx});
+
+              ++row_idx;
+            });
+          }
+        }
+
+        std::sort(materialized.begin(), materialized.end(), [](const auto& lhs, const auto& rhs) {
+          return lhs < rhs;
+        });
+
+        const auto partition_size = materialized.size() / partition_count;
+        for (auto partition_id = size_t{0}; partition_id < partition_count; ++partition_id) {
+          const auto partition_begin = partition_id * partition_size;
+          const auto partition_end = partition_id == partition_count - 1 ? materialized.size() : (partition_id + 1) * partition_size;
+          std::cout << "\t\tPartition " << partition_id << " from index " << partition_begin << " to " << partition_end << " (size " << (partition_end - partition_begin + 1) << ") - values " << materialized.at(partition_begin).first << " to " << materialized.at(partition_end - 1).first << std::endl;
+          for (auto materialized_idx = partition_begin; materialized_idx < partition_end; ++materialized_idx) {
+            const auto row_idx = materialized[materialized_idx].second;
+
+            // Shift existing partitions
+            partition_by_row_idx[row_idx] *= partition_count;
+
+            // Set partition of this
+            partition_by_row_idx[row_idx] += partition_id;
+          }
+        }
+      });
+
+      std::cout << "\t\tdone (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    auto segments_by_partition = std::vector<Segments>(total_num_partitions);
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      std::cout << "\tWriting partitioned column " << table->column_name(column_id) << std::flush;
+      Timer timer;
+      resolve_data_type(table->column_data_type(column_id), [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+
+        auto values_by_partition = std::vector<pmr_vector<ColumnDataType>>(total_num_partitions);
+        for (auto& values : values_by_partition) {
+          values.reserve(table->row_count() / (total_num_partitions - 1));
+        }
+
+        for (auto row_idx = size_t{0}; row_idx < table->row_count(); ++row_idx) {
+          const auto partition_id = partition_by_row_idx[row_idx];
+          values_by_partition[partition_id].emplace_back(table->get_value<ColumnDataType>(column_id, row_idx));
+        }
+
+        for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
+          auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values_by_partition[partition_id]));
+          segments_by_partition[partition_id].emplace_back(value_segment);
+        }
+      });
+      std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+
+    // Write new table
+    auto new_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
+    for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
+      const auto& segments = segments_by_partition[partition_id];
+      auto mvcc_data = std::make_shared<MvccData>(segments[0]->size(), CommitID{0});
+      new_table->append_chunk(segments, mvcc_data);
+      new_table->last_chunk()->finalize();
+    }
+
+    {
+      std::cout << "Applying dictionary encoding to new table" << std::flush;
+      Timer timer;
+      ChunkEncoder::encode_all_chunks(new_table, SegmentEncodingSpec{EncodingType::Dictionary});
+      std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    {
+      std::cout << "Generating statistics" << std::flush;
+      Timer timer;
+      drop_table(table_name);
+      add_table(table_name, table);
+      std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    // Print::print(new_table);
+  }
 }
 
 }  // namespace opossum

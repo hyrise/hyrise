@@ -150,6 +150,7 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+  register_command("partition", std::bind(&Console::_partition, this, std::placeholders::_1));
 }
 
 int Console::read() {
@@ -954,6 +955,21 @@ int Console::_unload_plugin(const std::string& input) {
   _pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
+
+  return ReturnCode::Ok;
+}
+
+int Console::_partition(const std::string& input) {
+  auto arguments = trim_and_split(input);
+
+  if (arguments.size() != 0) {
+    out("Usage:\n");
+    out("  partition\n");
+    out("  (partitioning.json must be present in current working directory)\n");
+    return ReturnCode::Error;
+  }
+
+  Hyrise::get().storage_manager.apply_partitioning();
 
   return ReturnCode::Ok;
 }
