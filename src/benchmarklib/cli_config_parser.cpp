@@ -175,7 +175,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
   json_config.emplace("verify", parse_result["verify"].as<bool>());
-  json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
+  json_config.emplace("cache_binary_tables", !parse_result["dont_cache_binary_tables"].as<bool>());
   json_config.emplace("sql_metrics", parse_result["sql_metrics"].as<bool>());
 
   return json_config;
