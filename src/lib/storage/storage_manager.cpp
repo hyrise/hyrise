@@ -340,6 +340,7 @@ void StorageManager::apply_partitioning() {
 
     {
       std::cout << "Applying dictionary encoding to new table" << std::flush;
+      PARALLEL
       Timer timer;
       ChunkEncoder::encode_all_chunks(new_table, SegmentEncodingSpec{EncodingType::Dictionary});
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
