@@ -333,6 +333,7 @@ void StorageManager::apply_partitioning() {
     auto new_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
     for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
       const auto& segments = segments_by_partition[partition_id];
+      if (segments[0]->size() == 0) continue;
       // Note that this makes all rows that have been deleted visible again
       auto mvcc_data = std::make_shared<MvccData>(segments[0]->size(), CommitID{0});
       new_table->append_chunk(segments, mvcc_data);
@@ -346,7 +347,7 @@ void StorageManager::apply_partitioning() {
       // Encode chunks in parallel, using `hardware_concurrency + 1` workers
       // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
       auto next_chunk_id = std::atomic_uint{0};
-      const auto thread_count = std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
+      const auto thread_count = std::min(static_cast<uint>(new_table->chunk_count()), std::thread::hardware_concurrency() + 1);
       auto threads = std::vector<std::thread>{};
       threads.reserve(thread_count);
 
@@ -354,10 +355,10 @@ void StorageManager::apply_partitioning() {
         threads.emplace_back([&] {
           while (true) {
             auto my_chunk_id = next_chunk_id++;
-            if (my_chunk_id >= table->chunk_count()) return;
+            if (my_chunk_id >= new_table->chunk_count()) return;
 
-            const auto chunk = table->get_chunk(ChunkID{my_chunk_id});
-            ChunkEncoder::encode_chunk(chunk, table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
+            const auto chunk = new_table->get_chunk(ChunkID{my_chunk_id});
+            ChunkEncoder::encode_chunk(chunk, new_table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
           }
         });
       }
