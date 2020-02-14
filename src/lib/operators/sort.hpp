@@ -53,7 +53,7 @@ class Sort : public AbstractReadOnlyOperator {
   template <typename SortColumnType>
   class SortImplMaterializeOutput;
 
-  std::shared_ptr<const Table> _get_materialized_output(const std::shared_ptr<PosList>& pos_list = nullptr);
+  std::shared_ptr<const Table> _get_materialized_output(const std::shared_ptr<PosList>& pos_list);
 
   void _validate_sort_definitions() const;
 
