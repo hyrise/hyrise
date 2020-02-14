@@ -27,10 +27,9 @@ void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVaria
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _sort_definition_data_types.resize(_sort_definitions.size());
-  for (auto column_id = ColumnID{0}; column_id < _sort_definitions.size(); ++column_id) {
-    auto sort_definition = _sort_definitions[column_id];
-    _sort_definition_data_types[column_id] = input_table_left()->column_data_type(sort_definition.column);
-  }
+  std::transform(
+      _sort_definitions.begin(), _sort_definitions.end(), _sort_definition_data_types.begin(),
+      [this](const auto sort_definition) { return input_table_left()->column_data_type(sort_definition.column); });
 
   std::shared_ptr<const Table> output = input_table_left();
   std::shared_ptr<Table> output_mutable;
