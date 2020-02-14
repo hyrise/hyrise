@@ -33,6 +33,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   std::shared_ptr<const Table> output = input_table_left();
+  std::shared_ptr<Table> output_mutable;
   std::shared_ptr<PosList> previously_sorted_pos_list = std::shared_ptr<PosList>(nullptr);
 
   _validate_sort_definitions();
@@ -56,17 +57,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         auto materialization = std::make_shared<SortImplMaterializeOutput<ColumnDataType>>(
             input_table_left(), row_id_value_vector, _output_chunk_size);
 
-        std::shared_ptr<Table> output_mutable = materialization->execute();
-
-        // Set the ordered_by attribute of the output's chunks to the column the chunk was sorted by last (because this
-        // is the column that the chunk is ordered by in any case; whereas it is not necessarily sorted by the other
-        // columns -- on their own -- as well).
-        const auto chunk_count = output_mutable->chunk_count();
-        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          output_mutable->get_chunk(chunk_id)->set_ordered_by(
-              std::make_pair(sort_definition.column, sort_definition.order_by_mode));
-        }
-        output = output_mutable;
+        output_mutable = materialization->execute();
       } else {
         previously_sorted_pos_list.reset();
         previously_sorted_pos_list = std::make_shared<PosList>();
@@ -77,6 +68,17 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       }
     });
   }
+
+  auto final_sort_definition = _sort_definitions[0];
+  // Set the ordered_by attribute of the output's chunks to the column the chunk was sorted by last (because this
+  // is the column that the chunk is ordered by in any case; whereas it is not necessarily sorted by the other
+  // columns -- on their own -- as well).
+  const auto chunk_count = output_mutable->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    output_mutable->get_chunk(chunk_id)->set_ordered_by(
+        std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
+  }
+  output = output_mutable;
 
   return output;
 }
