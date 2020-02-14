@@ -893,7 +893,7 @@ TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl",
-                               sorted_table_wrapper->get_output()->max_chunk_size());
+                               sorted_table_wrapper->get_output()->target_chunk_size());
   }
 }
 
@@ -905,7 +905,7 @@ TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl",
-                               sorted_table_wrapper->get_output()->max_chunk_size());
+                               sorted_table_wrapper->get_output()->target_chunk_size());
   }
 }
 
@@ -917,7 +917,7 @@ TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl",
-                               sorted_table_wrapper->get_output()->max_chunk_size());
+                               sorted_table_wrapper->get_output()->target_chunk_size());
   }
 }
 
@@ -929,7 +929,7 @@ TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl",
-                               sorted_table_wrapper->get_output()->max_chunk_size());
+                               sorted_table_wrapper->get_output()->target_chunk_size());
   }
 }
 
