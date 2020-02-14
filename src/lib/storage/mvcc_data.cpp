@@ -1,68 +1,80 @@
 #include "mvcc_data.hpp"
 
-#include <shared_mutex>
-
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
-  grow_by(size, INVALID_TRANSACTION_ID, begin_commit_id);
-}
+  DebugAssert(size > 0, "No point in having empty MVCC data, as it cannot grow");
 
-size_t MvccData::size() const { return _size; }
-
-void MvccData::shrink() {
-  // tbb::concurrent_vector::shrink_to_fit() is not thread-safe, we need a unique lock to it.
-  //
-  // https://software.intel.com/en-us/node/506205
-  //   "Concurrent invocation of these operations on the same instance is not safe."
-  // https://software.intel.com/en-us/node/506203
-  //   "The method shrink_to_fit() merges several smaller arrays into a single contiguous array, which may improve
-  //     access time."
-
-  std::unique_lock<std::shared_mutex> lock{_mutex};
-  tids.shrink_to_fit();
-  begin_cids.shrink_to_fit();
-  end_cids.shrink_to_fit();
-}
-
-void MvccData::grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id) {
-  _size += delta;
-  tids.grow_to_at_least(_size);
-
-  for (auto chunk_offset = _size - delta; chunk_offset < _size; ++chunk_offset) {
-    // We set the TIDs manually instead of passing them into grow_to_at_least, because this way we can do this
-    // without synchronization. As the rows are not visible to anyone yet (MVCC vectors are resized before the table
-    // is), there is no harm in using a relaxed model.
-    tids[chunk_offset].store(transaction_id, std::memory_order_relaxed);
-  }
+  _begin_cids.resize(size, begin_commit_id);
+  _end_cids.resize(size, MAX_COMMIT_ID);
+  _tids.resize(size, copyable_atomic<TransactionID>{INVALID_TRANSACTION_ID});
   std::atomic_thread_fence(std::memory_order_seq_cst);
-
-  begin_cids.grow_to_at_least(_size, begin_commit_id);
-  end_cids.grow_to_at_least(_size, MAX_COMMIT_ID);
 }
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   stream << "TIDs: ";
-  for (const auto& tid : mvcc_data.tids) stream << tid.load() << ", ";
+  for (const auto& tid : mvcc_data._tids) stream << tid.load() << ", ";
   stream << std::endl;
 
   stream << "BeginCIDs: ";
-  for (const auto& begin_cid : mvcc_data.begin_cids) stream << begin_cid << ", ";
+  for (const auto& begin_cid : mvcc_data._begin_cids) stream << begin_cid << ", ";
   stream << std::endl;
 
   stream << "EndCIDs: ";
-  for (const auto& end_cid : mvcc_data.end_cids) stream << end_cid << ", ";
+  for (const auto& end_cid : mvcc_data._end_cids) stream << end_cid << ", ";
   stream << std::endl;
 
   return stream;
 }
 
-CommitID MvccData::get_begin_cid(const ChunkOffset offset) const { return begin_cids[offset]; }
-void MvccData::set_begin_cid(const ChunkOffset offset, const CommitID commit_id) { begin_cids[offset] = commit_id; }
+CommitID MvccData::get_begin_cid(const ChunkOffset offset) const {
+  DebugAssert(offset < _begin_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+  return _begin_cids[offset];
+}
 
-CommitID MvccData::get_end_cid(const ChunkOffset offset) const { return end_cids[offset]; }
-void MvccData::set_end_cid(const ChunkOffset offset, const CommitID commit_id) { end_cids[offset] = commit_id; }
+void MvccData::set_begin_cid(const ChunkOffset offset, const CommitID commit_id) {
+  DebugAssert(offset < _begin_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+  _begin_cids[offset] = commit_id;
+}
+
+CommitID MvccData::get_end_cid(const ChunkOffset offset) const {
+  DebugAssert(offset < _end_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+  return _end_cids[offset];
+}
+
+void MvccData::set_end_cid(const ChunkOffset offset, const CommitID commit_id) {
+  DebugAssert(offset < _end_cids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+  _end_cids[offset] = commit_id;
+}
+
+TransactionID MvccData::get_tid(const ChunkOffset offset) const {
+  DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+  return _tids[offset];
+}
+
+void MvccData::set_tid(const ChunkOffset offset, const TransactionID new_transaction_id,
+                       const std::memory_order memory_order) {
+  DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+
+  _tids[offset].store(new_transaction_id, memory_order);
+}
+
+bool MvccData::compare_exchange_tid(const ChunkOffset offset, TransactionID expected_transaction_id,
+                                    TransactionID new_transaction_id) {
+  DebugAssert(offset < _tids.size(), "offset out of bounds; MvccData insufficently preallocated?");
+
+  return _tids[offset].compare_exchange_strong(expected_transaction_id, new_transaction_id);
+}
+
+size_t MvccData::memory_usage() const {
+  auto bytes = size_t{0};
+  bytes += sizeof(_tids) + sizeof(_begin_cids) + sizeof(_end_cids);  // NOLINT
+  bytes += _tids.size() * sizeof(decltype(_tids)::value_type);
+  bytes += _begin_cids.size() * sizeof(decltype(_begin_cids)::value_type);
+  bytes += _end_cids.size() * sizeof(decltype(_end_cids)::value_type);
+  return bytes;
+}
 
 }  // namespace opossum

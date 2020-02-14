@@ -124,9 +124,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       }
     }
 
-    return std::allocate_shared<LZ4Segment<T>>(allocator, std::move(lz4_blocks), std::move(optional_null_values),
-                                               std::move(dictionary), _block_size, last_block_size,
-                                               total_compressed_size, values.size());
+    return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(optional_null_values),
+                                           std::move(dictionary), _block_size, last_block_size, total_compressed_size,
+                                           values.size());
   }
 
   std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
@@ -218,14 +218,16 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     if (num_chars == 0) {
       auto empty_blocks = pmr_vector<pmr_vector<char>>{allocator};
       auto empty_dictionary = pmr_vector<char>{};
-      return std::allocate_shared<LZ4Segment<pmr_string>>(allocator, std::move(empty_blocks),
-                                                          std::move(optional_null_values), std::move(empty_dictionary),
-                                                          nullptr, _block_size, 0u, 0u, null_values.size());
+      return std::make_shared<LZ4Segment<pmr_string>>(std::move(empty_blocks), std::move(optional_null_values),
+                                                      std::move(empty_dictionary), nullptr, _block_size, 0u, 0u,
+                                                      null_values.size());
     }
 
     // Compress the offsets with SimdBp128 vector compression to reduce the memory footprint of the LZ4 segment.
     // SimdBp128 is chosen over fixed size byte-aligned (FSBA) vector compression, since it compresses better and the
     // performance advantage of FSBA is neglectable, because runtime is dominated by the LZ4 encoding/decoding anyways.
+    // Prohibiting FSBA here reduces the compile time.
+    Assert(vector_compression_type() == VectorCompressionType::SimdBp128, "Only SimdBp128 is supported for LZ4");
     auto compressed_offsets = compress_vector(offsets, VectorCompressionType::SimdBp128, allocator, {offsets.back()});
 
     /**
@@ -255,9 +257,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       total_compressed_size += compressed_block.size();
     }
 
-    return std::allocate_shared<LZ4Segment<pmr_string>>(
-        allocator, std::move(lz4_blocks), std::move(optional_null_values), std::move(dictionary),
-        std::move(compressed_offsets), _block_size, last_block_size, total_compressed_size, null_values.size());
+    return std::make_shared<LZ4Segment<pmr_string>>(std::move(lz4_blocks), std::move(optional_null_values),
+                                                    std::move(dictionary), std::move(compressed_offsets), _block_size,
+                                                    last_block_size, total_compressed_size, null_values.size());
   }
 
  private:
