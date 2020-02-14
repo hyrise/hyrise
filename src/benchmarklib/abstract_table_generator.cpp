@@ -167,6 +167,15 @@ void AbstractTableGenerator::generate_and_store() {
             << format_duration(metrics.store_duration) << ")" << std::endl;
 
   /**
+   * Apply partitioning if partitioning.json is present
+   */
+  if (std::getenv("PARTITIONING") && std::filesystem::exists(std::getenv("PARTITIONING"))) {
+    storage_manager.apply_partitioning();
+  } else {
+    std::cout << "- Not applying partitioning as PARTITIONING environment variable is unset" << std::endl;
+  }
+
+  /**
    * Create indexes if requested by the user
    */
   if (_benchmark_config->indexes) {

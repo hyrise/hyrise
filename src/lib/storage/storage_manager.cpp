@@ -207,14 +207,15 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
 }
 
 void StorageManager::apply_partitioning() {
-  std::ifstream file("partitioning.json");
+  const auto config_file = std::getenv("PARTITIONING") ? std::getenv("PARTITIONING") : "partitioning.json";
+  std::ifstream file(config_file);
   nlohmann::json json;
   file >> json;
 
   for (const auto& entry : json.items()) {
     const auto& table_name = entry.key();
     const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-    std::cout << "Partitioning " << table_name << std::endl;
+    std::cout << "Partitioning " << table_name << " according to " << config_file << std::endl;
     const auto& dimensions = entry.value();
 
     auto partition_by_row_idx = std::vector<size_t>(table->row_count());
@@ -340,9 +341,29 @@ void StorageManager::apply_partitioning() {
 
     {
       std::cout << "Applying dictionary encoding to new table" << std::flush;
-      PARALLEL
       Timer timer;
-      ChunkEncoder::encode_all_chunks(new_table, SegmentEncodingSpec{EncodingType::Dictionary});
+
+      // Encode chunks in parallel, using `hardware_concurrency + 1` workers
+      // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
+      auto next_chunk_id = std::atomic_uint{0};
+      const auto thread_count = std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
+      auto threads = std::vector<std::thread>{};
+      threads.reserve(thread_count);
+
+      for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
+        threads.emplace_back([&] {
+          while (true) {
+            auto my_chunk_id = next_chunk_id++;
+            if (my_chunk_id >= table->chunk_count()) return;
+
+            const auto chunk = table->get_chunk(ChunkID{my_chunk_id});
+            ChunkEncoder::encode_chunk(chunk, table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
+          }
+        });
+      }
+
+      for (auto& thread : threads) thread.join();
+
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
 
