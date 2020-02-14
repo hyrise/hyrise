@@ -911,7 +911,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
 
-      DebugAssert(null_output_left->size() == null_output_right->size(), "Null positions lists are expected to be of equal length.");
+      DebugAssert(null_output_left->size() == null_output_right->size(),
+                  "Null positions lists are expected to be of equal length.");
       if (!null_output_left->empty()) {
         _output_pos_lists_left.push_back(null_output_left);
         _output_pos_lists_right.push_back(null_output_right);
