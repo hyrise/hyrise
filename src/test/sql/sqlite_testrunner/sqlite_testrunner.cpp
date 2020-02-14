@@ -83,8 +83,8 @@ void SQLiteTestRunner::SetUp() {
 
   // In case the previous SQL query was not executed successfully, we always reset all tables
   // because we cannot be sure that the dirty flags have been properly set.
-  for (auto& [_, table_cache_entry] : table_cache) {
-    if (!_last_run_successful) {
+  if (!_last_run_successful) {
+    for (auto& [_, table_cache_entry] : table_cache) {
       table_cache_entry.dirty = true;
     }
   }
