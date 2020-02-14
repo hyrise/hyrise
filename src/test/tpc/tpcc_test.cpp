@@ -16,7 +16,6 @@ class TPCCTest : public BaseTest {
  public:
   static void SetUpTestCase() {
     auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-    benchmark_config->cache_binary_tables = false;
     auto table_generator = TPCCTableGenerator{NUM_WAREHOUSES, benchmark_config};
 
     tables = table_generator.generate();
