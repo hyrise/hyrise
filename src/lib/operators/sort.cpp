@@ -254,6 +254,9 @@ class Sort::SortImpl {
 
     auto& null_value_rows = *_null_value_rows;
 
+    // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
+    // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
+    // the last run.
     if (pos_list) {
       auto segment_ptr_and_accessor_by_chunk_id =
           std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
@@ -294,7 +297,7 @@ class Sort::SortImpl {
       const auto chunk_count = _table_in->chunk_count();
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = _table_in->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+        Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
 
         auto base_segment = chunk->get_segment(_column_id);
 
