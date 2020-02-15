@@ -24,7 +24,7 @@ def main():
   arguments["--indexes"] = "true"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
-  arguments["--cache_binary_tables"] = "false"
+  arguments["--dont_cache_binary_tables"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
