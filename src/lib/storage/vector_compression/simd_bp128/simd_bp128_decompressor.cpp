@@ -31,7 +31,7 @@ SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other) noex
       _cached_block{std::move(other._cached_block)} {}
 
 SimdBp128Decompressor& SimdBp128Decompressor::operator=(const SimdBp128Decompressor& other) {
-  if (&other = this) {
+  if (&other == this) {
     return *this;
   }
 
