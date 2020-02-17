@@ -953,7 +953,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    
     if (write_output_concurrently) {
       // Wait for all chunk creation tasks to finish
       Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
