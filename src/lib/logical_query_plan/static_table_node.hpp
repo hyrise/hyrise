@@ -24,6 +24,7 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Bas
 
  protected:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
+  // static table nodes that reference meta tables should not be copied
   const bool _copyable;
 
   size_t _on_shallow_hash() const override;
