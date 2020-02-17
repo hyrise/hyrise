@@ -26,7 +26,7 @@ const auto STRING_SIZE = 512;
 
 opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
   auto table_column_definitions = opossum::TableColumnDefinitions();
-  table_column_definitions.emplace_back("a", data_type, false);
+  table_column_definitions.emplace_back("a", data_type, true);
   return table_column_definitions;
 }
 
