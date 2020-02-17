@@ -922,9 +922,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Intermediate structure for output chunks (to avoid concurrent appending to table)
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
+    // Threshold of expected rows per partition over which parallel output jobs are spawned.
+    constexpr auto parallel_output_threshold = 10'000;
+
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
-    const auto write_output_concurrently = _cluster_count > 1 && _output_pos_lists_left[0]->size() > 10'000;
+    const auto first_output_size = _output_pos_lists_left[0]->size();
+    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > parallel_output_threshold;
 
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
@@ -949,8 +953,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    // Wait for all chunk creation tasks to finish
-    Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+    
+    if (write_output_concurrently) {
+      // Wait for all chunk creation tasks to finish
+      Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+    }
 
     // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
     output_chunks.erase(
