@@ -105,7 +105,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   // Handle logical query plan if statement has been cached
-  if (lqp_cache && _translation_info.cacheable) {
+  if (lqp_cache) {
     if (const auto cached_plan = lqp_cache->try_get(_sql_string)) {
       const auto plan = *cached_plan;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
@@ -156,7 +156,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
-  if (pqp_cache && _translation_info.cacheable) {
+  if (pqp_cache) {
     if (const auto cached_physical_plan = pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
         Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
