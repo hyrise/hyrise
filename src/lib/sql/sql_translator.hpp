@@ -21,8 +21,8 @@ class AggregateNode;
 class LQPSubqueryExpression;
 
 struct TranslationInfo {
-  bool cacheable;
-  std::vector<ParameterID> parameter_ids_of_value_placeholders;
+  bool cacheable{true};
+  std::vector<ParameterID> parameter_ids_of_value_placeholders{};
 };
 
 /**
