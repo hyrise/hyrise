@@ -153,16 +153,13 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
-  // TODO(unknown): Ideally _read_values would directly write into a pmr_concurrent_vector so that no conversion is
-  // needed
   if (is_nullable) {
-    const auto nullables = _read_values<bool>(file, row_count);
-    const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()},
-                                             pmr_concurrent_vector<bool>{nullables.begin(), nullables.end()});
+    auto nullables = _read_values<bool>(file, row_count);
+    auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
   } else {
-    const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()});
+    auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueSegment<T>>(std::move(values));
   }
 }
 
@@ -171,12 +168,11 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
                                                                                ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  const auto null_value_id = dictionary_size;
   auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
 
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
-  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
+  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
 }
 
 template <typename T>

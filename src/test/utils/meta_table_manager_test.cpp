@@ -15,7 +15,8 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
 
   const auto prefix = MetaTableManager::META_PREFIX;
   const auto path = std::string{"resources/test_data/tbl/meta_tables/meta_"};
-  for (const auto& meta_table_name : {"tables", "columns", "chunks", "segments", "segments_accurate"}) {
+  for (const auto& meta_table_name :
+       std::vector<std::string>{"tables", "columns", "chunks", "segments", "segments_accurate"}) {
     SCOPED_TRACE(meta_table_name);
 
     const auto int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
@@ -31,9 +32,20 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
 
+    auto lib_suffix = std::string{};
+    if (meta_table_name == "segments" || meta_table_name == "segments_accurate") {
+#ifdef __GLIBCXX__
+      lib_suffix = "_libstdcpp";
+#elif _LIBCPP_VERSION
+      lib_suffix = "_libcpp";
+#else
+      static_assert(false, "Unknown c++ library");
+#endif
+    }
+
     {
       const auto meta_table = meta_table_manager.generate_table(meta_table_name);
-      const auto expected_table = load_table(path + meta_table_name + ".tbl");
+      const auto expected_table = load_table(path + meta_table_name + lib_suffix + ".tbl");
       EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
 
@@ -45,7 +57,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
 
     {
       const auto meta_table = meta_table_manager.generate_table(meta_table_name);
-      const auto expected_table = load_table(path + meta_table_name + "_updated.tbl");
+      const auto expected_table = load_table(path + meta_table_name + lib_suffix + "_updated.tbl");
       EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
   }
