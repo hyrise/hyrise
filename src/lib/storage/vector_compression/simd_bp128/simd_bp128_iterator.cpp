@@ -19,7 +19,8 @@ SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) 
   return *this;
 }
 
-// As we use boost's iterator facades, we cannot use _increment().
+// Our code style would want this to be _increment() as it is a private method, but we need to implement boost’s
+// interface. Same for the methods below.
 void SimdBp128Iterator::increment() { ++_absolute_index; }  // NOLINT
 
 void SimdBp128Iterator::decrement() { --_absolute_index; }  // NOLINT
