@@ -121,7 +121,7 @@ class SortedSegmentSearch {
   }
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
-  void _set_begin_and_end_value_scan() {
+  void _set_begin_and_end_positions_for_vs_value_scan() {
     if (_predicate_condition == PredicateCondition::Equals) {
       _begin = _get_first_bound(_first_search_value, _begin, _end);
       _end = _get_last_bound(_first_search_value, _begin, _end);
@@ -131,98 +131,104 @@ class SortedSegmentSearch {
     // clang-format off
     if (_is_ascending) {
       switch (_predicate_condition) {
-        case PredicateCondition::GreaterThanEquals: _begin = _get_first_bound(_first_search_value, _begin, _end); return; // NOLINT
-        case PredicateCondition::GreaterThan: _begin = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::LessThanEquals: _end = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::LessThan: _end = _get_first_bound(_first_search_value, _begin, _end); return;
+        case PredicateCondition::GreaterThanEquals:
+          _begin = _get_first_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::GreaterThan:
+          _begin = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::LessThanEquals:
+          _end = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::LessThan:
+          _end = _get_first_bound(_first_search_value, _begin, _end);
+          return;
         default: Fail("Unsupported predicate condition encountered");
       }
     } else {
       switch (_predicate_condition) {
-        case PredicateCondition::LessThanEquals: _begin = _get_first_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::LessThan: _begin = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::GreaterThanEquals: _end = _get_last_bound(_first_search_value, _begin, _end); return;
-        case PredicateCondition::GreaterThan: _end = _get_first_bound(_first_search_value, _begin, _end); return;
+        case PredicateCondition::LessThanEquals:
+          _begin = _get_first_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::LessThan:
+          _begin = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::GreaterThanEquals:
+          _end = _get_last_bound(_first_search_value, _begin, _end);
+          return;
+        case PredicateCondition::GreaterThan:
+          _end = _get_first_bound(_first_search_value, _begin, _end);
+          return;
         default: Fail("Unsupported predicate condition encountered");
       }
     }
     // clang-format on
   }
 
-  // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
-  void _set_begin_and_end_between_scan() {
+  // This function sets the offset(s) that delimit the result set based on the predicate condition and the sort order
+  void _set_begin_and_end_positions_for_between_scan() {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
     if (_begin == _end) return;
 
-    if (_is_ascending) {
-      // early out everything matches
-      if (_begin->value() > _first_search_value && (_end - 1)->value() < *_second_search_value) {
-        return;
+    auto first_value = _begin->value();
+    auto last_value = (_end - 1)->value();
+
+    auto predicate_condition = _predicate_condition;
+    auto first_search_value = _first_search_value;
+    auto second_search_value = *_second_search_value;
+
+    // if descending: exchange predicate conditions, search values and first/last values
+    if (!_is_ascending) {
+      switch (_predicate_condition) {
+        case PredicateCondition::BetweenLowerExclusive:
+          predicate_condition = PredicateCondition::BetweenUpperExclusive;
+          break;
+        case PredicateCondition::BetweenUpperExclusive:
+          predicate_condition = PredicateCondition::BetweenLowerExclusive;
+          break;
+        case PredicateCondition::BetweenInclusive:
+        case PredicateCondition::BetweenExclusive:
+          break;
+        default:
+          Fail("Unsupported predicate condition encountered");
       }
 
-      // early out nothing matches
-      if (_begin->value() > *_second_search_value || (_end - 1)->value() < _first_search_value) {
-        _begin = _end;
-        return;
-      }
-    } else {
-      // early out everything matches
-      if (_begin->value() < *_second_search_value && (_end - 1)->value() > _first_search_value) {
-        return;
-      }
-      // early out nothing matches
-      if ((_end - 1)->value() > *_second_search_value || _begin->value() < _first_search_value) {
-        _begin = _end;
-        return;
-      }
+      std::swap(first_value, last_value);
+      std::swap(first_search_value, second_search_value);
+    }
+
+    // early out everything matches
+    if (first_value > _first_search_value && last_value < *_second_search_value) return;
+
+    // early out nothing matches
+    if (first_value > *_second_search_value || last_value < _first_search_value) {
+      _begin = _end;
+      return;
     }
 
     // This implementation uses behaviour which resembles std::equal_range's
-    // behaviour. However, std::equal_range returns all elements in range
-    // [first, last), which describes only the PredicateCondition::BetweenInclusive case.
-    // For the other PredicateConditions, different borders are required.
-    if (_is_ascending) {
-      switch (_predicate_condition) {
-        case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(_first_search_value, _begin, _end);
-          _end = _get_last_bound(*_second_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_last_bound(_first_search_value, _begin, _end);
-          _end = _get_last_bound(*_second_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_first_bound(_first_search_value, _begin, _end);
-          _end = _get_first_bound(*_second_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(_first_search_value, _begin, _end);
-          _end = _get_first_bound(*_second_search_value, _begin, _end);
-          return;
-        default:
-          Fail("Unsupported predicate condition encountered");
-      }
-    } else {
-      switch (_predicate_condition) {
-        case PredicateCondition::BetweenInclusive:
-          _begin = _get_first_bound(*_second_search_value, _begin, _end);
-          _end = _get_last_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
-          _begin = _get_first_bound(*_second_search_value, _begin, _end);
-          _end = _get_first_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenUpperExclusive:
-          _begin = _get_last_bound(*_second_search_value, _begin, _end);
-          _end = _get_last_bound(_first_search_value, _begin, _end);
-          return;
-        case PredicateCondition::BetweenExclusive:
-          _begin = _get_last_bound(*_second_search_value, _begin, _end);
-          _end = _get_first_bound(_first_search_value, _begin, _end);
-          return;
-        default:
-          Fail("Unsupported predicate condition encountered");
-      }
+    // behaviour since it, too, calculates two different bounds.
+    // However, equal_range is designed to compare to a single search value,
+    // whereas in this case, the upper and lower search value (if given) will differ.
+    switch (predicate_condition) {
+      case PredicateCondition::BetweenInclusive:
+        _begin = _get_first_bound(first_search_value, _begin, _end);
+        _end = _get_last_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenLowerExclusive:  // upper inclusive
+        _begin = _get_last_bound(first_search_value, _begin, _end);
+        _end = _get_last_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenUpperExclusive:
+        _begin = _get_first_bound(first_search_value, _begin, _end);
+        _end = _get_first_bound(second_search_value, _begin, _end);
+        return;
+      case PredicateCondition::BetweenExclusive:
+        _begin = _get_last_bound(first_search_value, _begin, _end);
+        _end = _get_first_bound(second_search_value, _begin, _end);
+        return;
+      default:
+        Fail("Unsupported predicate condition encountered");
     }
   }
 
@@ -231,7 +237,7 @@ class SortedSegmentSearch {
    * The function contains four early outs. These are all only for performance reasons and, if removed, would not
    * change the functionality.
    *
-   * Note: All comments within this method are written from the point of ascendingly ordered ranges.
+   * Note: All comments within this method are written from the point of ranges in ascending order.
    */
   template <typename ResultConsumer>
   void _handle_not_equals(const ResultConsumer& result_consumer) {
@@ -280,7 +286,7 @@ class SortedSegmentSearch {
       if (_nullable) {
         _exponential_search_for_nulls(_begin, _end);
       }
-      _set_begin_and_end_between_scan();
+      _set_begin_and_end_positions_for_between_scan();
       result_consumer(_begin, _end);
     } else {
       // decrease the effective sort range by excluding null values based on their ordering
@@ -297,8 +303,42 @@ class SortedSegmentSearch {
       if (_predicate_condition == PredicateCondition::NotEquals) {
         _handle_not_equals(result_consumer);
       } else {
-        _set_begin_and_end_value_scan();
+        _set_begin_and_end_positions_for_vs_value_scan();
         result_consumer(_begin, _end);
+      }
+    }
+  }
+
+  template <typename ResultIteratorType>
+  void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id,
+                              PosList& matches, const std::shared_ptr<const PosList>& position_filter) const {
+    if (begin == end) return;
+
+    // General note: If the predicate is NotEquals, there might be two ranges that match.
+    // These two ranges might have been combined into a single one via boost::join(range_1, range_2).
+    // See _handle_not_equals for further details.
+
+    size_t output_idx = matches.size();
+
+    matches.resize(matches.size() + std::distance(begin, end));
+
+    /**
+     * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
+     * by calculating the offsets based on the first offset instead of calling chunk_offset()
+     * for every match.
+     * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
+     * NotEquals because the result might consist of 2 ranges.
+     */
+    if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
+      for (; begin != end; ++begin) {
+        matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
+      }
+    } else {
+      const auto first_offset = begin->chunk_offset();
+      const auto distance = std::distance(begin, end);
+
+      for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+        matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
       }
     }
   }
