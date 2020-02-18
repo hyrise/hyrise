@@ -106,11 +106,16 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     ParameterID parameter_id(0);
 
-    visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+    visit_lqp(unoptimized_lqp, [&values, &parameter_id, &unoptimized_lqp](const auto& node) {
         if (node) {
+          if (node->type == LQPNodeType::Aggregate) {
+            remove_duplicate_aggregate(node->node_expressions, node, unoptimized_lqp);
+          }
             for (auto& root_expression : node->node_expressions) {
                 visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-                    if (expression->type == ExpressionType::Value || expression->type == ExpressionType::List) {
+                    if (expression->type == ExpressionType::Value) {
+                        const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
+                        std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
                         values.push_back(expression);
                         expression = std::make_shared<PlaceholderExpression>(parameter_id);
                         parameter_id++;
@@ -147,6 +152,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         _optimized_logical_plan = (*cached_plan)->instantiate(values);
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_cache);
+        _metrics->query_plan_cache_hit = true;
         return _optimized_logical_plan;
       }
     }
@@ -196,7 +202,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
-  /*if (pqp_cache) {
+  if (pqp_cache) {
     if (const auto cached_physical_plan = pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
         Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
@@ -207,7 +213,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
       _physical_plan = (*cached_physical_plan)->deep_copy();
       _metrics->query_plan_cache_hit = true;
     }
-  }*/
+  }
 
   if (!_physical_plan) {
     // "Normal" path in which the query plan is created instead of begin retrieved from cache
