@@ -226,12 +226,18 @@ void StorageManager::apply_partitioning() {
     for (auto dimension_id = size_t{0}; dimension_id < dimensions.size(); ++dimension_id) {
       const auto& dimension = dimensions[dimension_id];
       const auto partition_count = static_cast<size_t>(dimension["partitions"]);
-      total_num_partitions *= partition_count;
 
-      std::cout << "\tCalculating boundaries for " << dimension["column_name"] << " with " << partition_count << " partitions" << std::endl;
+      bool partition_by_values;
+      if (dimension["mode"] == "size") {
+        partition_by_values = false;
+      } else if (dimension["mode"] == "values") {
+        partition_by_values = true;
+      } else {
+        Fail("Unknown mode");
+      }
+
+      std::cout << "\tCalculating boundaries for " << dimension["column_name"] << std::endl;
       Timer timer;
-
-      Assert(partition_count < table->row_count(), "Partition count must be smaller than table size");
 
       const auto column_id = table->column_id_by_name(dimension["column_name"]);
       resolve_data_type(table->column_data_type(column_id), [&](auto type) {
@@ -256,23 +262,60 @@ void StorageManager::apply_partitioning() {
           }
         }
 
-        std::sort(materialized.begin(), materialized.end(), [](const auto& lhs, const auto& rhs) {
-          return lhs < rhs;
-        });
+        std::sort(materialized.begin(), materialized.end());
 
-        const auto partition_size = materialized.size() / partition_count;
+        auto distinct_values = std::vector<ColumnDataType>{};
+
+        if (partition_by_values) {
+          distinct_values.resize(materialized.size());
+          for (auto i = size_t{0}; i < materialized.size(); ++i) {
+            distinct_values[i] = materialized[i].first;
+          }
+          distinct_values.erase(std::unique(distinct_values.begin(), distinct_values.end()), distinct_values.end());
+          Assert(partition_count <= distinct_values.size(), "More partitions requested than distinct values found");
+        } else {
+          Assert(partition_count <= materialized.size(), "More partitions requested than rows in table");
+        }
+
+        total_num_partitions *= partition_count;
+
+        auto materialized_idx = size_t{0};
         for (auto partition_id = size_t{0}; partition_id < partition_count; ++partition_id) {
-          const auto partition_begin = partition_id * partition_size;
-          const auto partition_end = partition_id == partition_count - 1 ? materialized.size() : (partition_id + 1) * partition_size;
-          std::cout << "\t\tPartition " << partition_id << " from index " << partition_begin << " to " << partition_end << " (size " << (partition_end - partition_begin + 1) << ") - values " << materialized.at(partition_begin).first << " to " << materialized.at(partition_end - 1).first << std::endl;
-          for (auto materialized_idx = partition_begin; materialized_idx < partition_end; ++materialized_idx) {
-            const auto row_idx = materialized[materialized_idx].second;
+          ColumnDataType first_value_in_next_partition{};
+          if (partition_by_values) {
+            first_value_in_next_partition = distinct_values[std::min((partition_id + 1) * distinct_values.size() / partition_count, distinct_values.size() - 1)];
+          }
+
+          auto current_partition_size = size_t{0};
+
+          if (partition_by_values) {
+            std::cout << "\t\tfrom value '" << materialized[materialized_idx].first << "' to value '";
+          } else {
+            std::cout << "\t\tfrom row " << materialized_idx << " to row ";
+          }
+
+          while(materialized_idx < materialized.size()) {
+            const auto& [value, row_idx] = materialized[materialized_idx];
 
             // Shift existing partitions
             partition_by_row_idx[row_idx] *= partition_count;
 
             // Set partition of this
             partition_by_row_idx[row_idx] += partition_id;
+
+            ++materialized_idx;
+            ++current_partition_size;
+
+            if (partition_by_values && materialized[materialized_idx].first == first_value_in_next_partition && (partition_id < partition_count - 1 || materialized_idx == materialized.size() - 1)) {
+              std::cout << materialized[materialized_idx - 1].first << "' (" << current_partition_size << " rows)" << std::endl;
+              first_value_in_next_partition = distinct_values[std::min((partition_id + 1) * distinct_values.size() / partition_count, distinct_values.size() - 1)];
+              break;
+            }
+
+            if (!partition_by_values && current_partition_size >= materialized.size() / partition_count && (partition_id != partition_count - 1 || materialized_idx == materialized.size() - 1)) {
+              std::cout << materialized_idx << " (" << current_partition_size << " rows)" << std::endl;
+              break;
+            }
           }
         }
       });
