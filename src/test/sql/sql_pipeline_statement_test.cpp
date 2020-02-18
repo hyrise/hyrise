@@ -307,16 +307,20 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
 
-  // Evict validated version by requesting a not validated version
+  // Requesting a not validated version does not evict validated version
   auto not_validated_sql_pipeline =
       SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline_statement();
+  auto not_validated_cache_key = not_validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
+
   const auto& not_validated_lqp = not_validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
-  // Expect cache to contain not validated LQP
+  // Expect cache to contain both validated and not validated LQP
   EXPECT_TRUE(_lqp_cache->has(cache_key));
-  const auto not_validated_cached_lqp = _lqp_cache->get_entry(cache_key)->instantiate(values);
-  EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
+  const auto not_validated_cached_lqp_1 = _lqp_cache->get_entry(cache_key)->instantiate(values);
+  EXPECT_TRUE(lqp_is_validated(not_validated_cached_lqp_1));
+  const auto not_validated_cached_lqp_2 = _lqp_cache->get_entry(not_validated_cache_key)->instantiate(values);
+  EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp_2));
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
@@ -337,16 +341,20 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   const auto not_validated_cached_lqp = _lqp_cache->get_entry(cache_key)->instantiate(values);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
-  // Evict not validated version by requesting a validated version
+  // Requesting a validated version does not evict not validated version
   auto validated_sql_pipeline =
       SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
+  auto validated_cache_key = validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
+
   const auto& validated_lqp = validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
-  // Expect cache to contain not validated LQP
+  // Expect cache to contain both validated and not validated LQP
   EXPECT_TRUE(_lqp_cache->has(cache_key));
-  const auto validated_cached_lqp = _lqp_cache->get_entry(cache_key)->instantiate(values);
-  EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
+  const auto validated_cached_lqp_1 = _lqp_cache->get_entry(cache_key)->instantiate(values);
+  EXPECT_FALSE(lqp_is_validated(validated_cached_lqp_1));
+  const auto validated_cached_lqp_2 = _lqp_cache->get_entry(validated_cache_key)->instantiate(values);
+  EXPECT_TRUE(lqp_is_validated(validated_cached_lqp_2));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
