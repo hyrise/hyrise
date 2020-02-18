@@ -1,0 +1,8 @@
+{
+  "lineitem" : [
+        {"column_name": "l_shipdate", "partitions": 60, "mode": "size"},
+        {"column_name": "l_discount", "partitions": 7, "mode": "size"},
+        {"column_name": "l_returnflag", "partitions": 3, "mode": "values"}
+  ]
+}
+
