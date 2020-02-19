@@ -340,9 +340,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // case, we DO need all rows.
       if (_secondary_predicates.empty() &&
           (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits);
+        hash_tables =
+            build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits);
       } else {
-        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits);
+        hash_tables =
+            build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits);
       }
     }));
     jobs.back()->schedule();
@@ -405,7 +407,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     probe_side_pos_lists.resize(partition_count);
 
     // simple heuristic: half of the rows of the probe relation will match
-    const size_t result_rows_per_partition = _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
+    const size_t result_rows_per_partition =
+        _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
     for (size_t i = 0; i < partition_count; i++) {
       build_side_pos_lists[i].reserve(result_rows_per_partition);
       probe_side_pos_lists[i].reserve(result_rows_per_partition);

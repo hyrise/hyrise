@@ -46,14 +46,14 @@ struct Partition {
   // Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
   // The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
   std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
-                                     std::vector<PartitionedElement<T>>> elements;
+                     std::vector<PartitionedElement<T>>>
+      elements;
 
   // Bit vector to store NULL flags - not using uninitialized_vector because it is not specialized for bool.
   // It is stored independently of the elements as adding a single bit to PartitionedElement would cause memory waste
   // due to padding.
   std::vector<bool> null_values;
 };
-
 
 // This alias is used in two phases:
 //   - the result of the materialization phase, at this time partitioned by chunks as we parallelize the
@@ -86,7 +86,7 @@ class PosHashTable {
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) { // TODO doc +1
+      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {  // TODO doc +1
     _hash_table.reserve(max_size);
   }
 
@@ -311,9 +311,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.size());
 
-  for (size_t partition_idx = 0; partition_idx < radix_container.size();
-       ++partition_idx) {
-
+  for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
     // Skip empty partitions, so that we don't have too many empty jobs and hash tables
     if (radix_container[partition_idx].elements.empty()) {
       continue;
@@ -359,11 +357,11 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
 template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-                                           std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   if constexpr (retain_null_values) {
     Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),
-                "partition_by_radix() called with NULL consideration but radix container does not store any NULL "
-                "value information");
+           "partition_by_radix() called with NULL consideration but radix container does not store any NULL "
+           "value information");
   }
 
   const std::hash<HashedType> hash_function;
@@ -382,7 +380,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
 
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first value in the bucket written for input_partition_idx
-  auto output_offsets_by_input_partition = std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
+  auto output_offsets_by_input_partition =
+      std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -419,7 +418,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
         auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
         Assert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
         if (input_partition_idx < input_partition_count - 1) {
-          Assert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix], "output_idx goes into next range");
+          Assert(output_idx < output_offsets_by_input_partition[input_partition_idx + 1][radix],
+                 "output_idx goes into next range");
         }
 
         // In case NULL values have been materialized in materialize_input(),
@@ -456,7 +456,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
 
-// TODO This should run in parallel now even when radix_bits = 0 :)
+  // TODO This should run in parallel now even when radix_bits = 0 :)
 
   /*
     NUMA notes:
@@ -466,9 +466,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     and the job that probes that partition should also be on that NUMA node.
   */
 
-  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size();
-       ++partition_idx) {
-
+  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
       continue;
@@ -483,13 +481,12 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       PosList pos_list_probe_local;
 
       if constexpr (keep_null_values) {
-        Assert(
-            elements.size() == null_values.size(),
-            "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
+        Assert(elements.size() == null_values.size(),
+               "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
       }
 
       const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-      if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) { // TODO is hash_tables.empty valid?
+      if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {  // TODO is hash_tables.empty valid?
         const auto& hash_table = *hash_tables[hash_table_idx];
 
         // Accessors are not thread-safe, so we create one evaluator per job
@@ -500,12 +497,12 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
         // Simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the build cluster
-        const size_t expected_output_size =
-            static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
+        const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
         pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
         pos_list_probe_local.reserve(static_cast<size_t>(expected_output_size));
 
-        for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {  // TODO naming _idx vs _offset
+        for (auto partition_offset = size_t{0}; partition_offset < elements.size();
+             ++partition_offset) {  // TODO naming _idx vs _offset
           const auto& probe_column_element = elements[partition_offset];
 
           if (mode == JoinMode::Inner && probe_column_element.row_id == NULL_ROW_ID) {
@@ -602,19 +599,18 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
-void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,  // TODO why is name different from probe()
-                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-                     std::vector<PosList>& pos_lists, const Table& build_table, const Table& probe_table,
-                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+void probe_semi_anti(
+    const RadixContainer<ProbeColumnType>& radix_probe_column,  // TODO why is name different from probe()
+    const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists,
+    const Table& build_table, const Table& probe_table,
+    const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_probe_column.size());
 
   auto debug_all = size_t{};
   auto debug_skipped = size_t{};
 
-  for (size_t partition_idx = 0; partition_idx < radix_probe_column.size();
-       ++partition_idx) {
-
+  for (size_t partition_idx = 0; partition_idx < radix_probe_column.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (radix_probe_column[partition_idx].elements.empty()) {
       continue;
@@ -644,7 +640,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column, 
           if constexpr (mode == JoinMode::Semi) {
             // NULLs on the probe side are never emitted
             if (probe_column_element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-            // Could be either skipped or NULL
+              // Could be either skipped or NULL
               ++debug_skipped;
               continue;
             }
@@ -832,10 +828,6 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {
-
-
-
-
       {
         // TODO any chance to make this nicer?
         auto common_chunk_id = std::optional<ChunkID>{};
@@ -854,10 +846,6 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
           pos_list->guarantee_single_chunk();
         }
       }
-
-
-
-
 
       output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
     }
