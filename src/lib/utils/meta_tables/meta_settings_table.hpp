@@ -5,17 +5,16 @@
 namespace opossum {
 
 /**
- * This is a class for plugin control via a meta table.
- * Inserting loads a plugin, deleting unloads it.
+ * This is a class for settings control via a meta table.
+ * Inserting only modifies an existing setting, as we onlý want to update.
  */
-class MetaPluginsTable : public AbstractMetaTable {
+class MetaSettingsTable : public AbstractMetaTable {
  public:
-  MetaPluginsTable();
+  MetaSettingsTable();
 
   const std::string& name() const final;
 
-  static bool can_insert();
-  static bool can_remove();
+  static bool can_update();
 
  protected:
   std::shared_ptr<Table> _on_generate() const;

@@ -18,23 +18,18 @@ class MetaMockTable : public AbstractMetaTable {
 
   const std::string& name() const final;
 
-  const TableColumnDefinitions& column_definitions() const;
-
   size_t insert_calls() const;
   size_t remove_calls() const;
-  size_t update_calls() const;
 
  protected:
   std::shared_ptr<Table> _on_generate() const;
-  void _insert(const std::vector<AllTypeVariant>& values);
-  void _remove(const AllTypeVariant& key);
-  void _update(const AllTypeVariant& key, const std::vector<AllTypeVariant>& values);
+  void _on_insert(const std::vector<AllTypeVariant>& values);
+  void _on_remove(const std::vector<AllTypeVariant>& values);
 
   const TableColumnDefinitions _column_definitions;
 
   size_t _insert_calls;
   size_t _remove_calls;
-  size_t _update_calls;
 };
 
 }  // namespace opossum

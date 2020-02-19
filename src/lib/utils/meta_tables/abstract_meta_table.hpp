@@ -18,19 +18,9 @@ namespace opossum {
  *
  * Meta tables should be declared as members in the MetaTableManager constructor.
  */
-class AbstractMetaTable : private Noncopyable {
+class AbstractMetaTable : public Noncopyable {
  public:
-  AbstractMetaTable();
-
-  virtual ~AbstractMetaTable() = default;
-
   virtual const std::string& name() const = 0;
-
-  /*
-   * Generates the meta table on the fly by calling _on_generate().
-   * It finalizes the last chunk of the table and sets table statistics.
-   */
-  const std::shared_ptr<Table> generate() const;
 
   const TableColumnDefinitions& column_definitions() const;
 
@@ -41,14 +31,30 @@ class AbstractMetaTable : private Noncopyable {
  protected:
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
-  // This method actually generates the output table.
-  virtual std::shared_ptr<Table> _on_generate() const = 0;
 
-  // TO DO: should we move all implementations mutating methods to _on_operation and
-  // add Asserts for length and types of values here?
-  [[noreturn]] void _insert(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] void _update(const AllTypeVariant& key, const std::vector<AllTypeVariant>& values);
-  [[noreturn]] void _remove(const AllTypeVariant& key);
+  AbstractMetaTable();
+
+  virtual ~AbstractMetaTable() = default;
+
+  /*
+   * Generates the meta table on the fly by calling _on_generate().
+   * It finalizes the last chunk of the table and sets table statistics.
+   */
+  const std::shared_ptr<Table> generate() const;
+
+  /*
+   * Manipulate the meta table by calling _on_insert() / _on_remove.
+   * Additionally, checks if the input values match the column definitions are done.
+   */
+  [[noreturn]] void insert(const std::vector<AllTypeVariant>& values);
+  [[noreturn]] void remove(const std::vector<AllTypeVariant>& values);
+
+  void _assert_data_types(const std::vector<AllTypeVariant>& values) const;
+
+  // These methods actually perform the table creation and manipulation.
+  virtual std::shared_ptr<Table> _on_generate() const = 0;
+  [[noreturn]] void _on_insert(const std::vector<AllTypeVariant>& values);
+  [[noreturn]] void _on_remove(const std::vector<AllTypeVariant>& values);
 
   const TableColumnDefinitions _column_definitions;
 };

@@ -541,7 +541,6 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
-    utils/abstract_setting.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_curry_override.hpp
@@ -581,6 +580,8 @@ set(
     utils/meta_tables/meta_plugins_table.hpp
     utils/meta_tables/meta_segments_table.cpp
     utils/meta_tables/meta_segments_table.hpp
+    utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_settings_table.hpp
     utils/meta_tables/meta_tables_table.cpp
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
@@ -593,6 +594,10 @@ set(
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
+    utils/settings/abstract_setting.hpp
+    utils/settings/abstract_setting.cpp
+    utils/settings_manager.cpp
+    utils/settings_manager.hpp
     utils/singleton.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp

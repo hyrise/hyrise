@@ -36,9 +36,9 @@ class MetaTableManagerTest : public BaseTest {
     return names;
   }
 
-  // We need this as the _add method of MetaTableManager is protected.
-  // Won't compile if _add is not called by test class, which is a friend of MetaTableManager.
-  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager._add(table); }
+  // We need this as the add method of MetaTableManager is protected.
+  // Won't compile if add is not called by test class, which is a friend of MetaTableManager.
+  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager.add(table); }
 
  protected:
   const std::string _test_file_path = "resources/test_data/tbl/meta_tables/meta_";
@@ -84,11 +84,9 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   MetaTableManagerTest::add_meta_table(mock_table);
   mtm.insert_into(mock_table->name(), nullptr);
   mtm.delete_from(mock_table->name(), nullptr);
-  mtm.update(mock_table->name(), nullptr, nullptr);
 
   EXPECT_EQ(mock_table->insert_calls(), 1);
   EXPECT_EQ(mock_table->remove_calls(), 1);
-  EXPECT_EQ(mock_table->update_calls(), 1);
 }
 
 TEST_P(MetaTableManagerMultiTablesTest, HasAllTables) {

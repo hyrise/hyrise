@@ -31,15 +31,14 @@ class MetaTableManager : public Noncopyable {
 
   void insert_into(const std::string& table_name, const std::shared_ptr<Table>& values) const;
   void delete_from(const std::string& table_name, const std::shared_ptr<Table>& values) const;
-  void update(const std::string& table_name, const std::shared_ptr<Table>& fields,
-              const std::shared_ptr<Table>& values) const;
 
  protected:
   friend class Hyrise;
   friend class MetaTableManagerTest;
+
   MetaTableManager();
 
-  void _add(const std::shared_ptr<AbstractMetaTable>& table);
+  void add(const std::shared_ptr<AbstractMetaTable>& table);
 
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;
   std::vector<std::string> _table_names;

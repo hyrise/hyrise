@@ -6,7 +6,9 @@
 #include "utils/meta_tables/meta_columns_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
+#include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
+
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
@@ -14,7 +16,7 @@ MetaTableManager::MetaTableManager() {
       std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
       std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkOrdersTable>(),
       std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
-      std::make_shared<MetaPluginsTable>()};
+      std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
 
   for (const auto& table : meta_tables) {
     _meta_tables[table->name()] = table;
@@ -53,19 +55,20 @@ bool MetaTableManager::can_update(const std::string& table_name) const {
 }
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<Table>& values) const {
-  // TO DO
+  Assert(can_insert_into(table_name) || can_update(table_name), "Cannot insert into " + table_name + ".");
+  const auto& rows = values->get_rows();
+
+  std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<Table>& values) const {
-  // TO DO
+  Assert(can_delete_from(table_name) || can_update(table_name), "Cannot delete from " + table_name + ".");
+  const auto& rows = values->get_rows();
+
+  std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
 }
 
-void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<Table>& fields,
-                              const std::shared_ptr<Table>& values) const {
-  // TO DO
-}
-
-void MetaTableManager::_add(const std::shared_ptr<AbstractMetaTable>& table) {
+void MetaTableManager::add(const std::shared_ptr<AbstractMetaTable>& table) {
   _meta_tables[table->name()] = table;
   _table_names.push_back(table->name());
   std::sort(_table_names.begin(), _table_names.end());

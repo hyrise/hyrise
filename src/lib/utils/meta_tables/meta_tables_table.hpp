@@ -10,12 +10,11 @@ namespace opossum {
 class MetaTablesTable : public AbstractMetaTable {
  public:
   MetaTablesTable();
-
   const std::string& name() const final;
 
-  const TableColumnDefinitions& column_definitions() const;
-
  protected:
+  friend class MetaTableManager;
+
   std::shared_ptr<Table> _on_generate() const;
   const TableColumnDefinitions _column_definitions;
 };

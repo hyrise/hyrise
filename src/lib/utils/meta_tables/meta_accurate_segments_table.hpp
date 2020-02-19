@@ -14,8 +14,6 @@ class MetaAccurateSegmentsTable : public AbstractMetaTable {
 
   const std::string& name() const final;
 
-  const TableColumnDefinitions& column_definitions() const;
-
  protected:
   std::shared_ptr<Table> _on_generate() const;
   const TableColumnDefinitions _column_definitions;

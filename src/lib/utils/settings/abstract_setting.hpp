@@ -11,7 +11,7 @@ namespace opossum {
  * Settings have a unique name that consists of the name of its parent and the setting
  * name (e.g. "TaskScheduler.workers")
  */
-class AbstractSetting : private Noncopyable {
+class AbstractSetting : public Noncopyable, private std::enable_shared_from_this<AbstractSetting> {
  public:
   AbstractSetting() = default;
 
@@ -19,9 +19,14 @@ class AbstractSetting : private Noncopyable {
 
   virtual const std::string& name() const = 0;
 
-  virtual const std:string& get() const;
+  virtual const std::string& description() const = 0;
+
+  virtual const std::string& get() const;
 
   virtual void set(const std::string& value);
+
+  void enroll() const;
+
 };
 
 }  // namespace opossum
