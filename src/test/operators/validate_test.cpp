@@ -240,9 +240,9 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 }
 
 TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  const auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
+  const auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
   validate_unsorted->set_transaction_context(context);
   validate_unsorted->execute();
 
@@ -262,10 +262,10 @@ TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
     if (!chunk) continue;
     chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
   }
-  auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
+  const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
   sorted_table_wrapper->execute();
 
-  auto validate_sorted = std::make_shared<Validate>(sorted_table_wrapper);
+  const auto validate_sorted = std::make_shared<Validate>(sorted_table_wrapper);
   validate_sorted->set_transaction_context(context);
   validate_sorted->execute();
 

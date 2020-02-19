@@ -205,7 +205,7 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
   }
 
   // Verify that order_by flag is set when present in left input
-  auto sort = std::make_shared<Sort>(table_wrapper_a, ColumnID{0});
+  const auto sort = std::make_shared<Sort>(table_wrapper_a, ColumnID{0});
   sort->execute();
 
   const auto projection_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_a));

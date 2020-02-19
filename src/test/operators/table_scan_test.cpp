@@ -645,11 +645,11 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
-  auto table = load_table("resources/test_data/tbl/int_float_null_sorted_asc_2.tbl", 4);
+  const auto table = load_table("resources/test_data/tbl/int_float_null_sorted_asc_2.tbl", 4);
   table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
@@ -1069,7 +1069,8 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
   // Verify that order_by flag is not set when not present in left input
-  auto scan_unsorted = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  const auto scan_unsorted =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_unsorted->execute();
 
   const auto result_table_unsorted = scan_unsorted->get_output();
@@ -1080,7 +1081,8 @@ TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
   }
 
   // Verify that order_by flag is set when present in left input
-  auto scan_sorted = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  const auto scan_sorted =
+      create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_sorted->execute();
 
   const auto result_table_sorted = scan_sorted->get_output();

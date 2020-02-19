@@ -368,7 +368,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * However, we did not benchmark it, so we cannot prove it.
    */
 
-  // check if there's a common chunk ordering
+  // Check if there's a common chunk ordering.
+  //
   auto all_chunks_ordered_by = input_table->get_chunk(ChunkID{0})->ordered_by();
   if (all_chunks_ordered_by) {
     for (auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
@@ -600,11 +601,11 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     aggregate_index++;
   }
 
-  // Append output to result table
+  // Append output to result table.
   result_table->append_chunk(_output_segments);
 
-  // Set order_by flag
-  auto chunk = result_table->last_chunk();
+  // Set order_by flag.
+  const auto chunk = result_table->last_chunk();
   chunk->finalize();
   chunk->set_ordered_by(*order_by);
 

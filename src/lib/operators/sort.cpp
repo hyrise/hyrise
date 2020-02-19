@@ -208,7 +208,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     const auto chunk_count = output->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto chunk = output->get_chunk(chunk_id);
+      const auto chunk = output->get_chunk(chunk_id);
       if (chunk->is_mutable()) {
         chunk->finalize();
       }

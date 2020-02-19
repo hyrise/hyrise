@@ -98,19 +98,13 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec(encoding_type));
   }
 
-  if (mode == "Sorted") {
-    const auto chunk_count = table->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
+  const auto chunk_count = table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
 
+    if (mode == "Sorted") {
       chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
-    }
-  }
-  if (mode == "SortedDescending") {
-    const auto chunk_count = table->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
-
+    } else if (mode == "SortedDescending") {
       chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
     }
   }
@@ -148,8 +142,8 @@ void BM_TableScanSorted(
     if (is_between_scan) {
       auto left_search_value = AllTypeVariant{};
       auto right_search_value = AllTypeVariant{};
-      const int left_raw_value = static_cast<int>(table_size * (0.5 - selectivity / 2.0));
-      const int right_raw_value = static_cast<int>(table_size * (0.5 + selectivity / 2.0));
+      const auto left_raw_value = static_cast<int>(table_size * (0.5 - selectivity / 2.0));
+      const auto right_raw_value = static_cast<int>(table_size * (0.5 + selectivity / 2.0));
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         left_search_value = pad_string(std::to_string(left_raw_value), STRING_SIZE);
         right_search_value = pad_string(std::to_string(right_raw_value), STRING_SIZE);
@@ -162,7 +156,7 @@ void BM_TableScanSorted(
                                                       value_(left_search_value), value_(right_search_value));
     } else {
       auto search_value = AllTypeVariant{};
-      const double raw_value = table_size * selectivity;
+      const auto raw_value = table_size * selectivity;
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         search_value = pad_string(std::to_string(raw_value), STRING_SIZE);
       } else {
@@ -206,7 +200,6 @@ void registerTableScanSortedBenchmarks() {
                    }}};
 
   const std::vector<std::string> modes{"Sorted", "SortedDescending", "SortedNotMarked", "Shuffled"};
-  const std::vector<bool> between_modes{false, true};
 
   for (const auto& encoding : encoding_types) {
     const auto encoding_name = encoding.first;
@@ -216,7 +209,7 @@ void registerTableScanSortedBenchmarks() {
     for (const auto selectivity : selectivities) {
       for (const auto& data_type : supported_data_types) {
         for (const auto& mode : modes) {
-          for (const auto is_between_scan : between_modes) {
+          for (const auto is_between_scan : {false, true}) {
             const auto& table_generator = table_types.at(data_type);
 
             const std::string between_label = is_between_scan ? "Between" : "";

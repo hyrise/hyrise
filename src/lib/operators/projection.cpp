@@ -223,7 +223,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto ordered_by = input_chunk->ordered_by();
     if (ordered_by) {
       chunk->finalize();
-      chunk->set_ordered_by(ordered_by.value());
+      chunk->set_ordered_by(*ordered_by);
     }
 
     output_chunks[chunk_id] = chunk;

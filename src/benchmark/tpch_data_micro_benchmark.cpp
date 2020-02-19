@@ -1,7 +1,6 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "cert-err58-cpp"
 
-#include <operators/sort.hpp>
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
@@ -16,6 +15,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/operator_task.hpp"
@@ -216,7 +216,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::St
   const ColumnID group_by_column = l_orderkey_id;
   const std::vector<ColumnID> group_by = {l_orderkey_id};
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{max_(pqp_column_(
-          group_by_column, table_scan_output->column_data_type(group_by_column),
+      group_by_column, table_scan_output->column_data_type(group_by_column),
       table_scan_output->column_is_nullable(group_by_column), table_scan_output->column_name(group_by_column)))};
   const auto aggregate = std::make_shared<AggregateSort>(sorted_line_item, aggregate_expressions, group_by);
   for (auto _ : state) {
