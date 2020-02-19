@@ -20,7 +20,6 @@ def main():
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Unencoded'"
   arguments["--clients"] = "1"
-  arguments["--cache_binary_tables"] = "true"
   arguments["--scheduler"] = "false"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
@@ -32,7 +31,6 @@ def main():
   benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Unencoded'")
-  benchmark.expect_exact("Chunk size is 100000")
   benchmark.expect_exact("Max runs per item is 100")
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("No warmup runs are performed")
@@ -76,9 +74,10 @@ def main():
   arguments["--runs"] = "2"
   arguments["--warmup"] = "2"
   arguments["--encoding"] = "'LZ4'"
-  arguments["--compression"] = "'Fixed-size byte-aligned'"
+  arguments["--compression"] = "'SIMD-BP128'"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
+  arguments["--chunk_size"] = "100000"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
@@ -92,7 +91,6 @@ def main():
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("Warmup duration per item is 2 seconds")
   benchmark.expect_exact("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
-  benchmark.expect_exact("Not caching tables as binary files")
   benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect_exact("Running on tables from resources/test_data/imdb_sample/")
   benchmark.expect_exact("Multi-threaded Topology:")
