@@ -312,7 +312,7 @@ void StorageManager::apply_partitioning() {
               break;
             }
 
-            if (!partition_by_values && current_partition_size >= materialized.size() / partition_count && (partition_id != partition_count - 1 || materialized_idx == materialized.size() - 1)) {
+            if (!partition_by_values && ((current_partition_size >= materialized.size() / partition_count && partition_id != partition_count - 1) || (materialized_idx == materialized.size() - 1))) {
               std::cout << materialized_idx << " (" << current_partition_size << " rows)" << std::endl;
               break;
             }
