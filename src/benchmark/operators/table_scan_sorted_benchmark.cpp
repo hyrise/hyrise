@@ -26,7 +26,7 @@ const auto STRING_SIZE = 512;
 
 opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
   auto table_column_definitions = opossum::TableColumnDefinitions();
-  table_column_definitions.emplace_back("a", data_type, false);
+  table_column_definitions.emplace_back("a", data_type, true);
   return table_column_definitions;
 }
 
@@ -78,7 +78,17 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     if (mode == "SortedDescending") {
       std::reverse(value_vector.begin(), value_vector.end());
     }
-    const auto value_segment = std::make_shared<ValueSegment<Type>>(std::move(value_vector));
+
+    pmr_vector<bool> null_values(value_vector.size(), false);
+    // setting 10% of the values NULL
+    std::fill(null_values.begin(), null_values.begin() + std::round(value_vector.size() * 0.1), true);
+    if (mode == "Shuffled") {
+      std::random_device random_device;
+      std::mt19937 generator(random_device());
+      std::shuffle(null_values.begin(), null_values.end(), generator);
+    }
+
+    const auto value_segment = std::make_shared<ValueSegment<Type>>(std::move(value_vector), std::move(null_values));
     table->append_chunk({value_segment});
     table->last_chunk()->finalize();
   }
