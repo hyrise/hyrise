@@ -96,7 +96,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
    public:
     // Begin and End Iterator
-    explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset)
+    explicit Iterator(ValueIterator&& data_it, std::optional<NullValueIterator>&& null_value_it, ChunkOffset chunk_offset)
         : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
 
    private:
@@ -146,8 +146,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
     // Begin Iterator
-    PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
-                        PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+    PointAccessIterator(DataIteratorType&& data_it, std::optional<NullValueIterator>&& null_value_it,
+                        PosList::const_iterator&& position_filter_begin, PosList::const_iterator&& position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},

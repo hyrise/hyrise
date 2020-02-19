@@ -58,8 +58,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueIterator = typename pmr_vector<T>::const_iterator;
 
    public:
-    explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
-        : _value_it{value_it}, _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
+    explicit NonNullIterator(const ValueIterator&& begin_value_it, const ValueIterator&& value_it)
+        : _value_it{std::move(value_it)}, _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -98,11 +98,11 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:
-    explicit Iterator(const ValueIterator begin_value_it, const ValueIterator value_it,
-                      const NullValueIterator null_value_it)
-        : _value_it(value_it),
-          _null_value_it{null_value_it},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
+    explicit Iterator(const ValueIterator&& begin_value_it, const ValueIterator&& value_it,
+                      const NullValueIterator&& null_value_it)
+        : _value_it(std::move(value_it)),
+          _null_value_it{std::move(null_value_it)},
+          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -145,13 +145,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
 
    public:
-    explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
-                                        const PosList::const_iterator position_filter_begin,
-                                        PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(
-                                                                                             position_filter_begin),
+    explicit NonNullPointAccessIterator(ValueVectorIterator&& values_begin_it,
+                                        const PosList::const_iterator&& position_filter_begin,
+                                        PosList::const_iterator&& position_filter_it)
+        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
                                                                                          std::move(position_filter_it)},
-          _values_begin_it{values_begin_it} {}
+          _values_begin_it{std::move(values_begin_it)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -175,9 +174,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using NullValueVectorIterator = typename pmr_vector<bool>::const_iterator;
 
    public:
-    explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
-                                 const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
+    explicit PointAccessIterator(ValueVectorIterator&& values_begin_it, NullValueVectorIterator&& null_values_begin_it,
+                                 const PosList::const_iterator&& position_filter_begin,
+                                 PosList::const_iterator&& position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
           _values_begin_it{values_begin_it},
