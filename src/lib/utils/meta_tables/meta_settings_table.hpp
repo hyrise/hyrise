@@ -6,7 +6,7 @@ namespace opossum {
 
 /**
  * This is a class for settings control via a meta table.
- * Inserting only modifies an existing setting, as we onlý want to update.
+ * We onlý want to update setting values with this.
  */
 class MetaSettingsTable : public AbstractMetaTable {
  public:
@@ -19,8 +19,7 @@ class MetaSettingsTable : public AbstractMetaTable {
  protected:
   std::shared_ptr<Table> _on_generate() const;
 
-  void _on_insert(const std::vector<AllTypeVariant>& values);
-  void _on_remove(const std::vector<AllTypeVariant>& values);
+  void _on_update(const std::vector<AllTypeVariant>& values);
 
   const TableColumnDefinitions _column_definitions;
 };

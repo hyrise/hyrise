@@ -5,8 +5,8 @@ namespace opossum {
 bool SettingsManager::has_setting(const std::string& name) const { return _settings.count(name); }
 
 void SettingsManager::add(const std::shared_ptr<AbstractSetting>& setting) {
-  Assert(!_settings.count(setting->name()), "A setting with that name already exists.");
-  _settings[setting->name()] = setting;
+  Assert(!_settings.count(setting->name), "A setting with that name already exists.");
+  _settings[setting->name] = setting;
 }
 
 const std::shared_ptr<AbstractSetting> SettingsManager::get(const std::string& name) const {

@@ -4,9 +4,10 @@
 
 namespace opossum {
 
-void AbstractSetting::enroll() const {
-	const auto pointer = shared_from_this();
-	Hyrise::get().settings_manager.add(pointer);
+AbstractSetting::AbstractSetting(const std::string& init_name) : name(init_name) {}
+
+void AbstractSetting::enroll() {
+	Hyrise::get().settings_manager.add(shared_from_this());
 }
 
 }  // namespace opossum

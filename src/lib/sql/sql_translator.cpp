@@ -310,11 +310,20 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
-  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
+
   AssertInput(Hyrise::get().storage_manager.has_table(table_name),
               std::string{"Did not find a table with name "} + table_name);
 
-  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
+  std::shared_ptr<Table> target_table;
+
+  if (MetaTableManager::is_meta_table_name(table_name)) {
+    const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
+    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) && Hyrise::get().meta_table_manager.can_insert_into(meta_table_name), "Cannot insert into " + table_name);
+    target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
+  } else {
+    target_table = Hyrise::get().storage_manager.get_table(table_name);
+  }
+
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto insert_data_projection_required = false;
@@ -414,10 +423,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
+  const auto table_name = std::string{delete_statement.tableName};
+
+  if (MetaTableManager::is_meta_table_name(table_name)) {
+    const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
+    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) && Hyrise::get().meta_table_manager.can_delete_from(meta_table_name), "Cannot delete from " + table_name);
+  }
+
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  AssertInput(!MetaTableManager::is_meta_table_name(delete_statement.tableName), "Cannot modify meta tables");
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
@@ -432,7 +447,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
 
   const auto table_name = std::string{update.table->name};
-  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
+
+  std::shared_ptr<Table> target_table;
+
+  if (MetaTableManager::is_meta_table_name(table_name)) {
+    const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
+    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) && Hyrise::get().meta_table_manager.can_update(meta_table_name), "Cannot update " + table_name);
+    target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
+  } else {
+    target_table = Hyrise::get().storage_manager.get_table(table_name);
+  }
 
   auto translation_state = _translate_table_ref(*update.table);
 
@@ -461,7 +485,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   }
 
   // Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
-  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.

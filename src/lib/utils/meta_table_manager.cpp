@@ -54,18 +54,25 @@ bool MetaTableManager::can_update(const std::string& table_name) const {
   return (_meta_tables.at(table_name))->can_update();
 }
 
-void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<Table>& values) const {
-  Assert(can_insert_into(table_name) || can_update(table_name), "Cannot insert into " + table_name + ".");
+void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values) {
+  Assert(can_insert_into(table_name), "Cannot insert into " + table_name + ".");
   const auto& rows = values->get_rows();
 
   std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
 }
 
-void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<Table>& values) const {
-  Assert(can_delete_from(table_name) || can_update(table_name), "Cannot delete from " + table_name + ".");
+void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
+  Assert(can_delete_from(table_name), "Cannot delete from " + table_name + ".");
   const auto& rows = values->get_rows();
 
   std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
+}
+
+void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& values) {
+  Assert(can_update(table_name), "Cannot update " + table_name + ".");
+  const auto& rows = values->get_rows();
+
+  std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->update(row); });
 }
 
 void MetaTableManager::add(const std::shared_ptr<AbstractMetaTable>& table) {
