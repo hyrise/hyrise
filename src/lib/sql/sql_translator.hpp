@@ -25,6 +25,11 @@ struct TranslationInfo {
   std::vector<ParameterID> parameter_ids_of_value_placeholders{};
 };
 
+struct SQLTranslationResult {
+  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_nodes;
+  TranslationInfo translation_info;
+};
+
 /**
  * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
  *
@@ -43,8 +48,7 @@ class SQLTranslator final {
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
    */
-  std::pair<std::vector<std::shared_ptr<AbstractLQPNode>>, TranslationInfo> translate_parser_result(
-      const hsql::SQLParserResult& result);
+  SQLTranslationResult translate_parser_result(const hsql::SQLParserResult& result);
 
   /**
    * Translate an Expression AST into a Hyrise-expression. No columns can be referenced in expressions translated by
@@ -174,11 +178,6 @@ class SQLTranslator final {
       const std::vector<SelectListElement>& select_list_elements);
 
  private:
-  /**
-  * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
-  */
-  std::vector<ParameterID> _parameter_ids_of_value_placeholders() const;
-
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;

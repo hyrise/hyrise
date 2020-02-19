@@ -56,7 +56,7 @@ size_t StaticTableNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  Assert(_copyable, "StaticTableNode cannot be shallow copied");
+  Assert(_copyable, "This StaticTableNode cannot be shallow copied");
   return StaticTableNode::make(table);
 }
 

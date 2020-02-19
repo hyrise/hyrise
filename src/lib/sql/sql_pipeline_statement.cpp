@@ -87,8 +87,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   SQLTranslator sql_translator{_use_mvcc};
 
   auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
-  auto lqp_roots = translation_result.first;
-  _translation_info = translation_result.second;
+  auto lqp_roots = translation_result.lqp_nodes;
+  _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
   _unoptimized_logical_plan = lqp_roots.front();

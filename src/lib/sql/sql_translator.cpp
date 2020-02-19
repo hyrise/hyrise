@@ -136,8 +136,7 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
                     std::unordered_map<std::string, std::shared_ptr<LQPView>>{}) {}
 
-std::pair<std::vector<std::shared_ptr<AbstractLQPNode>>, TranslationInfo> SQLTranslator::translate_parser_result(
-    const hsql::SQLParserResult& result) {
+SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParserResult& result) {
   _cacheable = true;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
@@ -148,7 +147,14 @@ std::pair<std::vector<std::shared_ptr<AbstractLQPNode>>, TranslationInfo> SQLTra
     result_nodes.push_back(result_node);
   }
 
-  return std::make_pair(result_nodes, TranslationInfo{_cacheable, _parameter_ids_of_value_placeholders()});
+  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
+
+  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
+    parameter_ids[value_placeholder_id] = parameter_id;
+  }
+
+  return {result_nodes, {_cacheable, parameter_ids}};
 }
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
@@ -656,6 +662,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   // that can change at any time
   _cacheable = false;
 
+  // The meta table is generated here because meta tables are integrated in the LQP as static table node
+  // and should be regenerated for every SQL query
   const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
 
@@ -1211,11 +1219,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
   const auto translation_result = prepared_plan_translator.translate_parser_result(parse_result);
-  Assert(translation_result.second.cacheable, "Non-cacheable LQP nodes can't be part of prepared statements");
+  Assert(translation_result.translation_info.cacheable, "Non-cacheable LQP nodes can't be part of prepared statements");
 
-  const auto lqp = translation_result.first.at(0);
+  const auto lqp = translation_result.lqp_nodes.at(0);
 
-  const auto parameter_ids = translation_result.second.parameter_ids_of_value_placeholders;
+  const auto parameter_ids = translation_result.translation_info.parameter_ids_of_value_placeholders;
 
   const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
 
@@ -1678,17 +1686,6 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
     expressions.emplace_back(element.expression);
   }
   return expressions;
-}
-
-std::vector<ParameterID> SQLTranslator::_parameter_ids_of_value_placeholders() const {
-  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
-  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
-
-  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
-    parameter_ids[value_placeholder_id] = parameter_id;
-  }
-
-  return parameter_ids;
 }
 
 SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression)
