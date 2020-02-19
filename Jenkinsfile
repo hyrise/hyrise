@@ -161,7 +161,7 @@ try {
               // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
               sh "cd clang-debug-unity-odr && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             } else {
-              Utils.markStageSkippedForConditional("clangDebugUnity")
+              Utils.markStageSkippedForConditional("clangDebugUnityODR")
             }
           }
         }, clangDebugTidy: {

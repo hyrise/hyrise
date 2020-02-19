@@ -30,10 +30,14 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
  public:
   explicit SimdBp128Decompressor(const SimdBp128Vector& vector);
   SimdBp128Decompressor(const SimdBp128Decompressor& other);
+  SimdBp128Decompressor(SimdBp128Decompressor&& other) noexcept;
+
+  SimdBp128Decompressor& operator=(const SimdBp128Decompressor& other);
+  SimdBp128Decompressor& operator=(SimdBp128Decompressor&& other) noexcept;
 
   ~SimdBp128Decompressor() = default;
 
-  uint32_t get(size_t i) final {
+  uint32_t get(const size_t i) final {
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);
     }
@@ -68,31 +72,33 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   size_t size() const final { return _size; }
 
  private:
-  bool _is_index_within_cached_block(size_t index) const {
+  bool _is_index_within_cached_block(const size_t index) const {
     const auto begin = _cached_block_first_index;
     const auto end = _cached_block_first_index + Packing::block_size;
     return begin <= index && index < end;
   }
 
-  size_t _index_within_cached_block(size_t index) { return index - _cached_block_first_index; }
+  size_t _index_within_cached_block(const size_t index) { return index - _cached_block_first_index; }
 
-  bool _is_index_within_cached_meta_block(size_t index) const {
+  bool _is_index_within_cached_meta_block(const size_t index) const {
     const auto begin = _cached_meta_block_first_index;
     const auto end = _cached_meta_block_first_index + Packing::meta_block_size;
     return begin <= index && index < end;
   }
 
-  size_t _index_relative_to_cached_meta_block(size_t index) const { return index - _cached_meta_block_first_index; }
+  size_t _index_relative_to_cached_meta_block(const size_t index) const {
+    return index - _cached_meta_block_first_index;
+  }
 
-  bool _is_index_after_or_within_cached_meta_block(size_t index) const {
+  bool _is_index_after_or_within_cached_meta_block(const size_t index) const {
     return _cached_meta_block_first_index <= index;
   }
 
-  uint32_t _get_within_cached_block(size_t index) { return (*_cached_block)[_index_within_cached_block(index)]; }
+  uint32_t _get_within_cached_block(const size_t index) { return (*_cached_block)[_index_within_cached_block(index)]; }
 
-  uint32_t _get_within_cached_meta_block(size_t index) {
+  uint32_t _get_within_cached_meta_block(const size_t index) {
     const auto block_index = _index_relative_to_cached_meta_block(index) / Packing::block_size;
-    _unpack_block(static_cast<uint8_t>(block_index));
+    _unpack_block(block_index);
 
     return (*_cached_block)[_index_within_cached_block(index)];
   }
@@ -102,7 +108,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
    * jumps to the meta block with the relative
    * index `meta_block_index`
    */
-  void _read_meta_info_from_offset(size_t relative_meta_block_index) {
+  void _read_meta_info_from_offset(const size_t relative_meta_block_index) {
     auto meta_info_offset = _cached_meta_info_offset;
     for (auto i = 0u; i < relative_meta_block_index; ++i) {
       static const auto meta_info_data_size = 1u;  // One 128 bit block
@@ -126,18 +132,18 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
    *
    * @param meta_info_offset an absolute position within the compressed vector
    */
-  void _read_meta_info(size_t meta_info_offset);
+  void _read_meta_info(const size_t meta_info_offset);
 
   /**
    * @brief unpacks a block in the current meta block
    *
    * @param block_index relative block index within the current meta block
    */
-  void _unpack_block(uint8_t block_index);
+  void _unpack_block(const size_t block_index);
 
  private:
   const pmr_vector<uint128_t>* _data;
-  const size_t _size;
+  size_t _size;
 
   // Cached meta info’s offset into the compressed vector
   size_t _cached_meta_info_offset;
@@ -148,8 +154,8 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   // Index of the first element within the cached block
   size_t _cached_block_first_index;
 
-  std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info{};
-  const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
+  alignas(16) std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info{};
+  std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
 };
 
 }  // namespace opossum
