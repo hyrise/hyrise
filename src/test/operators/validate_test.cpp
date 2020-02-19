@@ -253,8 +253,8 @@ TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
     EXPECT_FALSE(ordered_by);
   }
 
-  // Verify that order_by flag is set when present in left input
-  // since validate can not be executed after sort, we need to load a sorted table
+  // Verify that the order_by flag is set when it's present in left input.
+  // Since Validate can not be executed after Sort, we need to load a sorted table.
   const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", 2);
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

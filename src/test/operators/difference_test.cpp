@@ -92,7 +92,7 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
     EXPECT_FALSE(ordered_by);
   }
 
-  // Verify that order_by flag is set when present in left input
+  // Verify that the order_by flag is set when it's present in left input.
   const auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0});
   sort->execute();
 

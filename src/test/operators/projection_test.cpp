@@ -193,7 +193,7 @@ TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
 }
 
 TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
-  // Verify that order_by flag is not set when not present in left input
+  // Verify that the order_by flag is not set when it's not present in left input.
   const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
   projection_a_unsorted->execute();
 
@@ -204,7 +204,7 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
     EXPECT_FALSE(ordered_by);
   }
 
-  // Verify that order_by flag is set when present in left input
+  // Verify that the order_by flag is set when it's present in left input.
   const auto sort = std::make_shared<Sort>(table_wrapper_a, ColumnID{0});
   sort->execute();
 

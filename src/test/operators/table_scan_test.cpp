@@ -1068,7 +1068,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
-  // Verify that order_by flag is not set when not present in left input
+  // Verify that the order_by flag is not set when it's not present in left input.
   const auto scan_unsorted =
       create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_unsorted->execute();
@@ -1080,7 +1080,7 @@ TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
     EXPECT_FALSE(ordered_by);
   }
 
-  // Verify that order_by flag is set when present in left input
+  // Verify that the order_by flag is set when it's present in left input.
   const auto scan_sorted =
       create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_sorted->execute();
