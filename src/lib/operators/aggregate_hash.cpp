@@ -154,7 +154,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
       if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
                     function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        // increase value counter
+        // For aggregate functions that use the number of non-NULL values, increase the value counter
         ++result.aggregate_count;
       }
 
@@ -264,7 +264,8 @@ void AggregateHash::_aggregate() {
     //     uint64_t. We cannot do the same for int64_t because we need to account for NULL values.
     // (2) For strings not longer than five characters, there are 1+2^(1*8)+2^(2*8)+2^(3*8)+2^(4*8) potential values.
     //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
-    //     integer. The calculation is described below.
+    //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
+    //     require all strings in the given column to be that short.
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(_groupby_column_ids.size());
@@ -348,7 +349,12 @@ void AggregateHash::_aggregate() {
                     keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
                   }
                 } else {
-                  auto id = AggregateKeyEntry{0} - 1;                          // using max value for "unset"
+                  // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
+                  // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
+                  // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
+                  // ID generation was applied and we need to generate the ID using the value->ID map.
+                  auto id = std::numeric_limits<AggregateKeyEntry>::max();
+
                   if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
                     const auto& string = position.value();
                     if (string.size() < 5) {
@@ -400,7 +406,7 @@ void AggregateHash::_aggregate() {
                     }
                   }
 
-                  if (id == AggregateKeyEntry{0} - 1) {
+                  if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
                     // Could not take the shortcut above, either because we don't have a string or because it is too
                     // long
                     auto inserted = id_map.try_emplace(position.value(), id_counter);
