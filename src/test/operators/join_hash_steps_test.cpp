@@ -8,17 +8,15 @@
 namespace opossum {
 
 /*
-  The purpose of this test case is to test the single steps of the Hash Join (e.g., build(), probe() , etc.).
+  The purpose of this test case is to test the single steps of the Hash Join (e.g., build(), probe(), etc.).
 */
 
 class JoinHashStepsTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
-    _table_size_zero_one = 1'000;
-
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
-    _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _table_size_zero_one);
+    _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _table_size_zero_one / 10);
     for (auto i = size_t{0}; i < _table_size_zero_one; ++i) {
       _table_zero_one->append({static_cast<int>(i % 2)});
     }
@@ -49,15 +47,15 @@ class JoinHashStepsTest : public BaseTest {
     return row_count;
   }
 
-  inline static size_t _table_size_zero_one = 0;
+  inline static size_t _table_size_zero_one = 1'000;
   inline static std::shared_ptr<Table> _table_zero_one;
   inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros;
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
 };
 
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
-  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
-  for (auto i = 0; i < 10; ++i) {
+  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 9};
+  for (auto i = 0; i < 9; ++i) {
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
   }
@@ -100,17 +98,8 @@ TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
   }
 }
 
-TEST_F(JoinHashStepsTest, MaterializeInput) {
-  std::vector<std::vector<size_t>> histograms;
-  auto radix_container = materialize_input<int, int, false>(_table_with_nulls_and_zeros_scanned->get_output(),
-                                                            ColumnID{0}, histograms, 0);
-
-  // When radix bit count == 0, the number of partitions should be equal to the number of input chunks
-  EXPECT_EQ(radix_container.size(), _table_with_nulls_and_zeros_scanned->get_output()->chunk_count());
-}
-
 TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
-  size_t radix_bit_count = 0;
+  const size_t radix_bit_count = 0;
   std::vector<std::vector<size_t>> histograms;
 
   // We materialize the table twice, once with keeping NULL values and once without
@@ -119,46 +108,51 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   auto materialized_without_nulls = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count);
 
-  // Note: due to initialization with empty Partition Elements, NULL values are not materialized but
-  // the resulting size of the materialized input does not shrink due to NULL values (i.e., it's still
-  // the size of the pre-allocated vectors).
-  EXPECT_EQ(materialized_with_nulls.elements->size(), materialized_without_nulls.elements->size());
-  EXPECT_EQ(materialized_with_nulls.elements->size(), _table_with_nulls_and_zeros->get_output()->row_count());
-  // check if NULL values have been ignored
-  EXPECT_EQ(materialized_without_nulls.elements->at(6).value, 9);
-  EXPECT_EQ(materialized_with_nulls.elements->at(6).value, 13);
+  // Partition count should be equal to chunk count
+  EXPECT_EQ(materialized_with_nulls.size(), static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
+  EXPECT_EQ(materialized_without_nulls.size(), static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
 
-  EXPECT_EQ(materialized_with_nulls.null_value_bitvector->size(), materialized_with_nulls.elements->size());
-  EXPECT_EQ(materialized_without_nulls.null_value_bitvector->size(), 0);
+  // Sum of partition sizes should be equal to row count
+  auto materialized_with_nulls_size = size_t{0};
+  for (const auto& partition : materialized_with_nulls) {
+    materialized_with_nulls_size += partition.elements.size();
+  }
+  EXPECT_EQ(materialized_with_nulls_size, _table_with_nulls_and_zeros->get_output()->row_count());
 
-  // The main difference is that the vector storing NULL
-  // value flags should be set. Test if bits are set.
-  for (ChunkID chunk_id = ChunkID{0}; chunk_id < _table_with_nulls_and_zeros->get_output()->chunk_count(); ++chunk_id) {
-    const auto segment = _table_with_nulls_and_zeros->get_output()->get_chunk(chunk_id)->get_segment(ColumnID{0});
+  auto materialized_without_nulls_size = size_t{0};
+  for (const auto& partition : materialized_without_nulls) {
+    materialized_without_nulls_size += partition.elements.size();
+  }
+  EXPECT_EQ(materialized_without_nulls_size, _table_with_nulls_and_zeros->get_output()->row_count());
 
-    resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
-      using Type = typename decltype(type)::type;
-      auto iterable = create_iterable_from_segment<Type>(typed_segment);
+  // Check for values being properly set
+  EXPECT_EQ(materialized_without_nulls[0].elements.at(6).value, 9);
+  EXPECT_EQ(materialized_with_nulls[0].elements.at(6).value, 13);
 
-      size_t counter = 0;
-      iterable.with_iterators([&](auto it, auto end) {
-        for (; it != end; ++it) {
-          const bool null_flag = (*materialized_with_nulls.null_value_bitvector)[counter++];
-          EXPECT_EQ(null_flag, it->is_null());
-        }
-      });
-    });
+  // Check for NULL values
+  for (const auto& partition : materialized_with_nulls) {
+    EXPECT_EQ(partition.elements.size(), partition.null_values.size());
+    EXPECT_EQ(partition.null_values.size(), size_t{0});
   }
 
-  // build phase: NULLs we be discarded
-  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions);
-  auto hash_map_without_nulls = build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions);
+  for (const auto& partition : materialized_without_nulls) {
+    EXPECT_EQ(partition.elements.size(), partition.null_values.size());
+    auto nulls = size_t{0};
+    for (auto null_value : partition.null_values) {
+      if (null_value) ++nulls;
+    }
+    EXPECT_EQ(nulls, size_t{5});
+  }
 
-  // check for the expected number of hash maps
-  EXPECT_EQ(hash_map_with_nulls.size(), pow(2, radix_bit_count));
-  EXPECT_EQ(hash_map_without_nulls.size(), pow(2, radix_bit_count));
+  // Build phase: NULLs should be discarded
+  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0);
+  auto hash_map_without_nulls = build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions, 0);
 
-  // get count of non-NULL values in table
+  // With 0 radix bits, only a single hash map should be built
+  EXPECT_EQ(hash_map_with_nulls.size(), 1);
+  EXPECT_EQ(hash_map_without_nulls.size(), 1);
+
+  // Get count of non-NULL values in table
   auto table_without_nulls_scanned =
       create_table_scan(_table_with_nulls_and_zeros, ColumnID{0}, PredicateCondition::IsNotNull, 0);
   table_without_nulls_scanned->execute();
@@ -205,27 +199,29 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 }
 
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
-  size_t radix_bit_count = 1;
+  const size_t radix_bit_count = 1;
   std::vector<std::vector<size_t>> histograms;
 
 
   const auto materialized_without_null_handling = materialize_input<int, int, true>(
-      _table_int_with_nulls->get_output(), ColumnID{0}, chunk_offsets, histograms, radix_bit_count);
+      _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count);
   // Ensure we created NULL value information
-  EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(),
-            materialized_without_null_handling.elements->size());
+  EXPECT_EQ(materialized_without_null_handling[0].null_values.size(),
+            materialized_without_null_handling[0].elements.size());
 
-  const auto radix_cluster_result = partition_radix_parallel<int, int, true>(
-      materialized_without_null_handling, chunk_offsets, histograms, radix_bit_count);
+  const auto radix_cluster_result = partition_by_radix<int, int, true>(
+      materialized_without_null_handling, histograms, radix_bit_count);
 
   // Loaded table does not include int=0 values, so all int=0 values are NULLs
-  for (auto i = size_t{0}; i < radix_cluster_result.elements->size(); ++i) {
-    const auto value = radix_cluster_result.elements->at(i).value;
-    const bool null_flag = (*radix_cluster_result.null_value_bitvector)[i++];
-    if (value == 0) {
-      EXPECT_TRUE(null_flag);
-    } else {
-      EXPECT_FALSE(null_flag);
+  for (const auto& partition : radix_cluster_result) {
+    for (auto i = size_t{0}; i < partition.elements.size(); ++i) {
+      const auto value = partition.elements.at(i).value;
+      const bool null_flag = partition.null_values[i++];
+      if (value == 0) {
+        EXPECT_TRUE(null_flag);
+      } else {
+        EXPECT_FALSE(null_flag);
+      }
     }
   }
 }
@@ -239,13 +235,13 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count);
   // We want to test a non-NULL-considering Radix Container, ensure we did it correctly
-  EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(), 0);
+  EXPECT_EQ(materialized_without_null_handling[0].null_values.size(), 0);
 
   // Using true as the NULL handing flag should lead to an error,
   // because we did not create NULL value information during materialization.
   // Note, the extra parantheses are required for Gtest since otherwise the preprocessor
   // has problems resolving this code line (see https://stackoverflow.com/a/35957776/1147726)
-  EXPECT_THROW((partition_radix_parallel<int, int, true>)(materialized_without_null_handling, histograms,
+  EXPECT_THROW((partition_by_radix<int, int, true>)(materialized_without_null_handling, histograms,
                                                           radix_bit_count),
                std::logic_error);
 }

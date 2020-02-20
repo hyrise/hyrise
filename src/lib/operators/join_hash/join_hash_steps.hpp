@@ -86,7 +86,7 @@ class PosHashTable {
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {  // TODO doc +1
+      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {  // TODO doc +1 (just to make debug assert easier?)
     _hash_table.reserve(max_size);
   }
 
@@ -114,6 +114,8 @@ class PosHashTable {
     // For very small hash tables, a linear search performs better. In that case, replace the hash table with a vector
     // of value/offset pairs.  The boundary was determined experimentally and chosen conservatively.
     if (_hash_table.size() <= 10) {
+      Assert(!_values, "shrink_to_fit called twice");
+
       _values = std::vector<std::pair<HashedType, Offset>>{};
       _values->reserve(_hash_table.size());
       for (const auto& [value, offset] : _hash_table) {
@@ -129,7 +131,6 @@ class PosHashTable {
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
     const auto casted_value = static_cast<HashedType>(value);
-
     if (!_values) {
       const auto hash_table_iter = _hash_table.find(casted_value);
       if (hash_table_iter == _hash_table.end()) return end();
@@ -292,6 +293,8 @@ Build all the hash tables for the partitions of the build column. One job per pa
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits) {
+  if (radix_container.empty()) return {};
+
   /*
   NUMA notes:
   The hash tables for each partition P should also reside on the same node as the two vectors buildP and probeP. // TODO doc
@@ -350,7 +353,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
-  hash_tables[0]->shrink_to_fit();
+  if (radix_bits == 0) hash_tables[0]->shrink_to_fit();
 
   return hash_tables;
 }
@@ -358,6 +361,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+  if (radix_container.empty()) return radix_container;
+
   if constexpr (retain_null_values) {
     Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),
            "partition_by_radix() called with NULL consideration but radix container does not store any NULL "
@@ -479,7 +484,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       const auto& null_values = partition.null_values;
 
       PosList pos_list_build_side_local;
-      PosList pos_list_probe_local;
+      PosList pos_list_probe_side_local;
 
       if constexpr (keep_null_values) {
         Assert(elements.size() == null_values.size(),
@@ -500,7 +505,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         // a more conservative pre-allocation would be the size of the build cluster
         const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil(elements.size() / 2)));
         pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
-        pos_list_probe_local.reserve(static_cast<size_t>(expected_output_size));
+        pos_list_probe_side_local.reserve(static_cast<size_t>(expected_output_size));
 
         for (auto partition_offset = size_t{0}; partition_offset < elements.size();
              ++partition_offset) {  // TODO naming _idx vs _offset
@@ -527,7 +532,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             if constexpr (keep_null_values) {
               if (null_values[partition_offset]) {
                 pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-                pos_list_probe_local.emplace_back(probe_column_element.row_id);
+                pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
                 // ignore found matches and continue with next probe item
                 continue;
               }
@@ -538,14 +543,14 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             if (!multi_predicate_join_evaluator) {
               for (const auto& row_id : *primary_predicate_matching_rows) {
                 pos_list_build_side_local.emplace_back(row_id);
-                pos_list_probe_local.emplace_back(probe_column_element.row_id);
+                pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
               }
             } else {
               auto match_found = false;
               for (const auto& row_id : *primary_predicate_matching_rows) {
                 if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
                   pos_list_build_side_local.emplace_back(row_id);
-                  pos_list_probe_local.emplace_back(probe_column_element.row_id);
+                  pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
                   match_found = true;
                 }
               }
@@ -554,7 +559,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
               if constexpr (keep_null_values) {
                 if (!match_found) {
                   pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-                  pos_list_probe_local.emplace_back(probe_column_element.row_id);
+                  pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
                 }
               }
             }
@@ -566,7 +571,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             // relation since the relations are swapped upfront.
             if constexpr (keep_null_values) {
               pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-              pos_list_probe_local.emplace_back(probe_column_element.row_id);
+              pos_list_probe_side_local.emplace_back(probe_column_element.row_id);
             }
           }
         }
@@ -580,18 +585,18 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
           // Hence we are going to write NULL values for each row.
 
           pos_list_build_side_local.reserve(elements.size());
-          pos_list_probe_local.reserve(elements.size());
+          pos_list_probe_side_local.reserve(elements.size());
 
           for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
             const auto& element = elements[partition_offset];
             pos_list_build_side_local.emplace_back(NULL_ROW_ID);
-            pos_list_probe_local.emplace_back(element.row_id);
+            pos_list_probe_side_local.emplace_back(element.row_id);
           }
         }
       }
 
       pos_lists_build_side[partition_idx] = std::move(pos_list_build_side_local);
-      pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_local);
+      pos_lists_probe_side[partition_idx] = std::move(pos_list_probe_side_local);
     }));
     jobs.back()->schedule();
   }
@@ -608,8 +613,6 @@ void probe_semi_anti(
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_probe_column.size());
 
-  auto debug_all = size_t{};
-  auto debug_skipped = size_t{};
 
   for (size_t partition_idx = 0; partition_idx < radix_probe_column.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
@@ -635,14 +638,12 @@ void probe_semi_anti(
                                                                    secondary_join_predicates);
 
         for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
-          ++debug_all;
           const auto& probe_column_element = elements[partition_offset];
 
           if constexpr (mode == JoinMode::Semi) {
             // NULLs on the probe side are never emitted
             if (probe_column_element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
               // Could be either skipped or NULL
-              ++debug_skipped;
               continue;
             }
           } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
@@ -829,24 +830,24 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {
-      {
-        // TODO any chance to make this nicer?
-        auto common_chunk_id = std::optional<ChunkID>{};
-        for (const auto& row : *pos_list) {
-          if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-            common_chunk_id = INVALID_CHUNK_ID;
-          } else {
-            if (!common_chunk_id) {
-              common_chunk_id = row.chunk_id;
-            } else if (*common_chunk_id != row.chunk_id) {
-              common_chunk_id = INVALID_CHUNK_ID;
-            }
-          }
-        }
-        if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
-          pos_list->guarantee_single_chunk();
-        }
-      }
+      // {
+      //   // TODO any chance to make this nicer?
+      //   auto common_chunk_id = std::optional<ChunkID>{};
+      //   for (const auto& row : *pos_list) {
+      //     if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+      //       common_chunk_id = INVALID_CHUNK_ID;
+      //     } else {
+      //       if (!common_chunk_id) {
+      //         common_chunk_id = row.chunk_id;
+      //       } else if (*common_chunk_id != row.chunk_id) {
+      //         common_chunk_id = INVALID_CHUNK_ID;
+      //       }
+      //     }
+      //   }
+      //   if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
+      //     pos_list->guarantee_single_chunk();
+      //   }
+      // }
 
       output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
     }
