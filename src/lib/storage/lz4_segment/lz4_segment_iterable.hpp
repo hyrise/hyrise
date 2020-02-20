@@ -96,7 +96,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
    public:
     // Begin and End Iterator
-    explicit Iterator(ValueIterator&& data_it, std::optional<NullValueIterator>&& null_value_it, ChunkOffset chunk_offset)
+    explicit Iterator(ValueIterator&& data_it, std::optional<NullValueIterator>&& null_value_it,
+                      ChunkOffset chunk_offset)
         : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
 
    private:
