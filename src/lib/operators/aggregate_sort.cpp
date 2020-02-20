@@ -368,8 +368,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * However, we did not benchmark it, so we cannot prove it.
    */
 
-  // Check if there's a common chunk ordering.
-  //
+  // Check if there's a common chunk ordering. Since the aggregate_sort operates on table level
+  // and not on chunk level, we can only make statements about ordering when we know that the
+  // entire table is ordered regardings one single column among all chunks
   auto all_chunks_ordered_by = input_table->get_chunk(ChunkID{0})->ordered_by();
   if (all_chunks_ordered_by) {
     for (auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
