@@ -391,9 +391,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     }
     const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
     sorted_wrapper->execute();
-    Sort sort = Sort(sorted_wrapper, column_id);
-    sort.execute();
-    sorted_table = sort.get_output();
+    const auto sort = std::make_shared<Sort>(sorted_wrapper, column_id);
+    sort->execute();
+    sorted_table = sort->get_output();
     order_by = std::make_pair(column_id, OrderByMode::Ascending);
   }
 
