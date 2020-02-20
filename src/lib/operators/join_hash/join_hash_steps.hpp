@@ -339,9 +339,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       }
     };
 
-    if (radix_bits == 0) {  // TODO make sure if/else order is consistent
-      // Without radix partitioning, only a single hash table will be written. Parallelizing this would require a concurrent
-      // hash table, which is likely more expensive.
+    if (radix_bits == 0) {  // TODO parallelize
+      // Without radix partitioning, only a single hash table will be written. Parallelizing this would require a
+      // concurrent hash table, which is likely more expensive.
       insert_into_hash_table();
     } else {
       jobs.emplace_back(std::make_shared<JobTask>(insert_into_hash_table));
@@ -379,7 +379,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   Assert(histograms.size() == input_partition_count, "Expected one histogram per input partition");
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
 
-  // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first value in the bucket written for input_partition_idx
+  // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first value in the
+  // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
       std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
