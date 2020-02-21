@@ -251,7 +251,4 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
                std::logic_error);
 }
 
-// TODO read entire file
-// TODO test guarantee_single_chunk
-
 }  // namespace opossum
