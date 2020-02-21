@@ -86,7 +86,8 @@ class PosHashTable {
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {  // TODO doc +1 (just to make debug assert easier?)
+      : _hash_table(), _pos_lists(max_size + 1), _mode(mode) {
+    // _pos_lists is initialized with an additional element to make the enforcement of the assertions easier.
     _hash_table.reserve(max_size);
   }
 
@@ -333,10 +334,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
         hash_table = PosHashTable<HashedType>(mode, elements.size());
       }
       for (const auto& element : elements) {
-        if (element.row_id == NULL_ROW_ID) {  // TODO valid?
-          // Skip initialized PartitionedElements that might remain after materialization phase.
-          continue;
-        }
+        DebugAssert(!(element.row_id == NULL_ROW_ID), "No NULL_ROW_IDs should make it to this point");
 
         hash_table->emplace(element.value, element.row_id);
       }
@@ -346,7 +344,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       }
     };
 
-    if (radix_bits == 0) {  // TODO parallelize
+    if (radix_bits == 0) {
       // Without radix partitioning, only a single hash table will be written. Parallelizing this would require a
       // concurrent hash table, which is likely more expensive.
       insert_into_hash_table();
@@ -388,6 +386,10 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   Assert(histograms.size() == input_partition_count, "Expected one histogram per input partition");
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
 
+  // Writing to std::vector<bool> is not thread-safe if the same byte is being written to. For now, we temporarily
+  // use a std::vector<char> and compress it into an std::vector<bool> later.
+  auto null_values_as_char = std::vector<std::vector<char>>(output_partition_count);
+
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first value in the
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
@@ -402,6 +404,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     output[output_partition_idx].elements.resize(this_output_partition_size);
     if (retain_null_values) {
       output[output_partition_idx].null_values.resize(this_output_partition_size);
+      null_values_as_char[output_partition_idx].resize(this_output_partition_size);
     }
   }
 
@@ -432,11 +435,10 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                  "output_idx goes into next range");
         }
 
-        // In case NULL values have been materialized in materialize_input(),
-        // we need to keep them during the radix clustering phase.
+        // In case NULL values have been materialized in materialize_input(), we need to keep them during the radix
+        // clustering phase.
         if constexpr (retain_null_values) {
-          // TODO not thread-safe
-          output[radix].null_values[output_idx] = input_partition.null_values[input_idx];
+          null_values_as_char[radix][output_idx] = input_partition.null_values[input_idx];
         }
 
         output[radix].elements[output_idx] = element;
@@ -446,7 +448,18 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }));
     jobs.back()->schedule();
   }
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  jobs.clear();
 
+  // Compress null_values_as_char into partition.null_values
+  for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
+    jobs.emplace_back(std::make_shared<JobTask>([&, output_partition_idx]() {
+      for (auto element_idx = size_t{0}; element_idx < output[output_partition_idx].null_values.size(); ++element_idx) {
+        output[output_partition_idx].null_values[element_idx] = null_values_as_char[output_partition_idx][element_idx];
+      }
+    }));
+    jobs.back()->schedule();
+  }
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return output;
@@ -465,8 +478,6 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
-
-  // TODO This should run in parallel now even when radix_bits = 0 :)
 
   /*
     NUMA notes:
@@ -496,7 +507,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       }
 
       const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
-      if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {  // TODO is hash_tables.empty valid?
+      if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
         const auto& hash_table = *hash_tables[hash_table_idx];
 
         // Accessors are not thread-safe, so we create one evaluator per job
@@ -511,8 +522,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
         pos_list_build_side_local.reserve(static_cast<size_t>(expected_output_size));
         pos_list_probe_side_local.reserve(static_cast<size_t>(expected_output_size));
 
-        for (auto partition_offset = size_t{0}; partition_offset < elements.size();
-             ++partition_offset) {  // TODO naming _idx vs _offset
+        for (auto partition_offset = size_t{0}; partition_offset < elements.size(); ++partition_offset) {
           const auto& probe_column_element = elements[partition_offset];
 
           if (mode == JoinMode::Inner && probe_column_element.row_id == NULL_ROW_ID) {
@@ -609,24 +619,22 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
-void probe_semi_anti(
-    const RadixContainer<ProbeColumnType>& radix_probe_column,  // TODO why is name different from probe()
-    const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables, std::vector<PosList>& pos_lists,
-    const Table& build_table, const Table& probe_table,
-    const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
+void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
+                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+                     std::vector<PosList>& pos_lists, const Table& build_table, const Table& probe_table,
+                     const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(radix_probe_column.size());
+  jobs.reserve(probe_radix_container.size());
 
-
-  for (size_t partition_idx = 0; partition_idx < radix_probe_column.size(); ++partition_idx) {
+  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
-    if (radix_probe_column[partition_idx].elements.empty()) {
+    if (probe_radix_container[partition_idx].elements.empty()) {
       continue;
     }
 
     jobs.emplace_back(std::make_shared<JobTask>([&, partition_idx]() {
       // Get information from work queue
-      const auto& partition = radix_probe_column[partition_idx];
+      const auto& partition = probe_radix_container[partition_idx];
       const auto& elements = partition.elements;
       const auto& null_values = partition.null_values;
 
@@ -834,24 +842,29 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {
-      // {
-      //   // TODO any chance to make this nicer?
-      //   auto common_chunk_id = std::optional<ChunkID>{};
-      //   for (const auto& row : *pos_list) {
-      //     if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-      //       common_chunk_id = INVALID_CHUNK_ID;
-      //     } else {
-      //       if (!common_chunk_id) {
-      //         common_chunk_id = row.chunk_id;
-      //       } else if (*common_chunk_id != row.chunk_id) {
-      //         common_chunk_id = INVALID_CHUNK_ID;
-      //       }
-      //     }
-      //   }
-      //   if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
-      //     pos_list->guarantee_single_chunk();
-      //   }
-      // }
+      // Check if the PosList references a single chunk. This is easier than tracking the flag through materialization,
+      // radix partitioning, and so on. Also, actually checking for this property instead of simply forwarding it may
+      // allows us to set guarantee_single_chunk in more cases. In cases where more than one chunk is referenced, this
+      // should be cheap. In the other cases, the cost of iterating through the PosList are likely to be amortized in
+      // following operators.
+      // This is not part of PosList as other operators should have a better understanding of how they emit references.
+      auto common_chunk_id = std::optional<ChunkID>{};
+      for (const auto& row : *pos_list) {
+        if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+          common_chunk_id = INVALID_CHUNK_ID;
+          break;
+        } else {
+          if (!common_chunk_id) {
+            common_chunk_id = row.chunk_id;
+          } else if (*common_chunk_id != row.chunk_id) {
+            common_chunk_id = INVALID_CHUNK_ID;
+            break;
+          }
+        }
+      }
+      if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
+        pos_list->guarantee_single_chunk();
+      }
 
       output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
     }

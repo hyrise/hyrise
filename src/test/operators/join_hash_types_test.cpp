@@ -22,9 +22,7 @@ void test_hash_map(const std::vector<T>& values) {
     partition.null_values.emplace_back(false);
   }
 
-  auto hash_maps =
-      build<T, HashType>(RadixContainer<T>{partition},
-                         JoinHashBuildMode::AllPositions, 0);
+  auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0);
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_maps.size(), 1);

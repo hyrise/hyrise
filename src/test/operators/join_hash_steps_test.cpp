@@ -100,14 +100,16 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   std::vector<std::vector<size_t>> histograms;
 
   // We materialize the table twice, once with keeping NULL values and once without
-  auto materialized_with_nulls = materialize_input<int, int, true>(
-      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count);
-  auto materialized_without_nulls = materialize_input<int, int, false>(
-      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count);
+  auto materialized_with_nulls = materialize_input<int, int, true>(_table_with_nulls_and_zeros->get_output(),
+                                                                   ColumnID{0}, histograms, radix_bit_count);
+  auto materialized_without_nulls = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(),
+                                                                       ColumnID{0}, histograms, radix_bit_count);
 
   // Partition count should be equal to chunk count
-  EXPECT_EQ(materialized_with_nulls.size(), static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
-  EXPECT_EQ(materialized_without_nulls.size(), static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
+  EXPECT_EQ(materialized_with_nulls.size(),
+            static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
+  EXPECT_EQ(materialized_without_nulls.size(),
+            static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
 
   // Sum of partition sizes should be equal to row count if NULL values are contained and lower if they are not
   auto materialized_with_nulls_size = size_t{0};
@@ -171,7 +173,6 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   std::vector<std::vector<size_t>> histograms;
 
-
   // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
   // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
   materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 1);
@@ -208,15 +209,14 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const size_t radix_bit_count = 1;
   std::vector<std::vector<size_t>> histograms;
 
-
-  const auto materialized_without_null_handling = materialize_input<int, int, true>(
-      _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count);
+  const auto materialized_without_null_handling =
+      materialize_input<int, int, true>(_table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count);
   // Ensure we created NULL value information
   EXPECT_EQ(materialized_without_null_handling[0].null_values.size(),
             materialized_without_null_handling[0].elements.size());
 
-  const auto radix_cluster_result = partition_by_radix<int, int, true>(
-      materialized_without_null_handling, histograms, radix_bit_count);
+  const auto radix_cluster_result =
+      partition_by_radix<int, int, true>(materialized_without_null_handling, histograms, radix_bit_count);
 
   // Loaded table does not include int=0 values, so all int=0 values are NULLs
   for (const auto& partition : radix_cluster_result) {
@@ -247,8 +247,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   // because we did not create NULL value information during materialization.
   // Note, the extra parantheses are required for Gtest since otherwise the preprocessor
   // has problems resolving this code line (see https://stackoverflow.com/a/35957776/1147726)
-  EXPECT_THROW((partition_by_radix<int, int, true>)(materialized_without_null_handling, histograms,
-                                                          radix_bit_count),
+  EXPECT_THROW((partition_by_radix<int, int, true>)(materialized_without_null_handling, histograms, radix_bit_count),
                std::logic_error);
 }
 
