@@ -90,7 +90,9 @@ class PosHashTable {
     _hash_table.reserve(max_size);
   }
 
-  // For a value seen on the build side, add its row_id to the table
+  // For a value seen on the build side, add the value to the hash map.
+  // The row id is only added in the AllPositions mode. For SinglePosition, as used e.g., by semi joins, the actual
+  // row id is irrelevant. As such, find() is invalid in this mode and contains() should be used.
   template <typename InputType>
   void emplace(const InputType& value, RowID row_id) {
     const auto casted_value = static_cast<HashedType>(value);
@@ -130,6 +132,8 @@ class PosHashTable {
   // For a value seen on the probe side, return an iterator into the matching positions on the build side
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
+    DebugAssert(_mode == JoinHashBuildMode::AllPositions, "find is invalid for SinglePosition mode, use contains");
+
     const auto casted_value = static_cast<HashedType>(value);
     if (!_values) {
       const auto hash_table_iter = _hash_table.find(casted_value);

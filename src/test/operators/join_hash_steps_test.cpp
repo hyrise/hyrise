@@ -16,7 +16,7 @@ class JoinHashStepsTest : public BaseTest {
   static void SetUpTestCase() {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
-    _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _table_size_zero_one / 10);
+    _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size_zero_one);
     for (auto i = size_t{0}; i < _table_size_zero_one; ++i) {
       _table_zero_one->append({static_cast<int>(i % 2)});
     }
@@ -48,6 +48,7 @@ class JoinHashStepsTest : public BaseTest {
   }
 
   inline static size_t _table_size_zero_one = 1'000;
+  inline static size_t _chunk_size_zero_one = 10;
   inline static std::shared_ptr<Table> _table_zero_one;
   inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros;
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
@@ -86,15 +87,11 @@ TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
-    const auto pos_list = *table.find(50);
-    EXPECT_EQ(pos_list, expected_pos_list);
   }
   table.shrink_to_fit();
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
-    const auto pos_list = *table.find(50);
-    EXPECT_EQ(pos_list, expected_pos_list);
   }
 }
 
@@ -112,7 +109,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   EXPECT_EQ(materialized_with_nulls.size(), static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
   EXPECT_EQ(materialized_without_nulls.size(), static_cast<size_t>(_table_with_nulls_and_zeros->get_output()->chunk_count()));
 
-  // Sum of partition sizes should be equal to row count
+  // Sum of partition sizes should be equal to row count if NULL values are contained and lower if they are not
   auto materialized_with_nulls_size = size_t{0};
   for (const auto& partition : materialized_with_nulls) {
     materialized_with_nulls_size += partition.elements.size();
@@ -123,25 +120,33 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   for (const auto& partition : materialized_without_nulls) {
     materialized_without_nulls_size += partition.elements.size();
   }
-  EXPECT_EQ(materialized_without_nulls_size, _table_with_nulls_and_zeros->get_output()->row_count());
+  EXPECT_LE(materialized_without_nulls_size, _table_with_nulls_and_zeros->get_output()->row_count());
 
   // Check for values being properly set
   EXPECT_EQ(materialized_without_nulls[0].elements.at(6).value, 9);
   EXPECT_EQ(materialized_with_nulls[0].elements.at(6).value, 13);
 
   // Check for NULL values
-  for (const auto& partition : materialized_with_nulls) {
-    EXPECT_EQ(partition.elements.size(), partition.null_values.size());
+  for (const auto& partition : materialized_without_nulls) {
     EXPECT_EQ(partition.null_values.size(), size_t{0});
   }
 
-  for (const auto& partition : materialized_without_nulls) {
-    EXPECT_EQ(partition.elements.size(), partition.null_values.size());
-    auto nulls = size_t{0};
-    for (auto null_value : partition.null_values) {
-      if (null_value) ++nulls;
-    }
-    EXPECT_EQ(nulls, size_t{5});
+  // For materialized_with_nulls, NULLs should be set according to the data in the segment
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < _table_with_nulls_and_zeros->get_output()->chunk_count(); ++chunk_id) {
+    const auto segment = _table_with_nulls_and_zeros->get_output()->get_chunk(chunk_id)->get_segment(ColumnID{0});
+
+    resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
+      using Type = typename decltype(type)::type;
+      auto iterable = create_iterable_from_segment<Type>(typed_segment);
+
+      size_t counter = 0;
+      iterable.with_iterators([&](auto it, auto end) {
+        for (; it != end; ++it) {
+          const bool null_flag = materialized_with_nulls[chunk_id].null_values[counter++];
+          EXPECT_EQ(null_flag, it->is_null());
+        }
+      });
+    });
   }
 
   // Build phase: NULLs should be discarded
@@ -171,9 +176,10 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
   materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 1);
   size_t histogram_offset_sum = 0;
+  EXPECT_EQ(histograms.size(), this->_table_size_zero_one / this->_chunk_size_zero_one);
   for (const auto& radix_count_per_chunk : histograms) {
     for (auto count : radix_count_per_chunk) {
-      EXPECT_EQ(count, this->_table_size_zero_one / 2);
+      EXPECT_EQ(count, this->_chunk_size_zero_one / 2);
       histogram_offset_sum += count;
     }
   }
@@ -189,13 +195,13 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 2);
   for (const auto& radix_count_per_chunk : histograms) {
     for (auto count : radix_count_per_chunk) {
-      // Againg: due to the hashing, we do not know which cluster holds the value
-      // But we know that two buckets have tab _table_size_zero_one/2 items and two none items.
-      EXPECT_TRUE(count == this->_table_size_zero_one / 2 || count == 0);
+      // Aging: due to the hashing, we do not know which cluster holds the value
+      // But we know that two buckets have _table_size_zero_one/2 items and two have none items.
+      EXPECT_TRUE(count == this->_chunk_size_zero_one / 2 || count == 0);
       if (count == 0) ++empty_cluster_count;
     }
   }
-  EXPECT_EQ(empty_cluster_count, 2);
+  EXPECT_EQ(empty_cluster_count, 2 * this->_table_size_zero_one / this->_chunk_size_zero_one);
 }
 
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
