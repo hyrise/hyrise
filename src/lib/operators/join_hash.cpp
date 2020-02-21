@@ -147,7 +147,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     probe_column_id = _primary_predicate.column_ids.second;
   }
 
-  // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
+  // If the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the secondary join predicates.
   auto adjusted_secondary_predicates = _secondary_predicates;
 
@@ -271,8 +271,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<std::vector<size_t>> histograms_build_column;
     std::vector<std::vector<size_t>> histograms_probe_column;
 
-    // Output containers of materialization phase. Type similar to the output
-    // of radix partitioning phase to allow short cut for _radix_bits == 0
+    // Output containers of materialization phase. Uses the same output type as
+    // the radix partitioning phase to allow shortcut for _radix_bits == 0
     // (in this case, we can skip the partitioning altogether).
     RadixContainer<BuildColumnType> materialized_build_column;
     RadixContainer<ProbeColumnType> materialized_probe_column;
