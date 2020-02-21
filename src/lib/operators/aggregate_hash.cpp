@@ -154,7 +154,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
       if constexpr (function == AggregateFunction::Avg || function == AggregateFunction::Count ||
                     function == AggregateFunction::StandardDeviationSample) {  // NOLINT
-        // For aggregate functions that use the number of non-NULL values, increase the value counter
+        // Increase the counter of non-NULL values only for aggregation functions that use it.
         ++result.aggregate_count;
       }
 
