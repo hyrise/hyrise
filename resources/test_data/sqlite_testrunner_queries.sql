@@ -341,9 +341,11 @@ CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int
 CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
 CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
 CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM id_int_int_int_100 WHERE a > 10; SELECT a1, a2 FROM alias_view;
+CREATE VIEW someview AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a; SELECT * FROM someview;
 
 -- TABLES
 DROP TABLE IF EXISTS t; CREATE TABLE t (a INT); INSERT INTO t (a) VALUES (1); CREATE TABLE IF NOT EXISTS t (b INT); SELECT * FROM t;
+DROP TABLE IF EXISTS sometable; CREATE TABLE sometable AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a; SELECT * FROM sometable;
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;

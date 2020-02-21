@@ -21,11 +21,51 @@ SimdBp128Decompressor::SimdBp128Decompressor(const SimdBp128Decompressor& other)
       _cached_meta_info{other._cached_meta_info},
       _cached_block{std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block)} {}
 
-void SimdBp128Decompressor::_read_meta_info(size_t meta_info_offset) {
+SimdBp128Decompressor::SimdBp128Decompressor(SimdBp128Decompressor&& other) noexcept
+    : _data{other._data},
+      _size{other._size},
+      _cached_meta_info_offset{other._cached_meta_info_offset},
+      _cached_meta_block_first_index{other._cached_meta_block_first_index},
+      _cached_block_first_index{other._cached_block_first_index},
+      _cached_meta_info{other._cached_meta_info},
+      _cached_block{std::move(other._cached_block)} {}
+
+SimdBp128Decompressor& SimdBp128Decompressor::operator=(const SimdBp128Decompressor& other) {
+  if (&other == this) {
+    return *this;
+  }
+
+  _data = other._data;
+  _size = other._size;
+  _cached_meta_info_offset = other._cached_meta_info_offset;
+  _cached_meta_block_first_index = other._cached_meta_block_first_index;
+  _cached_block_first_index = other._cached_block_first_index;
+  _cached_meta_info = other._cached_meta_info;
+  _cached_block = std::make_unique<std::array<uint32_t, Packing::block_size>>(*other._cached_block);
+
+  return *this;
+}
+
+SimdBp128Decompressor& SimdBp128Decompressor::operator=(SimdBp128Decompressor&& other) noexcept {
+  if (&other == this) {
+    return *this;
+  }
+  _data = other._data;
+  _size = other._size;
+  _cached_meta_info_offset = other._cached_meta_info_offset;
+  _cached_meta_block_first_index = other._cached_meta_block_first_index;
+  _cached_block_first_index = other._cached_block_first_index;
+  _cached_meta_info = other._cached_meta_info;
+  _cached_block = std::move(other._cached_block);
+
+  return *this;
+}
+
+void SimdBp128Decompressor::_read_meta_info(const size_t meta_info_offset) {
   Packing::read_meta_info(_data->data() + meta_info_offset, _cached_meta_info.data());
 }
 
-void SimdBp128Decompressor::_unpack_block(uint8_t block_index) {
+void SimdBp128Decompressor::_unpack_block(const size_t block_index) {
   static const auto meta_info_data_size = 1u;  // One 128 bit block
 
   // Calculate data offset relative to the current _cached_meta_info_offset
