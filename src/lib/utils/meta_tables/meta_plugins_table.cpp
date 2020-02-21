@@ -11,7 +11,7 @@ constexpr char DYNAMIC_LIBRARY_SUFFIX[] = ".so";
 namespace opossum {
 
 MetaPluginsTable::MetaPluginsTable()
-    : AbstractMetaTable(), _column_definitions(TableColumnDefinitions{{"plugin_name", DataType::String, false}}) {}
+    : AbstractMetaTable(TableColumnDefinitions{{"plugin_name", DataType::String, false}}) {}
 
 const std::string& MetaPluginsTable::name() const {
   static const auto name = std::string{"plugins"};

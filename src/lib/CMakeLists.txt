@@ -595,6 +595,8 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/settings/abstract_setting.hpp
     utils/settings/abstract_setting.cpp
+    utils/settings/mock_setting.hpp
+    utils/settings/mock_setting.cpp
     utils/settings_manager.cpp
     utils/settings_manager.hpp
     utils/singleton.hpp

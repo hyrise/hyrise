@@ -20,8 +20,6 @@ class MetaSettingsTable : public AbstractMetaTable {
   std::shared_ptr<Table> _on_generate() const;
 
   void _on_update(const std::vector<AllTypeVariant>& values);
-
-  const TableColumnDefinitions _column_definitions;
 };
 
 }  // namespace opossum

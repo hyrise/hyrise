@@ -318,7 +318,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 
   if (MetaTableManager::is_meta_table_name(table_name)) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
-    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) && Hyrise::get().meta_table_manager.can_insert_into(meta_table_name), "Cannot insert into " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) &&
+                    Hyrise::get().meta_table_manager.can_insert_into(meta_table_name),
+                "Cannot insert into " + table_name);
     target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
   } else {
     target_table = Hyrise::get().storage_manager.get_table(table_name);
@@ -427,7 +429,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
 
   if (MetaTableManager::is_meta_table_name(table_name)) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
-    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) && Hyrise::get().meta_table_manager.can_delete_from(meta_table_name), "Cannot delete from " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) &&
+                    Hyrise::get().meta_table_manager.can_delete_from(meta_table_name),
+                "Cannot delete from " + table_name);
   }
 
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
@@ -452,7 +456,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   if (MetaTableManager::is_meta_table_name(table_name)) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
-    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) && Hyrise::get().meta_table_manager.can_update(meta_table_name), "Cannot update " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) &&
+                    Hyrise::get().meta_table_manager.can_update(meta_table_name),
+                "Cannot update " + table_name);
     target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
   } else {
     target_table = Hyrise::get().storage_manager.get_table(table_name);

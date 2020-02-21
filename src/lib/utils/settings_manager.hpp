@@ -5,21 +5,27 @@
 
 #include "types.hpp"
 #include "utils/settings/abstract_setting.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
-class SettingsManager : private Noncopyable {
+/* Besides the Hyrise class, this should be the only singleton.
+ * We need this this to be a singleton since we would lose the control
+ * of registered settings on reconstructions otherwise.
+ */
+class SettingsManager : public Singleton<SettingsManager> {
  public:
   bool has_setting(const std::string& name) const;
   void add(const std::shared_ptr<AbstractSetting>& setting);
-  const std::shared_ptr<AbstractSetting> get(const std::string& name) const;
+  void remove(const std::string& name);
+  const std::shared_ptr<AbstractSetting> get_setting(const std::string& name) const;
   const std::vector<std::shared_ptr<AbstractSetting>> all_settings() const;
 
- protected:
-  friend class Hyrise;
-  friend class SettingsManagerTest;
+ private:
+  friend class Singleton;
+  SettingsManager() {}
 
-  std::unordered_map<std::string, std::shared_ptr<AbstractSetting>> _settings;
+  std::map<std::string, std::shared_ptr<AbstractSetting>> _settings;
 };
 
 }  // namespace opossum

@@ -6,16 +6,15 @@
 namespace opossum {
 
 MetaAccurateSegmentsTable::MetaAccurateSegmentsTable()
-    : AbstractMetaTable(),
-      _column_definitions(TableColumnDefinitions{{"table_name", DataType::String, false},
-                                                 {"chunk_id", DataType::Int, false},
-                                                 {"column_id", DataType::Int, false},
-                                                 {"column_name", DataType::String, false},
-                                                 {"column_data_type", DataType::String, false},
-                                                 {"distinct_value_count", DataType::Long, false},
-                                                 {"encoding_type", DataType::String, true},
-                                                 {"vector_compression_type", DataType::String, true},
-                                                 {"size_in_bytes", DataType::Long, false}}) {}
+    : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
+                                               {"chunk_id", DataType::Int, false},
+                                               {"column_id", DataType::Int, false},
+                                               {"column_name", DataType::String, false},
+                                               {"column_data_type", DataType::String, false},
+                                               {"distinct_value_count", DataType::Long, false},
+                                               {"encoding_type", DataType::String, true},
+                                               {"vector_compression_type", DataType::String, true},
+                                               {"size_in_bytes", DataType::Long, false}}) {}
 
 const std::string& MetaAccurateSegmentsTable::name() const {
   static const auto name = std::string{"segments_accurate"};

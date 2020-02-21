@@ -26,8 +26,6 @@ class MetaMockTable : public AbstractMetaTable {
   void _on_insert(const std::vector<AllTypeVariant>& values);
   void _on_remove(const std::vector<AllTypeVariant>& values);
 
-  const TableColumnDefinitions _column_definitions;
-
   size_t _insert_calls;
   size_t _remove_calls;
 };

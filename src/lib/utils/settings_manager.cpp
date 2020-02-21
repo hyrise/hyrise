@@ -2,6 +2,8 @@
 
 namespace opossum {
 
+//void SettingsManager::reset() { get() = SettingsManager{}; }
+
 bool SettingsManager::has_setting(const std::string& name) const { return _settings.count(name); }
 
 void SettingsManager::add(const std::shared_ptr<AbstractSetting>& setting) {
@@ -9,7 +11,12 @@ void SettingsManager::add(const std::shared_ptr<AbstractSetting>& setting) {
   _settings[setting->name] = setting;
 }
 
-const std::shared_ptr<AbstractSetting> SettingsManager::get(const std::string& name) const {
+void SettingsManager::remove(const std::string& name) {
+  Assert(_settings.count(name), "A setting with that does not exist.");
+  _settings.erase(name);
+}
+
+const std::shared_ptr<AbstractSetting> SettingsManager::get_setting(const std::string& name) const {
   Assert(_settings.count(name), "A setting with that name does not exist.");
   return _settings.at(name);
 }

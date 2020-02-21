@@ -27,11 +27,12 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
               "_referencing_table needs to reference another table");
   DebugAssert(_referencing_table->column_count() > 0, "_referencing_table needs columns to determine referenced table");
 
-  if (MetaTableManager::is_meta_table_name(_target_table_name)) {
+  // TODO: use any way to redirect delete to MetaTableManager
+  /*if (MetaTableManager::is_meta_table_name(_target_table_name)) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     Hyrise::get().meta_table_manager.delete_from(meta_table_name, _referencing_table);
     return nullptr;
-  }
+  }*/
 
   _transaction_id = context->transaction_id();
 

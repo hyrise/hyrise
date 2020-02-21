@@ -22,8 +22,6 @@ class MetaPluginsTable : public AbstractMetaTable {
 
   void _on_insert(const std::vector<AllTypeVariant>& values);
   void _on_remove(const std::vector<AllTypeVariant>& values);
-
-  const TableColumnDefinitions _column_definitions;
 };
 
 }  // namespace opossum

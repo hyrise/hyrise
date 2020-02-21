@@ -3,8 +3,7 @@
 namespace opossum {
 
 MetaMockTable::MetaMockTable()
-    : AbstractMetaTable(),
-      _column_definitions(TableColumnDefinitions{{"mock", DataType::String, false}}),
+    : AbstractMetaTable(TableColumnDefinitions{{"mock", DataType::String, false}}),
       _insert_calls(0),
       _remove_calls(0) {}
 

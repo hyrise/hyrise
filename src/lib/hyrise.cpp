@@ -17,7 +17,6 @@ Hyrise::Hyrise() {
   storage_manager = StorageManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};
-  settings_manager = SettingsManager{};
   topology = Topology{};
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
 }

@@ -32,7 +32,8 @@ class AbstractMetaTable : public Noncopyable {
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
 
-  AbstractMetaTable();
+  //AbstractMetaTable();
+  AbstractMetaTable(const TableColumnDefinitions& column_definitions);
 
   virtual ~AbstractMetaTable() = default;
 
