@@ -6,7 +6,7 @@ namespace opossum {
  * This is an abstract class for all settings objects.
  *
  * Settings register itself at the SettingsManager.
- * Therefore it is neccessary that it is owned by a shared pointer (instantiate with std::make_shared).
+ * Therefore it is neccessary that they are owned by a shared pointer (instantiate with std::make_shared).
  * Thus, you need to call unenroll() when the setting is not longer needed (it won't get destructed otherwise,
  * as SettingsManager would still hold a shared pointer to it).
  *

@@ -6,7 +6,6 @@
 
 namespace opossum {
 
-//AbstractMetaTable::AbstractMetaTable() {}
 AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
     : _column_definitions(column_definitions){};
 

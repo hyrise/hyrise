@@ -10,11 +10,8 @@ namespace opossum {
  * Meta tables are significant different from normal tables.
  * Information provided by the table is usually not persisted, but gathered on the fly.
  *
- * A meta table provides methods for both retrieving, inserting, deleting or updating
+ * A meta table provides methods for retrieving, inserting, deleting or updating
  * and the information if the operation may be done.
- *
- * Meta tables that allow the updating/deleting values should use the first column of
- * the generated table as a key.
  *
  * Meta tables should be declared as members in the MetaTableManager constructor.
  */
@@ -32,7 +29,6 @@ class AbstractMetaTable : public Noncopyable {
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
 
-  //AbstractMetaTable();
   AbstractMetaTable(const TableColumnDefinitions& column_definitions);
 
   virtual ~AbstractMetaTable() = default;
