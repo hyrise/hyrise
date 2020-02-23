@@ -149,7 +149,7 @@ float get_system_cpu_usage() {
   std::string cpu_line;
   std::getline(stat_file, cpu_line);
   uint64_t user_time, user_nice_time, kernel_time, idle_time;
-  std::sscanf(cpu_line.c_str(), "cpu %llu %llu %llu %llu", &user_time, &user_nice_time, &kernel_time, &idle_time);
+  std::sscanf(cpu_line.c_str(), "cpu %lu %lu %lu %lu", &user_time, &user_nice_time, &kernel_time, &idle_time);
   stat_file.close();
 
   auto used = (user_time - last_user_time) + (user_nice_time - last_user_nice_time) + (kernel_time - last_kernel_time);
@@ -195,34 +195,82 @@ float get_process_cpu_usage() {
   Fail("Can't use sys/times.h on non-Linux systems");
 }
 
-struct MemoryUsage {
+struct SystemMemoryUsage {
   int64_t total_ram;
   int64_t total_swap;
   int64_t total_memory;
-  int64_t used_ram;
-  int64_t used_swap;
-  int64_t used_memory;
+  int64_t free_ram;
+  int64_t free_swap;
+  int64_t free_memory;
 };
 
-MemoryUsage get_system_memory_usage() {
+SystemMemoryUsage get_system_memory_usage() {
 #if defined(__linux__)
 
   struct sysinfo memory_info;
   sysinfo(&memory_info);
 
-  MemoryUsage memory_usage;
+  SystemMemoryUsage memory_usage;
   memory_usage.total_ram = memory_info.totalram * memory_info.mem_unit;
   memory_usage.total_swap = memory_info.totalswap * memory_info.mem_unit;
-  memory_usage.used_ram = (memory_info.totalram - memory_info.freeram) * memory_info.mem_unit;
-  memory_usage.used_swap = (memory_info.totalswap - memory_info.freeswap) * memory_info.mem_unit;
+  memory_usage.free_ram = memory_info.freeram * memory_info.mem_unit;
+  memory_usage.free_swap = memory_info.freeswap * memory_info.mem_unit;
   memory_usage.total_memory = memory_usage.total_ram + memory_usage.total_swap;
-  memory_usage.used_memory = memory_usage.used_ram + memory_usage.used_swap;
+  memory_usage.free_memory = memory_usage.free_ram + memory_usage.free_swap;
 
   return memory_usage;
 
 #endif
 
   Fail("Can't use sys/sysinfo.h on non-Linux systems");
+}
+
+int64_t int_from_string(std::string input_string) {
+  size_t index = 0;
+  size_t begin = 0, end = input_string.length() - 1;
+
+  for (; index < input_string.length(); ++index) {
+    if (isdigit(input_string[index])) {
+      begin = index;
+      break;
+    }
+  }
+  for (; index < input_string.length(); ++index) {
+    if (!isdigit(input_string[index])) {
+      end = index;
+      break;
+    }
+  }
+  return std::stol(input_string.substr(begin, end - begin));
+}
+
+struct ProcessMemoryUsage {
+  int64_t virtual_memory;
+  int64_t physical_memory;
+};
+
+ProcessMemoryUsage get_process_memory_usage() {
+#if defined(__linux__)
+
+  std::ifstream self_status_file;
+  self_status_file.open("/proc/self/status", std::ifstream::in);
+
+  ProcessMemoryUsage memory_usage;
+  for (std::string self_status_line; std::getline(self_status_file, self_status_line);) {
+    if (self_status_line.rfind("VmSize", 0) == 0) {
+      memory_usage.virtual_memory = int_from_string(self_status_line) * 1000;
+    } else if (self_status_line.rfind("VmRSS", 0) == 0) {
+      memory_usage.physical_memory = int_from_string(self_status_line) * 1000;
+    }
+  }
+
+  self_status_file.close();
+
+  return memory_usage;
+
+#endif
+
+  Fail("Can't use /proc/self/status on non-Linux systems");
 }
 
 auto gather_workload_meta_data(const std::shared_ptr<Table>& meta_table) {
@@ -232,9 +280,11 @@ auto gather_workload_meta_data(const std::shared_ptr<Table>& meta_table) {
   auto process_cpu_usage = get_process_cpu_usage();
   auto load_avg = get_load_avg();
   auto system_memory_usage = get_system_memory_usage();
+  auto process_memory_usage = get_process_memory_usage();
 
   meta_table->append({system_cpu_usage, process_cpu_usage, load_avg.load_1_min, load_avg.load_5_min,
-                      load_avg.load_15_min, system_memory_usage.used_ram, system_memory_usage.total_ram});
+                      load_avg.load_15_min, system_memory_usage.total_ram, system_memory_usage.free_ram,
+                      process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
 
 #endif
 }
@@ -362,8 +412,10 @@ std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
                                               {"load_average_1_min", DataType::Float, false},
                                               {"load_average_5_min", DataType::Float, false},
                                               {"load_average_15_min", DataType::Float, false},
-                                              {"ram_used", DataType::Long, false},
-                                              {"ram_total", DataType::Long, false}};
+                                              {"ram_total", DataType::Long, false},
+                                              {"ram_free", DataType::Long, false},
+                                              {"virtual_memory", DataType::Long, false},
+                                              {"physical_memory", DataType::Long, false}};
   //  ,
   //  {"ram_used_percent", DataType::Float, false},
   //  {"swap_used_percent", DataType::Float, false},
