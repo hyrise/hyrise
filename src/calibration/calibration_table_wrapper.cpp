@@ -1,5 +1,4 @@
 #include <storage/base_encoded_segment.hpp>
-#include <operators/export_csv.hpp>
 #include "calibration_table_wrapper.hpp"
 
 namespace opossum {

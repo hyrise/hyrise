@@ -63,7 +63,7 @@ namespace opossum {
       const auto column_data_types = table->get_table()->column_data_types();
 
       for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        // Column specfic values
+        // Column specific values
         const auto column = stored_table_node->get_column(column_names.at(column_id));
         const auto distribution = table->get_column_data_distribution(column_id);
         const auto step_size = (distribution.max_value - distribution.min_value) / selectivity_resolution;
