@@ -26,12 +26,10 @@ class TableGenerator {
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> generate() const;
 
  private:
-  std::vector<DataType> _data_types_collection;
-  std::vector<SegmentEncodingSpec> _segment_encoding_spec_collection;
   std::vector<ColumnDataDistribution> _column_data_distribution_collection;
   std::vector<int> _chunk_offsets;
   std::vector<int> _row_counts;
-  std::vector<std::string> _column_names;
+  std::vector<ColumnSpecification> _column_specs;
 };
 
 }  // namespace opossum
