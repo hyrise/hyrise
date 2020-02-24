@@ -118,7 +118,6 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
       }
     } break;
 
-    case JoinMode::Intersect:
     case JoinMode::Semi: {
       for (const auto& left_tuple : left_tuples) {
         const auto has_match = std::any_of(right_tuples.begin(), right_tuples.end(), [&](const auto& right_tuple) {
@@ -131,7 +130,6 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
       }
     } break;
 
-    case JoinMode::Except:
     case JoinMode::AntiNullAsTrue:
     case JoinMode::AntiNullAsFalse: {
       for (const auto& left_tuple : left_tuples) {
@@ -170,15 +168,8 @@ bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicat
   const auto variant_right = tuple_right[predicate.column_ids.second];
 
   if (variant_is_null(variant_left) || variant_is_null(variant_right)) {
-    if (_mode == JoinMode::AntiNullAsTrue) {
-      return true;
-    }
-
     // AntiNullAsTrue is the only JoinMode that treats null-booleans as TRUE, all others treat it as FALSE
-    if (variant_is_null(variant_left) && variant_is_null(variant_right)) {
-      return _mode == JoinMode::Intersect || _mode == JoinMode::Except;
-    }
-    return false;
+    return _mode == JoinMode::AntiNullAsTrue;
   }
 
   resolve_data_type(data_type_from_all_type_variant(variant_left), [&](const auto data_type_left_t) {

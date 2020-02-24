@@ -68,13 +68,13 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
-    case LQPNodeType::Export:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
     case LQPNodeType::Root:
     case LQPNodeType::Sort:
     case LQPNodeType::StaticTable:
     case LQPNodeType::StoredTable:
+    case LQPNodeType::Union:
     case LQPNodeType::Validate:
     case LQPNodeType::Mock: {
       for (const auto& expression : node->node_expressions) {
@@ -148,18 +148,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
                     "Expected binary predicate for join");
         locally_required_expressions.emplace(predicate->arguments[0]);
         locally_required_expressions.emplace(predicate->arguments[1]);
-      }
-    } break;
-
-    case LQPNodeType::Union:
-    case LQPNodeType::Intersect:
-    case LQPNodeType::Except: {
-      for (const auto& expression : node->left_input()->column_expressions()) {
-        locally_required_expressions.emplace(expression);
-      }
-
-      for (const auto& expression : node->right_input()->column_expressions()) {
-        locally_required_expressions.emplace(expression);
       }
     } break;
 

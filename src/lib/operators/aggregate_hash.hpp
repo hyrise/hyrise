@@ -74,11 +74,10 @@ using AggregateResultIdMap =
     ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
                          AggregateResultIdMapAllocator<AggregateKey>>;
 
-// The key type that is used for the aggregation map.
+/*
+The key type that is used for the aggregation map.
+*/
 using AggregateKeyEntry = uint64_t;
-
-// A dummy type used as AggregateKey if no GROUP BY columns are present
-struct EmptyAggregateKey {};
 
 template <typename AggregateKey>
 using AggregateKeys = std::vector<AggregateKey>;
@@ -141,11 +140,6 @@ class AggregateHash : public AbstractAggregateOperator {
 }  // namespace opossum
 
 namespace std {
-template <>
-struct hash<opossum::EmptyAggregateKey> {
-  size_t operator()(const opossum::EmptyAggregateKey& key) const { return 0; }
-};
-
 template <>
 struct hash<std::vector<opossum::AggregateKeyEntry>> {
   size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {

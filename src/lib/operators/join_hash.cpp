@@ -34,7 +34,6 @@ bool JoinHash::supports(const JoinConfiguration config) {
   // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't
   // so far determine a case/query where we'd need them.
   return config.predicate_condition == PredicateCondition::Equals && config.join_mode != JoinMode::FullOuter &&
-         config.join_mode != JoinMode::Intersect && config.join_mode != JoinMode::Except &&
          (config.join_mode != JoinMode::AntiNullAsTrue || !config.secondary_predicates);
 }
 
@@ -440,12 +439,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
                                                                      probe_side_pos_lists, *_build_input_table,
                                                                      *_probe_input_table, _secondary_predicates);
-        break;
-
-      case JoinMode::Intersect:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Intersect>(radix_probe_column, hash_tables,
-                                                                          probe_side_pos_lists, *_build_input_table,
-                                                                          *_probe_input_table, _secondary_predicates);
         break;
 
       case JoinMode::AntiNullAsTrue:
