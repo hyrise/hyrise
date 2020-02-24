@@ -90,7 +90,8 @@ const std::string& JoinNestedLoop::name() const {
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate);
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                          _secondary_predicates);
 }
 
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

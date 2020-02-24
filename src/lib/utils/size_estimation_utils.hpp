@@ -43,7 +43,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   const auto base_size = sizeof(V);
 
   // Early out
-  if (string_vector.empty()) return base_size;
+  if (string_vector.empty()) return base_size + (string_vector.capacity() * sizeof(StringType));
 
   constexpr auto sampling_factor = 0.005f;
   constexpr auto min_rows = size_t{10};
@@ -83,7 +83,8 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
 
   const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
   return base_size +
-         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)));
+         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)) +
+                             (string_vector.capacity() - string_vector.size()) * sizeof(StringType));
 }
 
 }  // namespace opossum
