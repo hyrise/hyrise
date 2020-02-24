@@ -562,6 +562,8 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/meta_table_generator.cpp
+    utils/meta_table_generator.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/pausable_loop_thread.cpp
