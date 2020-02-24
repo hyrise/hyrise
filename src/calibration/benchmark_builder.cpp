@@ -38,12 +38,15 @@ namespace opossum {
         case BenchmarkType::JOB:    _run_job(SCALE_FACTOR); break;
       }
 
-      for (const auto& [query_string, physical_query_plan] : *SQLPipelineBuilder::default_pqp_cache) {
+      auto& pqp_cache = Hyrise::get().default_pqp_cache;
+
+      for (auto pqp_entry = pqp_cache->unsafe_begin(); pqp_entry != pqp_cache->unsafe_end(); ++pqp_entry) {
+        const auto& [query_string, physical_query_plan] = *pqp_entry;
         _measurement_export.export_to_csv(physical_query_plan);
       }
 
-      //Clear pqp cache for next benchmark
-      SQLPipelineBuilder::default_pqp_cache->clear();
+      // Clear pqp cache for next benchmark
+      pqp_cache->clear();
 
       const std::vector<std::string> table_names = Hyrise::get().storage_manager.table_names();
       for (const auto &table_name : table_names){

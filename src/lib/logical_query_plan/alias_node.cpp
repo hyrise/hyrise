@@ -13,14 +13,15 @@ AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& exp
   Assert(expressions.size() == aliases.size(), "Number of expressions and number of aliases has to be equal.");
 }
 
-std::string AliasNode::description() const {
+std::string AliasNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
   std::stringstream stream;
   stream << "[Alias] ";
   for (auto column_id = ColumnID{0}; column_id < node_expressions.size(); ++column_id) {
-    if (node_expressions[column_id]->as_column_name() == aliases[column_id]) {
+    if (node_expressions[column_id]->description(expression_mode) == aliases[column_id]) {
       stream << aliases[column_id];
     } else {
-      stream << node_expressions[column_id]->as_column_name() << " AS " << aliases[column_id];
+      stream << node_expressions[column_id]->description(expression_mode) << " AS " << aliases[column_id];
     }
 
     if (column_id + 1u < node_expressions.size()) stream << ", ";
@@ -32,7 +33,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expres
   return node_expressions;
 }
 
-size_t AliasNode::_shallow_hash() const {
+size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {
     boost::hash_combine(hash, alias);

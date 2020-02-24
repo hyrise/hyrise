@@ -253,7 +253,7 @@ void Insert::_on_rollback_records() {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->begin_cids[chunk_offset] = 0u;
+      mvcc_data->set_begin_cid(chunk_offset, 0u);
       mvcc_data->tids[chunk_offset] = 0u;
     }
   }

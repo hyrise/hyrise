@@ -28,8 +28,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  SQLPipelineBuilder::default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  SQLPipelineBuilder::default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
@@ -371,7 +371,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   // Gather information on the (estimated) table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->estimate_memory_usage();
+    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled);
   }
 
   nlohmann::json summary{

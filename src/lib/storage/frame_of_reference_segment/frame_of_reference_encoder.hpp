@@ -52,32 +52,52 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
       // a temporary storage to hold the values of one block
       auto current_value_block = std::array<T, block_size>{};
 
+      // store iterator to the null values written within this block
+      auto current_block_null_values_it = null_values.end();
+
       while (segment_it != segment_end) {
+        auto min_value = std::numeric_limits<T>::max();
+        auto max_value = std::numeric_limits<T>::lowest();
+        auto block_contains_values = false;
+
         auto value_block_it = current_value_block.begin();
         for (; value_block_it != current_value_block.end() && segment_it != segment_end;
              ++value_block_it, ++segment_it) {
           const auto segment_value = *segment_it;
 
-          *value_block_it = segment_value.is_null() ? T{0u} : segment_value.value();
-          null_values.push_back(segment_value.is_null());
+          const auto value = segment_value.value();
+          const auto value_is_null = segment_value.is_null();
+          *value_block_it = value_is_null ? T{0u} : value;
+          null_values.push_back(value_is_null);
+
+          if (!value_is_null) {
+            min_value = std::min(min_value, value);
+            max_value = std::max(max_value, value);
+          }
+          block_contains_values |= !value_is_null;
         }
 
         // The last value block might not be filled completely
         const auto this_value_block_end = value_block_it;
 
-        const auto [min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);
+        if (block_contains_values) {
+          // Make sure that the largest offset fits into uint32_t (required for vector compression).
+          Assert(static_cast<std::make_unsigned_t<T>>(max_value - min_value) <= std::numeric_limits<uint32_t>::max(),
+                 "Value range in block must fit into uint32_t.");
+        }
 
-        // Make sure that the largest offset fits into uint32_t (required for vector compression.)
-        Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),
-               "Value range in block must fit into uint32_t.");
-
-        const auto minimum = *min_it;
-        block_minima.push_back(minimum);
+        block_minima.push_back(min_value);
 
         value_block_it = current_value_block.begin();
-        for (; value_block_it != this_value_block_end; ++value_block_it) {
-          const auto value = *value_block_it;
-          const auto offset = static_cast<uint32_t>(value - minimum);
+        for (; value_block_it != this_value_block_end; ++value_block_it, ++current_block_null_values_it) {
+          auto value = *value_block_it;
+          if (*current_block_null_values_it) {
+            // To ensure NULL values do not interfere with the min/max calculation (needed to calculate (i) the frame
+            // offset and (ii) the required width of the compressed vector), we set them to the minimum value. As NULL
+            // values are stored as zeros, we might run in an overflow of the uint32_t when minimum > 0.
+            value = min_value;
+          }
+          const auto offset = static_cast<uint32_t>(value - min_value);
           offset_values.push_back(offset);
           max_offset = std::max(max_offset, offset);
         }

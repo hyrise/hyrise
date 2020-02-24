@@ -16,6 +16,7 @@
 #include "delete_node.hpp"
 #include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
+#include "export_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -25,13 +26,16 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_node.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
+#include "operators/export.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
@@ -125,6 +129,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
+    case LQPNodeType::Import:             return _translate_import_node(node);
+    case LQPNodeType::Export:             return _translate_export_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
       // clang-format on
 
@@ -348,34 +354,24 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   const auto input_operator = translate_node(node->left_input());
 
-  // Create AggregateColumnDefinitions from AggregateExpressions
-  // All aggregate_pqp_expressions have to be AggregateExpressions and their argument() has to be a PQPColumnExpression
-  std::vector<AggregateColumnDefinition> aggregate_column_definitions;
-  aggregate_column_definitions.reserve(aggregate_node->aggregate_expressions_begin_idx);
+  std::vector<std::shared_ptr<AggregateExpression>> pqp_aggregate_expressions;
+  pqp_aggregate_expressions.reserve(aggregate_node->node_expressions.size() -
+                                    aggregate_node->aggregate_expressions_begin_idx);
   for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
        expression_idx < aggregate_node->node_expressions.size(); ++expression_idx) {
-    const auto& expression = aggregate_node->node_expressions[expression_idx];
+    const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
-    Assert(
-        expression->type == ExpressionType::Aggregate,
-        "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");
+    Assert(lqp_expression->type == ExpressionType::Aggregate,
+           "Expression '" + lqp_expression->as_column_name() +
+               "' used as AggregateExpression is not an AggregateExpression");
 
-    const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
-
-    // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
-    // arguments
-    const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*aggregate_expression->argument());
-    auto argument_column_id = ColumnID{};
-    if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
-      // Handle COUNT(*)
-      argument_column_id = INVALID_COLUMN_ID;
-    } else {
-      argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
-    }
-    aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
+    const auto pqp_expression = _translate_expression(lqp_expression, node->left_input());
+    const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
+    pqp_aggregate_expressions.emplace_back(aggregate_expression);
   }
 
-  // Create GroupByColumns from the GroupBy expressions
+  // Create GroupByColumns from the GroupBy expressions. For now, we expect all GroupBy expressions to be already
+  // present, i.e., we do not calculate them on the fly.
   std::vector<ColumnID> group_by_column_ids;
   group_by_column_ids.reserve(aggregate_node->node_expressions.size() -
                               aggregate_node->aggregate_expressions_begin_idx);
@@ -388,7 +384,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
@@ -484,6 +480,22 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
+  return std::make_shared<Import>(import_node->file_name, import_node->table_name, Chunk::DEFAULT_SIZE,
+                                  import_node->file_type);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
+  const auto export_node = std::dynamic_pointer_cast<ExportNode>(node);
+  return std::make_shared<Export>(input_operator, export_node->file_name, export_node->file_type);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
     const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
@@ -514,6 +526,13 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
           std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
                                                 node->is_column_nullable(node->get_column_id(*referenced_expression)),
                                                 referenced_expression->as_column_name());
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    // Resolve COUNT(*)
+    if (AggregateExpression::is_count_star(*expression)) {
+      const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
+      expression = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }
 

@@ -9,10 +9,10 @@
 
 namespace opossum {
 
-BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition predicate_condition,
+BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition init_predicate_condition,
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
                                                      const std::shared_ptr<AbstractExpression>& right_operand)
-    : AbstractPredicateExpression(predicate_condition, {left_operand, right_operand}) {
+    : AbstractPredicateExpression(init_predicate_condition, {left_operand, right_operand}) {
 #if HYRISE_DEBUG
   const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
                                            PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
@@ -33,12 +33,12 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const
                                                      right_operand()->deep_copy());
 }
 
-std::string BinaryPredicateExpression::as_column_name() const {
+std::string BinaryPredicateExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
-  stream << _enclose_argument_as_column_name(*left_operand()) << " ";
+  stream << _enclose_argument(*left_operand(), mode) << " ";
   stream << predicate_condition << " ";
-  stream << _enclose_argument_as_column_name(*right_operand());
+  stream << _enclose_argument(*right_operand(), mode);
 
   return stream.str();
 }

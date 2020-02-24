@@ -10,17 +10,15 @@ namespace opossum {
       for (EncodingType encoding_type : config->encoding_types){
         if (encoding_supports_data_type(encoding_type, data_type)){
           for (ColumnDataDistribution column_data_distribution : config->column_data_distribution){
-              _data_types_collection.emplace_back(data_type);
-              _segment_encoding_spec_collection.emplace_back(SegmentEncodingSpec(encoding_type));
-              _column_data_distribution_collection.emplace_back(column_data_distribution);
-
-              std::stringstream column_name_str;
-
-              column_name_str << data_type << "_"
+              std::stringstream column_name_stringstream;
+              column_name_stringstream << data_type << "_"
                               << encoding_type << "_"
                               << column_data_distribution;
 
-              _column_names.emplace_back(column_name_str.str());
+              auto column_name = column_name_stringstream.str();
+
+              _column_data_distribution_collection.emplace_back(column_data_distribution);
+              _column_specs.emplace_back(ColumnSpecification(column_data_distribution, data_type, encoding_type, column_name));
           }
         }  // if encoding is supported
       }
@@ -39,12 +37,9 @@ namespace opossum {
     for (int chunk_size : _chunk_offsets) {
       for (int row_count : _row_counts){
         const auto table = table_generator->generate_table(
-                _column_data_distribution_collection,
-                _data_types_collection,
+                _column_specs,
                 row_count,
                 chunk_size,
-                {_segment_encoding_spec_collection},
-                {_column_names},
                 UseMvcc::Yes);    // MVCC = Multiversion concurrency control
 
         const std::string table_name = "_cmc_" + std::to_string(chunk_size) + "_" + std::to_string(row_count);

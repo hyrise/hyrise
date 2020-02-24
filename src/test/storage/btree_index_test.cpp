@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
@@ -80,17 +79,17 @@ TEST_F(BTreeIndexTest, IndexProbes) {
     MemoryConsumptionVeryShortStringEmpty
   Tested functions:
     size_t memory_consumption() const;
-  
+
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|
   |[A] index is empty               |    true |   false |
   |[B] index has NULL positions     |    true |   false |
   |[C] index has non-NULL positions |    true |   false |
-  
+
   Base Choice:
     A2, B1, C1
   Further derived combinations:
-    A2, B1, C2 
+    A2, B1, C2
     A2, B2, C1
    (A1, B1, C1) --infeasible---+
     A1, B2, C2 <-alternative-<-+
@@ -129,7 +128,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
 // A2, B1, C2
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
   const auto& dict_segment_string_nulls =
-      BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
+      create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
   const auto& index =
       std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_nulls}));
 
@@ -159,7 +158,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
 
 // A2, B1, C1
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
-  const auto& dict_segment_string_mixed = BaseTest::create_dict_segment_by_type<pmr_string>(
+  const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
                          "b", "z", "x", std::nullopt});
   const auto& index =
@@ -191,7 +190,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
 
 // A1, B2, C2
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
-  const auto& dict_segment_string_empty = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
+  const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
   const auto& index =
       std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_empty}));
 
@@ -272,7 +271,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +    0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +    1 SegmentIndexType
   // = 1047
-  EXPECT_EQ(index->memory_consumption(), 1047u);
+  EXPECT_EQ(index->memory_consumption(), 1147u);
 #else
   // libc++ Only one string exceeds the reserved space (22 characters) for small strings:
   //   264 (reported by cpp_btree implementation)
@@ -283,7 +282,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 370
-  EXPECT_EQ(index->memory_consumption(), 370u);
+  EXPECT_EQ(index->memory_consumption(), 441u);
 #endif
 }
 

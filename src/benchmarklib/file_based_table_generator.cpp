@@ -4,8 +4,8 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
-#include "import_export/csv_parser.hpp"
-#include "operators/import_binary.hpp"
+#include "import_export/binary/binary_parser.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
@@ -84,7 +84,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     // Pick a source file to load a table from, prefer the binary version
     if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
       std::cout << "from " << *table_info.binary_file_path << std::flush;
-      table_info.table = ImportBinary::read_binary(*table_info.binary_file_path);
+      table_info.table = BinaryParser::parse(*table_info.binary_file_path);
       table_info.loaded_from_binary = true;
     } else {
       std::cout << "from " << *table_info.text_file_path << std::flush;
@@ -92,7 +92,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       if (extension == ".tbl") {
         table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
       } else if (extension == ".csv") {
-        table_info.table = CsvParser{}.parse(*table_info.text_file_path, std::nullopt, _benchmark_config->chunk_size);
+        table_info.table = CsvParser::parse(*table_info.text_file_path, _benchmark_config->chunk_size);
       } else {
         Fail("Unknown textual file format. This should have been caught earlier.");
       }

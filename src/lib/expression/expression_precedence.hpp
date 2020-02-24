@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-// Precedence levels for parenthesizing expression arguments. See AbstractExpression::_enclose_argument_as_column_name()
+// Precedence levels for parenthesizing expression arguments. See AbstractExpression::_enclose_argument
 enum class ExpressionPrecedence : uint32_t {
   Highest = 0,
   UnaryPredicate,

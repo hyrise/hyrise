@@ -50,7 +50,8 @@ std::shared_ptr<BaseSegment> ReferenceSegment::copy_using_allocator(const Polymo
   Fail("Cannot migrate a ReferenceSegment");
 }
 
-size_t ReferenceSegment::estimate_memory_usage() const {
+size_t ReferenceSegment::memory_usage(const MemoryUsageCalculationMode) const {
+  // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
   return sizeof(*this) + _pos_list->size() * sizeof(decltype(_pos_list)::element_type::value_type);
 }
 

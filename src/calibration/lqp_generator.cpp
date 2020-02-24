@@ -43,7 +43,7 @@ namespace opossum {
         if (_enable_column_vs_column_scans) {
            _generate_column_vs_column_scans(table);
         }
-	      
+
         for (int selectivity_step = 0; selectivity_step < selectivity_resolution; selectivity_step++) {
           // in this for-loop we iterate up and go from 100% selectivity to 0% by increasing the lower_bound in steps
           // for any step there

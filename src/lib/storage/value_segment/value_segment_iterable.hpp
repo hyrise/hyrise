@@ -23,7 +23,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       functor(begin, end);
     } else {
       auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
-      auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend()};
+      auto end = NonNullIterator{_segment.values().cbegin(), _segment.values().cend()};
       functor(begin, end);
     }
   }
@@ -199,18 +199,5 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     NullValueVectorIterator _null_values_begin_it;
   };
 };
-
-template <typename T>
-struct is_value_segment_iterable {
-  static constexpr auto value = false;
-};
-
-template <template <typename T> typename Iterable, typename T>
-struct is_value_segment_iterable<Iterable<T>> {
-  static constexpr auto value = std::is_same_v<ValueSegmentIterable<T>, Iterable<T>>;
-};
-
-template <typename T>
-inline constexpr bool is_value_segment_iterable_v = is_value_segment_iterable<T>::value;
 
 }  // namespace opossum

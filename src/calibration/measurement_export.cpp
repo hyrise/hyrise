@@ -39,11 +39,9 @@ namespace opossum {
         case OperatorType::Alias:               _export_generic(op);    break;
         case OperatorType::Delete:              _export_generic(op);    break;
         case OperatorType::Difference:          _export_generic(op);    break;
-        case OperatorType::ExportBinary:        _export_generic(op);    break;
-        case OperatorType::ExportCsv:           _export_generic(op);    break;
+        case OperatorType::Export:              _export_generic(op);    break;
         case OperatorType::GetTable:            _export_generic(op);    break;
-        case OperatorType::ImportBinary:        _export_generic(op);    break;
-        case OperatorType::ImportCsv:           _export_generic(op);    break;
+        case OperatorType::Import:              _export_generic(op);    break;
         case OperatorType::IndexScan:           _export_generic(op);    break;
         case OperatorType::Insert:              _export_generic(op);    break;
         case OperatorType::JoinHash:            _export_generic(op);    break;
@@ -175,11 +173,9 @@ namespace opossum {
         case OperatorType::Alias:               return _generic_header();
         case OperatorType::Delete:              return _generic_header();
         case OperatorType::Difference:          return _generic_header();
-        case OperatorType::ExportBinary:        return _generic_header();
-        case OperatorType::ExportCsv:           return _generic_header();
+        case OperatorType::Export:              return _generic_header();
         case OperatorType::GetTable:            return _generic_header();
-        case OperatorType::ImportBinary:        return _generic_header();
-        case OperatorType::ImportCsv:           return _generic_header();
+        case OperatorType::Import:              return _generic_header();
         case OperatorType::IndexScan:           return _generic_header();
         case OperatorType::Insert:              return _generic_header();
         case OperatorType::JoinHash:            return _generic_header();

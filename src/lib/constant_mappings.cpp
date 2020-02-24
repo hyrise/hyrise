@@ -22,6 +22,7 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::Count, "COUNT"},
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
         {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
+        {AggregateFunction::Any, "ANY"},
     });
 
 const boost::bimap<FunctionType, std::string> function_type_to_string =
@@ -43,6 +44,9 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string =
         {EncodingType::Unencoded, "Unencoded"},
     });
 
+const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileType, std::string>(
+    {{FileType::Tbl, "Tbl"}, {FileType::Csv, "Csv"}, {FileType::Binary, "Binary"}, {FileType::Auto, "Auto"}});
+
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
@@ -62,11 +66,9 @@ const boost::bimap<OperatorType, std::string> operator_type_to_string =
         {OperatorType::Alias, "Alias" },
         {OperatorType::Delete, "Delete" },
         {OperatorType::Difference, "Difference" },
-        {OperatorType::ExportBinary, "ExportBinary" },
-        {OperatorType::ExportCsv, "ExportCSV" },
+        {OperatorType::Export, "Export" },
         {OperatorType::GetTable, "GetTable" },
-        {OperatorType::ImportBinary, "ImportBinary" },
-        {OperatorType::ImportCsv, "ImportCSV" },
+        {OperatorType::Import, "Import" },
         {OperatorType::IndexScan, "IndexScan" },
         {OperatorType::Insert, "Insert" },
         {OperatorType::JoinHash, "JoinHash" },
@@ -101,31 +103,59 @@ const boost::bimap<CompressedVectorType, std::string> compressed_vector_type_to_
         {CompressedVectorType::SimdBp128, "SimdBp128"},
 });
 
-std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
+std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
 }
 
-std::ostream& operator<<(std::ostream& stream, FunctionType function_type) {
+std::ostream& operator<<(std::ostream& stream, const OperatorType opt) {
+  return stream << operator_type_to_string.left.at(opt);
+}
+
+std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {
   return stream << function_type_to_string.left.at(function_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, DataType data_type) {
+std::ostream& operator<<(std::ostream& stream, const DataType data_type) {
   return stream << data_type_to_string.left.at(data_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
+std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type) {
   return stream << encoding_type_to_string.left.at(encoding_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
+std::ostream& operator<<(std::ostream& stream, const FileType file_type) {
+  return stream << file_type_to_string.left.at(file_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type) {
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, OperatorType operator_type) {
-  return stream << operator_type_to_string.left.at(operator_type);
+std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type) {
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedSize4ByteAligned: {
+      stream << "FixedSize4ByteAligned";
+      break;
+    }
+    case CompressedVectorType::FixedSize2ByteAligned: {
+      stream << "FixedSize2ByteAligned";
+      break;
+    }
+    case CompressedVectorType::FixedSize1ByteAligned: {
+      stream << "FixedSize1ByteAligned";
+      break;
+    }
+    case CompressedVectorType::SimdBp128: {
+      stream << "SimdBp128";
+      break;
+    }
+    default:
+      break;
+  }
+  return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_data_distribution) {
+std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution) {
     stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
     switch (column_data_distribution.distribution_type){
         case DataDistributionType::Uniform:
@@ -145,7 +175,7 @@ std::ostream& operator<<(std::ostream& stream, ColumnDataDistribution column_dat
     return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
+std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec spec) {
   stream << spec.encoding_type;
   if (spec.vector_compression_type) {
     stream << "-" << *spec.vector_compression_type;
@@ -154,7 +184,4 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) 
   return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, CompressedVectorType compressed_vector_type) {
-  return stream << compressed_vector_type_to_string.left.at(compressed_vector_type);
-}
 }  // namespace opossum
