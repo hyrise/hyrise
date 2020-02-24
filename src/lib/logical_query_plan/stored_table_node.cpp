@@ -130,6 +130,27 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::c
   return lqp_constraints;
 }
 
+const std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
+  auto fds = std::vector<FunctionalDependency>();
+  const auto unique_constraints = this->constraints();
+  const auto column_expressions = this->column_expressions();
+
+  for(auto& constraint : *unique_constraints) {
+    auto left = constraint.column_expressions;
+    auto right = ExpressionUnorderedSet{};
+
+    // Get functional dependent column expressions
+    std::set_difference(column_expressions.begin(), column_expressions.end(), left.begin(), left.end(), right.begin());
+
+    // Create functional dependency
+    if(right.size() > 0) {
+      fds.emplace_back(left, right);
+    }
+  }
+
+  return fds;
+}
+
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 

@@ -201,4 +201,21 @@ TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(_stored_table_node->constraints()->empty());
 }
 
+TEST_F(StoredTableNodeTest, FunctionalDependenciesTest) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
+
+  const auto& fds = _stored_table_node->functional_dependencies();
+  EXPECT_TRUE(fds.size() == 1);
+  const auto fd = fds.at(0);
+
+  // Check left
+  EXPECT_TRUE(fd.first.size() == 1 && fd.first.contains(lqp_column_(_a)));
+
+  // Check right
+  EXPECT_TRUE(fd.second.size() == 2);
+  EXPECT_TRUE(fd.second.contains(lqp_column_(_b)));
+  EXPECT_TRUE(fd.second.contains(lqp_column_(_c)));
+}
+
 }  // namespace opossum

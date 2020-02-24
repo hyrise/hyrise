@@ -12,6 +12,7 @@
 namespace opossum {
 
 class TableStatistics;
+using FunctionalDependency = std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>;
 
 /**
  * Represents a Table from the StorageManager in an LQP
@@ -43,6 +44,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
   const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override;
+  const std::vector<FunctionalDependency> functional_dependencies() const;
 
   const std::string table_name;
 
