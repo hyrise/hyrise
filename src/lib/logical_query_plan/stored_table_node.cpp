@@ -118,14 +118,12 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::c
       for (const auto& column_id : table_constraint.columns) {
         const auto column_expr_opt = find_column_expression(column_id);
         Assert(column_expr_opt, "Did not find column expression in LQPNode");
-        Assert(!(table_constraint.is_primary_key == IsPrimaryKey::Yes && is_column_nullable(column_id)),
-               "Primary Key constraint requires column(s) to be non-NULL.");
 
         constraint_column_expressions.insert(*column_expr_opt);
       }
 
       // Create ExpressionsConstraintDefinition
-      lqp_constraints->emplace(constraint_column_expressions, table_constraint.is_primary_key);
+      lqp_constraints->emplace(constraint_column_expressions);
     }
   }
 

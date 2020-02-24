@@ -109,7 +109,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> MockNode::constrai
       }
 
       // Create ExpressionsConstraintDefinition
-      lqp_constraints->emplace(constraint_column_expressions, table_constraint.is_primary_key);
+      lqp_constraints->emplace(constraint_column_expressions);
     }
   }
 

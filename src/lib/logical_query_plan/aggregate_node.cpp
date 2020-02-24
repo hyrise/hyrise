@@ -122,7 +122,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
     }
   }
   // Create ExpressionsConstraintDefinition
-  aggregate_lqp_constraints->emplace(group_by_columns, IsPrimaryKey::No, aggregate_columns);
+  aggregate_lqp_constraints->emplace(group_by_columns); // TODO(Julian) ignore functional dependency? (aggregate_columns)
 
   return aggregate_lqp_constraints;
 }

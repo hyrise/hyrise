@@ -17,8 +17,7 @@ static void check_table_constraint_representation(
     const auto matching_lqp_constraint = std::find_if(
         lqp_constraints->cbegin(), lqp_constraints->cend(), [&](const ExpressionsConstraintDefinition& lqp_constraint) {
           // Basic comparison
-          if (table_constraint.is_primary_key != lqp_constraint.is_primary_key ||
-              table_constraint.columns.size() != lqp_constraint.column_expressions.size())
+          if (table_constraint.columns.size() != lqp_constraint.column_expressions.size())
             return false;
 
           // In-depth comparison, verifying column ids
