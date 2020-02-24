@@ -81,9 +81,9 @@ TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions
 TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
   // Add two unique constraints to _mock_node1
   // Primary Key: a, b
-  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}};
   // Unique: c
-  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No};
+  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{2}}};
   _mock_node1->set_table_constraints(TableConstraintDefinitions{table_constraint_1, table_constraint_2});
   EXPECT_EQ(_mock_node1->constraints()->size(), 2);
 

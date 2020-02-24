@@ -115,9 +115,9 @@ TEST_F(AggregateNodeTest, ConstraintsMultiGroupBy) {
 
 TEST_F(AggregateNodeTest, ConstraintsForwarding) {
     // Unique: a
-    const auto table_constraint_1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}}, IsPrimaryKey::No};
+    const auto table_constraint_1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}}};
     // Unique: b
-    const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+    const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}};
 
     _mock_node->set_table_constraints({table_constraint_1, table_constraint_2});
 

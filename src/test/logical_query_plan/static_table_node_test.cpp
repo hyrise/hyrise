@@ -56,8 +56,8 @@ TEST_F(StaticTableNodeTest, ConstraintsEmpty) {
 
 TEST_F(StaticTableNodeTest, Constraints) {
   // Add two constraints
-  const auto constraint1 = TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::Yes};
-  const auto constraint2 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No};
+  const auto constraint1 = TableConstraintDefinition{{ColumnID{0}}};
+  const auto constraint2 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}};
   dummy_table->add_soft_unique_constraint(constraint1);
   dummy_table->add_soft_unique_constraint(constraint2);
   // Verify

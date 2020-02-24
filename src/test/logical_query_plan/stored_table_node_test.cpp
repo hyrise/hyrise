@@ -174,9 +174,9 @@ TEST_F(StoredTableNodeTest, Constraints) {
 TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No};
-  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-  const auto table_constraint_3 = TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No};
+  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}}};
+  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}};
+  const auto table_constraint_3 = TableConstraintDefinition{{ColumnID{2}}};
   table->add_soft_unique_constraint(table_constraint_1);
   table->add_soft_unique_constraint(table_constraint_2);
   table->add_soft_unique_constraint(table_constraint_3);

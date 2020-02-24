@@ -84,9 +84,9 @@ TEST_F(MockNodeTest, Constraints) {
   // Add constraints to MockNode
   // Primary Key: a, b
   const auto table_constraint1 =
-      TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+      TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}};
   // Unique: c
-  const auto table_constraint2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+  const auto table_constraint2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{2}}};
   const auto table_constraints = TableConstraintDefinitions{table_constraint1, table_constraint2};
   _mock_node_a->set_table_constraints(table_constraints);
 
