@@ -31,22 +31,25 @@ int main() {
   auto table_generator = TableGenerator(table_config);
   const auto tables = table_generator.generate();
 
-  auto const path_train = "./.data/train";
-  auto const path_test = "./.data/test";
+  auto const path_train = "./data/train";
+  auto const path_test = "./data/test";
 
   const auto measurement_export = MeasurementExport(path_train);
-  const auto lqp_generator = LQPGenerator();
+  auto lqp_generator = LQPGenerator();
   const auto table_export = TableExport(path_train);
 
   const auto benchmark_builder = BenchmarkBuilder(path_test);
 
   benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
 
-  for (const auto &table : tables){
+  for (const auto &table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
 
-    const auto lqps = lqp_generator.generate(OperatorType::TableScan, table);
+    lqp_generator.generate(OperatorType::TableScan, table);
+//    lqp_generator.generate(OperatorType::JoinHash, table);
+  }
 
+    const auto lqps = lqp_generator.get_lqps();
     // Execution of lpqs; In the future a good scheduler as replacement for following code would be awesome.
     for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
       const auto pqp = LQPTranslator{}.translate_node(lqp);
@@ -56,6 +59,8 @@ int main() {
       // Execute LQP directly after generation
       measurement_export.export_to_csv(pqp);
     }
+
+  for (const auto &table : tables){
     table_export.export_table(table);
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
