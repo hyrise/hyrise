@@ -2,8 +2,26 @@
 #include <fstream>
 #include <iostream>
 #include <thread>
+
+#if defined __linux__
+
 #include "sys/sysinfo.h"
 #include "sys/times.h"
+
+#elif defined __APPLE__
+
+#include "sys/sysctl.h"
+#include "sys/resource.h"
+#include "mach/mach_init.h"
+#include "mach/mach_error.h"
+#include "mach/mach_host.h"
+#include "mach/vm_map.h"
+#include "mach/mach_time.h"
+#include "mach/mach.h"
+#include "mach/vm_statistics.h"
+
+#endif
+
 #include "sys/types.h"
 
 #include "meta_table_manager.hpp"
@@ -100,7 +118,7 @@ struct LoadAvg {
 };
 
 LoadAvg get_load_avg() {
-#if defined(__linux__)
+#if defined __linux__
 
   std::ifstream load_avg_file;
   load_avg_file.open("/proc/loadavg", std::ifstream::in);
@@ -115,13 +133,26 @@ LoadAvg get_load_avg() {
 
   return {load_avg_values[0], load_avg_values[1], load_avg_values[2]};
 
+#elif defined __APPLE__
+
+  loadavg load_avg;
+  size_t size = sizeof(load_avg);
+  if (sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0) != 0) {
+    Fail("Unable to call sysctl vm.loadavg");
+  }
+
+  return {static_cast<float>(load_avg.ldavg[0]) / static_cast<float>(load_avg.fscale),
+          static_cast<float>(load_avg.ldavg[1]) / static_cast<float>(load_avg.fscale),
+          static_cast<float>(load_avg.ldavg[2]) / static_cast<float>(load_avg.fscale)};
+
 #endif
 
-  Fail("Can't read /proc/loadavg on non-Linux systems");
+  Fail("Method not implemented for this platform");
 }
 
 int get_cpu_count() {
-#if defined(__linux__)
+#if defined __linux__
+
   std::ifstream cpu_info_file;
   cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
 
@@ -133,13 +164,23 @@ int get_cpu_count() {
   cpu_info_file.close();
 
   return processors;
+
+#elif defined __APPLE__
+
+  uint32_t processors;
+  size_t size = sizeof(processors);
+  if (sysctlbyname("hw.ncpu", &processors, &size, nullptr, 0) != 0) {
+    Fail("Unable to call sysctl hw.ncpu");
+  }
+
+  return processors;
 #endif
 
-  Fail("Can't read /proc/cpuinfo on non-Linux systems");
+  Fail("Method not implemented for this platform");
 }
 
 float get_system_cpu_usage() {
-#if defined(__linux__)
+#if defined __linux__
 
   static uint64_t last_user_time = 0u, last_user_nice_time = 0u, last_kernel_time = 0u, last_idle_time = 0u;
 
@@ -164,13 +205,40 @@ float get_system_cpu_usage() {
 
   return (100.0 * used) / (total * cpus);
 
+#elif defined __APPLE__
+
+  static uint64_t last_total_ticks = 0u, last_idle_ticks = 0u;
+
+  host_cpu_load_info_data_t cpu_info;
+  mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
+  if (host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count) != KERN_SUCCESS) {
+    Fail("Unable to access host_statistics");
+  }
+
+  uint64_t total_ticks = 0;
+  for (int cpu_state = 0; cpu_state <= CPU_STATE_MAX; ++cpu_state) {
+    total_ticks += cpu_info.cpu_ticks[cpu_state];
+  }
+  auto idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
+
+  auto total = total_ticks - last_total_ticks;
+  auto idle = idle_ticks - last_idle_ticks;
+
+  last_total_ticks = total_ticks;
+  last_idle_ticks = idle_ticks;
+
+  auto cpus = get_cpu_count();
+
+  return 100.0f * (1.0f - (static_cast<float>(idle) / static_cast<float>(total))) / cpus;
+
 #endif
 
-  Fail("Can't read /proc/stat on non-Linux systems");
+  Fail("Method not implemented for this platform");
 }
 
+
 float get_process_cpu_usage() {
-#if defined(__linux__)
+#if defined __linux__
 
   static clock_t last_clock_time = 0u, last_kernel_time = 0u, last_user_time = 0u;
   struct tms timeSample;
@@ -190,10 +258,38 @@ float get_process_cpu_usage() {
 
   return (100.0 * used) / (total * cpus);
 
+#elif defined __APPLE__
+
+  static uint64_t last_clock_time = 0u, last_system_time = 0u, last_user_time = 0u;
+
+  mach_timebase_info_data_t info;
+  mach_timebase_info(&info);
+
+  uint64_t clock_time = mach_absolute_time();
+
+  struct rusage resource_usage;
+  if (getrusage(RUSAGE_SELF, &resource_usage)) {
+    Fail("Unable to access rusage");
+  }
+
+  uint32_t nano = 1'000'000'000, micro = 1'000;
+  uint64_t system_time = resource_usage.ru_stime.tv_sec * nano + resource_usage.ru_stime.tv_usec * micro;
+  uint64_t user_time = resource_usage.ru_utime.tv_sec * nano + resource_usage.ru_utime.tv_usec * micro;
+
+  auto used = (user_time - last_user_time) + (system_time - last_system_time);
+  auto total = (clock_time - last_clock_time) * info.numer / info.denom;
+
+  last_clock_time = clock_time;
+  last_user_time = user_time;
+  last_system_time = system_time;
+
+  return (100.0f * used) / (total);
+
 #endif
 
-  Fail("Can't use sys/times.h on non-Linux systems");
+  Fail("Method not implemented for this platform");
 }
+
 
 struct SystemMemoryUsage {
   int64_t total_ram;
@@ -205,7 +301,7 @@ struct SystemMemoryUsage {
 };
 
 SystemMemoryUsage get_system_memory_usage() {
-#if defined(__linux__)
+#if defined __linux__
 
   struct sysinfo memory_info;
   sysinfo(&memory_info);
@@ -220,11 +316,46 @@ SystemMemoryUsage get_system_memory_usage() {
 
   return memory_usage;
 
+#elif defined __APPLE__
+
+  int64_t physical_memory;
+  size_t size = sizeof(physical_memory);
+  if (sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0) != 0) {
+    Fail("Unable to call sysctl hw.memsize");
+  }
+
+  // Attention: total swap might change if more swap is needed
+  xsw_usage swap_usage;
+  size = sizeof(swap_usage);
+  if (sysctlbyname("vm.swapusage", &swap_usage, &size, nullptr, 0) != 0) {
+    Fail("Unable to call sysctl vm.swapusage");
+  }
+
+  vm_size_t page_size;
+  vm_statistics64_data_t vm_statistics;
+  mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
+
+  if (host_page_size(mach_host_self(), &page_size) != KERN_SUCCESS ||
+      host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count) != KERN_SUCCESS) {
+    Fail("Unable to access host_page_size or host_statistics64");
+  }
+
+  SystemMemoryUsage memory_usage;
+  memory_usage.total_ram = physical_memory;
+  memory_usage.total_swap = swap_usage.xsu_total;
+  memory_usage.free_swap = swap_usage.xsu_avail;
+  memory_usage.free_ram = vm_statistics.free_count * page_size;
+
+  // auto used = (vm_statistics.active_couunt + vm_statistice.inactive_count + vm_statistics.wire_count) * page_size;
+
+  return memory_usage;
+
 #endif
 
-  Fail("Can't use sys/sysinfo.h on non-Linux systems");
+  Fail("Method not implemented for this platform");
 }
 
+#if defined __linux__
 int64_t int_from_string(std::string input_string) {
   size_t index = 0;
   size_t begin = 0, end = input_string.length() - 1;
@@ -243,6 +374,7 @@ int64_t int_from_string(std::string input_string) {
   }
   return std::stol(input_string.substr(begin, end - begin));
 }
+#endif
 
 struct ProcessMemoryUsage {
   int64_t virtual_memory;
@@ -250,7 +382,7 @@ struct ProcessMemoryUsage {
 };
 
 ProcessMemoryUsage get_process_memory_usage() {
-#if defined(__linux__)
+#if defined __linux__
 
   std::ifstream self_status_file;
   self_status_file.open("/proc/self/status", std::ifstream::in);
@@ -268,14 +400,22 @@ ProcessMemoryUsage get_process_memory_usage() {
 
   return memory_usage;
 
+#elif defined __APPLE__
+
+  struct task_basic_info info;
+  mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
+  if (task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count) != KERN_SUCCESS) {
+    Fail("Unable to access task_info");
+  }
+
+  return {static_cast<int64_t>(info.virtual_size), static_cast<int64_t>(info.resident_size)};
+
 #endif
 
-  Fail("Can't use /proc/self/status on non-Linux systems");
+  Fail("Method not implemented for this platform");
 }
 
 auto gather_workload_meta_data(const std::shared_ptr<Table>& meta_table) {
-#if defined(__linux__)
-
   auto system_cpu_usage = get_system_cpu_usage();
   auto process_cpu_usage = get_process_cpu_usage();
   auto load_avg = get_load_avg();
@@ -286,7 +426,6 @@ auto gather_workload_meta_data(const std::shared_ptr<Table>& meta_table) {
                       load_avg.load_15_min, system_memory_usage.total_ram, system_memory_usage.free_ram,
                       process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
 
-#endif
 }
 
 }  // namespace
@@ -412,14 +551,10 @@ std::shared_ptr<Table> MetaTableManager::generate_workload_table() {
                                               {"load_average_1_min", DataType::Float, false},
                                               {"load_average_5_min", DataType::Float, false},
                                               {"load_average_15_min", DataType::Float, false},
-                                              {"ram_total", DataType::Long, false},
-                                              {"ram_free", DataType::Long, false},
-                                              {"virtual_memory", DataType::Long, false},
-                                              {"physical_memory", DataType::Long, false}};
-  //  ,
-  //  {"ram_used_percent", DataType::Float, false},
-  //  {"swap_used_percent", DataType::Float, false},
-  //  {"mem_used_percent", DataType::Float, false}};
+                                              {"system_ram_total", DataType::Long, false},
+                                              {"system_ram_free", DataType::Long, false},
+                                              {"process_virtual_memory", DataType::Long, false},
+                                              {"process_physical_memory", DataType::Long, false}};
 
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
