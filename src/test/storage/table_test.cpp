@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
@@ -76,7 +75,7 @@ TEST_F(StorageTableTest, GetColumnIDByName) {
   EXPECT_THROW(t->column_id_by_name("no_column_name"), std::exception);
 }
 
-TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t->max_chunk_size(), 2u); }
+TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t->target_chunk_size(), 2u); }
 
 TEST_F(StorageTableTest, GetValue) {
   t->append({4, "Hello,"});
@@ -122,51 +121,13 @@ TEST_F(StorageTableTest, GetRows) {
   EXPECT_TRUE(variant_is_null(rows.at(3u).at(1u)));
 }
 
-TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
-  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-
-  t->append({4, "Hello,"});
-  t->append({6, "world"});
-
-  const auto chunk = t->get_chunk(ChunkID{0});
-
-  const auto values = std::vector<CommitID>{1u, 2u};
-
-  {
-    // acquiring mvcc_data locks them
-    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-    mvcc_data->tids[0u] = values[0u];
-    mvcc_data->tids[1u] = values[1u];
-    mvcc_data->begin_cids[0u] = values[0u];
-    mvcc_data->begin_cids[1u] = values[1u];
-    mvcc_data->end_cids[0u] = values[0u];
-    mvcc_data->end_cids[1u] = values[1u];
-  }
-
-  const auto previous_size = chunk->size();
-
-  chunk->mvcc_data()->shrink();
-
-  ASSERT_EQ(previous_size, chunk->size());
-  ASSERT_TRUE(chunk->has_mvcc_data());
-
-  auto new_mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-  for (auto i = 0u; i < chunk->size(); ++i) {
-    EXPECT_EQ(new_mvcc_data->tids[i], values[i]);
-    EXPECT_EQ(new_mvcc_data->begin_cids[i], values[i]);
-    EXPECT_EQ(new_mvcc_data->end_cids[i], values[i]);
-  }
-}
-
 TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
   t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
   t->append({4, "Hello,"});
 
   const auto c = t->get_chunk(ChunkID{0});
-  auto mvcc_data = c->get_scoped_mvcc_data_lock();
+  auto mvcc_data = c->mvcc_data();
   EXPECT_FALSE(mvcc_data->max_begin_cid);
   EXPECT_TRUE(c->is_mutable());
 

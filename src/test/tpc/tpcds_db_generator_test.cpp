@@ -1,8 +1,7 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "hyrise.hpp"
 #include "import_export/csv/csv_parser.hpp"
-#include "testing_assert.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 
@@ -18,7 +17,9 @@ std::shared_ptr<Table> load_csv(const std::string& file_name) {
 
 namespace opossum {
 
-TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
+class TpcdsTableGeneratorTest : public BaseTest {};
+
+TEST_F(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   /**
    * Check whether the data that TpcdsTableGenerator generates is the exact same that dsdgen generates.
    * Since dsdgen does not support very small scale factors only generate and check first rows for each table.
@@ -67,7 +68,7 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   }
 }
 
-TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
+TEST_F(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
  * Check whether all TPC-DS tables are created by the TpcdsTableGenerator and added to the StorageManager.
  * Then check whether the row count is correct for all tables.

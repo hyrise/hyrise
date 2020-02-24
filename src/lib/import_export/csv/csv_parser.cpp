@@ -88,6 +88,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     table->append_chunk(segments, mvcc_data);
   }
 
+  table->last_chunk()->finalize();
+
   return table;
 }
 
@@ -127,7 +129,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   unsigned int rows = 0;
   unsigned int field_count = 1;
   bool in_quotes = false;
-  while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
+  while (rows < table.target_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
     auto pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {

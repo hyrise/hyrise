@@ -29,7 +29,7 @@ size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
       return;
     } else if (const auto fs_dictionary_segment =
                    std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
-      distinct_value_count = fs_dictionary_segment->dictionary()->size();
+      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
       return;
     }
 
@@ -117,13 +117,13 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
                                               {"column_count", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
                                               {"chunk_count", DataType::Int, false},
-                                              {"max_chunk_size", DataType::Long, false}};
+                                              {"target_chunk_size", DataType::Long, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
                           static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
-                          static_cast<int64_t>(table->max_chunk_size())});
+                          static_cast<int64_t>(table->target_chunk_size())});
   }
 
   return output_table;

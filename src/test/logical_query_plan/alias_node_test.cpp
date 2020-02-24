@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -15,7 +15,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class AliasNodeTest : public ::testing::Test {
+class AliasNodeTest : public BaseTest {
  public:
   void SetUp() override {
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});

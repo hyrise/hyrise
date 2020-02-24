@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "../base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/base_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -113,18 +112,6 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{2}), "Hello,");
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{3}));
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}));
-}
-
-TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
-  auto pos_list = PosList{NULL_ROW_ID};
-  pos_list.guarantee_single_chunk();
-
-  auto rc_single_chunk =
-      std::make_shared<ReferenceSegment>(tbl, ColumnID{1u}, std::make_shared<PosList>(std::move(pos_list)));
-
-  auto rc_single_chunk_accessor = create_segment_accessor<pmr_string>(rc_single_chunk);
-  ASSERT_NE(rc_single_chunk_accessor, nullptr);
-  EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}));
 }
 
 }  // namespace opossum

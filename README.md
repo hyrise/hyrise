@@ -36,16 +36,15 @@ Older versions may work, but are neither tested nor supported.
 ## Setup using Docker
 To get all dependencies of Hyrise in a docker image, run
 ```
-docker-compose build
+docker build -t hyrise .
 ```
 
 You can start the container via
 ```
-docker-compose run --rm hyrise
+docker run -it hyrise
 ```
 
-Inside of the container, run `./install.sh` to download the required submodules.
-:whale:
+Inside of the container, you can then checkout Hyrise and run `./install.sh` to download the required submodules.
 
 ## Building and Tooling
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
@@ -135,6 +134,7 @@ Contact: firstname.lastname@hpi.de
 -   Eva       Krebs
 -   Sven      Lehmann
 -   Tom       Lichtenstein
+-   Daniel    Lindner
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer

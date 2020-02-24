@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
@@ -80,12 +79,14 @@ TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
 
 TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
   auto mvcc_data = std::make_shared<MvccData>(3, 0);
-  mvcc_data->begin_cids = {1, 2, 3};
+  mvcc_data->set_begin_cid(0, 1);
+  mvcc_data->set_begin_cid(1, 2);
+  mvcc_data->set_begin_cid(2, 3);
 
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
   chunk->finalize();
 
-  auto mvcc_data_chunk = chunk->get_scoped_mvcc_data_lock();
+  auto mvcc_data_chunk = chunk->mvcc_data();
   EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
 }
 

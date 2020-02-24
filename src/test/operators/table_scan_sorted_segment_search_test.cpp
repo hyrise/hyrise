@@ -1,5 +1,5 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+
 #include "operators/table_scan/sorted_segment_search.hpp"
 #include "storage/segment_iterate.hpp"
 
