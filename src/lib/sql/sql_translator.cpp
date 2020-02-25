@@ -54,6 +54,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
@@ -1070,10 +1071,10 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
+  auto set_operation_mode = SetOperationMode::Positions;
+
   if (set_operator.isAll) {
-    const auto set_operation_mode = SetOperationMode::All;
-  } else {
-    const auto set_operation_mode = SetOperationMode::Positions;
+    set_operation_mode = SetOperationMode::All;
   }
 
   switch (set_operator.setType) {

@@ -2624,7 +2624,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   join_predicates.emplace_back(equals_(int_float_a, int_float2_a));
 
-  const auto lqp = ExceptNode::make(UnionMode::Positions, join_predicates, left_projection, right_projection);
+  const auto lqp = ExceptNode::make(SetOperationMode::Positions, left_projection, right_projection);
 
   const auto projection_lqp = ProjectionNode::make(expression_vector(int_float_a), lqp);
 
@@ -2647,7 +2647,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   join_predicates.emplace_back(equals_(int_float_a, int_float2_a));
 
-  const auto lqp = IntersectNode::make(UnionMode::Positions, join_predicates, left_projection, right_projection);
+  const auto lqp = IntersectNode::make(SetOperationMode::Positions, left_projection, right_projection);
   const auto projection_lqp = ProjectionNode::make(expression_vector(int_float_a), lqp);
 
   const auto expected_lqp = AggregateNode::make(expression_vector(int_float_a), expression_vector(), projection_lqp);
@@ -2675,13 +2675,13 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
   auto join_predicates_b_c = std::vector<std::shared_ptr<AbstractExpression>>{};
   join_predicates_b_c.emplace_back(equals_(int_int_int_b, int_int_int_c)); 
 
-  const auto except_lqp = ExceptNode::make(UnionMode::Positions, join_predicates_b_c, b_projection, c_projection);
+  const auto except_lqp = ExceptNode::make(SetOperationMode::Positions, b_projection, c_projection);
 
   const auto aggregate_lqp = 
           AggregateNode::make(expression_vector(int_int_int_b), expression_vector(), 
             ProjectionNode::make(expression_vector(int_int_int_b), except_lqp));
 
-  const auto intesect_lqp = IntersectNode::make(UnionMode::Positions, join_predicates_a_b, a_projection, aggregate_lqp);
+  const auto intesect_lqp = IntersectNode::make(SetOperationMode::Positions, a_projection, aggregate_lqp);
 
   const auto expected_lqp = 
           AggregateNode::make(expression_vector(int_int_int_a), expression_vector(), 

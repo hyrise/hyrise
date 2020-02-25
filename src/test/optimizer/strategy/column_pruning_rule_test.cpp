@@ -86,7 +86,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
   // clang-format off
   lqp =
   ProjectionNode::make(expression_vector(a),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(greater_than_(a, 5),
         node_a),
       PredicateNode::make(greater_than_(b, 5),
@@ -104,7 +104,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(pruned_a),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(greater_than_(pruned_a, 5),
         pruned_node_a),
       PredicateNode::make(greater_than_(pruned_b, 5),
@@ -186,7 +186,7 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
 
   lqp =
   ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
-    UnionNode::make(UnionMode::All,
+    UnionNode::make(SetOperationMode::All,
       PredicateNode::make(greater_than_(add_(a, 2), 5),
         sub_lqp),
       PredicateNode::make(less_than_(add_(b, 3), 10),
@@ -207,7 +207,7 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)),
-    UnionNode::make(UnionMode::All,
+    UnionNode::make(SetOperationMode::All,
       PredicateNode::make(greater_than_(add_(pruned_a, 2), 5),
         expected_sub_lqp),
       PredicateNode::make(less_than_(add_(pruned_b, 3), 10),

@@ -28,7 +28,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
   // Fill the temporary table with values
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-    auto right_values = pmr_concurrent_vector<ColumnDataType>{};
+    auto right_values = pmr_vector<ColumnDataType>{};
     right_values.reserve(right_side_expressions.size());
 
     for (const auto& element : right_side_expressions) {
@@ -83,7 +83,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
   // Create a PredicateNode for the first value. Then, successively hook up additional PredicateNodes using UnionNodes.
   std::shared_ptr<AbstractLQPNode> last_node = predicate_nodes[0];
   for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes.size(); ++predicate_node_idx) {
-    last_node = UnionNode::make(UnionMode::All, last_node, predicate_nodes[predicate_node_idx]);
+    last_node = UnionNode::make(SetOperationMode::All, last_node, predicate_nodes[predicate_node_idx]);
   }
 
   // Attach the final UnionNode (or PredicateNode if only one) to the original plan. As this replaces the original

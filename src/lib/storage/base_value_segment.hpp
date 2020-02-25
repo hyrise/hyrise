@@ -24,9 +24,7 @@ class BaseValueSegment : public BaseSegment {
    *
    * Throws exception if is_nullable() returns false
    */
-  virtual const pmr_concurrent_vector<bool>& null_values() const = 0;
-  virtual pmr_concurrent_vector<bool>& null_values() = 0;
-
-  virtual void reserve(const size_t capacity) = 0;
+  virtual const pmr_vector<bool>& null_values() const = 0;
+  virtual pmr_vector<bool>& null_values() = 0;
 };
 }  // namespace opossum

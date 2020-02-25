@@ -426,19 +426,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   FailInput("Currently all SetOperations are not supported by Hyrise");
-  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   FailInput("Currently all SetOperations are not supported by Hyrise");
-  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   FailInput("Currently all SetOperations are not supported by Hyrise");
-  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(

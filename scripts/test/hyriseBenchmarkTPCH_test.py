@@ -24,7 +24,7 @@ def main():
   arguments["--indexes"] = "true"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
-  arguments["--cache_binary_tables"] = "false"
+  arguments["--dont_cache_binary_tables"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
@@ -33,7 +33,6 @@ def main():
   benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Dictionary'")
-  benchmark.expect_exact("Chunk size is 100000")
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("No warmup runs are performed")
   benchmark.expect_exact("Not caching tables as binary files")

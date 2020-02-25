@@ -473,14 +473,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           Fail("Cross join is not a predicated join");
 
         case JoinMode::Semi:
-        case JoinMode::Intersect:
           return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
                                     primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
                                     *right_input_table_statistics);
 
         case JoinMode::AntiNullAsTrue:
         case JoinMode::AntiNullAsFalse:
-        case JoinMode::Except:
           return left_input_table_statistics;
       }
     } else {
