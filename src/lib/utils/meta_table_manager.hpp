@@ -31,7 +31,8 @@ class MetaTableManager : public Noncopyable {
 
   void insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values);
   void delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values);
-  void update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values, const std::shared_ptr<const Table>& update_values);
+  void update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values,
+              const std::shared_ptr<const Table>& update_values);
 
  protected:
   friend class Hyrise;

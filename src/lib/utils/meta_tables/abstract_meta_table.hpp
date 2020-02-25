@@ -45,15 +45,15 @@ class AbstractMetaTable : public Noncopyable {
    */
   void insert(const std::vector<AllTypeVariant>& values);
   void remove(const std::vector<AllTypeVariant>& values);
-   void update(const std::vector<AllTypeVariant>& values);
+  void update(const std::vector<AllTypeVariant>& values);
 
   void _assert_data_types(const std::vector<AllTypeVariant>& values) const;
 
   // These methods actually perform the table creation and manipulation.
   virtual std::shared_ptr<Table> _on_generate() const = 0;
-   virtual void _on_insert(const std::vector<AllTypeVariant>& values);
-   virtual void _on_remove(const std::vector<AllTypeVariant>& values);
-   virtual void _on_update(const std::vector<AllTypeVariant>& values);
+  virtual void _on_insert(const std::vector<AllTypeVariant>& values);
+  virtual void _on_remove(const std::vector<AllTypeVariant>& values);
+  virtual void _on_update(const std::vector<AllTypeVariant>& values);
 
   const TableColumnDefinitions _column_definitions;
 };

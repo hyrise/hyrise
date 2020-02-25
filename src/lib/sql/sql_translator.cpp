@@ -425,9 +425,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
    */
   if (is_meta_table) {
     return MutateMetaTableNode::make(table_name, MetaTableMutation::Insert, DummyTableNode::make(), insert_data_node);
-    }
+  }
 
-    return InsertNode::make(table_name, insert_data_node);
+  return InsertNode::make(table_name, insert_data_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
@@ -454,7 +454,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   }
 
   if (is_meta_table) {
-    return MutateMetaTableNode::make(table_name, MetaTableMutation::Delete, data_to_delete_node, DummyTableNode::make());
+    return MutateMetaTableNode::make(table_name, MetaTableMutation::Delete, data_to_delete_node,
+                                     DummyTableNode::make());
   }
   return DeleteNode::make(data_to_delete_node);
 }
@@ -517,9 +518,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   // LQP that computes the updated values
   const auto updated_values_lqp = ProjectionNode::make(update_expressions, selection_lqp);
 
-   if (is_meta_table) {
+  if (is_meta_table) {
     return MutateMetaTableNode::make(table_name, MetaTableMutation::Update, selection_lqp, updated_values_lqp);
-    }
+  }
   return UpdateNode::make(table_name, selection_lqp, updated_values_lqp);
 }
 

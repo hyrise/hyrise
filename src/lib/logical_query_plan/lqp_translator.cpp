@@ -449,7 +449,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_mutate_meta_table_no
   const auto input_operator_left = translate_node(node->left_input());
   const auto input_operator_right = translate_node(node->right_input());
   const auto muatate_meta_table_node = std::dynamic_pointer_cast<MutateMetaTableNode>(node);
-  return std::make_shared<MutateMetaTable>(muatate_meta_table_node->table_name, muatate_meta_table_node->mutation_type, input_operator_left, input_operator_right);
+  return std::make_shared<MutateMetaTable>(muatate_meta_table_node->table_name, muatate_meta_table_node->mutation_type,
+                                           input_operator_left, input_operator_right);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

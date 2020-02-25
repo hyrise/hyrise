@@ -23,14 +23,13 @@ const std::string& MutateMetaTable::name() const {
 }
 
 std::shared_ptr<const Table> MutateMetaTable::_on_execute() {
-   auto values_to_modify = input_table_left();
-   auto modification_values = input_table_right();
+  auto values_to_modify = input_table_left();
+  auto modification_values = input_table_right();
 
-    Print::print(values_to_modify);
+  Print::print(values_to_modify);
 
   std::cout << std::endl;
-      Print::print(modification_values);
-
+  Print::print(modification_values);
 
   switch (_mutation_type) {
     case MetaTableMutation::Insert:

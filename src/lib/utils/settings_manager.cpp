@@ -4,6 +4,14 @@
 
 namespace opossum {
 
+SettingsManager::SettingsManager() {
+  auto a = std::make_shared<MockSetting>("foo");
+  auto b = std::make_shared<MockSetting>("bar");
+
+  _settings["foo"] = a;
+  _settings["bar"] = b;
+}
+
 bool SettingsManager::has_setting(const std::string& name) const { return _settings.count(name); }
 
 void SettingsManager::add(const std::shared_ptr<AbstractSetting>& setting) {

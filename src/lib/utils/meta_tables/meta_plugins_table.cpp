@@ -36,8 +36,7 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
 
 void MetaPluginsTable::_on_insert(const std::vector<AllTypeVariant>& values) {
   const auto file_name = get_full_file_name(std::string{boost::get<pmr_string>(values.at(0))});
-    std::cout << file_name << std::endl;
-
+  std::cout << file_name << std::endl;
 
   //Hyrise::get().plugin_manager.load_plugin(file_name);
 }
