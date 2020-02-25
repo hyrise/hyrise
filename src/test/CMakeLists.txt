@@ -49,9 +49,11 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/except_node_test.cpp
     logical_query_plan/export_node_test.cpp
     logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
+    logical_query_plan/intersect_node_test.cpp
     logical_query_plan/join_node_test.cpp
     logical_query_plan/limit_node_test.cpp
     logical_query_plan/logical_query_plan_test.cpp
