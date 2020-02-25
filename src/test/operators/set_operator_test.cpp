@@ -55,7 +55,7 @@ class SetOperatorIntegrationTest : public BaseTest {
 
 // set operators are not yet implemented;
 // these tests can be enabled as soon as they are
-class DISABLED_SetOperatorIntegrationTest : public SetOperatorIntegrationTest {};
+class DISABLED_SetOperatorIntegrationTest : public SetOperatorIntegrationTest {}; /* #0 */
 
 TEST_F(DISABLED_SetOperatorIntegrationTest, IntersectTest) {
   auto sql_pipeline = SQLPipelineBuilder{_intersect_query_a}.create_pipeline();
