@@ -175,6 +175,10 @@ class AggregateSortedTest : public BaseTest {
     _table_wrapper_multi_columns = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", 2));
     _table_wrapper_multi_columns->execute();
+
+    _table_wrapper_sorted_value_clustered = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/int_sorted_value_clustered.tbl", 6));
+    _table_wrapper_sorted_value_clustered->execute();
   }
 
  protected:
@@ -205,7 +209,7 @@ class AggregateSortedTest : public BaseTest {
     }
   }
 
-  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_multi_columns;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_multi_columns, _table_wrapper_sorted_value_clustered;
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
@@ -977,6 +981,20 @@ TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
   std::vector<ColumnID> groupby_column_ids = {ColumnID{2}};
   const auto aggregate =
       std::make_shared<AggregateSort>(this->_table_wrapper_multi_columns, aggregate_expressions, groupby_column_ids);
+}
+
+TEST_F(AggregateSortedTest, AggregateOnPresortedValueClustered) {
+  auto table = _table_wrapper_sorted_value_clustered->get_output();
+  const auto aggregate_expression = std::vector<std::shared_ptr<AggregateExpression>>{
+      sum_(pqp_column_(ColumnID{1}, table->column_data_type(ColumnID{1}), table->column_is_nullable(ColumnID{1}),
+                       table->column_name(ColumnID{1})))};
+  std::vector<ColumnID> groupby_column_ids = {ColumnID{0}};
+  const auto aggregate =
+    std::make_shared<AggregateSort>(this->_table_wrapper_sorted_value_clustered, aggregate_expression, groupby_column_ids);
+  aggregate->execute();
+
+  const auto result_table = load_table("resources/test_data/tbl/int_sorted_value_clustered_result.tbl");
+  EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), result_table);
 }
 
 }  // namespace opossum
