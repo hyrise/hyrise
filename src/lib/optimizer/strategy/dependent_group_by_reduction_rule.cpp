@@ -29,11 +29,11 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
   auto group_by_list_changed = false;
   const auto& constraint_columns = constraint.column_expressions;
 
-  // Intersect primary key/unique columns and non-nullable group-by columns.
-  ExpressionUnorderedSet difference;
-  std::set_difference(constraint_columns.begin(), constraint_columns.end(), group_by_columns.begin(),
-                        group_by_columns.end(), std::inserter(difference, difference.begin()));
-  if (difference.size() > 0) {
+  // ToDo(Julian) Comment!
+  bool all_columns_present = std::all_of(constraint_columns.cbegin(), constraint_columns.cend(), [&group_by_columns](std::shared_ptr<AbstractExpression> constraint_col_expr) {
+      return group_by_columns.contains(constraint_col_expr);
+  });
+  if (!all_columns_present) {
     // Skip the current constraint as the primary key/unique constraint is not completely present.
     return false;
   }
