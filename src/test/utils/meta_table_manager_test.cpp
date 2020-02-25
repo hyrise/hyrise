@@ -97,7 +97,7 @@ TEST_P(MetaTableManagerMultiTablesTest, ForwardsMutationInfo) {
   const auto& table = GetParam();
   const auto& mtm = Hyrise::get().meta_table_manager;
   EXPECT_EQ(mtm.can_insert_into(table->name()), table->can_insert());
-  EXPECT_EQ(mtm.can_delete_from(table->name()), table->can_remove());
+  EXPECT_EQ(mtm.can_delete_from(table->name()), table->can_delete());
   EXPECT_EQ(mtm.can_update(table->name()), table->can_update());
 }
 

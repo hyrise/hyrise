@@ -436,8 +436,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
-
   if (MetaTableManager::is_meta_table_name(table_name)) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) &&
@@ -445,6 +443,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
                 "Cannot delete from " + table_name);
     is_meta_table = true;
   }
+
+  Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
     const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);

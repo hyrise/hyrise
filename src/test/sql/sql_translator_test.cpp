@@ -22,6 +22,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/mutate_meta_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -1875,7 +1876,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, DMLOnMetatables) {
+TEST_F(SQLTranslatorTest, DMLOnRegularMetatables) {
   EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
   EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
@@ -1959,6 +1960,20 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
+  const auto actual_lqp = compile_query("INSERT INTO meta_plugins VALUES ('foo');");
+
+  // clang-format off
+  const auto expected_lqp =
+  MutateMetaTableNode::make("meta_plugins", MetaTableMutation::Insert,
+    DummyTableNode::make(),
+    ProjectionNode::make(expression_vector("foo"),
+      DummyTableNode::make()));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, DeleteWithoutMVCC) {
   EXPECT_THROW(compile_query("DELETE FROM int_float;"), std::logic_error);
 }
@@ -1985,6 +2000,23 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
     PredicateNode::make(greater_than_(int_float_a, 5),
       ValidateNode::make(
         stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DeleteMetaTable) {
+  const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE plugin_name = 'foo'", UseMvcc::Yes);
+
+  const auto select_node = StoredTableNode::make("meta_plugins");
+
+  // clang-format off
+  const auto expected_lqp =
+   MutateMetaTableNode::make("meta_plugins", MetaTableMutation::Delete,
+    PredicateNode::make(equals_(select_node->get_column("plugin_name"), "foo"),
+      ValidateNode::make(
+       select_node)),
+    DummyTableNode::make());
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
