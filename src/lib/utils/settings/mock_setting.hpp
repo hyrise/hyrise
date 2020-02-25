@@ -10,7 +10,7 @@ namespace opossum {
  */
 class MockSetting : public AbstractSetting {
  public:
-  MockSetting(const std::string& init_name);
+  explicit MockSetting(const std::string& init_name);
 
   const std::string& description() const final;
 

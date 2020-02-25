@@ -67,11 +67,10 @@ void MetaTableManager::insert_into(const std::string& table_name, const std::sha
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
   Assert(can_delete_from(table_name), "Cannot delete from " + table_name + ".");
-  std::cout << values->column_count() << std::endl;
   const auto& rows = values->get_rows();
 
   for (const auto& row : rows) {
-    _meta_tables.at(table_name)->delete (row);
+    _meta_tables.at(table_name)->remove(row);
   }
 }
 
@@ -79,7 +78,13 @@ void MetaTableManager::update(const std::string& table_name, const std::shared_p
                               const std::shared_ptr<const Table>& update_values) {
   Assert(can_update(table_name), "Cannot update " + table_name + ".");
 
-  //std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->update(row); });
+  const auto& selected_rows = selected_values->get_rows();
+  const auto& update_rows = update_values->get_rows();
+  Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
+
+  for (size_t row = 0; row < selected_rows.size(); row++) {
+    _meta_tables.at(table_name)->update(selected_rows.at(row), update_rows.at(row));
+  }
 }
 
 void MetaTableManager::add(const std::shared_ptr<AbstractMetaTable>& table) {

@@ -29,11 +29,12 @@ std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
   return output_table;
 }
 
-void MetaSettingsTable::_on_update(const std::vector<AllTypeVariant>& values) {
-  const auto& name = std::string{boost::get<pmr_string>(values.at(0))};
+void MetaSettingsTable::_on_update(const std::vector<AllTypeVariant>& selected_values,
+                                   const std::vector<AllTypeVariant>& update_values) {
+  const auto& name = std::string{boost::get<pmr_string>(selected_values.at(0))};
   Assert(Hyrise::get().settings_manager.has_setting(name), "No setting named " + name + " found.");
 
-  const auto& value = std::string{boost::get<pmr_string>(values.at(1))};
+  const auto& value = std::string{boost::get<pmr_string>(update_values.at(1))};
   Hyrise::get().settings_manager.get_setting(name)->set(value);
 }
 

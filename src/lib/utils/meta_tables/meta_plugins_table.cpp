@@ -31,20 +31,21 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
     output_table->append({pmr_string{plugin}});
   }
 
+  output_table->append({pmr_string{"foo"}});
+  output_table->append({pmr_string{"bar"}});
+
   return output_table;
 }
 
 void MetaPluginsTable::_on_insert(const std::vector<AllTypeVariant>& values) {
   const auto file_name = get_full_file_name(std::string{boost::get<pmr_string>(values.at(0))});
-  std::cout << file_name << std::endl;
 
-  //Hyrise::get().plugin_manager.load_plugin(file_name);
+  Hyrise::get().plugin_manager.load_plugin(file_name);
 }
 
 void MetaPluginsTable::_on_remove(const std::vector<AllTypeVariant>& values) {
   const auto plugin_name = std::string{boost::get<pmr_string>(values.at(0))};
-  std::cout << plugin_name << std::endl;
-  //Hyrise::get().plugin_manager.unload_plugin(plugin_name);
+  Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 }
 
 std::string MetaPluginsTable::get_full_file_name(const std::string& file_name) const {

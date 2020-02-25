@@ -29,7 +29,7 @@ class AbstractMetaTable : public Noncopyable {
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
 
-  AbstractMetaTable(const TableColumnDefinitions& column_definitions);
+  explicit AbstractMetaTable(const TableColumnDefinitions& column_definitions);
 
   virtual ~AbstractMetaTable() = default;
 
@@ -45,7 +45,7 @@ class AbstractMetaTable : public Noncopyable {
    */
   void insert(const std::vector<AllTypeVariant>& values);
   void remove(const std::vector<AllTypeVariant>& values);
-  void update(const std::vector<AllTypeVariant>& values);
+  void update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values);
 
   void _assert_data_types(const std::vector<AllTypeVariant>& values) const;
 
@@ -53,7 +53,8 @@ class AbstractMetaTable : public Noncopyable {
   virtual std::shared_ptr<Table> _on_generate() const = 0;
   virtual void _on_insert(const std::vector<AllTypeVariant>& values);
   virtual void _on_remove(const std::vector<AllTypeVariant>& values);
-  virtual void _on_update(const std::vector<AllTypeVariant>& values);
+  virtual void _on_update(const std::vector<AllTypeVariant>& selected_values,
+                          const std::vector<AllTypeVariant>& update_values);
 
   const TableColumnDefinitions _column_definitions;
 };

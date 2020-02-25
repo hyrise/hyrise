@@ -11,7 +11,7 @@ namespace opossum {
 class AbstractExpression;
 
 /*
- * Node type to represent updates (i.e., invalidation and inserts) in a table.
+ * Node type to represent mutations (insert, delete, update) of a meta table.
  */
 class MutateMetaTableNode : public EnableMakeForLQPNode<MutateMetaTableNode>, public BaseNonQueryNode {
  public:

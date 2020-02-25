@@ -7,7 +7,7 @@
 namespace opossum {
 
 AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
-    : _column_definitions(column_definitions){};
+    : _column_definitions(column_definitions) {}
 
 const std::shared_ptr<Table> AbstractMetaTable::generate() const {
   const auto table = _on_generate();
@@ -37,9 +37,11 @@ void AbstractMetaTable::remove(const std::vector<AllTypeVariant>& values) {
   _on_remove(values);
 }
 
-void AbstractMetaTable::update(const std::vector<AllTypeVariant>& values) {
-  _assert_data_types(values);
-  _on_update(values);
+void AbstractMetaTable::update(const std::vector<AllTypeVariant>& selected_values,
+                               const std::vector<AllTypeVariant>& update_values) {
+  _assert_data_types(selected_values);
+  _assert_data_types(update_values);
+  _on_update(selected_values, update_values);
 }
 
 void AbstractMetaTable::_on_insert(const std::vector<AllTypeVariant>& values) {
@@ -50,7 +52,8 @@ void AbstractMetaTable::_on_remove(const std::vector<AllTypeVariant>& values) {
   Fail("Cannot delete from " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
-void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& values) {
+void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& selected_values,
+                                   const std::vector<AllTypeVariant>& update_values) {
   Fail("Cannot update " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
