@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -61,6 +62,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For the vast majority of node types, AbstractLQPNode::node_expression holds all expressions required by this
     // node.
     case LQPNodeType::Alias:
+    case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
     case LQPNodeType::DropView:
@@ -73,7 +75,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Sort:
     case LQPNodeType::StaticTable:
     case LQPNodeType::StoredTable:
-    case LQPNodeType::Union:
     case LQPNodeType::Validate:
     case LQPNodeType::Mock: {
       for (const auto& expression : node->node_expressions) {
@@ -150,8 +151,19 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       }
     } break;
 
-    // No pruning of the input columns for these nodes as they need them all.
-    case LQPNodeType::CreateTable:
+    case LQPNodeType::Union:
+    case LQPNodeType::Intersect:
+    case LQPNodeType::Except: {
+      for (const auto& expression : node->left_input()->column_expressions()) {
+        locally_required_expressions.emplace(expression);
+      }
+
+      for (const auto& expression : node->right_input()->column_expressions()) {
+        locally_required_expressions.emplace(expression);
+      }
+    } break;
+
+    // No pruning of the input columns to Delete, Update and Insert, they need them all.
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
     case LQPNodeType::Update: {

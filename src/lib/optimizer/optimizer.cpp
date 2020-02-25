@@ -96,6 +96,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
@@ -272,6 +274,8 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Join:
         case LQPNodeType::Update:
         case LQPNodeType::Union:
+        case LQPNodeType::Intersect:
+        case LQPNodeType::Except:
           num_expected_inputs = 2;
           break;
       }

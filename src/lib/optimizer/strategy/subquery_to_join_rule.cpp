@@ -48,6 +48,8 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
           return {true, true};
         case JoinMode::Left:
         case JoinMode::Semi:
+        case JoinMode::Intersect:
+        case JoinMode::Except:
         case JoinMode::AntiNullAsFalse:
         case JoinMode::AntiNullAsTrue:
           return {true, false};

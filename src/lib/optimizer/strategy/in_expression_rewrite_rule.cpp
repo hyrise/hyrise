@@ -28,7 +28,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
   // Fill the temporary table with values
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-    auto right_values = pmr_vector<ColumnDataType>{};
+    auto right_values = pmr_concurrent_vector<ColumnDataType>{};
     right_values.reserve(right_side_expressions.size());
 
     for (const auto& element : right_side_expressions) {
