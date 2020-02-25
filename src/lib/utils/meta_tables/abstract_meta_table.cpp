@@ -21,11 +21,11 @@ const std::shared_ptr<Table> AbstractMetaTable::generate() const {
   return table;
 }
 
-bool AbstractMetaTable::can_insert() { return false; }
+bool AbstractMetaTable::can_insert() const { return false; }
 
-bool AbstractMetaTable::can_update() { return false; }
+bool AbstractMetaTable::can_update() const { return false; }
 
-bool AbstractMetaTable::can_remove() { return false; }
+bool AbstractMetaTable::can_remove() const { return false; }
 
 void AbstractMetaTable::insert(const std::vector<AllTypeVariant>& values) {
   _assert_data_types(values);

@@ -2,8 +2,6 @@
 
 namespace opossum {
 
-//void SettingsManager::reset() { get() = SettingsManager{}; }
-
 bool SettingsManager::has_setting(const std::string& name) const { return _settings.count(name); }
 
 void SettingsManager::add(const std::shared_ptr<AbstractSetting>& setting) {

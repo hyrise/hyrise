@@ -12,9 +12,9 @@ class MetaMockTable : public AbstractMetaTable {
  public:
   MetaMockTable();
 
-  static bool can_insert();
-  static bool can_remove();
-  static bool can_update();
+  bool can_insert() const;
+  bool can_remove() const;
+  bool can_update() const;
 
   const std::string& name() const final;
 

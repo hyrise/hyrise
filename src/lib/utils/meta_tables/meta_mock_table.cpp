@@ -12,11 +12,11 @@ const std::string& MetaMockTable::name() const {
   return name;
 }
 
-bool MetaMockTable::can_insert() { return true; }
+bool MetaMockTable::can_insert() const { return true; }
 
-bool MetaMockTable::can_remove() { return true; }
+bool MetaMockTable::can_remove() const { return true; }
 
-bool MetaMockTable::can_update() { return true; }
+bool MetaMockTable::can_update() const { return true; }
 
 size_t MetaMockTable::insert_calls() const { return _insert_calls; }
 

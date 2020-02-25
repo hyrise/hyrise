@@ -14,8 +14,8 @@ class MetaPluginsTable : public AbstractMetaTable {
 
   const std::string& name() const final;
 
-  static bool can_insert();
-  static bool can_remove();
+  bool can_insert() const;
+  bool can_remove() const;
 
  protected:
   std::shared_ptr<Table> _on_generate() const;

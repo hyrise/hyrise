@@ -21,9 +21,9 @@ class AbstractMetaTable : public Noncopyable {
 
   const TableColumnDefinitions& column_definitions() const;
 
-  static bool can_insert();
-  static bool can_update();
-  static bool can_remove();
+  virtual bool can_insert() const;
+  virtual bool can_update() const;
+  virtual bool can_remove() const;
 
  protected:
   friend class MetaTableManager;
@@ -51,9 +51,9 @@ class AbstractMetaTable : public Noncopyable {
 
   // These methods actually perform the table creation and manipulation.
   virtual std::shared_ptr<Table> _on_generate() const = 0;
-  [[noreturn]] void _on_insert(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] void _on_remove(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] void _on_update(const std::vector<AllTypeVariant>& values);
+  [[noreturn]] virtual void _on_insert(const std::vector<AllTypeVariant>& values);
+  [[noreturn]] virtual void _on_remove(const std::vector<AllTypeVariant>& values);
+  [[noreturn]] virtual void _on_update(const std::vector<AllTypeVariant>& values);
 
   const TableColumnDefinitions _column_definitions;
 };

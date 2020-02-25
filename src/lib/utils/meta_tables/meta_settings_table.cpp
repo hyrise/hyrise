@@ -2,7 +2,6 @@
 
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
-#include "utils/settings_manager.hpp"
 
 namespace opossum {
 
@@ -16,11 +15,11 @@ const std::string& MetaSettingsTable::name() const {
   return name;
 }
 
-bool MetaSettingsTable::can_update() { return true; }
+bool MetaSettingsTable::can_update() const { return true; }
 
 std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
-  const auto settings = SettingsManager::get().all_settings();
+  const auto settings = Hyrise::get().settings_manager.all_settings();
 
   for (const auto& setting : settings) {
     output_table->append({pmr_string{setting->name}, pmr_string{setting->get()}, pmr_string{setting->description()}});
@@ -31,10 +30,10 @@ std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
 
 void MetaSettingsTable::_on_update(const std::vector<AllTypeVariant>& values) {
   const auto& name = std::string{boost::get<pmr_string>(values.at(0))};
-  Assert(SettingsManager::get().has_setting(name), "No setting named " + name + " found.");
+  Assert(Hyrise::get().settings_manager.has_setting(name), "No setting named " + name + " found.");
 
   const auto& value = std::string{boost::get<pmr_string>(values.at(1))};
-  SettingsManager::get().get_setting(name)->set(value);
+  Hyrise::get().settings_manager.get_setting(name)->set(value);
 }
 
 }  // namespace opossum
