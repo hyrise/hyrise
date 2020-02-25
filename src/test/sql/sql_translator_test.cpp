@@ -2082,6 +2082,28 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, UpdateMetaTable) {
+  const auto actual_lqp =
+      compile_query("UPDATE meta_settings SET value = 'foo' WHERE setting_name = 'bar';", UseMvcc::Yes);
+
+  const auto select_node = StoredTableNode::make("meta_settings");
+
+  // clang-format off
+  const auto row_subquery_lqp =
+  PredicateNode::make(equals_(select_node->get_column("setting_name"), "bar"),
+    ValidateNode::make(
+      select_node));
+
+  const auto expected_lqp =
+  MutateMetaTableNode::make("meta_settings", MetaTableMutation::Update,
+    row_subquery_lqp,
+    ProjectionNode::make(expression_vector(select_node->get_column("setting_name"), "foo", select_node->get_column("description")),
+      row_subquery_lqp));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, CreateView) {
   const auto query = "CREATE VIEW my_first_view AS SELECT a, b, a + b, a*b AS t FROM int_float WHERE a = 'b';";
   const auto result_node = compile_query(query);
