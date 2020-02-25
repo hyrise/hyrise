@@ -425,7 +425,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Currently all SetOperations are not supported by Hyrise");
+  const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
+
+  const auto input_operator_left = translate_node(node->left_input());
+  const auto input_operator_right = translate_node(node->right_input());
+
+  switch (union_node->set_operation_mode) {
+    case SetOperationMode::Positions:
+      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+    case SetOperationMode::All:
+      return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
+  }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
