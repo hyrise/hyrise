@@ -1,5 +1,7 @@
 #include "meta_plugins_table.hpp"
 
+#include <boost/algorithm/string.hpp>
+
 #include "hyrise.hpp"
 
 #ifdef __APPLE__
@@ -20,7 +22,7 @@ const std::string& MetaPluginsTable::name() const {
 
 bool MetaPluginsTable::can_insert() const { return true; }
 
-bool MetaPluginsTable::can_remove() const { return true; }
+bool MetaPluginsTable::can_delete() const { return true; }
 
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -33,12 +35,27 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
 }
 
 void MetaPluginsTable::_on_insert(const std::vector<AllTypeVariant>& values) {
-  Hyrise::get().plugin_manager.load_plugin(boost::get<pmr_string>(values.at(0)) + DYNAMIC_LIBRARY_SUFFIX);
+  const auto file_name = get_full_file_name(std::string{boost::get<pmr_string>(values.at(0))});
+    std::cout << file_name << std::endl;
+
+
+  //Hyrise::get().plugin_manager.load_plugin(file_name);
 }
 
 void MetaPluginsTable::_on_remove(const std::vector<AllTypeVariant>& values) {
-  Hyrise::get().plugin_manager.unload_plugin(std::string{boost::get<pmr_string>(values.at(0))} +
-                                             DYNAMIC_LIBRARY_SUFFIX);
+  const auto plugin_name = std::string{boost::get<pmr_string>(values.at(0))};
+  std::cout << plugin_name << std::endl;
+  //Hyrise::get().plugin_manager.unload_plugin(plugin_name);
+}
+
+std::string MetaPluginsTable::get_full_file_name(const std::string& file_name) const {
+  auto extension = std::string{std::filesystem::path{file_name}.extension()};
+  boost::algorithm::to_lower(extension);
+  if (extension == DYNAMIC_LIBRARY_SUFFIX) {
+    return file_name;
+  }
+
+  return file_name + DYNAMIC_LIBRARY_SUFFIX;
 }
 
 }  // namespace opossum

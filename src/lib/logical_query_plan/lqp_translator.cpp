@@ -30,6 +30,7 @@
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
+#include "mutate_meta_table_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
@@ -47,6 +48,7 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "operators/mutate_meta_table.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/product.hpp"
@@ -123,6 +125,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Union:              return _translate_union_node(node);
+    case LQPNodeType::MutateMetaTable:    return _translate_mutate_meta_table_node(node);
 
       // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -439,6 +442,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   return std::make_shared<Validate>(input_operator);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_mutate_meta_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator_left = translate_node(node->left_input());
+  const auto input_operator_right = translate_node(node->right_input());
+  const auto muatate_meta_table_node = std::dynamic_pointer_cast<MutateMetaTableNode>(node);
+  return std::make_shared<MutateMetaTable>(muatate_meta_table_node->table_name, muatate_meta_table_node->mutation_type, input_operator_left, input_operator_right);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

@@ -19,10 +19,11 @@ bool MetaSettingsTable::can_update() const { return true; }
 
 std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
-  const auto settings = Hyrise::get().settings_manager.all_settings();
+  const auto setting_names = Hyrise::get().settings_manager.all_settings();
 
-  for (const auto& setting : settings) {
-    output_table->append({pmr_string{setting->name}, pmr_string{setting->get()}, pmr_string{setting->description()}});
+  for (const auto& setting_name : setting_names) {
+    const auto& setting = Hyrise::get().settings_manager.get_setting(setting_name);
+    output_table->append({pmr_string{setting_name}, pmr_string{setting->get()}, pmr_string{setting->description()}});
   }
 
   return output_table;

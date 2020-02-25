@@ -25,7 +25,7 @@ bool AbstractMetaTable::can_insert() const { return false; }
 
 bool AbstractMetaTable::can_update() const { return false; }
 
-bool AbstractMetaTable::can_remove() const { return false; }
+bool AbstractMetaTable::can_delete() const { return false; }
 
 void AbstractMetaTable::insert(const std::vector<AllTypeVariant>& values) {
   _assert_data_types(values);

@@ -12,7 +12,7 @@ class SettingsManager : public Noncopyable {
  public:
   bool has_setting(const std::string& name) const;
   const std::shared_ptr<AbstractSetting> get_setting(const std::string& name) const;
-  const std::vector<std::shared_ptr<AbstractSetting>> all_settings() const;
+  const std::vector<std::string> all_settings() const;
 
  protected:
   friend class AbstractSetting;

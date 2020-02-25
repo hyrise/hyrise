@@ -82,13 +82,6 @@ const std::string& Insert::name() const {
 }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  if (MetaTableManager::is_meta_table_name(_target_table_name)) {
-    const auto meta_table_name = _target_table_name.substr(MetaTableManager::META_PREFIX.size());
-    const auto input_values = input_table_left();
-    Hyrise::get().meta_table_manager.insert_into(meta_table_name, input_values);
-    return nullptr;
-  }
-
   _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
 
   Assert(_target_table->target_chunk_size() > 0, "Expected target chunk size of target table to be greater than zero");

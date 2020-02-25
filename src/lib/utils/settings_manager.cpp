@@ -1,5 +1,7 @@
 #include "settings_manager.hpp"
 
+#include "utils/settings/mock_setting.hpp"
+
 namespace opossum {
 
 bool SettingsManager::has_setting(const std::string& name) const { return _settings.count(name); }
@@ -19,14 +21,13 @@ const std::shared_ptr<AbstractSetting> SettingsManager::get_setting(const std::s
   return _settings.at(name);
 }
 
-const std::vector<std::shared_ptr<AbstractSetting>> SettingsManager::all_settings() const {
-  std::vector<std::shared_ptr<AbstractSetting>> settings_list;
+const std::vector<std::string> SettingsManager::all_settings() const {
+  std::vector<std::string> settings_list;
   settings_list.reserve(_settings.size());
 
-  for (const auto& [_, setting] : _settings) {
-    settings_list.emplace_back(setting);
+  for (const auto& [setting_name, _] : _settings) {
+    settings_list.emplace_back(setting_name);
   }
-
   std::sort(settings_list.begin(), settings_list.end());
 
   return settings_list;

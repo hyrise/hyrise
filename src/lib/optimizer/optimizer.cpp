@@ -261,7 +261,6 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
-        case LQPNodeType::MutateMetaTable:
         case LQPNodeType::Predicate:
         case LQPNodeType::Projection:
         case LQPNodeType::Root:
@@ -271,6 +270,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
           break;
 
         case LQPNodeType::Join:
+        case LQPNodeType::MutateMetaTable:
         case LQPNodeType::Update:
         case LQPNodeType::Union:
           num_expected_inputs = 2;

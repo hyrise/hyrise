@@ -20,6 +20,7 @@ class TransactionContext;
 class MutateMetaTable : public AbstractReadOnlyOperator {
  public:
   explicit MutateMetaTable(const std::string& table_name, const MetaTableMutation& mutation_type,
+                           const std::shared_ptr<const AbstractOperator>& values_to_modify,
                            const std::shared_ptr<const AbstractOperator>& modification_values);
 
   const std::string& name() const override;

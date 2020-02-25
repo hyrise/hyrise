@@ -35,12 +35,6 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   DebugAssert(input_table_left()->column_data_types() == input_table_right()->column_data_types(),
               "Update required identical layouts from its input tables");
 
-  if (MetaTableManager::is_meta_table_name(_table_to_update_name)) {
-    const auto meta_table_name = _table_to_update_name.substr(MetaTableManager::META_PREFIX.size());
-    Hyrise::get().meta_table_manager.update(meta_table_name, input_table_right());
-    return nullptr;
-  }
-
   // 1. Delete obsolete data with the Delete operator.
   //    Delete doesn't accept empty input data
   if (input_table_left()->row_count() > 0) {

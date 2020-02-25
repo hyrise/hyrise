@@ -23,7 +23,7 @@ class AbstractMetaTable : public Noncopyable {
 
   virtual bool can_insert() const;
   virtual bool can_update() const;
-  virtual bool can_remove() const;
+  virtual bool can_delete() const;
 
  protected:
   friend class MetaTableManager;

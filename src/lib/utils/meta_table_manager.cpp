@@ -47,7 +47,7 @@ bool MetaTableManager::can_insert_into(const std::string& table_name) const {
 }
 
 bool MetaTableManager::can_delete_from(const std::string& table_name) const {
-  return (_meta_tables.at(table_name))->can_remove();
+  return (_meta_tables.at(table_name))->can_delete();
 }
 
 bool MetaTableManager::can_update(const std::string& table_name) const {
@@ -56,23 +56,33 @@ bool MetaTableManager::can_update(const std::string& table_name) const {
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values) {
   Assert(can_insert_into(table_name), "Cannot insert into " + table_name + ".");
-  const auto& rows = values->get_rows();
+  const auto rows = values->get_rows();
 
-  std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
+  std::cout << "for each" << std::endl;
+   for (const auto& row : rows) {
+    auto copy = row;
+    (_meta_tables.at(table_name))->insert(copy);
+   }
+
+
+  //std::for_each(rows.begin(), rows.end(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row);
+  //  std::cout << "did one" << std::endl;});
+  std::cout << "ended" << std::endl;
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
   Assert(can_delete_from(table_name), "Cannot delete from " + table_name + ".");
+  std::cout << values->column_count()  << std::endl;
   const auto& rows = values->get_rows();
 
   std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
 }
 
-void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& values) {
+void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values, const std::shared_ptr<const Table>& update_values) {
   Assert(can_update(table_name), "Cannot update " + table_name + ".");
-  const auto& rows = values->get_rows();
+  //const auto& rows = values->get_rows();
 
-  std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->update(row); });
+  //std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->update(row); });
 }
 
 void MetaTableManager::add(const std::shared_ptr<AbstractMetaTable>& table) {
