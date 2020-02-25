@@ -49,8 +49,22 @@ class MatchesAllPosList : public AbstractPosList {
     return false;
   }
 
-  // template <typename Functor>
-  // void for_each(const Functor& functor) const;
+  PosListIterator<const MatchesAllPosList*, RowID> begin() const {
+    return PosListIterator<const MatchesAllPosList*, RowID>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
+  }
+
+  PosListIterator<const MatchesAllPosList*, RowID> end() const {
+    return PosListIterator<const MatchesAllPosList*, RowID>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
+  }
+
+  PosListIterator<const MatchesAllPosList*, RowID> cbegin() const {
+    return begin();
+  }
+
+  PosListIterator<const MatchesAllPosList*, RowID> cend() const {
+    return end();
+  }
+
 
  private:
   std::shared_ptr<const Chunk> _common_chunk = nullptr;

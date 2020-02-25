@@ -153,14 +153,6 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
     return static_cast<const pmr_vector<RowID>&>(*this) == other;
   }
 
-  PosListIterator<true> begin() {
-    return PosListIterator<true>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
-  }
-
-  PosListIterator<true> end() {
-    return PosListIterator<true>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
-  }
-
  private:
   bool _references_single_chunk = false;
 };

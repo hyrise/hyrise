@@ -7,6 +7,7 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -14,12 +15,14 @@ class PosList;
 
 class AbstractPosList {
 public:
-  template <bool modifiable = false>
-  class PosListIterator : public boost::iterator_facade<PosListIterator<modifiable>, RowID, boost::random_access_traversal_tag, std::conditional_t<modifiable, RowID&, RowID>> {
+  template <typename PosListType = const AbstractPosList*, typename DereferenceReturnType = RowID>
+  class PosListIterator : public boost::iterator_facade<
+                          PosListIterator<PosListType, DereferenceReturnType>,
+                          RowID,
+                          boost::random_access_traversal_tag,
+                          DereferenceReturnType> {
 public:
-  using Typ = std::conditional_t<modifiable, AbstractPosList*, const AbstractPosList*>;
-  using DereferenceReturnType = std::conditional_t<modifiable, RowID&, RowID>;
-  PosListIterator(Typ pl_pointer, ChunkOffset pos, ChunkOffset max_size) {
+  PosListIterator(PosListType pl_pointer, ChunkOffset pos, ChunkOffset max_size) {
     _pl_pointer = pl_pointer;
     _chunk_offset = pos;
     _max_size = max_size;
@@ -42,9 +45,12 @@ public:
     return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
   }
 
-  DereferenceReturnType dereference() const;
+  DereferenceReturnType dereference() const {
+    DebugAssert(_chunk_offset < _max_size, "You foool");
+    return (*_pl_pointer)[_chunk_offset];
+  }
 
-  Typ _pl_pointer;
+  PosListType _pl_pointer;
   ChunkOffset _chunk_offset;
   ChunkOffset _max_size;
 };
@@ -63,19 +69,21 @@ public:
 
   virtual RowID operator[](size_t n) const = 0;
 
-  PosListIterator<false> begin() const {
-    return PosListIterator<false>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
+  PosListIterator<> begin() const {
+    PerformanceWarning("AbstractPosList::begin() called - dereferencing this iterator will be slow.");
+    return PosListIterator<>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
   }
 
-  PosListIterator<false> end() const {
-    return PosListIterator<false>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
+  PosListIterator<> end() const {
+    PerformanceWarning("AbstractPosList::end() called - dereferencing this iterator will be slow.");
+    return PosListIterator<>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
   }
 
-  PosListIterator<false> cbegin() const {
+  PosListIterator<> cbegin() const {
     return begin();
   }
 
-  PosListIterator<false> cend() const {
+  PosListIterator<> cend() const {
     return end();
   }
 
@@ -86,9 +94,6 @@ public:
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
 
   virtual bool operator==(const AbstractPosList* other) const = 0;
-
-  // template <typename Functor>
-  // void for_each(const Functor& functor) const;
 };
 
 }  // namespace opossum
