@@ -64,6 +64,8 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
 
   inline static std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
   inline static std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+
+  inline static bool _last_run_successful{true};
 };
 
 auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLiteTestRunnerParam>& info) {
