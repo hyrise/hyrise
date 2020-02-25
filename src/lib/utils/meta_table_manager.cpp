@@ -9,6 +9,8 @@
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
+#include "operators/print.hpp"
+
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
@@ -58,16 +60,9 @@ void MetaTableManager::insert_into(const std::string& table_name, const std::sha
   Assert(can_insert_into(table_name), "Cannot insert into " + table_name + ".");
   const auto rows = values->get_rows();
 
-  std::cout << "for each" << std::endl;
-   for (const auto& row : rows) {
-    auto copy = row;
-    (_meta_tables.at(table_name))->insert(copy);
+  for (const auto& row : rows) {
+    _meta_tables.at(table_name)->insert(row);
    }
-
-
-  //std::for_each(rows.begin(), rows.end(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row);
-  //  std::cout << "did one" << std::endl;});
-  std::cout << "ended" << std::endl;
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
@@ -75,12 +70,13 @@ void MetaTableManager::delete_from(const std::string& table_name, const std::sha
   std::cout << values->column_count()  << std::endl;
   const auto& rows = values->get_rows();
 
-  std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->insert(row); });
+  for (const auto& row : rows) {
+    _meta_tables.at(table_name)->delete(row);
+   }
 }
 
 void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values, const std::shared_ptr<const Table>& update_values) {
   Assert(can_update(table_name), "Cannot update " + table_name + ".");
-  //const auto& rows = values->get_rows();
 
   //std::for_each(rows.cbegin(), rows.cend(), [&](auto&& row) { (_meta_tables.at(table_name))->update(row); });
 }

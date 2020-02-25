@@ -43,17 +43,17 @@ class AbstractMetaTable : public Noncopyable {
    * Manipulate the meta table by calling _on_insert() / _on_remove.
    * Additionally, checks if the input values match the column definitions are done.
    */
-  [[noreturn]] void insert(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] void remove(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] void update(const std::vector<AllTypeVariant>& values);
+  void insert(const std::vector<AllTypeVariant>& values);
+  void remove(const std::vector<AllTypeVariant>& values);
+   void update(const std::vector<AllTypeVariant>& values);
 
   void _assert_data_types(const std::vector<AllTypeVariant>& values) const;
 
   // These methods actually perform the table creation and manipulation.
   virtual std::shared_ptr<Table> _on_generate() const = 0;
-  [[noreturn]] virtual void _on_insert(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] virtual void _on_remove(const std::vector<AllTypeVariant>& values);
-  [[noreturn]] virtual void _on_update(const std::vector<AllTypeVariant>& values);
+   virtual void _on_insert(const std::vector<AllTypeVariant>& values);
+   virtual void _on_remove(const std::vector<AllTypeVariant>& values);
+   virtual void _on_update(const std::vector<AllTypeVariant>& values);
 
   const TableColumnDefinitions _column_definitions;
 };
