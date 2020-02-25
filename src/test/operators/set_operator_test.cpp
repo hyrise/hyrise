@@ -57,25 +57,25 @@ class SetOperatorIntegrationTest : public BaseTest {
 // these tests can be enabled as soon as they are
 class DISABLED_SetOperatorIntegrationTest : public SetOperatorIntegrationTest {}; /* #0 */
 
-TEST_F(DISABLED_SetOperatorIntegrationTest, IntersectTest) {
+TEST_F(DISABLED_SetOperatorIntegrationTest, IntersectTest) { /* #0 */
   auto sql_pipeline = SQLPipelineBuilder{_intersect_query_a}.create_pipeline();
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_TABLE_EQ_UNORDERED(table, _intersect_result);
 }
 
-TEST_F(DISABLED_SetOperatorIntegrationTest, MultipleIntersectTest) {
+TEST_F(DISABLED_SetOperatorIntegrationTest, MultipleIntersectTest) { /* #0 */
   auto sql_pipeline = SQLPipelineBuilder{_intersect_query_b}.create_pipeline();
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_TABLE_EQ_UNORDERED(table, _intersect_result);
 }
 
-TEST_F(DISABLED_SetOperatorIntegrationTest, ExceptTest) {
+TEST_F(DISABLED_SetOperatorIntegrationTest, ExceptTest) { /* #0 */
   auto sql_pipeline = SQLPipelineBuilder{_except_query_a}.create_pipeline();
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_TABLE_EQ_UNORDERED(table, _except_result);
 }
 
-TEST_F(DISABLED_SetOperatorIntegrationTest, MultipleSetOperatorsTest) {
+TEST_F(DISABLED_SetOperatorIntegrationTest, MultipleSetOperatorsTest) { /* #0 */
   auto sql_pipeline = SQLPipelineBuilder{_multiple_set_operations_query_a}.create_pipeline();
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_TABLE_EQ_UNORDERED(table, _except_result);
