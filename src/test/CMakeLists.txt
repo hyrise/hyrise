@@ -37,7 +37,7 @@ set(
     lib/import_export/csv/csv_writer_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
-    lib/pos_list_test.cpp
+    lib/matches_all_pos_list_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp

@@ -5,13 +5,13 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "gtest/gtest.h"
-#include "storage/pos_list.hpp"
+#include "storage/matches_all_pos_list.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/maintenance/create_table.hpp"
 
 namespace opossum {
 
-    class PosListTest : public BaseTest {
+    class MatchesAllPosListTest : public BaseTest {
     public:
         void SetUp() override {
             column_definitions.emplace_back("a", DataType::Int, false);
@@ -28,7 +28,7 @@ namespace opossum {
         std::shared_ptr<CreateTable> create_table;
     };
 
-    TEST_F(PosListTest, AddAfterMatchedAllTest) {
+    TEST_F(MatchesAllPosListTest, AddAfterMatchedAllTest) {
         // This checks if the matchesAllChunk-Flag in the PosList correctly handles rows, that are added to the table
         // after the posList was created. These later added rows should not be contained in the PosList
 
@@ -43,7 +43,7 @@ namespace opossum {
         auto get_table = std::make_shared<GetTable>(table_name);
         get_table->execute();
         const auto chunkID = ChunkID{0};
-        const auto matchesAllPosList = std::make_shared<const PosList>(get_table->get_output()->get_chunk(chunkID), chunkID);
+        const auto matchesAllPosList = std::make_shared<const MatchesAllPosList>(get_table->get_output()->get_chunk(chunkID), chunkID);
 
         const auto insert_context = Hyrise::get().transaction_manager.new_transaction_context();
         auto get_table_to_add = std::make_shared<GetTable>(table_name);
