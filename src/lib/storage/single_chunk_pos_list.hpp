@@ -43,6 +43,22 @@ class SingleChunkPosList final : public AbstractPosList {
       return _offsets;
     }
 
+  PosListIterator<const SingleChunkPosList*, RowID> begin() const {
+    return PosListIterator<const SingleChunkPosList*, RowID>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
+  }
+
+  PosListIterator<const SingleChunkPosList*, RowID> end() const {
+    return PosListIterator<const SingleChunkPosList*, RowID>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
+  }
+
+  PosListIterator<const SingleChunkPosList*, RowID> cbegin() const {
+    return begin();
+  }
+
+  PosListIterator<const SingleChunkPosList*, RowID> cend() const {
+    return end();
+  }
+
   private:
     std::vector<ChunkOffset> _offsets;
     ChunkID _chunk_id = INVALID_CHUNK_ID;
