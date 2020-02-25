@@ -284,8 +284,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _current_lqp = AliasNode::make(_unwrap_elements(_inflated_select_list_elements), aliases, _current_lqp);
   }
 
-  if (select.setOperators) {
-    for (const auto set_operator : *select.setOperators) {
+  if (select.setOperations) {
+    for (const auto set_operator : *select.setOperations) {
       AssertInput(!(set_operator->setType == hsql::kSetUnion), "Union Operations are currently not supported");
       _translate_set_operation(*set_operator);
       if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
@@ -1049,7 +1049,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   }
 }
 
-void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operator) {
+void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
   const auto left_input_lqp = _current_lqp;
 
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
