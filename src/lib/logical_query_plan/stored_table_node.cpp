@@ -130,32 +130,6 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> StoredTableNode::c
   return lqp_constraints;
 }
 
-static void print(std::vector<std::shared_ptr<AbstractExpression>> vec, std::string comment) {
-  std::cout << "--> Print Vector " + comment << std::endl;
-  for(const auto& expr : vec) {
-    const auto col_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-    if(col_expr) {
-      std::cout << col_expr << "__cid = " << col_expr->column_reference.original_column_id() << std::endl;
-    } else {
-      std::cout << "No LQPColumnExpression" << std::endl;
-    }
-  }
-  std::cout << "--> Printing done" << std::endl;
-}
-
-static void print(ExpressionUnorderedSet set, std::string comment) {
-  std::cout << "--> Print ExpressionUnorderedSet " + comment << std::endl;
-  for(const auto& expr : set) {
-    const auto col_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-    if(col_expr) {
-      std::cout << col_expr << "__cid = " << col_expr->column_reference.original_column_id() << std::endl;
-    } else {
-      std::cout << "No LQPColumnExpression" << std::endl;
-    }
-  }
-  std::cout << "--> Printing done" << std::endl;
-}
-
 const std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
   const auto unique_constraints = this->constraints();
@@ -164,13 +138,11 @@ const std::vector<FunctionalDependency> StoredTableNode::functional_dependencies
   for(auto& constraint : *unique_constraints) {
     auto left = constraint.column_expressions;
     auto right = ExpressionUnorderedSet{};
-    print(column_expressions, "this->column_expressions()");
-    print(left, "left = constraint.column_expressions");
 
     // Find column expressions that are functionally dependent
-    std::set_difference(column_expressions.begin(), column_expressions.end(), left.begin(), left.end(),
-                        std::inserter(right, right.begin()));
-    print(right, "right (set_difference)");
+    std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()), [&left](std::shared_ptr<AbstractExpression> column_expr) {
+      return !(left.contains(column_expr));
+    });
 
     // Create functional depend ency
     if(!right.empty()) {
