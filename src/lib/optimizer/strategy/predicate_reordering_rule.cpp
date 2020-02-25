@@ -26,7 +26,9 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type == LQPNodeType::Predicate) return true;
 
   // Validate can be seen as a Predicate on the MVCC column
+#if 0
   if (node->type == LQPNodeType::Validate) return true;
+#endif
 
   // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
   // might place the join below a validate node, but since it is not a "proper" join (i.e., one that returns columns

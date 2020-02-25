@@ -60,10 +60,11 @@ struct ChunkOffsetMapping {
  */
 
 
-template <typename Derived, typename Value, bool PlainPosList = false>
+template <typename Derived, typename Value, typename _PosListIteratorType>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  using PosListIteratorType = std::conditional_t<PlainPosList, PosList::const_iterator, AbstractPosList::PosListIterator<>>;
+  using PosListIteratorType = _PosListIteratorType;
+
   explicit BasePointAccessSegmentIterator(PosListIteratorType position_filter_begin,
                                           PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}

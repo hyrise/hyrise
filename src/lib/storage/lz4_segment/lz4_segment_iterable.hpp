@@ -39,41 +39,37 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
    */
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    using ValueIterator = typename std::vector<T>::const_iterator;
-
     const auto position_filter_size = position_filter->size();
 
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
 
-    // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
-    // element. If the requested element is not within that block, the next block will be decompressed and written to
-    // `cached_block` while the value and the new block id are returned. In case the requested element is within the
-    // cached block, the value and the input block id are returned.
-    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
-      const auto& position = (*position_filter)[index];
-      // NOLINTNEXTLINE
-      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
-      decompressed_filtered_segment[index] = std::move(value);
-      cached_block_index = block_index;
-    }
+    resolve_pos_list_type(position_filter, [&, *this](auto& pos_list) {
+      // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
+      // element. If the requested element is not within that block, the next block will be decompressed and written to
+      // `cached_block` while the value and the new block id are returned. In case the requested element is within the
+      // cached block, the value and the input block id are returned.
+      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+        const auto& position = (*pos_list)[index];
+        // NOLINTNEXTLINE
+        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+        decompressed_filtered_segment[index] = std::move(value);
+        cached_block_index = block_index;
+      }
 
-    if (_segment.null_values()) {
-      auto begin =
-          PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values()->cbegin(),
-                                             position_filter->cbegin(), position_filter->cbegin()};
-      auto end =
-          PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values()->cend(),
-                                             position_filter->cbegin(), position_filter->cend()};
-      functor(begin, end);
-    } else {
-      auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), std::nullopt,
-                                                      position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), std::nullopt,
-                                                    position_filter->cbegin(), position_filter->cend()};
+      using PosListIteratorType = decltype(pos_list->cbegin());
+      if (_segment.null_values()) {
+        auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), _segment.null_values()->cbegin(), pos_list->cbegin(), pos_list->cbegin()};
+        auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), _segment.null_values()->cend(), pos_list->cbegin(), pos_list->cend()};
 
-      functor(begin, end);
-    }
+        functor(begin, end);
+      } else {
+        auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt, pos_list->cbegin(), pos_list->cbegin()};
+        auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt, pos_list->cbegin(), pos_list->cend()};
+
+        functor(begin, end);
+      }
+    });
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -133,10 +129,11 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     std::optional<NullValueIterator> _null_value_it;
   };
 
-  template <typename ValueIterator>
+  template <typename _PosListIteratorType>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>, SegmentPosition<T>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>, SegmentPosition<T>, _PosListIteratorType> {
    public:
+    using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
     using IterableType = LZ4SegmentIterable<T>;
     using DataIteratorType = typename std::vector<T>::const_iterator;
@@ -144,9 +141,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     // Begin Iterator
     PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
-                        AbstractPosList::PosListIterator<> position_filter_begin, AbstractPosList::PosListIterator<> position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
-                                         SegmentPosition<T>>{std::move(position_filter_begin),
+                        _PosListIteratorType position_filter_begin, _PosListIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>,
+                                         SegmentPosition<T>, _PosListIteratorType>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _data_it{std::move(data_it)},
           _null_value_it{std::move(null_value_it)} {}

@@ -213,7 +213,17 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
 
       if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
+#if 1
         pos_list_out = std::make_shared<MatchesAllPosList>(chunk_in, chunk_id);
+#else
+        PosList temp_pos_list;
+        const auto chunk_size = chunk_in->size();
+        temp_pos_list.resize(chunk_size);
+        for (auto chunk_offset = 0u; chunk_offset < chunk_size; ++chunk_offset) {
+          temp_pos_list[chunk_offset] = RowID{chunk_id, chunk_offset};
+        }
+        pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
+#endif
       } else {
         PosList temp_pos_list;
         temp_pos_list.guarantee_single_chunk();
