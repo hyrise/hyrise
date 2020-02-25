@@ -11,7 +11,8 @@
 
 namespace opossum {
 
-UnionNode::UnionNode(const SetOperationMode set_operation_mode) : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(set_operation_mode) {}
+UnionNode::UnionNode(const SetOperationMode set_operation_mode)
+    : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(set_operation_mode) {}
 
 std::string UnionNode::description(const DescriptionMode mode) const {
   return "[UnionNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);

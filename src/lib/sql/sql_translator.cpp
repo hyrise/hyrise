@@ -1066,7 +1066,6 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
     AssertInput(left_expression->data_type() == right_expression->data_type(),
                 "The data type of both columns needs to match");
-
   }
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
@@ -1078,7 +1077,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   }
 
   switch (set_operator.setType) {
-    case hsql::kSetExcept: 
+    case hsql::kSetExcept:
       lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
     case hsql::kSetIntersect:

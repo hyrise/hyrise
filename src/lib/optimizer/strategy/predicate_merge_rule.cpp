@@ -49,8 +49,10 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   // Step 1: Collect mergeable nodes
   visit_lqp(root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
-    // We need to check for SetOperationMode::Positions as other SetOperationModes are not guaranteed to represent a disjunction
-    if (node->type == LQPNodeType::Predicate || (union_node && union_node->set_operation_mode == SetOperationMode::Positions)) {
+    // We need to check for SetOperationMode::Positions as other SetOperationModes are
+    // not guaranteed to represent a disjunction
+    if (node->type == LQPNodeType::Predicate ||
+        (union_node && union_node->set_operation_mode == SetOperationMode::Positions)) {
       const auto& outputs = node->outputs();
       const auto parent = std::find_if(outputs.begin(), outputs.end(),
                                        [&](const auto& output) { return node_to_topmost.count(output); });
@@ -98,7 +100,8 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
         break;
       }
 
-      default: {}
+      default: {
+      }
     }
   }
 }
