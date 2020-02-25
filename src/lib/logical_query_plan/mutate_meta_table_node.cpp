@@ -17,7 +17,7 @@ MutateMetaTableNode::MutateMetaTableNode(const std::string& init_table_name,
 std::string MutateMetaTableNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;
 
-  desc << "[Manipulate] Meta Table: '" << table_name << "'";
+  desc << "[Mutate] Meta Table: '" << table_name << "'";
 
   return desc.str();
 }

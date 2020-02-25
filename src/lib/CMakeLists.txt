@@ -228,6 +228,8 @@ set(
     operators/maintenance/drop_view.hpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
+    operators/mutate_meta_table.cpp
+    operators/mutate_meta_table.hpp
     operators/operator_join_predicate.cpp
     operators/operator_join_predicate.hpp
     operators/operator_performance_data.cpp

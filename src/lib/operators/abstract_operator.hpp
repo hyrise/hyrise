@@ -31,6 +31,7 @@ enum class OperatorType {
   JoinSortMerge,
   JoinVerification,
   Limit,
+  MutateMetaTable,
   Print,
   Product,
   Projection,
