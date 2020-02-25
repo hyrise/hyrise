@@ -261,6 +261,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
+        case LQPNodeType::MutateMetaTable:
         case LQPNodeType::Predicate:
         case LQPNodeType::Projection:
         case LQPNodeType::Root:

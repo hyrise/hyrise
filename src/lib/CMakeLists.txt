@@ -145,6 +145,8 @@ set(
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
+    logical_query_plan/mutate_meta_table_node.cpp
+    logical_query_plan/mutate_meta_table_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp

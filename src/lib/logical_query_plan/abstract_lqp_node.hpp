@@ -25,6 +25,7 @@ enum class LQPNodeType {
   Insert,
   Join,
   Limit,
+  MutateMetaTable,
   Predicate,
   Projection,
   Root,

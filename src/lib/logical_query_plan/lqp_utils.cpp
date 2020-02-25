@@ -8,6 +8,7 @@
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/mutate_meta_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -206,6 +207,9 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
           return LQPVisitation::VisitInputs;
         });
       } break;
+      case LQPNodeType::MutateMetaTable:
+        modified_tables.insert(std::static_pointer_cast<MutateMetaTableNode>(node)->table_name);
+        break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:
