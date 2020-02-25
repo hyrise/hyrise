@@ -11,12 +11,11 @@
 
 namespace opossum {
 
-IntersectNode::IntersectNode(const UnionMode union_mode,
-                             const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates)
-    : AbstractLQPNode(LQPNodeType::Intersect, join_predicates), union_mode(union_mode) {}
+IntersectNode::IntersectNode(const SetOperationMode set_operation_mode)
+    : AbstractLQPNode(LQPNodeType::Intersect), set_operation_mode(set_operation_mode) {}
 
 std::string IntersectNode::description(const DescriptionMode mode) const {
-  return "[IntersectNode] Mode: " + union_mode_to_string.left.at(union_mode);
+  return "[IntersectNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& IntersectNode::column_expressions() const {
@@ -29,19 +28,15 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& IntersectNode::join_predicates() const {
-  return node_expressions;
-}
-
-size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(union_mode); }
+size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return IntersectNode::make(union_mode, node_expressions);
+  return IntersectNode::make(set_operation_mode);
 }
 
 bool IntersectNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& intersect_node = static_cast<const IntersectNode&>(rhs);
-  return union_mode == intersect_node.union_mode;
+  return set_operation_mode == intersect_node.set_operation_mode;
 }
 
 }  // namespace opossum

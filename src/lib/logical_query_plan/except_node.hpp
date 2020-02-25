@@ -12,15 +12,13 @@ namespace opossum {
 
 class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNode {
  public:
-  explicit ExceptNode(const UnionMode union_mode,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates);
+  explicit ExceptNode(const SetOperationMode set_operation_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  const UnionMode union_mode;
-  const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
+  const SetOperationMode set_operation_mode;
 
  protected:
   size_t _on_shallow_hash() const override;

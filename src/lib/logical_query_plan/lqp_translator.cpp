@@ -425,86 +425,20 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
-
-  const auto input_operator_left = translate_node(node->left_input());
-  const auto input_operator_right = translate_node(node->right_input());
-
-  switch (union_node->union_mode) {
-    case UnionMode::Positions:
-      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
-    case UnionMode::All:
-      return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
-  }
-  Fail("Invalid enum value");
+  FailInput("Currently all SetOperations are not supported by Hyrise");
+  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto intersect_node = std::dynamic_pointer_cast<IntersectNode>(node);
-
-  const auto input_operator_left = translate_node(node->left_input());
-  const auto input_operator_right = translate_node(node->right_input());
-
-  const auto join_predicates = intersect_node->join_predicates();
-
-  const auto predicate_operators = _create_set_predicates(node, join_predicates);
-
-  const auto& primary_predicate_operator = predicate_operators.front();
-  std::vector<OperatorJoinPredicate> secondary_join_predicates(predicate_operators.cbegin() + 1,
-                                                               predicate_operators.cend());
-
-  switch (intersect_node->union_mode) {
-    case UnionMode::Positions:
-      return std::make_shared<JoinNestedLoop>(input_operator_left, input_operator_right, JoinMode::Intersect,
-                                              primary_predicate_operator, move(secondary_join_predicates));
-    case UnionMode::All:
-      Fail("Set Operations with the ALL operator are currently not supported");
-  }
-  Fail("Invalid enum value");
+  FailInput("Currently all SetOperations are not supported by Hyrise");
+  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto except_node = std::dynamic_pointer_cast<ExceptNode>(node);
-
-  const auto input_operator_left = translate_node(node->left_input());
-  const auto input_operator_right = translate_node(node->right_input());
-
-  const auto join_predicates = except_node->join_predicates();
-
-  const auto predicate_operators = _create_set_predicates(node, join_predicates);
-
-  const auto& primary_predicate_operator = predicate_operators.front();
-  std::vector<OperatorJoinPredicate> secondary_join_predicates(predicate_operators.cbegin() + 1,
-                                                               predicate_operators.cend());
-
-  switch (except_node->union_mode) {
-    case UnionMode::Positions:
-      return std::make_shared<JoinNestedLoop>(input_operator_left, input_operator_right, JoinMode::Except,
-                                              primary_predicate_operator, move(secondary_join_predicates));
-    case UnionMode::All:
-      Fail("Set Operations with the ALL operator are currently not supported");
-  }
-  Fail("Invalid enum value");
-}
-
-std::vector<OperatorJoinPredicate> LQPTranslator::_create_set_predicates(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& join_expressions) const {
-  std::vector<OperatorJoinPredicate> join_predicates;
-  join_predicates.reserve(join_expressions.size());
-
-  for (const auto& predicate_expression : join_expressions) {
-    auto join_predicate =
-        OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());
-    // Assert that the Join Predicates are simple, e.g. of the form <column_a> <predicate> <column_b>.
-    // <column_a> and <column_b> must be on separate sides, but <column_a> need not be on the left.
-    Assert(join_predicate, "Couldn't translate join predicate: "s + predicate_expression->as_column_name());
-    join_predicates.emplace_back(*join_predicate);
-  }
-
-  return join_predicates;
+  FailInput("Currently all SetOperations are not supported by Hyrise");
+  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(

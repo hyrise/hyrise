@@ -1055,8 +1055,6 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
                                       _with_descriptions};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
 
-  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
-
   AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(),
               "The size of tables connected via set operators needs to match");
 
@@ -1068,26 +1066,28 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperator& set_operat
     AssertInput(left_expression->data_type() == right_expression->data_type(),
                 "The data type of both columns needs to match");
 
-    join_predicates.emplace_back(
-        std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
   }
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
-  if (set_operator.setType == hsql::kSetExcept) {
-    lqp = ExceptNode::make(UnionMode::Positions, join_predicates, left_input_lqp, right_input_lqp);
-  } else if (set_operator.setType == hsql::kSetIntersect) {
-    lqp = IntersectNode::make(UnionMode::Positions, join_predicates, left_input_lqp, right_input_lqp);
+  if (set_operator.isAll) {
+    const auto set_operation_mode = SetOperationMode::All;
+  } else {
+    const auto set_operation_mode = SetOperationMode::Positions;
   }
 
-  if (!join_predicates.empty()) {
-    // Projection Node to remove duplicate columns
-    lqp = ProjectionNode::make(_unwrap_elements(_inflated_select_list_elements), lqp);
-  }
-
-  if (!set_operator.isAll) {
-    lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
-                              std::vector<std::shared_ptr<AbstractExpression>>{}, lqp);
+  switch (set_operator.setType) {
+    case hsql::kSetExcept: 
+      lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
+      break;
+    case hsql::kSetIntersect:
+      lqp = IntersectNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
+      break;
+    case hsql::kSetUnion:
+      lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
+      break;
+    default:
+      FailInput("Unknown Set Type");
   }
 
   _current_lqp = lqp;
