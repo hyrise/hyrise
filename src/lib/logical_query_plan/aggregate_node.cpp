@@ -83,18 +83,16 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
 const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
   auto aggregate_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  // (1) Identify incoming constraints that are eligible for forwarding
-
+  // (1) Check for incoming constraints that can be forwarded straightaway.
   // We call column_expressions() to avoid the (intermediate) ANY() aggregates
   // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
-  const auto& column_expressions_vec = column_expressions();
+  const auto column_expressions_vec = column_expressions();
   const auto column_expressions_set = ExpressionUnorderedSet{column_expressions_vec.cbegin(), column_expressions_vec.cend()};
 
-
-  // Check each input constraint for applicability in this aggregate node
+  // Check each constraint for applicability
   auto input_lqp_constraints = left_input()->constraints();
   for (const auto& constraint : *input_lqp_constraints) {
-    // Check whether column expressions have been filtered out with this node.
+    // Check, whether involved column expressions are part of the AggregateNode's output expressions
     bool found_all_column_expressions =
         std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
                     [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
@@ -102,27 +100,22 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
                     });
 
     if (found_all_column_expressions) {
+      // Forward constraint
       aggregate_lqp_constraints->insert(constraint);
     }
   }
 
-  // (2) Create a new unique constraint based on the Group-By column(s).
-  // The set of group-by columns represents a candidate key of the output relation.
-  // In addition, we also know that non-group-by columns are functionally dependent on group-by columns.
-  ExpressionUnorderedSet group_by_columns;
-  ExpressionUnorderedSet aggregate_columns;
-  group_by_columns.reserve(aggregate_expressions_begin_idx + 1);
-  aggregate_columns.reserve(node_expressions.size() - aggregate_expressions_begin_idx);
-  for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx;
-       ++expression_idx) {
-    if(expression_idx < aggregate_expressions_begin_idx) {
-      group_by_columns.insert(column_expressions_vec[expression_idx]);
-    } else {
-      aggregate_columns.insert(column_expressions_vec[expression_idx]);
-    }
-  }
-  // Create ExpressionsConstraintDefinition
-  aggregate_lqp_constraints->emplace(group_by_columns); // TODO(Julian) ignore functional dependency? (aggregate_columns)
+  // (2) Create unique constraint from Group-By column(s).
+  // The set of group-by columns forms a candidate key for the output relation.
+  ExpressionUnorderedSet group_by_columns(aggregate_expressions_begin_idx + 1);
+  std::copy(node_expressions.cbegin(), node_expressions.cbegin() + aggregate_expressions_begin_idx, group_by_columns.begin());
+  DebugAssert(group_by_columns.size() == aggregate_expressions_begin_idx + 1, "wrong!"); // TODO remove
+
+  // Create ExpressionsConstraintDefinition from column expressions
+  aggregate_lqp_constraints->emplace(group_by_columns);
+
+  // We also have a functional dependency here: (group_by_columns) => (aggregate_columns)
+  // TODO(anyone) Save FD?
 
   return aggregate_lqp_constraints;
 }
