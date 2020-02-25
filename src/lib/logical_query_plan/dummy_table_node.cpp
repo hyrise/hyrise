@@ -14,8 +14,8 @@ DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}
 
 std::string DummyTableNode::description(const DescriptionMode mode) const { return "[DummyTable]"; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::column_expressions() const {
-  return _column_expressions;
+const std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::column_expressions() const {
+  return {};
 }
 
 bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
