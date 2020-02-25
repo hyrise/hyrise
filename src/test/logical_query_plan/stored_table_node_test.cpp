@@ -201,7 +201,21 @@ TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(_stored_table_node->constraints()->empty());
 }
 
-TEST_F(StoredTableNodeTest, FunctionalDependenciesTest) {
+
+
+TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
+  // No constraints => No functional dependencies
+  EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
+
+  // Constraint across all columns => No more columns available to create a functional dependency from
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint(TableConstraintDefinition{
+      {_a.original_column_id(), _b.original_column_id(), _c.original_column_id()}});
+
+  EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
+}
+
+TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
   table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
 
@@ -210,12 +224,44 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesTest) {
   const auto fd = fds.at(0);
 
   // Check left
-  EXPECT_TRUE(fd.first.size() == 1 && fd.first.contains(lqp_column_(_a)));
+  EXPECT_EQ(fd.first.size(), 1);
+  EXPECT_TRUE(fd.first.contains(lqp_column_(_a)));
 
   // Check right
   EXPECT_TRUE(fd.second.size() == 2);
   EXPECT_TRUE(fd.second.contains(lqp_column_(_b)));
   EXPECT_TRUE(fd.second.contains(lqp_column_(_c)));
+}
+
+TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint(TableConstraintDefinition{{
+    _a.original_column_id()}});
+  table->add_soft_unique_constraint(TableConstraintDefinition{{
+    _a.original_column_id(), _b.original_column_id()}});
+
+  const auto& fds = _stored_table_node->functional_dependencies();
+  EXPECT_TRUE(fds.size() == 2);
+  const auto fd1 = fds.at(0);
+  const auto fd2 = fds.at(1);
+
+  // Check left of fd1
+  EXPECT_EQ(fd1.first.size(), 1);
+  EXPECT_TRUE(fd1.first.contains(lqp_column_(_a)));
+
+  // Check right of fd1
+  EXPECT_EQ(fd1.second.size(), 2);
+  EXPECT_TRUE(fd1.second.contains(lqp_column_(_b)));
+  EXPECT_TRUE(fd1.second.contains(lqp_column_(_c)));
+
+  // Check left of fd2
+  EXPECT_EQ(fd2.first.size(), 2);
+  EXPECT_TRUE(fd2.first.contains(lqp_column_(_a)));
+  EXPECT_TRUE(fd2.first.contains(lqp_column_(_b)));
+
+  // Check right of fd2
+  EXPECT_EQ(fd2.second.size(), 1);
+  EXPECT_TRUE(fd2.second.contains(lqp_column_(_c)));
 }
 
 }  // namespace opossum
