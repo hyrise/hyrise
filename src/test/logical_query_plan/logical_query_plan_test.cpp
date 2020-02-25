@@ -352,7 +352,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
 
   EXPECT_EQ(cleaned_str, R"([0] [Predicate] 0x00000000.a > 5 @ 0x00000000
  \_[1] [Join] Mode: Inner [0x00000000.a = 0x00000000.a] @ 0x00000000
-    \_[2] [UnionNode] Mode: UnionPositions @ 0x00000000
+    \_[2] [UnionNode] Mode: SetOperationPositions @ 0x00000000
     |  \_[3] [Predicate] 0x00000000.a = 5 @ 0x00000000
     |  |  \_[4] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s) @ 0x00000000
     |  \_[5] [Predicate] 0x00000000.a = 6 @ 0x00000000
