@@ -90,7 +90,30 @@ class AbstractPosList {
 
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
 
-  virtual bool operator==(const AbstractPosList* other) const = 0;
+  friend bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs);
 };
+
+inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
+  PerformanceWarning("Using slow PosList comparison.");
+
+  if (lhs.size() != rhs.size()) {
+    return false;
+  }
+
+  auto lhsIt = lhs.cbegin();
+  auto lhsEnd = lhs.cend();
+  auto rhsIt = rhs.cbegin();
+
+  while (lhsIt != lhsEnd) {
+    if (!(*lhsIt == *rhsIt)) {
+      return false;
+    }
+
+    lhsIt++;
+    rhsIt++;
+  }
+
+  return true;
+}
 
 }  // namespace opossum

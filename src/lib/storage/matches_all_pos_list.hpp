@@ -32,13 +32,6 @@ class MatchesAllPosList : public AbstractPosList {
 
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const override final { return sizeof *this; }
 
-  virtual bool operator==(const MatchesAllPosList* other) const final { return _common_chunk == other->_common_chunk; }
-
-  virtual bool operator==(const AbstractPosList* other) const override final {
-    // TODO
-    return false;
-  }
-
   PosListIterator<const MatchesAllPosList*, RowID> begin() const {
     return PosListIterator<const MatchesAllPosList*, RowID>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
   }
