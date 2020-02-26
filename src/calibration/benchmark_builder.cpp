@@ -1,6 +1,5 @@
 #include <tpch/tpch_benchmark_item_runner.hpp>
 #include <benchmark_runner.hpp>
-#include <sql/sql_pipeline_builder.hpp>
 #include <tpch/tpch_table_generator.hpp>
 #include <file_based_benchmark_item_runner.hpp>
 #include <tpcds/tpcds_table_generator.hpp>

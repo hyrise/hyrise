@@ -35,5 +35,6 @@ class LQPGenerator {
     const bool _enable_like_predicates = true;
     const bool _enable_reference_scans = true;
     const bool _enable_column_vs_column_scans = true;
+    const bool _enable_between_predicates = true;
 };
 }

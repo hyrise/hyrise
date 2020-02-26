@@ -222,7 +222,7 @@ set (
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     plugins/mvcc_delete_plugin_system_test.cpp
-)
+        calibration/calibration_lqp_generation_test.cpp calibration/calibration_lqp_generation_test.hpp)
 
 # Both hyriseTest and hyriseSystemTest link against these
 set(
