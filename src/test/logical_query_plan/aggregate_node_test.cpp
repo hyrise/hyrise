@@ -92,36 +92,45 @@ TEST_F(AggregateNodeTest, Copy) {
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 
-TEST_F(AggregateNodeTest, ConstraintsSingleGroupBy) {
+TEST_F(AggregateNodeTest, ConstraintsGroupBySingleColumn) {
+  EXPECT_TRUE(_mock_node->constraints()->empty());
+
   const auto aggregate1 = sum_(add_(_a, _b));
   const auto aggregate2 = sum_(add_(_a, _c));
   _aggregate_node = AggregateNode::make(expression_vector(_a),
                                         expression_vector(aggregate1, aggregate2), _mock_node);
 
-  // Check, whether AggregateNode adds a new constraint for its group-by column
+  // Check, whether AggregateNode adds a new constraint covering group-by column _a
   EXPECT_EQ(_aggregate_node->constraints()->size(), 1);
   const auto lqp_constraint = *_aggregate_node->constraints()->cbegin();
+  EXPECT_TRUE((lqp_constraint.column_expressions.contains(lqp_column_(_a))));
   EXPECT_EQ(lqp_constraint.column_expressions.size(), 1);
-  //EXPECT_EQ((lqp_constraint.column_expressions.cbegin()->get()), _a); // ToDo(Julian): Does not yet work!
-
-//  EXPECT_EQ(lqp_constraint.column_expressions_functionally_dependent.size(), 1);
-//  EXPECT_TRUE(lqp_constraint.column_expressions_functionally_dependent.contains(aggregate1));
-//  EXPECT_TRUE(lqp_constraint.column_expressions_functionally_dependent.contains(aggregate2));
 }
 
-TEST_F(AggregateNodeTest, ConstraintsMultiGroupBy) {
+TEST_F(AggregateNodeTest, ConstraintsGroupByMultipleColumns) {
 
 }
 
 TEST_F(AggregateNodeTest, ConstraintsForwarding) {
-    // Unique: a
-    const auto table_constraint_1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}}};
-    // Unique: b
-    const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}};
+  // Prepare Test
+  const auto table_constraint_1 = TableConstraintDefinition{{_b.original_column_id()}};
+  const auto table_constraint_2 = TableConstraintDefinition{{_c.original_column_id()}};
+  _mock_node->set_table_constraints({table_constraint_1, table_constraint_2});
+  EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
-    _mock_node->set_table_constraints({table_constraint_1, table_constraint_2});
+  const auto aggregate = sum_(_c);
+  _aggregate_node = AggregateNode::make(expression_vector(_a, _b),
+                                        expression_vector(aggregate), _mock_node);
 
+  // Since _b is part of the group-by columns, table_constraint1 remains valid.
+  // As _c becomes aggregated, table_constraint2 has to be discarded
+  // In addition, a new table constraint is created covering all group-by columns (_a, _b)
+  EXPECT_EQ(_aggregate_node->constraints()->size(), 2);
+}
+
+TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
 
 }
+
 
 }  // namespace opossum
