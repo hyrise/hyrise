@@ -222,6 +222,15 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
   _ordered_by.emplace(ordered_by);
 }
 
+const std::optional<std::pair<ColumnID, ValueClusteringType>>& Chunk::value_clustered_by() const {
+  return _value_clustered_by;
+}
+
+void Chunk::set_value_clustered_by(const std::pair<ColumnID, ValueClusteringType>& value_clustered_by) {
+  // TODO Should we check for mutable chunk here?
+  _value_clustered_by.emplace(value_clustered_by);
+}
+
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
   if (_cleanup_commit_id == 0) {
     // Cleanup-Commit-ID is not yet set

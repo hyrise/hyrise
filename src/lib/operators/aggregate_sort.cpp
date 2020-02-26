@@ -256,6 +256,49 @@ void AggregateSort::_set_and_write_aggregate_value(
   }
 }
 
+Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id) {
+  Segments segments{};
+  for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+    segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+  }
+  return segments;
+}
+
+std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_ptr<const Table> input_table,
+      const std::optional<std::pair<ColumnID, OrderByMode>>& all_chunks_ordered_by) {
+  auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, input_table->target_chunk_size(), UseMvcc::No);
+
+  const auto chunk_count = input_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto new_chunk = std::make_shared<Chunk>(_get_segments_of_chunk(input_table, chunk_id));
+    std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
+    auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+
+    // call sort operator on single-chunk table
+    // Skip already sorted columns
+    auto partly_sorted_table = input_table;
+    auto order_by = all_chunks_ordered_by;
+    for (const auto& column_id : _groupby_column_ids) {
+      auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+      table_wrapper->execute();
+      auto sort = std::make_shared<Sort>(table_wrapper, column_id);
+      sort->execute();
+      partly_sorted_table = sort->get_output();
+      order_by = std::make_pair(column_id, OrderByMode::Ascending);
+    }
+
+    // add sorted chunk to output table
+    // Note: we do not care about MVCC at all at the moment
+    sorted_table->append_chunk(_get_segments_of_chunk(partly_sorted_table, ChunkID{0}));
+    //sorted_table->append_chunk(immutable_sorted_table->get_chunk(ChunkID{0})->segments());
+    const auto& added_chunk = sorted_table->get_chunk(chunk_id);
+    added_chunk->finalize();
+    added_chunk->set_ordered_by(*order_by);
+  }
+
+  return sorted_table;
+}
+
 /**
  * Executes the aggregation.
  * High-level overview:
@@ -371,32 +414,25 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Check if there's a common chunk ordering. Since the aggregate_sort operates on table level
   // and not on chunk level, we can only make statements about ordering when we know that the
   // entire table is ordered regardings one single column among all chunks
-  auto all_chunks_ordered_by = input_table->get_chunk(ChunkID{0})->ordered_by();
+  const auto first_chunk = input_table->get_chunk(ChunkID{0});
+  auto all_chunks_ordered_by = first_chunk->ordered_by();
+  auto all_chunks_value_clustered_by = first_chunk->value_clustered_by();
   if (all_chunks_ordered_by) {
     for (auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
       if (input_table->get_chunk(chunk_id)->ordered_by() != all_chunks_ordered_by) {
         all_chunks_ordered_by = std::nullopt;
+      }
+      if (input_table->get_chunk(chunk_id)->value_clustered_by() != all_chunks_value_clustered_by) {
+        all_chunks_ordered_by = std::nullopt;
+      }
+      if (!all_chunks_ordered_by && !all_chunks_value_clustered_by) {
         break;
       }
     }
   }
 
   // Sort input table consecutively by the group by columns (stable sort)
-  auto sorted_table = input_table;
-  auto order_by = all_chunks_ordered_by;
-  for (const auto& column_id : _groupby_column_ids) {
-    // Skip already sorted columns.
-    // The order in which columns are sorted is not relevant here since we only care about grouping.
-    if (all_chunks_ordered_by && all_chunks_ordered_by->first == column_id) {
-      continue;
-    }
-    const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
-    sorted_wrapper->execute();
-    const auto sort = std::make_shared<Sort>(sorted_wrapper, column_id);
-    sort->execute();
-    sorted_table = sort->get_output();
-    order_by = std::make_pair(column_id, OrderByMode::Ascending);
-  }
+  auto sorted_table = _sort_table_chunk_wise(input_table, all_chunks_ordered_by);
 
   _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
 
@@ -607,8 +643,11 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   // Set order_by flag.
   const auto chunk = result_table->last_chunk();
-  chunk->finalize();
-  chunk->set_ordered_by(*order_by);
+  auto order_by = sorted_table->get_chunk(ChunkID{0})->ordered_by();
+  if (order_by) {
+    chunk->finalize();
+    chunk->set_ordered_by(*order_by);
+  }
 
   return result_table;
 }

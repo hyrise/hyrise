@@ -103,7 +103,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     const auto chunk = table->get_chunk(chunk_id);
 
     if (mode == "Sorted") {
-      chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
+      chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Ascending));
     } else if (mode == "SortedDescending") {
       chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
     }
