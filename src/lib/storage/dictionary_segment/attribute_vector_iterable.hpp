@@ -28,7 +28,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    // TODO: Some callers resolve already before calling this. This has become unnecessary
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;

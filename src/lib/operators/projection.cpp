@@ -126,14 +126,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                     auto filtered_attribute_vector = pmr_vector<ValueID::base_type>(input_pos_list->size());
                     auto iterable = create_iterable_from_attribute_vector(dictionary_segment);
                     auto chunk_offset = ChunkOffset{0};
-                    resolve_pos_list_type(input_pos_list, [&](auto pos) {
-                      iterable.with_iterators(pos, [&](auto it, auto end) {
-                        while (it != end) {
-                          filtered_attribute_vector[chunk_offset] = it->value();
-                          ++it;
-                          ++chunk_offset;
-                        }
-                      });
+                    iterable.with_iterators(input_pos_list, [&](auto it, auto end) {
+                      while (it != end) {
+                        filtered_attribute_vector[chunk_offset] = it->value();
+                        ++it;
+                        ++chunk_offset;
+                      }
                     });
                     // DictionarySegments take BaseCompressedVectors, not an std::vector<ValueId> for the attribute
                     // vector. But the latter can be wrapped into a FixedSizeByteAligned<uint32_t> without copying.
