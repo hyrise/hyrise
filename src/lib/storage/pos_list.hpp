@@ -125,24 +125,6 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
     return size() * sizeof(Vector::value_type);
   }
 
-  // TODO: Proper support for comparison
-  bool operator==(const AbstractPosList* other) const override {
-    // return other == *this;
-    if (auto p = dynamic_cast<const PosList*>(other)) {
-      return static_cast<const pmr_vector<RowID>&>(*this) == static_cast<const pmr_vector<RowID>&>(*p);
-    }
-    Fail("operator == fail");
-  }
-
-  bool operator==(const PosList& other) const {
-    return static_cast<const pmr_vector<RowID>&>(*this) == static_cast<const pmr_vector<RowID>&>(other);
-  }
-
-  // Kept for testing
-  bool operator==(const pmr_vector<RowID>& other) const {
-    return static_cast<const pmr_vector<RowID>&>(*this) == other;
-  }
-
  private:
   bool _references_single_chunk = false;
 };
