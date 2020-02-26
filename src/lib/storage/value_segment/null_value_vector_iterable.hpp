@@ -27,9 +27,11 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
-    functor(begin, end);
+    resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
+      auto begin = PointAccessIterator{_null_values, pos_list->cbegin(), pos_list->cbegin()};
+      auto end = PointAccessIterator{_null_values, pos_list->begin(), pos_list->cend()};
+      functor(begin, end);
+    });
   }
 
  private:
@@ -64,16 +66,18 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     NullValueIterator _null_value_it;
   };
 
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
+  template <typename _PosListIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>, IsNullSegmentPosition, _PosListIteratorType> {
    public:
+    using PosListIteratorType = _PosListIteratorType;
     using ValueType = bool;
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values,
-                                 const AbstractPosList::PosListIterator<> position_filter_begin,
-                                 AbstractPosList::PosListIterator<> position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
+                                 const _PosListIteratorType position_filter_begin,
+                                 _PosListIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition, _PosListIteratorType>{std::move(position_filter_begin),
                                                                                      std::move(position_filter_it)},
           _null_values{null_values} {}
 

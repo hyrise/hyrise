@@ -38,7 +38,12 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value> {};
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
+public:
+  // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
+  // we still want to use random access (for binary search, distance, ...)
+  typedef std::random_access_iterator_tag iterator_category;
+};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -60,10 +65,11 @@ struct ChunkOffsetMapping {
  */
 
 
-template <typename Derived, typename Value, bool PlainPosList = false>
+template <typename Derived, typename Value, typename _PosListIteratorType>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  using PosListIteratorType = std::conditional_t<PlainPosList, PosList::const_iterator, AbstractPosList::PosListIterator<>>;
+  using PosListIteratorType = _PosListIteratorType;
+
   explicit BasePointAccessSegmentIterator(PosListIteratorType position_filter_begin,
                                           PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}

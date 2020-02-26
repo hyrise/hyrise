@@ -31,19 +31,23 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    if (_segment.is_nullable()) {
-      auto begin = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                       position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                     position_filter->cbegin(), position_filter->cend()};
-      functor(begin, end);
-    } else {
-      auto begin =
-          NonNullPointAccessIterator{_segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin()};
-      auto end =
-          NonNullPointAccessIterator{_segment.values().cbegin(), position_filter->cbegin(), position_filter->cend()};
-      functor(begin, end);
-    }
+    resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
+      using PosListIteratorType = std::decay_t<decltype(pos_list->cbegin())>;
+
+      if (_segment.is_nullable()) {
+        auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                         pos_list->cbegin(), pos_list->cbegin()};
+        auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                       pos_list->cbegin(), pos_list->cend()};
+        functor(begin, end);
+      } else {
+        auto begin =
+            NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), pos_list->cbegin(), pos_list->cbegin()};
+        auto end =
+            NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), pos_list->cbegin(), pos_list->cend()};
+        functor(begin, end);
+      }
+    });
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -138,18 +142,20 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
+  template <typename _PosListIteratorType>
   class NonNullPointAccessIterator
-      : public BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>> {
+      : public BasePointAccessSegmentIterator<NonNullPointAccessIterator<_PosListIteratorType>, SegmentPosition<T>, _PosListIteratorType> {
    public:
+    using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
-                                        const AbstractPosList::PosListIterator<> position_filter_begin,
-                                        AbstractPosList::PosListIterator<> position_filter_it)
-        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(
+                                        const _PosListIteratorType position_filter_begin,
+                                        _PosListIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>, _PosListIteratorType>{std::move(
                                                                                              position_filter_begin),
                                                                                          std::move(position_filter_it)},
           _values_begin_it{values_begin_it} {}
@@ -168,8 +174,10 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ValueVectorIterator _values_begin_it;
   };
 
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>> {
+  template <typename _PosListIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>, SegmentPosition<T>, _PosListIteratorType> {
    public:
+    using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
@@ -177,9 +185,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
-                                 const AbstractPosList::PosListIterator<> position_filter_begin,
-                                 AbstractPosList::PosListIterator<> position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
+                                 const _PosListIteratorType position_filter_begin,
+                                 _PosListIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, _PosListIteratorType>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
           _values_begin_it{values_begin_it},
           _null_values_begin_it{null_values_begin_it} {}

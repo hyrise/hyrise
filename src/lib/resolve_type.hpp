@@ -221,8 +221,8 @@ void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functo
 
   if (auto pos_list = dynamic_cast<PosListPtr>(&untyped_pos_list)) {
     func(*pos_list);
-  } else if (auto pos_list = dynamic_cast<const MatchesAllPosList *>(&untyped_pos_list)) {
-    func(*pos_list);
+  } else if (auto matches_all_pos_list = dynamic_cast<const MatchesAllPosList *>(&untyped_pos_list)) {
+    func(*matches_all_pos_list);
   } else {
     Fail("Unrecognized PosList type encountered");
   }
@@ -238,8 +238,8 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
 
   if (auto pos_list = std::dynamic_pointer_cast<const PosList>(untyped_pos_list)) {
     func(pos_list);
-  } else if (auto pos_list = std::dynamic_pointer_cast<const MatchesAllPosList>(untyped_pos_list)) {
-    func(pos_list);
+  } else if (auto matches_all_pos_list = std::dynamic_pointer_cast<const MatchesAllPosList>(untyped_pos_list)) {
+    func(matches_all_pos_list);
   } else {
     Fail("Unrecognized PosList type encountered");
   }
