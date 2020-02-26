@@ -108,7 +108,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
   // (2) Create unique constraint from Group-By column(s).
   // The set of group-by columns forms a candidate key for the output relation.
   ExpressionUnorderedSet group_by_columns(aggregate_expressions_begin_idx + 1);
-  std::copy(node_expressions.cbegin(), node_expressions.cbegin() + aggregate_expressions_begin_idx, group_by_columns.begin());
+  std::copy_n(node_expressions.begin(), aggregate_expressions_begin_idx + 1, std::inserter(group_by_columns, group_by_columns.begin()));
   DebugAssert(group_by_columns.size() == aggregate_expressions_begin_idx + 1, "wrong!"); // TODO remove
 
   // Create ExpressionsConstraintDefinition from column expressions
