@@ -136,6 +136,8 @@ const std::vector<FunctionalDependency> StoredTableNode::functional_dependencies
   const auto column_expressions = this->column_expressions();
 
   for(auto& constraint : *unique_constraints) {
+
+    // ToDo PK or non-nullable?
     auto left = constraint.column_expressions;
     auto right = ExpressionUnorderedSet{};
 
@@ -144,7 +146,7 @@ const std::vector<FunctionalDependency> StoredTableNode::functional_dependencies
       return !(left.contains(column_expr));
     });
 
-    // Create functional depend ency
+    // Create functional dependency
     if(!right.empty()) {
       fds.emplace_back(left, right);
     }
