@@ -92,19 +92,6 @@ TEST_F(AggregateNodeTest, Copy) {
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 
-static void print(ExpressionUnorderedSet set, std::string comment) {
-  std::cout << "--> Print ExpressionUnorderedSet " + comment << std::endl;
-  for(const auto& expr : set) {
-    const auto col_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-    if(col_expr) {
-      std::cout << col_expr << "__cid = " << col_expr->column_reference.original_column_id() << std::endl;
-    } else {
-      std::cout << "No LQPColumnExpression" << std::endl;
-    }
-  }
-  std::cout << "--> Printing done" << std::endl;
-}
-
 TEST_F(AggregateNodeTest, ConstraintsGroupBySingleColumn) {
   EXPECT_TRUE(_mock_node->constraints()->empty());
 
@@ -116,9 +103,8 @@ TEST_F(AggregateNodeTest, ConstraintsGroupBySingleColumn) {
   // Check, whether AggregateNode adds a new constraint covering group-by column _a
   EXPECT_EQ(_aggregate_node->constraints()->size(), 1);
   const auto lqp_constraint = *_aggregate_node->constraints()->cbegin();
-  EXPECT_TRUE((lqp_constraint.column_expressions.contains(lqp_column_(_a))));
-  print(lqp_constraint.column_expressions, "lqp_constraint.column_expressions");
   EXPECT_EQ(lqp_constraint.column_expressions.size(), 1);
+  EXPECT_TRUE((lqp_constraint.column_expressions.contains(lqp_column_(_a))));
 }
 
 TEST_F(AggregateNodeTest, ConstraintsGroupByMultipleColumns) {
