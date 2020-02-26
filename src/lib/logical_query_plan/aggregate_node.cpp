@@ -57,7 +57,7 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressions() const {
   // We do not return node_expressions directly here, because we do not want to expose ANY() to the following LQP
   // nodes. This way, we execute ANY() as intended, but do not have to traverse the LQP upwards and adapt nodes
   // that reference the ANY'd column.

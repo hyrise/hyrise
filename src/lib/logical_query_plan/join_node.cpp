@@ -45,7 +45,7 @@ std::string JoinNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**

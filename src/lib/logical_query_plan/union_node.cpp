@@ -17,7 +17,7 @@ std::string UnionNode::description(const DescriptionMode mode) const {
   return "[UnionNode] Mode: " + union_mode_to_string.left.at(union_mode);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
   Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
          "Input Expressions must match");
   return left_input()->column_expressions();

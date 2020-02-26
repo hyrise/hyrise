@@ -218,7 +218,7 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
   return _on_shallow_equals(rhs, node_mapping);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(),
          "Can only forward input expressions iff there is a left input and no right input");
   return left_input()->column_expressions();
