@@ -216,14 +216,14 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
 }
 
 // TODO: Comment, const magic like resolve_segment_type
-template<typename Functor>
+template <typename Functor>
 void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functor& func) {
   using PosListPtr = const PosList*;
 
   if (auto pos_list = dynamic_cast<PosListPtr>(&untyped_pos_list)) {
     func(*pos_list);
-  } else if (auto pos_list = dynamic_cast<const SingleChunkPosList *>(&untyped_pos_list)) {
-    func(*pos_list);
+  } else if (auto single_chunk_pos_list  = dynamic_cast<const SingleChunkPosList *>(&untyped_pos_list)) {
+    func(*single_chunk_pos_list);
   } else if (auto matches_all_pos_list = dynamic_cast<const MatchesAllPosList *>(&untyped_pos_list)) {
     func(*matches_all_pos_list);
   } else {
@@ -232,7 +232,7 @@ void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functo
 }
 
 // TODO: Comment, const magic like resolve_segment_type
-template<typename Functor>
+template <typename Functor>
 void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& func) {
   if (!untyped_pos_list) {
     func(untyped_pos_list);

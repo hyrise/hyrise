@@ -308,7 +308,8 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
     ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractIndex>& index, const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
+    const std::shared_ptr<AbstractIndex>& index,
+    const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
     PosList index_scan_pos_list;
     const auto probe_side_position = *probe_iter;

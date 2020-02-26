@@ -67,18 +67,19 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   };
 
   template <typename _PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>, IsNullSegmentPosition, _PosListIteratorType> {
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>,
+                                                                    IsNullSegmentPosition, _PosListIteratorType> {
    public:
     using PosListIteratorType = _PosListIteratorType;
     using ValueType = bool;
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values,
-                                 const _PosListIteratorType position_filter_begin,
+    explicit PointAccessIterator(const NullValueVector& null_values, const _PosListIteratorType position_filter_begin,
                                  _PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition, _PosListIteratorType>{std::move(position_filter_begin),
-                                                                                     std::move(position_filter_it)},
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,
+                                         _PosListIteratorType>{std::move(position_filter_begin),
+                                                               std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:

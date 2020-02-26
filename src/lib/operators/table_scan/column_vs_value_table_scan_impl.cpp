@@ -44,9 +44,9 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
   }
 }
 
-void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                       PosList& matches,
-                                                       const std::shared_ptr<const AbstractPosList>& position_filter) const {
+void ColumnVsValueTableScanImpl::_scan_generic_segment(
+    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
     // DictionarySegments are handled in _scan_dictionary_segment()
@@ -69,9 +69,9 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
   });
 }
 
-void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                                          PosList& matches,
-                                                          const std::shared_ptr<const AbstractPosList>& position_filter) const {
+void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
+    const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+    const std::shared_ptr<const AbstractPosList>& position_filter) const {
   /**
    * ValueID search_vid;              // left value id
    * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
@@ -123,7 +123,6 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
       return predicate_comparator(position.value(), search_value_id);
     };
 
-
     resolve_pos_list_type(position_filter, [&](auto pos) {
       iterable.with_iterators(pos, [&](auto it, auto end) {
         // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
@@ -138,12 +137,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
         }
       });
     });
-    
-
-
-
   });
-
 }
 
 void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,

@@ -3,9 +3,9 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_pos_list.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "abstract_pos_list.hpp"
 
 namespace opossum {
 
@@ -85,13 +85,9 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::get_allocator;
 
   // Element access
-  RowID operator[](size_t n) const final {
-    return Vector::operator[](n);
-  }
+  RowID operator[](size_t n) const final { return Vector::operator[](n); }
 
-  RowID& operator[](size_t n) {
-    return Vector::operator[](n);
-  }
+  RowID& operator[](size_t n) { return Vector::operator[](n); }
 
   using Vector::back;
   using Vector::data;
@@ -99,21 +95,17 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   // Iterators
   using Vector::begin;
-  using Vector::end;
   using Vector::cbegin;
   using Vector::cend;
+  using Vector::end;
 
   // Capacity
   using Vector::capacity;
   using Vector::max_size;
   using Vector::reserve;
   using Vector::shrink_to_fit;
-  size_t size() const override {
-    return Vector::size();
-  }
-  bool empty() const override {
-    return Vector::empty();
-  }
+  size_t size() const override { return Vector::size(); }
+  bool empty() const override { return Vector::empty(); }
 
   // Modifiers
   using Vector::clear;
@@ -126,9 +118,7 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
-  Vector& as_vector() {
-    return static_cast<Vector&>(*this);
-  }
+  Vector& as_vector() { return static_cast<Vector&>(*this); }
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override {
     // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
