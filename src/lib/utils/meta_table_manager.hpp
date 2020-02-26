@@ -37,6 +37,7 @@ class MetaTableManager : public Noncopyable {
  protected:
   friend class Hyrise;
   friend class MetaTableManagerTest;
+  friend class MutateMetaTableTest;
 
   MetaTableManager();
 

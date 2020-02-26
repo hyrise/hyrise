@@ -95,6 +95,7 @@ set(
     operators/maintenance/create_table_test.cpp
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/drop_table_test.cpp
+    operators/mutate_meta_table_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/operator_join_predicate_test.cpp
     operators/operator_scan_predicate_test.cpp

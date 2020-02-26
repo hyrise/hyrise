@@ -14,6 +14,9 @@ class TransactionContext;
  * Operator that modifies meta tables.
  * Expects the table name of the table to modify as a string and both
  * the values to modify and the fully modified values.
+ *
+ * This is not MVCC safe, so we do nothing on commit or rollback.
+ * This is why the operator should only be used in auto-commit queries.
  */
 class MutateMetaTable : public AbstractReadWriteOperator {
  public:
@@ -29,8 +32,8 @@ class MutateMetaTable : public AbstractReadWriteOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-  void _on_commit_records(const CommitID cid) override;
-  void _on_rollback_records() override;
+  void _on_commit_records(const CommitID cid) override {}
+  void _on_rollback_records() override {}
 
  private:
   const std::string _table_name;

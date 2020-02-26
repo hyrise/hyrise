@@ -31,9 +31,6 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
     output_table->append({pmr_string{plugin}});
   }
 
-  output_table->append({pmr_string{"foo"}});
-  output_table->append({pmr_string{"bar"}});
-
   return output_table;
 }
 

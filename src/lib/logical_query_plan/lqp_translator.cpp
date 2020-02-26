@@ -448,8 +448,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_mutate_meta_table_no
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator_left = translate_node(node->left_input());
   const auto input_operator_right = translate_node(node->right_input());
-  const auto muatate_meta_table_node = std::dynamic_pointer_cast<MutateMetaTableNode>(node);
-  return std::make_shared<MutateMetaTable>(muatate_meta_table_node->table_name, muatate_meta_table_node->mutation_type,
+  const auto mutate_meta_table_node = std::dynamic_pointer_cast<MutateMetaTableNode>(node);
+  return std::make_shared<MutateMetaTable>(mutate_meta_table_node->table_name, mutate_meta_table_node->mutation_type,
                                            input_operator_left, input_operator_right);
 }
 
