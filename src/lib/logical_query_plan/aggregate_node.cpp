@@ -101,18 +101,24 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
 
   // Check each constraint for applicability
   auto input_lqp_constraints = left_input()->constraints();
-  for (const auto& constraint : *input_lqp_constraints) {
+  for (const auto& input_constraint : *input_lqp_constraints) {
+    // Ensure that we do not produce any duplicate constraints
+    bool constraint_already_exists = std::any_of(aggregate_lqp_constraints->cbegin(), aggregate_lqp_constraints->cend(),
+                                      [&input_constraint](const auto& existing_constraint) {
+                                        return input_constraint == existing_constraint;
+                                      });
+    if(constraint_already_exists) continue;
+
     // Check, whether involved column expressions are part of the AggregateNode's output expressions
     bool found_all_column_expressions =
-        std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
-                    [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
+        std::all_of(input_constraint.column_expressions.cbegin(), input_constraint.column_expressions.cend(),
+                    [&column_expressions_set](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
                       return column_expressions_set.contains(constraint_column_expr);
                     });
 
     if (found_all_column_expressions) {
       // Forward constraint
-      // TODO Ensure, there are no duplicate constraints
-      aggregate_lqp_constraints->insert(constraint);
+      aggregate_lqp_constraints->insert(input_constraint);
     }
   }
 
