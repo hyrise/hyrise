@@ -31,7 +31,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     const auto& position_filter = _segment.pos_list();
     resolve_pos_list_type(position_filter, [&](auto pos_list) {
-
       const auto begin_it = pos_list->begin();
       const auto end_it = pos_list->end();
 
@@ -50,23 +49,23 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
             // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
             // compile time during development. While new segment types should be added here,
-  #ifdef HYRISE_ERASE_DICTIONARY
+#ifdef HYRISE_ERASE_DICTIONARY
             if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
-  #endif
+#endif
 
-  #ifdef HYRISE_ERASE_RUNLENGTH
+#ifdef HYRISE_ERASE_RUNLENGTH
             if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
-  #endif
+#endif
 
-  #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
+#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
             if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
-  #endif
+#endif
 
-  #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
+#ifdef HYRISE_ERASE_FRAMEOFREFERENCE
             if constexpr (std::is_same_v<T, int32_t>) {
               if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
             }
-  #endif
+#endif
 
             // Always erase LZ4Segment accessors
             if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
@@ -101,8 +100,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
         using PosListIteratorType = std::decay_t<decltype(begin_it)>;
-        auto begin = MultipleChunkIterator<PosListIteratorType>{referenced_table, referenced_column_id, accessors, begin_it, begin_it};
-        auto end = MultipleChunkIterator<PosListIteratorType>{referenced_table, referenced_column_id, accessors, begin_it, end_it};
+        auto begin = MultipleChunkIterator<PosListIteratorType>{referenced_table, referenced_column_id, accessors,
+                                                                begin_it, begin_it};
+        auto end = MultipleChunkIterator<PosListIteratorType>{referenced_table, referenced_column_id, accessors,
+                                                              begin_it, end_it};
 
         functor(begin, end);
       }
@@ -165,7 +166,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
   template <typename PosListIteratorType>
-  class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator<PosListIteratorType>, SegmentPosition<T>> {
+  class MultipleChunkIterator
+      : public BaseSegmentIterator<MultipleChunkIterator<PosListIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;

@@ -38,10 +38,11 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
       resolve_pos_list_type(position_filter, [&, *this](auto& pos_list) {
         using PosListIteratorType = std::decay_t<decltype(pos_list->cbegin())>;
-        auto begin = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{&_segment.block_minima(), &_segment.null_values(),
-                                                                  std::move(decompressor), pos_list->cbegin(),
-                                                                  pos_list->cbegin()};
-        auto end = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{pos_list->cbegin(), pos_list->cend()};
+        auto begin = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{
+            &_segment.block_minima(), &_segment.null_values(), std::move(decompressor), pos_list->cbegin(),
+            pos_list->cbegin()};
+        auto end =
+            PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{pos_list->cbegin(), pos_list->cend()};
         functor(begin, end);
       });
     });
@@ -134,7 +135,8 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   template <typename OffsetValueDecompressorT, typename _PosListIteratorType>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT, _PosListIteratorType>, SegmentPosition<T>, _PosListIteratorType> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT, _PosListIteratorType>,
+                                              SegmentPosition<T>, _PosListIteratorType> {
    public:
     using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
@@ -146,7 +148,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
                         const _PosListIteratorType position_filter_begin, _PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT, _PosListIteratorType>,
                                          SegmentPosition<T>, _PosListIteratorType>{std::move(position_filter_begin),
-                                                             std::move(position_filter_it)},
+                                                                                   std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{attribute_decompressor} {}
