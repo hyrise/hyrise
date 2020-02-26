@@ -1288,8 +1288,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   if (projection_expressions.empty()) return node;
 
   const auto column_expressions = node->column_expressions();
-  projection_expressions.insert(projection_expressions.end(), column_expressions.cbegin(),
-                                column_expressions.cend());
+  projection_expressions.insert(projection_expressions.end(), column_expressions.cbegin(), column_expressions.cend());
 
   return ProjectionNode::make(projection_expressions, node);
 }
