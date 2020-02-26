@@ -72,8 +72,6 @@ TEST_F(ExceptNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_except_node->hash(), different_except_node_1->hash());
   EXPECT_NE(_except_node->hash(), different_except_node_2->hash());
   EXPECT_NE(_except_node->hash(), different_except_node_3->hash());
-  //EXPECT_NE(_except_node->hash(), ExceptNode::make(SetOperationMode::Positions)->hash());
-  //EXPECT_NE(_except_node->hash(), ExceptNode::make(SetOperationMode::All)->hash());
 }
 
 TEST_F(ExceptNodeTest, Copy) { EXPECT_EQ(*_except_node->deep_copy(), *_except_node); }

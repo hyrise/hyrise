@@ -71,8 +71,6 @@ TEST_F(IntersectNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_intersect_node->hash(), different_intersect_node_1->hash());
   EXPECT_NE(_intersect_node->hash(), different_intersect_node_2->hash());
   EXPECT_NE(_intersect_node->hash(), different_intersect_node_3->hash());
-  //EXPECT_NE(_intersect_node->hash(), ExceptNode::make(SetOperationMode::Positions)->hash());
-  //EXPECT_NE(_intersect_node->hash(), ExceptNode::make(SetOperationMode::All)->hash());
 }
 
 TEST_F(IntersectNodeTest, Copy) { EXPECT_EQ(*_intersect_node->deep_copy(), *_intersect_node); }
