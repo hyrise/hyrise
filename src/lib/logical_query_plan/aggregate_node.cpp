@@ -61,8 +61,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressio
   // We do not return node_expressions directly here, because we do not want to expose ANY() to the following LQP
   // nodes. This way, we execute ANY() as intended, but do not have to traverse the LQP upwards and adapt nodes
   // that reference the ANY'd column.
-  auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>(node_expressions.size());
-  std::copy(node_expressions.begin(), node_expressions.end(), column_expressions.begin());
+  auto column_expressions = node_expressions;
 
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < column_expressions.size();
        ++expression_idx) {
