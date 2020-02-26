@@ -38,7 +38,12 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value> {};
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {
+public:
+  // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
+  // we still want to use random access (for binary search, distance, ...)
+  typedef std::random_access_iterator_tag iterator_category;
+};
 
 /**
  * Mapping between chunk offset into a reference segment and

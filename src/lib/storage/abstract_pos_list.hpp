@@ -28,6 +28,10 @@ public:
     _max_size = max_size;
   }
 
+  // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
+  // we still want to use random access (for binary search, distance, ...)
+  typedef std::random_access_iterator_tag iterator_category;
+
   PosListIterator() = delete;
 
   void increment() { ++_chunk_offset; }
