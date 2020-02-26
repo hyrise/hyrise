@@ -15,7 +15,11 @@ struct ExpressionsConstraintDefinition final {
       : column_expressions(std::move(init_column_expressions)) {}
 
   bool operator==(const ExpressionsConstraintDefinition& rhs) const {
-    return column_expressions == rhs.column_expressions;
+    if(column_expressions.size() != rhs.column_expressions.size()) return false;
+    return std::all_of(column_expressions.cbegin(), column_expressions.cend(),
+        [&rhs](const auto column_expression) {
+      return rhs.column_expressions.contains(column_expression);
+    });
   }
   bool operator!=(const ExpressionsConstraintDefinition& rhs) const { return !(rhs == *this); }
 
