@@ -198,6 +198,7 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/column_ids_after_pruning_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
@@ -205,7 +206,7 @@ set(
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
-    utils/column_ids_after_pruning_test.cpp
+    utils/settings_manager_test.cpp
     utils/singleton_test.cpp
     utils/size_estimation_utils_test.cpp
     utils/string_utils_test.cpp
