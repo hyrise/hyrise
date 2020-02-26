@@ -2094,10 +2094,12 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
     ValidateNode::make(
       select_node));
 
+  const auto expressions = expression_vector(select_node->get_column("setting_name"), "foo", select_node->get_column("description"));  // NOLINT
+
   const auto expected_lqp =
   MutateMetaTableNode::make("meta_settings", MetaTableMutation::Update,
     row_subquery_lqp,
-    ProjectionNode::make(expression_vector(select_node->get_column("setting_name"), "foo", select_node->get_column("description")),
+    ProjectionNode::make(expressions,
       row_subquery_lqp));
   // clang-format on
 

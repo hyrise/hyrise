@@ -1,5 +1,6 @@
 #include "../base_test.hpp"
 
+#include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -10,6 +11,7 @@
 #include "utils/meta_tables/meta_mock_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
+#include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
@@ -24,7 +26,7 @@ class MetaTableManagerTest : public BaseTest {
     return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
             std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkOrdersTable>(),
             std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
-            std::make_shared<MetaPluginsTable>()};
+            std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
   }
 
   static MetaTableNames meta_table_names() {
@@ -44,15 +46,26 @@ class MetaTableManagerTest : public BaseTest {
   const std::string _test_file_path = "resources/test_data/tbl/meta_tables/meta_";
   std::shared_ptr<Table> int_int;
   std::shared_ptr<Table> int_int_int_null;
+  std::shared_ptr<const Table> mock_manipulation_values;
 
   void SetUp() {
-    int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
-    int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
     Hyrise::reset();
     auto& storage_manager = Hyrise::get().storage_manager;
+
+    int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
+    int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
+
+    auto& column_definitions = MetaMockTable().column_definitions();
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    table->append({pmr_string{"foo"}});
+    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+    table_wrapper->execute();
+    mock_manipulation_values = table_wrapper->get_output();
   }
+
+  void TearDown() { Hyrise::reset(); }
 };
 
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
@@ -82,11 +95,13 @@ TEST_F(MetaTableManagerTest, ForwardsMethodCalls) {
   auto& mtm = Hyrise::get().meta_table_manager;
 
   MetaTableManagerTest::add_meta_table(mock_table);
-  mtm.insert_into(mock_table->name(), nullptr);
-  mtm.delete_from(mock_table->name(), nullptr);
+  mtm.insert_into(mock_table->name(), mock_manipulation_values);
+  mtm.delete_from(mock_table->name(), mock_manipulation_values);
+  mtm.update(mock_table->name(), mock_manipulation_values, mock_manipulation_values);
 
   EXPECT_EQ(mock_table->insert_calls(), 1);
   EXPECT_EQ(mock_table->remove_calls(), 1);
+  EXPECT_EQ(mock_table->update_calls(), 1);
 }
 
 TEST_P(MetaTableManagerMultiTablesTest, HasAllTables) {

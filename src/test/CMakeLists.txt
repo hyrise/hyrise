@@ -59,6 +59,7 @@ set(
     logical_query_plan/lqp_utils_test.cpp
     logical_query_plan/lqp_translator_test.cpp
     logical_query_plan/mock_node_test.cpp
+    logical_query_plan/mutate_meta_table_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
     logical_query_plan/sort_node_test.cpp
