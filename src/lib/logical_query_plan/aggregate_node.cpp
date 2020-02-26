@@ -83,7 +83,16 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
 const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
   auto aggregate_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  // (1) Check for incoming constraints that can be forwarded straightaway.
+  // (1) Create a unique constraint covering the group-by column(s).
+  // The set of group-by columns forms a candidate key for the output relation.
+  ExpressionUnorderedSet group_by_columns(aggregate_expressions_begin_idx + 1);
+  std::copy_n(node_expressions.begin(), aggregate_expressions_begin_idx + 1, std::inserter(group_by_columns, group_by_columns.begin()));
+
+  // Create ExpressionsConstraintDefinition from column expressions
+  aggregate_lqp_constraints->emplace(group_by_columns);
+  // We also have a functional dependency here: (group_by_columns) => (aggregate_columns) TODO(anyone) Save FD?
+
+  // (2) Check incoming constraints for validity and forward if applicable
   // We call column_expressions() to avoid the (intermediate) ANY() aggregates
   // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
   const auto column_expressions_vec = column_expressions();
@@ -101,21 +110,12 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::con
 
     if (found_all_column_expressions) {
       // Forward constraint
+      // TODO Ensure, there are no duplicate constraints
       aggregate_lqp_constraints->insert(constraint);
     }
   }
 
-  // (2) Create unique constraint from Group-By column(s).
-  // The set of group-by columns forms a candidate key for the output relation.
-  ExpressionUnorderedSet group_by_columns(aggregate_expressions_begin_idx + 1);
-  std::copy_n(node_expressions.begin(), aggregate_expressions_begin_idx + 1, std::inserter(group_by_columns, group_by_columns.begin()));
-  DebugAssert(group_by_columns.size() == aggregate_expressions_begin_idx + 1, "wrong!"); // TODO remove
 
-  // Create ExpressionsConstraintDefinition from column expressions
-  aggregate_lqp_constraints->emplace(group_by_columns);
-
-  // We also have a functional dependency here: (group_by_columns) => (aggregate_columns)
-  // TODO(anyone) Save FD?
 
   return aggregate_lqp_constraints;
 }
