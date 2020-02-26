@@ -147,8 +147,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
-                                        PosList::const_iterator&& position_filter_begin,
-                                        PosList::const_iterator&& position_filter_it)
+                                        PosList::const_iterator position_filter_begin,
+                                        PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(
                                                                                              position_filter_begin),
                                                                                          std::move(position_filter_it)},
