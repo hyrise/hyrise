@@ -26,6 +26,11 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& no
 
 bool UpdateNode::is_column_nullable(const ColumnID column_id) const { Fail("Update does not output any colums"); }
 
+std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::column_expressions() const {
+  static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
+  return empty_vector;
+}
+
 size_t UpdateNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
