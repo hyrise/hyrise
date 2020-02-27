@@ -26,7 +26,7 @@ LQPColumnReference MockNode::get_column(const std::string& column_name) const {
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> MockNode::column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
   if (!_column_expressions) {
