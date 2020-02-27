@@ -175,7 +175,8 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
   } else {
-    return std::atomic_load(&_chunks[chunk_id]);
+    // return std::atomic_load(&_chunks[chunk_id]);
+    return _chunks[chunk_id];
   }
 }
 

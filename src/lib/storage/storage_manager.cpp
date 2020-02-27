@@ -13,8 +13,8 @@
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -287,7 +287,8 @@ void StorageManager::apply_partitioning() {
         for (auto partition_id = size_t{0}; partition_id < partition_count; ++partition_id) {
           ColumnDataType first_value_in_next_partition{};
           if (partition_by_values) {
-            first_value_in_next_partition = distinct_values[std::min((partition_id + 1) * distinct_values.size() / partition_count, distinct_values.size() - 1)];
+            first_value_in_next_partition = distinct_values[std::min(
+                (partition_id + 1) * distinct_values.size() / partition_count, distinct_values.size() - 1)];
           }
 
           auto current_partition_size = size_t{0};
@@ -298,7 +299,7 @@ void StorageManager::apply_partitioning() {
             std::cout << "\t\tfrom row " << materialized_idx << " to row ";
           }
 
-          while(materialized_idx < materialized.size()) {
+          while (materialized_idx < materialized.size()) {
             const auto& [value, row_idx] = materialized[materialized_idx];
 
             // Shift existing partitions
@@ -310,13 +311,18 @@ void StorageManager::apply_partitioning() {
             ++materialized_idx;
             ++current_partition_size;
 
-            if (partition_by_values && materialized[materialized_idx].first == first_value_in_next_partition && (partition_id < partition_count - 1 || materialized_idx == materialized.size() - 1)) {
-              std::cout << materialized[materialized_idx - 1].first << "' (" << current_partition_size << " rows)" << std::endl;
-              first_value_in_next_partition = distinct_values[std::min((partition_id + 1) * distinct_values.size() / partition_count, distinct_values.size() - 1)];
+            if (partition_by_values && materialized[materialized_idx].first == first_value_in_next_partition &&
+                (partition_id < partition_count - 1 || materialized_idx == materialized.size() - 1)) {
+              std::cout << materialized[materialized_idx - 1].first << "' (" << current_partition_size << " rows)"
+                        << std::endl;
+              first_value_in_next_partition = distinct_values[std::min(
+                  (partition_id + 1) * distinct_values.size() / partition_count, distinct_values.size() - 1)];
               break;
             }
 
-            if (!partition_by_values && ((current_partition_size >= materialized.size() / partition_count && partition_id != partition_count - 1) || (materialized_idx == materialized.size() - 1))) {
+            if (!partition_by_values && ((current_partition_size >= materialized.size() / partition_count &&
+                                          partition_id != partition_count - 1) ||
+                                         (materialized_idx == materialized.size() - 1))) {
               std::cout << materialized_idx << " (" << current_partition_size << " rows)" << std::endl;
               break;
             }
@@ -339,11 +345,13 @@ void StorageManager::apply_partitioning() {
           resolve_data_type(table->column_data_type(column_id), [&](auto type) {
             using ColumnDataType = typename decltype(type)::type;
 
-            auto original_dictionary_segments = std::vector<std::shared_ptr<const DictionarySegment<ColumnDataType>>>(table->chunk_count());
+            auto original_dictionary_segments =
+                std::vector<std::shared_ptr<const DictionarySegment<ColumnDataType>>>(table->chunk_count());
             for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
               const auto& original_chunk = table->get_chunk(chunk_id);
               const auto& original_segment = original_chunk->get_segment(column_id);
-              const auto& original_dictionary_segment = std::static_pointer_cast<const DictionarySegment<ColumnDataType>>(original_segment);
+              const auto& original_dictionary_segment =
+                  std::static_pointer_cast<const DictionarySegment<ColumnDataType>>(original_segment);
 
               original_dictionary_segments[chunk_id] = original_dictionary_segment;
             }
@@ -360,11 +368,13 @@ void StorageManager::apply_partitioning() {
 
               const auto& original_dictionary_segment = original_dictionary_segments[chunk_id];
 
-              values_by_partition[partition_id].emplace_back(*original_dictionary_segment->get_typed_value(chunk_offset));
+              values_by_partition[partition_id].emplace_back(
+                  *original_dictionary_segment->get_typed_value(chunk_offset));
             }
 
             for (auto partition_id = size_t{0}; partition_id < total_num_partitions; ++partition_id) {
-              auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values_by_partition[partition_id]));
+              auto value_segment =
+                  std::make_shared<ValueSegment<ColumnDataType>>(std::move(values_by_partition[partition_id]));
               segments_by_partition[partition_id][column_id] = value_segment;
             }
           });
@@ -374,7 +384,6 @@ void StorageManager::apply_partitioning() {
 
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
-
 
     // Write new table
     auto new_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -394,7 +403,8 @@ void StorageManager::apply_partitioning() {
       // Encode chunks in parallel, using `hardware_concurrency + 1` workers
       // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
       auto next_chunk_id = std::atomic_uint{0};
-      const auto thread_count = std::min(static_cast<uint>(new_table->chunk_count()), std::thread::hardware_concurrency() + 1);
+      const auto thread_count =
+          std::min(static_cast<uint>(new_table->chunk_count()), std::thread::hardware_concurrency() + 1);
       auto threads = std::vector<std::thread>{};
       threads.reserve(thread_count);
 
@@ -405,7 +415,8 @@ void StorageManager::apply_partitioning() {
             if (my_chunk_id >= new_table->chunk_count()) return;
 
             const auto chunk = new_table->get_chunk(ChunkID{my_chunk_id});
-            ChunkEncoder::encode_chunk(chunk, new_table->column_data_types(), SegmentEncodingSpec{EncodingType::Dictionary});
+            ChunkEncoder::encode_chunk(chunk, new_table->column_data_types(),
+                                       SegmentEncodingSpec{EncodingType::Dictionary});
           }
         });
       }

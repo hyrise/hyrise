@@ -69,7 +69,10 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 }
 
 std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
-  return std::atomic_load(&_segments.at(column_id));
+  // _segments might be modified by, e.g., a concurrent compression of a segment. However, as a replaced pointer is
+  // semantically equivalent, we only care about atomic loads, not about memory ordering.
+  // return std::atomic_load_explicit(&_segments.at(column_id), std::memory_order_relaxed);
+  return _segments.at(column_id);
 }
 
 ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
