@@ -31,11 +31,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       _sort_definitions.begin(), _sort_definitions.end(), _sort_definition_data_types.begin(),
       [this](const auto sort_definition) { return input_table_left()->column_data_type(sort_definition.column); });
 
+  _validate_sort_definitions();
+
   std::shared_ptr<const Table> output = input_table_left();
   std::shared_ptr<Table> output_mutable;
   std::shared_ptr<PosList> sorted_pos_list = std::shared_ptr<PosList>(nullptr);
-
-  _validate_sort_definitions();
 
   for (auto column_id = _sort_definitions.size(); column_id-- != 0;) {
     const bool is_last_sorting_run = (column_id == 0);
@@ -220,7 +220,8 @@ class Sort::SortImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
-  std::shared_ptr<std::vector<RowIDValuePair>> sort_one_column(const std::shared_ptr<PosList>& previously_sorted_values = nullptr) {
+  std::shared_ptr<std::vector<RowIDValuePair>> sort_one_column(
+      const std::shared_ptr<PosList>& previously_sorted_values = nullptr) {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column(previously_sorted_values);
 
