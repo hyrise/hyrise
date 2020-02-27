@@ -23,11 +23,10 @@ const std::string& MutateMetaTable::name() const {
 }
 
 std::shared_ptr<const Table> MutateMetaTable::_on_execute(std::shared_ptr<TransactionContext> context) {
-  std::cout << "I am here" << std::endl;
-  if (context) {
-    std::cout << "aaaa" << std::endl;
-  } else {
-    std::cout << "bbbb" << std::endl;
+  // Meta tables can only be modified during non-transactions
+  if (context->auto_commit() == AutoCommit::No) {
+    _mark_as_failed();
+    return nullptr;
   }
 
   switch (_mutation_type) {

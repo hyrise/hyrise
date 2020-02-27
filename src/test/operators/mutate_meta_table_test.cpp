@@ -31,7 +31,7 @@ class MutateMetaTableTest : public BaseTest {
     meta_mock_table = std::make_shared<MetaMockTable>();
     Hyrise::get().meta_table_manager.add(meta_mock_table);
 
-    context = Hyrise::get().transaction_manager.new_transaction_context();
+    context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
   void TearDown() { Hyrise::reset(); }
@@ -80,6 +80,20 @@ TEST_F(MutateMetaTableTest, Update) {
   EXPECT_EQ(meta_mock_table->update_calls(), 1);
   EXPECT_EQ(meta_mock_table->update_selected_values(), input_left->get_output()->get_row(0));
   EXPECT_EQ(meta_mock_table->update_updated_values(), input_right->get_output()->get_row(0));
+}
+
+TEST_F(MutateMetaTableTest, OnlyAllowsAutoCommit) {
+  auto mutate_meta_table =
+      std::make_shared<MutateMetaTable>("meta_mock", MetaTableMutation::Insert, input_left, input_right);
+
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+  mutate_meta_table->set_transaction_context(transaction_context);
+  mutate_meta_table->execute();
+
+  EXPECT_TRUE(mutate_meta_table->execute_failed());
+
+  transaction_context->rollback();
 }
 
 }  // namespace opossum
