@@ -4,6 +4,7 @@
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -262,6 +263,9 @@ void StorageManager::apply_partitioning() {
           }
         }
 
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(materialized.begin(), materialized.end(), g);
         std::sort(materialized.begin(), materialized.end());
 
         auto distinct_values = std::vector<ColumnDataType>{};
