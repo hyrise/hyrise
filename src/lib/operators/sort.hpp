@@ -33,7 +33,7 @@ struct SortColumnDefinition final {
 class Sort : public AbstractReadOnlyOperator {
  public:
   Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-       size_t output_chunk_size = Chunk::DEFAULT_SIZE);
+       const size_t output_chunk_size = Chunk::DEFAULT_SIZE);
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
 
@@ -41,7 +41,6 @@ class Sort : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
-  void _on_cleanup() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
@@ -52,8 +51,6 @@ class Sort : public AbstractReadOnlyOperator {
 
   template <typename SortColumnType>
   class SortImplMaterializeOutput;
-
-  std::shared_ptr<const Table> _get_materialized_output(const std::shared_ptr<PosList>& pos_list);
 
   void _validate_sort_definitions() const;
 
