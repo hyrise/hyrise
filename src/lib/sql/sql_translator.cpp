@@ -669,7 +669,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
 
   // Meta tables are integrated in the LQP as static table nodes in order to avoid regeneration at every
-  // access in the pipeline afterwards. 
+  // access in the pipeline afterwards.
   std::shared_ptr<Table> meta_table;
   if (_meta_tables->contains(meta_table_name)) {
     meta_table = _meta_tables->at(meta_table_name);
