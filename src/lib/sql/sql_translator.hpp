@@ -43,7 +43,9 @@ class SQLTranslator final {
   /**
    * @param use_mvcc  Whether ValidateNodes should be compiled into the plan
    */
-  explicit SQLTranslator(const UseMvcc use_mvcc);
+  explicit SQLTranslator(const UseMvcc use_mvcc,
+                         std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables =
+                             std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>());
 
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
@@ -54,7 +56,7 @@ class SQLTranslator final {
    * Translate an Expression AST into a Hyrise-expression. No columns can be referenced in expressions translated by
    * this call.
    */
-  static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
+  std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
  private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
@@ -111,7 +113,8 @@ class SQLTranslator final {
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions);
+                const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
+                const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
@@ -158,11 +161,11 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(
-      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
+      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   std::shared_ptr<LQPSubqueryExpression> _translate_hsql_subquery(
-      const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
+      const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
-      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
+      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
@@ -188,6 +191,7 @@ class SQLTranslator final {
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
   std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
+  std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> _meta_tables;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<SelectListElement> _inflated_select_list_elements;

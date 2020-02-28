@@ -132,9 +132,10 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 
 namespace opossum {
 
-SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
+SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
+                             const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}) {}
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}, meta_tables) {}
 
 SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParserResult& result) {
   _cacheable = true;
@@ -160,11 +161,13 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
                              const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                              const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                             const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions)
+                             const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
+                             const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator),
-      _with_descriptions(with_descriptions) {}
+      _with_descriptions(with_descriptions),
+      _meta_tables(meta_tables) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
@@ -281,7 +284,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
-  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions};
+  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto lqp = with_translator._translate_select_statement(*desc.select);
 
   // Save mappings: ColumnID -> ColumnName
@@ -302,7 +305,8 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
                                                                        const UseMvcc use_mvcc) {
   // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
-  return SQLTranslator{use_mvcc}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierResolver>());
+  return SQLTranslator{use_mvcc, _meta_tables}._translate_hsql_expr(hsql_expr,
+                                                                    std::make_shared<SQLIdentifierResolver>());
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
@@ -564,7 +568,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       table_name = hsql_table_ref.alias->name;
 
       SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
-                                        _with_descriptions};
+                                        _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
       std::vector<std::vector<SQLIdentifier>> identifiers;
@@ -662,10 +666,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   // that can change at any time
   _cacheable = false;
 
-  // The meta table is generated here because meta tables are integrated in the LQP as static table node
-  // and should be regenerated for every SQL query
   const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
-  const auto meta_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
+
+  // Meta tables are integrated in the LQP as static table nodes in order to avoid regeneration at every
+  // access in the pipeline afterwards. 
+  std::shared_ptr<Table> meta_table;
+  if (_meta_tables->contains(meta_table_name)) {
+    meta_table = _meta_tables->at(meta_table_name);
+  } else {
+    meta_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
+    (*_meta_tables)[meta_table_name] = meta_table;
+  }
 
   const auto static_table_node = StaticTableNode::make(meta_table, false);
   const auto validated_static_table_node = _validate_if_active(static_table_node);
@@ -1328,7 +1339,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
-    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
+    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   auto name = expr.name ? std::string(expr.name) : "";
 
   const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
@@ -1553,12 +1564,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 }
 
 std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
-    const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
+    const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   const auto sql_identifier_proxy = std::make_shared<SQLIdentifierResolverProxy>(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
   auto subquery_translator =
-      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions};
+      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
 
@@ -1577,7 +1588,7 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
-    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
+    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   /**
    * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
    * Hyrise supports both.
