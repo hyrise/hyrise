@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import warnings
 
 from prepare_calibration_data import import_train_data
 from prepare_tpch import import_test_data
@@ -14,16 +15,6 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 plt.style.use('ggplot')
-
-
-# store model and metadata about the model in one object (there might be better ways, tbd)
-class CostModel:
-
-    def __init__(self, model, encoding, data_type):
-        self.model = model
-        self.encoding = encoding
-        self.data_type = data_type
-
 
 def preprocess_data(data):
     # one-hot encoding
@@ -51,35 +42,23 @@ def train_model(train_data, type):
 def generate_model_plot(model, test_data, method, data_type, encoding, out):
     ohe_data = preprocess_data(test_data)
     real_y = np.ravel(ohe_data[['RUNTIME_NS']])
-    # ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
-    # pred_y = model.predict(ohe_data)
-
-    #model_scores = calculate_error(ohe_data, pred_y, real_y, model)
-
-    #plt.scatter(real_y, pred_y, c='b')
-    cols = ['b', 'orange', 'purple', 'black']
-    i = 0
-    for imp in test_data['SCAN_IMPLEMENTATION'].unique():
-        dat = ohe_data.loc[(ohe_data['SCAN_IMPLEMENTATION_{}'.format(imp)] == 1)]
-        real_y = np.ravel(dat[['RUNTIME_NS']])
-        dat = dat.drop(labels=['RUNTIME_NS'], axis=1)
-        pred_y = model.predict(dat)
-        #score = calculate_error(dat, pred_y, real_y, model)
-        plt.scatter(real_y, pred_y, c=cols[i], label=imp)
-        i += 1
-
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
     pred_y = model.predict(ohe_data)
+
+    model_scores = calculate_error(ohe_data, pred_y, real_y, model)
+
+    plt.scatter(real_y, pred_y, c='orange')
+
+    pred_y = model.predict(ohe_data)
     axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
-    axis_min = min(np.amin(pred_y), np.amin(real_y))
+    axis_min = min(np.amin(pred_y), np.amin(real_y)) * 0.95
     abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
 
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-    #plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method))#, model_scores['R2']))
+    plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_scores['R2']))
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
-    plt.legend()
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
     output_path = '{}/Plots/{}_{}_{}'.format(out, method, data_type, encoding)
@@ -114,50 +93,9 @@ def calculate_error(test_X, y_true, y_pred, model):
 
     return scores
 
-# this was a 'base line' model to check how the added prediction features make the predictions better
-def train_general_model(train_data, model_type, out):
-    train_X = train_data[['INPUT_ROWS', 'OUTPUT_ROWS']]
-    train_y = np.ravel(train_data[['RUNTIME_NS']])
 
-    if model_type == 'linear':
-        general_model = LinearRegression().fit(train_X, train_y)
-    elif model_type == 'ridge':
-        general_model = Ridge(alpha=1000).fit(train_X, train_y)
-    elif model_type == 'lasso':
-        general_model = Lasso(alpha=1000).fit(train_X, train_y)
-    elif model_type == 'boost':
-        general_model = GradientBoostingRegressor(loss='huber').fit(train_X, train_y)
-
-    filename = '{}/Models/{}_general_model.sav'.format(out, model_type)
-    joblib.dump(general_model, filename)
-
-    return general_model
-
-
-def plot_general_model(test_data, model, model_type, data_type, encoding, out):
-    test_X = test_data[['INPUT_ROWS', 'OUTPUT_ROWS']]
-    test_y = np.ravel(test_data[['RUNTIME_NS']])
-
-    pred_y = model.predict(test_X)
-    model_scores = calculate_error(test_X, pred_y, test_y, model)
-    plt.scatter(test_y, pred_y, c='b')
-    axis_max = max(np.amax(pred_y), np.amax(test_y)) * 1.05
-    axis_min = min(0, np.amin(pred_y), np.amin(test_y))
-    abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
-
-    # Plot the best fit line over the actual values
-    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-
-    plt.title('General Model; Score: {}'.format(model_scores['R2']))
-    plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
-    plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
-    plt.xlabel("Real Time")
-    plt.ylabel("Predicted Time")
-    output_path = '{}/Plots/{}_{}_{}_general'.format(out, model_type, data_type, encoding)
-    plt.savefig(output_path, bbox_inches='tight')
-    plt.close()
-
-
+# needed for prediction with one-hot-encoding in case trainings and test data don't have the same set of values in a
+# categorical data column
 def add_dummy_types(train, test, cols):
     for col in cols:
         diff1 = np.setdiff1d(train[col].unique(), test[col].unique())
@@ -191,7 +129,9 @@ def import_data(args):
     train_data = train_data.dropna()
 
     # check whether trainings and testdata have the same format
-    # TBD: should it rather fail otherwise?
+    if test_data.columns.all() != train_data.columns.all():
+        warnings.warn("Warning: Trainings- and Testdata do not have the same format. Unmatched columns will be ignored!")
+
     inter = train_data.columns.intersection(test_data.columns)
     test_data = test_data[inter.tolist()]
     train_data = train_data[inter.tolist()]
@@ -200,7 +140,6 @@ def import_data(args):
 
 
 def main(args):
-    leftover_test_data = []
     out = "CostModelOutput"
 
     if args.m:
@@ -224,6 +163,7 @@ def main(args):
     if not os.path.exists("{}/Plots".format(out)):
         os.makedirs("{}/Plots".format(out))
 
+    # one single model for everything
     for type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
@@ -254,17 +194,6 @@ def main(args):
 
                     if not model_test_data.empty:
                         generate_model_plot(model, model_test_data, type, data_type, encoding, out)
-                        # general_model = joblib.load('{}/Models/{}_general_model.sav'.format(out, type))
-                        # plot_general_model(model_test_data, general_model, type, data_type, encoding, out)
-
-                    # test_data_split.append(model_test_data)
-
-            # if we don't have a model for this combination but test_data, add the test_data to test on the general model
-            if not model_test_data.empty:
-                leftover_test_data.append(model_test_data)
-
-    # TODO: catch the queries that don't correspond to any model and use the 'general model' for runtime prediction
-    #  of those
 
 
 if __name__ == '__main__':
