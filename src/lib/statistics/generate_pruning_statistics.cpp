@@ -89,7 +89,9 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
       continue;
     }
 
-    generate_chunk_pruning_statistics(chunk);
+    if (!chunk->pruning_statistics()) {
+      generate_chunk_pruning_statistics(chunk);
+    }
   }
 }
 
