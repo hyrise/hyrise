@@ -31,6 +31,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   //}
 
   table->set_table_statistics(TableStatistics::from_table(*table));
+  generate_chunk_pruning_statistics(table);
   _tables.emplace(name, std::move(table));
 }
 
