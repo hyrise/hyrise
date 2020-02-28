@@ -3,9 +3,6 @@
 
 import pandas as pd
 
-def remove_ee_data(test_data):
-        test_data.loc[(test_data['SCAN_IMPLEMENTATION'] != 'ExpressionEvaluator')]
-
 
 def import_train_data(input_data):
     table_scan_data = pd.read_csv(input_data[0])
@@ -26,7 +23,10 @@ def import_train_data(input_data):
     # remove the rows with ExpressionEvaluator queries from the test data since we don't have any in the test data
     joined_data = joined_data.loc[(joined_data['SCAN_IMPLEMENTATION'] != 'ExpressionEvaluator')]
 
-    # explicitly add selectivity
+    # try intervention
+    joined_data = joined_data.loc[(joined_data['INPUT_ROWS'] != 10000)]
+
+# explicitly add selectivity
     joined_data['SELECTIVITY'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS'])
     joined_data['SELECTIVITY'].fillna(0, inplace=True)
     return joined_data
