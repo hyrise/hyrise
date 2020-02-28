@@ -265,35 +265,35 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
 }
 
 std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_ptr<const Table> input_table,
-      const std::optional<std::pair<ColumnID, OrderByMode>>& all_chunks_ordered_by) {
+      const std::optional<std::pair<ColumnID, ValueClusteringType>>& all_chunks_value_clustered_by) {
   auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, input_table->target_chunk_size(), UseMvcc::No);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto new_chunk = std::make_shared<Chunk>(_get_segments_of_chunk(input_table, chunk_id));
     std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
-    auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+    auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::Data, std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
 
-    // call sort operator on single-chunk table
-    // Skip already sorted columns
-    auto partly_sorted_table = input_table;
-    auto order_by = all_chunks_ordered_by;
+    // all sort operator on single-chunk table
+    auto input_order_by = input_table->get_chunk(chunk_id)->ordered_by();
+    auto output_order_by = input_order_by;
     for (const auto& column_id : _groupby_column_ids) {
+      // Skip already sorted columns
+      if (input_order_by && input_order_by->first == column_id) continue;
       auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
       table_wrapper->execute();
       auto sort = std::make_shared<Sort>(table_wrapper, column_id);
       sort->execute();
-      partly_sorted_table = sort->get_output();
-      order_by = std::make_pair(column_id, OrderByMode::Ascending);
+      single_chunk_table = sort->get_output();
+      output_order_by = std::make_pair(column_id, OrderByMode::Ascending);
     }
 
     // add sorted chunk to output table
     // Note: we do not care about MVCC at all at the moment
-    sorted_table->append_chunk(_get_segments_of_chunk(partly_sorted_table, ChunkID{0}));
-    //sorted_table->append_chunk(immutable_sorted_table->get_chunk(ChunkID{0})->segments());
+    sorted_table->append_chunk(_get_segments_of_chunk(single_chunk_table, ChunkID{0}));
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->finalize();
-    added_chunk->set_ordered_by(*order_by);
+    added_chunk->set_ordered_by(*output_order_by);
   }
 
   return sorted_table;
@@ -411,28 +411,40 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * However, we did not benchmark it, so we cannot prove it.
    */
 
-  // Check if there's a common chunk ordering. Since the aggregate_sort operates on table level
-  // and not on chunk level, we can only make statements about ordering when we know that the
-  // entire table is ordered regardings one single column among all chunks
+  // Check if all chunks are clustered by the order by columns
+  // Since the aggregate_sort operates on table level and not on chunk level, 
+  // we can only aggregate chunk-wise when we know that the entire table is clustered. 
   const auto first_chunk = input_table->get_chunk(ChunkID{0});
-  auto all_chunks_ordered_by = first_chunk->ordered_by();
   auto all_chunks_value_clustered_by = first_chunk->value_clustered_by();
-  if (all_chunks_ordered_by) {
+  if (all_chunks_value_clustered_by) {
     for (auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
-      if (input_table->get_chunk(chunk_id)->ordered_by() != all_chunks_ordered_by) {
-        all_chunks_ordered_by = std::nullopt;
-      }
       if (input_table->get_chunk(chunk_id)->value_clustered_by() != all_chunks_value_clustered_by) {
-        all_chunks_ordered_by = std::nullopt;
-      }
-      if (!all_chunks_ordered_by && !all_chunks_value_clustered_by) {
+        all_chunks_value_clustered_by = std::nullopt;
         break;
       }
     }
   }
 
-  // Sort input table consecutively by the group by columns (stable sort)
-  auto sorted_table = _sort_table_chunk_wise(input_table, all_chunks_ordered_by);
+  std::shared_ptr<const Table> sorted_table;
+  // Check if value clustering matches group by column
+  if (all_chunks_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), all_chunks_value_clustered_by->first) != _groupby_column_ids.end()){
+    // Sort input table chunk_wise consecutively by the group by columns (stable sort)
+    sorted_table = _sort_table_chunk_wise(input_table, all_chunks_value_clustered_by);
+  } else {
+    // sort input table in whole consecutively by the group by columns
+    for (const auto& column_id : _groupby_column_ids) {
+      auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+      table_wrapper->execute();
+      auto sort = std::make_shared<Sort>(table_wrapper, column_id);
+      sort->execute();
+      sorted_table = sort->get_output();
+    }
+    auto last_chunk = sorted_table->last_chunk();
+    if (last_chunk->is_mutable()) {
+      last_chunk->finalize();
+    }
+    last_chunk->set_ordered_by(std::make_pair(_groupby_column_ids.back(), OrderByMode::Ascending));
+  }
 
   _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
 
