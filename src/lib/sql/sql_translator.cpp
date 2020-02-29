@@ -41,6 +41,7 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -190,6 +191,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
     case hsql::kStmtImport:
       return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
+    case hsql::kStmtExport:
+      return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
 
     default:
       FailInput("SQL statement type not supported");
@@ -572,7 +575,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
              "There have to be as many identifier lists as column expressions");
       for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size();
            ++select_list_element_idx) {
-        const auto& subquery_expression = lqp->column_expressions()[select_list_element_idx];
+        const auto subquery_expression = lqp->column_expressions()[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -1214,6 +1217,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
                           import_type_to_file_type(import_statement.type));
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
+  // Get stored table as input (validated if MVCC is enabled)
+  auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
+  auto lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+
+  return ExportNode::make(export_statement.tableName, export_statement.filePath,
+                          import_type_to_file_type(export_statement.type), lqp);
+}
+
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
     const std::shared_ptr<AbstractLQPNode>& input_node) {
   if (_use_mvcc == UseMvcc::No) return input_node;
@@ -1274,8 +1287,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   // If all requested expressions are available, no need to create a projection
   if (projection_expressions.empty()) return node;
 
-  projection_expressions.insert(projection_expressions.end(), node->column_expressions().begin(),
-                                node->column_expressions().end());
+  const auto column_expressions = node->column_expressions();
+  projection_expressions.insert(projection_expressions.end(), column_expressions.cbegin(), column_expressions.cend());
 
   return ProjectionNode::make(projection_expressions, node);
 }
