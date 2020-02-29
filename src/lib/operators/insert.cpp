@@ -187,7 +187,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       const auto num_rows_current_iteration = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
 
       // Copy from the source into the target Segments
-      for (ColumnID column_id{0}, column_count{target_chunk->column_count()}; column_id < column_count; ++column_id) {
+      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto source_segment = source_chunk->get_segment(column_id);
         const auto target_segment = target_chunk->get_segment(column_id);
 
