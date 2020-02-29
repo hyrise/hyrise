@@ -56,10 +56,10 @@ namespace opossum {
 
               const ColumnDataType lower_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(step_cursor);
 
-              // Generate main predicate
-
               auto get_predicate_node_based_on = [column, lower_bound](const std::shared_ptr<AbstractLQPNode>& base)
                       { return PredicateNode::make(greater_than_(column, lower_bound), base); };
+
+              // Baseline
               _generated_lpqs.emplace_back(get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
 
               // Add reference scans
@@ -73,19 +73,27 @@ namespace opossum {
                   _generated_lpqs.emplace_back(
                           get_predicate_node_based_on(PredicateNode::make(less_than_(column, upper_bound), stored_table_node))
                           );
+                  if (_enable_between_predicates && std::is_same<ColumnDataType, std::string>::value) {
+                    _generated_lpqs.emplace_back(PredicateNode::make(
+                            between_inclusive_(column, lower_bound, upper_bound), stored_table_node));
+                  }
                 }
                 // add reference scan with full pos list
                 _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_not_null_(column), stored_table_node)));
                 // add reference scan with empty pos list
                 _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_null_(column), stored_table_node)));
+
               }
 
-              // Like Predicate for Strings
+              // LIKE and IN predicates for strings
               if (_enable_like_predicates && std::is_same<ColumnDataType, std::string>::value) {
                 for (int step = 0; step < 10; step++) {
                   auto const upper_bound = (SyntheticTableGenerator::generate_value<pmr_string>(step));
                   _generated_lpqs.emplace_back(PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
                 }
+
+                // IN
+                _generated_lpqs.emplace_back(PredicateNode::make(not_in_(column, "not_there"), stored_table_node));
 
                 // 100% selectivity
                 _generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%"), stored_table_node));
