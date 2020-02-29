@@ -30,7 +30,3 @@ def import_train_data(input_data):
     joined_data['SELECTIVITY'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS'])
     joined_data['SELECTIVITY'].fillna(0, inplace=True)
     return joined_data
-
-
-def main():
-    pass
