@@ -53,8 +53,8 @@ class SegmentAccessCounter {
  private:
   std::array<CounterType, (size_t)AccessType::Count> _counters;
 
-  // For access pattern analysis: The following enums are used to determine how an iterator iterates over its elements.
-  // This is done by analysing the first elements in a given PosList and a state machine, defined below.
+  // For access pattern analysis: The following enum is used used to determine how an iterator iterates over its
+  // elements. This is done by analysing the first elements in a given PosList and a state machine, defined below.
   // There are six AccessPatterns:
   // 0 (point access), an empty sequence or a sequence accessing only a single point
   // 1 (sequentially increasing), difference between two neighboring elements is 0 or 1.
