@@ -31,6 +31,10 @@ SegmentAccessCounter::CounterType& SegmentAccessCounter::get(const AccessType ty
   return _counters[(size_t)type];
 }
 
+const SegmentAccessCounter::CounterType& SegmentAccessCounter::get(const AccessType type) const {
+  return _counters[(size_t)type];
+}
+
 uint64_t SegmentAccessCounter::sum() const {
   return std::accumulate(_counters.cbegin(), _counters.cend() - 1, 0ul);
 }

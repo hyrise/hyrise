@@ -36,6 +36,7 @@ class SegmentAccessCounter {
   SegmentAccessCounter& operator=(const SegmentAccessCounter& counter);
 
   CounterType& get(const AccessType type);
+  const CounterType& get(const AccessType type) const;
 
   static AccessType access_type(const PosList& positions);
 
