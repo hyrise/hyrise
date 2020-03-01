@@ -29,7 +29,7 @@ class SegmentAccessCounter {
   };
 
   inline static const std::array<std::string, (size_t)AccessType::Count> access_type_string_mapping = {
-    "Point", "Sequential", "SequentiallyIncreasing", "Random"
+    "Point", "Sequential", "Increasing", "Random", "Dictionary"
   };
 
   SegmentAccessCounter();
