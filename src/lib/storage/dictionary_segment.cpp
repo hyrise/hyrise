@@ -39,7 +39,7 @@ AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) 
 
 template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionarySegment<T>::dictionary() const {
-  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += 1;
+  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += _dictionary->size();
   return _dictionary;
 }
 
