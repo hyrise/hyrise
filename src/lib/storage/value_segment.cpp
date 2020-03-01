@@ -83,13 +83,11 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
 template <typename T>
 const pmr_vector<T>& ValueSegment<T>::values() const {
-  access_counter.get(SegmentAccessCounter::AccessType::Point) += 1;
   return _values;
 }
 
 template <typename T>
 pmr_vector<T>& ValueSegment<T>::values() {
-  access_counter.get(SegmentAccessCounter::AccessType::Point) += 1;
   return _values;
 }
 
