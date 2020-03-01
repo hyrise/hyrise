@@ -29,7 +29,7 @@ template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
-  access_counter.on_other_access(1);
+  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += 1;
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
     return NULL_VALUE;
@@ -39,7 +39,7 @@ AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) 
 
 template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionarySegment<T>::dictionary() const {
-  access_counter.on_dictionary_access(1);
+  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += 1;
   return _dictionary;
 }
 
@@ -54,7 +54,7 @@ std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc);
   auto copy = std::make_shared<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector));
-  copy->access_counter.set_counter_values(access_counter);
+  copy->access_counter = access_counter;
   return copy;
 }
 
@@ -81,9 +81,7 @@ EncodingType DictionarySegment<T>::encoding_type() const {
 template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-
-  access_counter.on_dictionary_access(1);
-
+  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += std::ceil(std::log2(_dictionary->size()));
   const auto typed_value = boost::get<T>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
@@ -94,9 +92,7 @@ ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
 template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-
-  access_counter.on_dictionary_access(1);
-
+  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += std::ceil(std::log2(_dictionary->size()));
   const auto typed_value = boost::get<T>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
@@ -107,7 +103,7 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
 template <typename T>
 AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
   DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
-  access_counter.on_dictionary_access(1);
+  access_counter.get(SegmentAccessCounter::AccessType::Dictionary) += 1;
   return (*_dictionary)[value_id];
 }
 

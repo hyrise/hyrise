@@ -20,9 +20,10 @@ class SegmentAccessCounter {
 
   enum class AccessType {
     Point /* Single point access */,
-    StrictlySequential,
-    SequentiallyIncreasing,
-    Random,
+    Sequential /* 0, 1, 1, 2, 3, 4 */,
+    Increasing /* 0, 0, 1, 2, 4, 8, 17 */,
+    Random /* 0, 1, 0, 42 */,
+    Dictionary,
     Count /* Dummy entry to describe the number of elements in this enum class. */
   };
 
@@ -31,8 +32,10 @@ class SegmentAccessCounter {
   };
 
   SegmentAccessCounter();
+  SegmentAccessCounter(const SegmentAccessCounter& counter);
+  SegmentAccessCounter& operator=(const SegmentAccessCounter& counter);
 
-  CounterType& get(const AccessType type) const;
+  CounterType& get(const AccessType type);
 
   static AccessType access_type(const PosList& positions);
 
@@ -61,6 +64,8 @@ class SegmentAccessCounter {
     RandomlyDecreasing, Random };
 
   static AccessPattern _access_pattern(const PosList& positions);
+
+  void _set_counters(const SegmentAccessCounter& counter);
 };
 
 }  // namespace opossum

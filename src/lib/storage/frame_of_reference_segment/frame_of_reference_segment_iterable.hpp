@@ -18,7 +18,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    _segment.access_counter.on_iterator_create(_segment.size());
+    _segment.access_counter.get(SegmentAccessCounter::AccessType::Sequential) += _segment.size();
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
@@ -35,7 +35,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    _segment.access_counter.on_iterator_create(position_filter);
+    _segment.access_counter.get(SegmentAccessCounter::access_type(*position_filter)) += position_filter->size();
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(decompressor)>;

@@ -1,5 +1,6 @@
 #include "segment_access_counter.hpp"
 
+#include <numeric>
 #include <sstream>
 
 #include "boost/format.hpp"
@@ -7,69 +8,63 @@
 
 namespace opossum {
 
-template <typename T>
-SegmentAccessCounter::Counter<T>::Counter()
-    : other{0},
-      iterator_create{0},
-      iterator_seq_access{0},
-      iterator_increasing_access{0},
-      iterator_random_access{0},
-      accessor_create{0},
-      accessor_access{0},
-      dictionary_access{0} {}
-
-template <typename T>
-std::string SegmentAccessCounter::Counter<T>::to_string() const {
-  return (boost::format("%d,%d,%d,%d,%d,%d,%d,%d") % other % iterator_create % iterator_seq_access %
-          iterator_increasing_access % iterator_random_access % accessor_create % accessor_access % dictionary_access)
-      .str();
+SegmentAccessCounter::SegmentAccessCounter() {
+  reset();
 }
 
-template <typename T>
-void SegmentAccessCounter::Counter<T>::reset() {
-  other = 0;
-  iterator_create = 0;
-  iterator_seq_access = 0;
-  iterator_increasing_access = 0;
-  iterator_random_access = 0;
-  accessor_create = 0;
-  accessor_access = 0;
-  dictionary_access = 0;
+SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& counter) {
+  _set_counters(counter);
 }
 
-template <typename T>
-T SegmentAccessCounter::Counter<T>::sum() const {
-  return other + iterator_create + iterator_seq_access + iterator_increasing_access + iterator_random_access +
-         accessor_create + accessor_access + dictionary_access;
+SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter& counter) {
+  _set_counters(counter);
+  return *this;
 }
 
-// Explicit instantiation of Counters used
-template class SegmentAccessCounter::Counter<uint64_t>;
-template class SegmentAccessCounter::Counter<std::atomic_uint64_t>;
-
-SegmentAccessCounter::AccessPattern SegmentAccessCounter::_iterator_access_pattern(
-    const std::shared_ptr<const PosList>& positions) {
-  const auto max_items_to_compare = std::min(positions->size(), 100ul);
-
-  auto access_pattern = AccessPattern::Unknown;
-  for (auto i = 1ul; i < max_items_to_compare; ++i) {
-    const int64_t diff = static_cast<int64_t>(positions->operator[](i).chunk_offset) -
-                         static_cast<int64_t>(positions->operator[](i - 1).chunk_offset);
-
-    auto input = Input::Negative;
-    if (diff == 0)
-      input = Input::Zero;
-    else if (diff == 1)
-      input = Input::One;
-    else if (diff > 0)
-      input = Input::Positive;
-    else if (diff == -1)
-      input = Input::NegativeOne;
-
-    access_pattern = _transitions[static_cast<uint32_t>(access_pattern)][static_cast<uint32_t>(input)];
+void SegmentAccessCounter::_set_counters(const SegmentAccessCounter& counter) {
+  for (auto counter_index = 0ul, size = _counters.size(); counter_index < size; ++counter_index) {
+    _counters[counter_index] = counter._counters[counter_index].load();
   }
+}
 
-  return access_pattern;
+SegmentAccessCounter::CounterType& SegmentAccessCounter::get(const AccessType type) {
+  return _counters[(size_t)type];
+}
+
+uint64_t SegmentAccessCounter::sum() const {
+  return std::accumulate(_counters.cbegin(), _counters.cend() - 1, 0ul);
+}
+
+std::string SegmentAccessCounter::to_string() const {
+  std::string result = std::to_string(_counters[0]);
+  result.reserve((size_t)AccessType::Count * 19);
+  for (auto access_type = 1u; access_type < (size_t)AccessType::Count; ++access_type) {
+    result.append(",");
+    result.append(std::to_string(_counters[access_type]));
+  }
+  return result;
+}
+
+// Computes the AccessType from the given positions list by determining the access pattern
+SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList& positions){
+  const auto access_pattern = _access_pattern(positions);
+  switch (access_pattern) {
+    case SegmentAccessCounter::AccessPattern::Point:
+      return AccessType::Point;
+    case SegmentAccessCounter::AccessPattern::SequentiallyIncreasing:
+    case SegmentAccessCounter::AccessPattern::SequentiallyDecreasing:
+      return AccessType::Sequential;
+    case SegmentAccessCounter::AccessPattern::RandomlyIncreasing:
+    case SegmentAccessCounter::AccessPattern::RandomlyDecreasing:
+      return AccessType::Increasing;
+    case SegmentAccessCounter::AccessPattern::Random:
+      return AccessType::Random;
+  }
+  Fail("This code should never be reached.");
+}
+
+void SegmentAccessCounter::reset() {
+  for (auto& counter : _counters) counter = 0ul;
 }
 
 // Sets all counters of all segments in tables to zero.
@@ -86,83 +81,45 @@ void SegmentAccessCounter::reset(const std::map<std::string, std::shared_ptr<Tab
   }
 }
 
-void SegmentAccessCounter::on_iterator_create(uint64_t count) {
-  ++_counter.iterator_create;
-  _counter.iterator_seq_access += count;
-}
+SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const PosList& positions) {
+  // There are five possible inputs
+  enum class Input { Zero, One, Positive, NegativeOne, Negative };
 
-/**
- * Increases the corresponding access counter [iterator_seq_access | iterator_increasing_access |
- * iterator_random_access] by positions->size(). The access counter is derived from the first N elements in positions
- * (see SegmentAccessStatisticsTools::iterator_access_pattern).
- */
-void SegmentAccessCounter::on_iterator_create(const std::shared_ptr<const PosList>& positions) {
-  ++_counter.iterator_create;
-  const auto access_pattern = SegmentAccessCounter::_iterator_access_pattern(positions);
-  switch (access_pattern) {
-    case SegmentAccessCounter::AccessPattern::Unknown:
-    case SegmentAccessCounter::AccessPattern::SeqInc:
-    case SegmentAccessCounter::AccessPattern::SeqDec:
-      _counter.iterator_seq_access += positions->size();
-      break;
-    case SegmentAccessCounter::AccessPattern::RndInc:
-    case SegmentAccessCounter::AccessPattern::RndDec:
-      _counter.iterator_increasing_access += positions->size();
-      break;
-    case SegmentAccessCounter::AccessPattern::Rnd:
-      _counter.iterator_random_access += positions->size();
+  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> _transitions{
+    {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
+       AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
+      {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
+        AccessPattern::Random, AccessPattern::Random},
+      {AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing,
+        AccessPattern::Random, AccessPattern::Random},
+      {AccessPattern::SequentiallyDecreasing, AccessPattern::Random, AccessPattern::Random,
+        AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},
+      {AccessPattern::RandomlyDecreasing, AccessPattern::Random, AccessPattern::Random,
+        AccessPattern::RandomlyDecreasing, AccessPattern::RandomlyDecreasing},
+      {AccessPattern::Random, AccessPattern::Random, AccessPattern::Random, AccessPattern::Random,
+        AccessPattern::Random}}};
+
+  const auto max_items_to_compare = std::min(positions.size(), 100ul);
+
+  auto access_pattern = AccessPattern::Point;
+  for (auto i = 1ul; i < max_items_to_compare; ++i) {
+    const int64_t diff = static_cast<int64_t>(positions[i].chunk_offset) -
+                         static_cast<int64_t>(positions[i - 1].chunk_offset);
+
+    auto input = Input::Negative;
+    if (diff == 0)
+      input = Input::Zero;
+    else if (diff == 1)
+      input = Input::One;
+    else if (diff > 0)
+      input = Input::Positive;
+    else if (diff == -1)
+      input = Input::NegativeOne;
+
+    access_pattern = _transitions[(size_t)access_pattern][(size_t)input];
   }
-}
 
-// count is currently not in use.
-void SegmentAccessCounter::on_accessor_create(uint64_t count) { ++_counter.accessor_create; }
-
-// chunk_offset is currently not in use. It may be used in the future to derive the access pattern.
-void SegmentAccessCounter::on_accessor_access(uint64_t count, ChunkOffset chunk_offset) {
-  _counter.accessor_access += count;
-}
-
-void SegmentAccessCounter::on_dictionary_access(uint64_t count) { _counter.dictionary_access += count; }
-
-void SegmentAccessCounter::on_other_access(uint64_t count) { _counter.other += count; }
-
-void SegmentAccessCounter::reset() { _counter.reset(); }
-
-// returns a copy of the segments counter.
-SegmentAccessCounter::Counter<uint64_t> SegmentAccessCounter::counter() const {
-  SegmentAccessCounter::Counter<uint64_t> counter;
-  counter.iterator_random_access = _counter.iterator_random_access;
-  counter.iterator_increasing_access = _counter.iterator_increasing_access;
-  counter.iterator_seq_access = _counter.iterator_seq_access;
-  counter.other = _counter.other;
-  counter.dictionary_access = _counter.dictionary_access;
-  counter.accessor_access = _counter.accessor_access;
-  counter.accessor_create = _counter.accessor_create;
-  counter.iterator_create = _counter.iterator_create;
-  return counter;
-}
-
-void SegmentAccessCounter::set_counter_values(uint64_t other, uint64_t iterator_create, uint64_t iterator_seq_access,
-  uint64_t iterator_increasing_access, uint64_t iterator_random_access, uint64_t accessor_create,
-  uint64_t accessor_access, uint64_t dictionary_access) {
-  _counter.other = other;
-  _counter.iterator_create = iterator_create;
-  _counter.iterator_seq_access = iterator_seq_access;
-  _counter.iterator_increasing_access = iterator_increasing_access;
-  _counter.iterator_random_access = iterator_random_access;
-  _counter.accessor_create = accessor_create;
-  _counter.accessor_access = accessor_access;
-  _counter.dictionary_access = dictionary_access;
-}
-
-void SegmentAccessCounter::set_counter_values(const Counter<uint64_t>& counter) {
-  set_counter_values(counter.other, counter.iterator_create, counter.iterator_seq_access,
-    counter.iterator_increasing_access, counter.iterator_random_access, counter.accessor_create,
-    counter.accessor_access, counter.dictionary_access);
-}
-
-void SegmentAccessCounter::set_counter_values(const SegmentAccessCounter& counter) {
-  set_counter_values(counter.counter());
+  return access_pattern;
 }
 
 }  // namespace opossum
