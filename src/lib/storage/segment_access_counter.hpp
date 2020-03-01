@@ -12,6 +12,7 @@
 namespace opossum {
 class Table;
 
+// The SegmentAccessCounter is a collection of counters to register how often and how a segment is accessed.
 class SegmentAccessCounter {
   friend class SegmentAccessCounterTest;
 
@@ -21,7 +22,7 @@ class SegmentAccessCounter {
   enum class AccessType {
     Point /* Single point access */,
     Sequential /* 0, 1, 1, 2, 3, 4 */,
-    Increasing /* 0, 0, 1, 2, 4, 8, 17 */,
+    Increasing /* 0, 0, 1, 2, 4, 8, 17 */ /* or decreasing */,
     Random /* 0, 1, 0, 42 */,
     Dictionary,
     Count /* Dummy entry to describe the number of elements in this enum class. */
@@ -50,7 +51,7 @@ class SegmentAccessCounter {
   static void reset(const std::map<std::string, std::shared_ptr<Table>>& tables);
 
  private:
-  std::array<CounterType, 10> _counters;
+  std::array<CounterType, (size_t)AccessType::Count> _counters;
 
   // For access pattern analysis: The following enums are used to determine how an iterator iterates over its elements.
   // This is done by analysing the first elements in a given PosList and a state machine, defined below.
