@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
+#include "encoding_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -336,7 +336,8 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
-  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  auto pos_list =
+      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
@@ -344,16 +345,18 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
-  auto nulls_found = uint32_t{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
-  EXPECT_EQ(nulls_found, 2u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
+  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased) {
-  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  auto pos_list =
+      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
@@ -361,12 +364,13 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::Yes>{*reference_segment};
 
-  auto nulls_found = uint32_t{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
-  EXPECT_EQ(nulls_found, 2u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
+  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 // Value Segment Tests

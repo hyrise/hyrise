@@ -22,7 +22,6 @@ def main():
   arguments["--encoding"] = "'Unencoded'"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
-  arguments["--cache_binary_tables"] = "true"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
@@ -33,7 +32,6 @@ def main():
   benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Unencoded'")
-  benchmark.expect_exact("Chunk size is 100000")
   benchmark.expect_exact("Max runs per item is 100")
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("No warmup runs are performed")
@@ -87,12 +85,10 @@ def main():
   benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Ordered' mode")
   benchmark.expect_exact("Encoding is 'LZ4'")
-  benchmark.expect_exact("Chunk size is 100000")
   benchmark.expect_exact("Max runs per item is 100")
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("Warmup duration per item is 5 seconds")
   benchmark.expect_exact("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
-  benchmark.expect_exact("Not caching tables as binary files")
   benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
   benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")
   benchmark.expect_exact("Running subset of queries: select_statement")

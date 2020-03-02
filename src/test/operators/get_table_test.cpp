@@ -290,7 +290,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
   table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{2}, OrderByMode::Descending});
 
-  // with column pruning
+  // single column pruned
   {
     auto get_table =
         std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
@@ -305,7 +305,20 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
   }
 
-  // without column pruning
+  // multiple columns pruned
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{},
+                                                         std::vector{ColumnID{0}, ColumnID{1}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 1);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+  }
+
+  // no columns pruned
   {
     auto get_table =
         std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});

@@ -27,7 +27,7 @@ void SimdBp128Compressor::_init(size_t size, const PolymorphicAllocator<size_t>&
   constexpr auto MAX_BIT_SIZE = 32u;
 
   // Ceiling of integer devision
-  const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
+  const auto div_ceil = [](const auto x, const auto y) { return (x + y - 1u) / y; };
 
   const auto num_blocks = div_ceil(size, Packing::block_size) * MAX_BIT_SIZE;
   const auto num_meta_blocks = div_ceil(size, Packing::meta_block_size);
@@ -107,7 +107,7 @@ void SimdBp128Compressor::_write_meta_info(const std::array<uint8_t, Packing::bl
 
 void SimdBp128Compressor::_pack_blocks(const uint8_t num_blocks,
                                        const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
-  DebugAssert(num_blocks <= 16u, "num_blocks must be smaller than 16.");
+  DebugAssert(num_blocks <= 16u, "num_blocks must be smaller or equal to 16.");
 
   auto in = _pending_meta_block.data();
   for (auto block_index = 0u; block_index < num_blocks; ++block_index) {

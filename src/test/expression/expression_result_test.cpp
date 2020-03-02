@@ -8,7 +8,7 @@ namespace opossum {
 class ExpressionResultTest : public BaseTest {
  public:
   template <typename ExpectedViewType>
-  bool check_view(std::vector<typename ExpectedViewType::Type> values, std::vector<bool> nulls) {
+  bool check_view(pmr_vector<typename ExpectedViewType::Type> values, pmr_vector<bool> nulls) {
     auto match = false;
     ExpressionResult<typename ExpectedViewType::Type>(values, nulls).as_view([&](const auto& view) {
       match = std::is_same_v<std::decay_t<decltype(view)>, ExpectedViewType>;

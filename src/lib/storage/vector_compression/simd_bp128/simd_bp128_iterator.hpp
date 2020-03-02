@@ -6,6 +6,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
 #include "oversized_types.hpp"
+#include "simd_bp128_decompressor.hpp"
 #include "simd_bp128_packing.hpp"
 
 #include "types.hpp"
@@ -18,12 +19,15 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   using Packing = SimdBp128Packing;
 
  public:
-  SimdBp128Iterator(const pmr_vector<uint128_t>* data, const size_t size, const size_t absolute_index = 0u);
-
+  // The SimdBp128Iterator simply wraps a SimdBp128Decompressor (which implements the logic to cache and extract
+  // blocks/meta blocks) to allow STL algorithms (e.g., std::lower_bound) to be used on a compressed vector. However,
+  // please be aware of #1531. The fixed-size-byte-aligned vector compression uses std::vector for the underlying data
+  // and does thus not require an additional iterator.
+  explicit SimdBp128Iterator(SimdBp128Decompressor&& decompressor, const size_t absolute_index = 0u);
   SimdBp128Iterator(const SimdBp128Iterator& other);
-  SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
+  SimdBp128Iterator(SimdBp128Iterator&& other) noexcept;
 
-  SimdBp128Iterator(SimdBp128Iterator&& other) = default;
+  SimdBp128Iterator& operator=(const SimdBp128Iterator& other);
   SimdBp128Iterator& operator=(SimdBp128Iterator&& other) = default;
 
   ~SimdBp128Iterator() = default;
@@ -31,64 +35,16 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() {
-    ++_absolute_index;
-    ++_current_meta_block_index;
-
-    if (_current_meta_block_index >= Packing::meta_block_size && _absolute_index < _size) {
-      _unpack_next_meta_block();
-    }
-  }
-
-  void decrement() {
-    --_absolute_index;
-
-    if (_current_meta_block_index > 0) {
-      --_current_meta_block_index;
-    } else {
-      _unpack_previous_meta_block();
-    }
-  }
-
-  void advance(std::ptrdiff_t n) {
-    PerformanceWarning("Using repeated increment/decrement for random access");
-    // The easy way for now
-    if (n < 0) {
-      for (std::ptrdiff_t i = n; i < 0; ++i) {
-        decrement();
-      }
-    } else {
-      for (std::ptrdiff_t i = 0; i < n; ++i) {
-        increment();
-      }
-    }
-  }
-
-  bool equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
-
-  std::ptrdiff_t distance_to(const SimdBp128Iterator& other) const { return other._absolute_index - _absolute_index; }
-
-  uint32_t dereference() const { return (*_current_meta_block)[_current_meta_block_index]; }
+  void increment();
+  void decrement();
+  void advance(std::ptrdiff_t n);
+  bool equal(const SimdBp128Iterator& other) const;
+  std::ptrdiff_t distance_to(const SimdBp128Iterator& other) const;
+  uint32_t dereference() const;
 
  private:
-  void _unpack_next_meta_block();
-  void _unpack_previous_meta_block();
-
-  void _read_next_meta_info();
-  void _read_previous_meta_info();
-  void _unpack_block(uint8_t meta_info_index);
-
- private:
-  const pmr_vector<uint128_t>* _data;
-  size_t _size;
-
-  size_t _data_index;
+  mutable SimdBp128Decompressor _decompressor;
   size_t _absolute_index;
-
-  alignas(16) std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info{};
-
-  std::unique_ptr<std::array<uint32_t, Packing::meta_block_size>> _current_meta_block;
-  size_t _current_meta_block_index;
 };
 
 }  // namespace opossum

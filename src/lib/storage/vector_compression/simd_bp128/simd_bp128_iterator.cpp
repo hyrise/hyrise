@@ -2,76 +2,39 @@
 
 namespace opossum {
 
-SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, const size_t size, const size_t absolute_index)
-    : _data{data},
-      _size{size},
-      _data_index{absolute_index},
-      _absolute_index{absolute_index},
-      _current_meta_block{std::make_unique<std::array<uint32_t, Packing::meta_block_size>>()},
-      _current_meta_block_index{0u} {
-  if (data && !data->empty() && _absolute_index != _size) {
-    _unpack_next_meta_block();
-  }
-}
+SimdBp128Iterator::SimdBp128Iterator(SimdBp128Decompressor&& decompressor, const size_t absolute_index)
+    : _decompressor{std::move(decompressor)}, _absolute_index{absolute_index} {}
 
 SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
-    : _data{other._data},
-      _size{other._size},
-      _data_index{other._data_index},
-      _absolute_index{other._absolute_index},
-      _current_meta_block{std::make_unique<std::array<uint32_t, Packing::meta_block_size>>(*other._current_meta_block)},
-      _current_meta_block_index{other._current_meta_block_index} {}
+    : _decompressor{SimdBp128Decompressor(other._decompressor)}, _absolute_index{other._absolute_index} {}
+
+SimdBp128Iterator::SimdBp128Iterator(SimdBp128Iterator&& other) noexcept
+    : _decompressor{std::move(other._decompressor)}, _absolute_index{other._absolute_index} {}
 
 SimdBp128Iterator& SimdBp128Iterator::operator=(const SimdBp128Iterator& other) {
   if (this == &other) return *this;
-  _data = other._data;
-  _size = other._size;
-  _data_index = other._data_index;
+
+  _decompressor = SimdBp128Decompressor(other._decompressor);
   _absolute_index = other._absolute_index;
-  _current_meta_block = std::make_unique<std::array<uint32_t, Packing::meta_block_size>>(*other._current_meta_block);
-  _current_meta_block_index = other._current_meta_block_index;
   return *this;
 }
 
-void SimdBp128Iterator::_unpack_next_meta_block() {
-  _read_next_meta_info();
+// Our code style would want this to be _increment() as it is a private method, but we need to implement boost’s
+// interface. Same for the methods below.
+void SimdBp128Iterator::increment() { ++_absolute_index; }  // NOLINT
 
-  for (uint8_t meta_info_index = 0u; meta_info_index < Packing::blocks_in_meta_block; ++meta_info_index) {
-    _unpack_block(meta_info_index);
-  }
+void SimdBp128Iterator::decrement() { --_absolute_index; }  // NOLINT
 
-  _current_meta_block_index = 0u;
+void SimdBp128Iterator::advance(std::ptrdiff_t n) { _absolute_index += n; }  // NOLINT
+
+bool SimdBp128Iterator::equal(const SimdBp128Iterator& other) const {  // NOLINT
+  return _absolute_index == other._absolute_index;
 }
 
-void SimdBp128Iterator::_unpack_previous_meta_block() {
-  _read_previous_meta_info();
-
-  for (uint8_t meta_info_index = 0u; meta_info_index < Packing::blocks_in_meta_block; ++meta_info_index) {
-    _unpack_block(meta_info_index);
-  }
-
-  _current_meta_block_index = Packing::meta_block_size - 1;
+std::ptrdiff_t SimdBp128Iterator::distance_to(const SimdBp128Iterator& other) const {  // NOLINT
+  return other._absolute_index - _absolute_index;
 }
 
-void SimdBp128Iterator::_read_next_meta_info() {
-  Packing::read_meta_info(_data->data() + _data_index++, _current_meta_info.data());
-}
-
-void SimdBp128Iterator::_read_previous_meta_info() {
-  // _data_index always points to the *next* data block. To access the previous block, we therefore need to subtract 2,
-  // read the block, and then increment by 1.
-  --_data_index;
-  Packing::read_meta_info(_data->data() + (_data_index - 1), _current_meta_info.data());
-}
-
-void SimdBp128Iterator::_unpack_block(uint8_t meta_info_index) {
-  const auto in = _data->data() + _data_index;
-  auto out = _current_meta_block->data() + (meta_info_index * Packing::block_size);
-  const auto bit_size = _current_meta_info[meta_info_index];
-
-  Packing::unpack_block(in, out, bit_size);
-
-  _data_index += bit_size;
-}
+uint32_t SimdBp128Iterator::dereference() const { return _decompressor.get(_absolute_index); }  // NOLINT
 
 }  // namespace opossum

@@ -21,13 +21,13 @@ class ChunkEncoderTest : public BaseTest {
  public:
   void SetUp() override {
     static const auto row_count = 15u;
-    static const auto max_chunk_size = 5u;
+    static const auto target_chunk_size = 5u;
     static const auto column_count = 3u;
 
-    _table = create_test_table(row_count, max_chunk_size, column_count);
+    _table = create_test_table(row_count, target_chunk_size, column_count);
   }
 
-  static std::shared_ptr<Table> create_test_table(const size_t row_count, const size_t max_chunk_size,
+  static std::shared_ptr<Table> create_test_table(const size_t row_count, const size_t target_chunk_size,
                                                   const size_t column_count) {
     TableColumnDefinitions column_definitions;
 
@@ -35,7 +35,7 @@ class ChunkEncoderTest : public BaseTest {
       const auto column_name = std::to_string(column_id);
       column_definitions.emplace_back(column_name, DataType::Int, false);
     }
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, target_chunk_size);
 
     for (auto row_id = 0u; row_id < row_count; ++row_id) {
       const auto row = std::vector<AllTypeVariant>(column_count, AllTypeVariant{static_cast<int32_t>(row_id)});
