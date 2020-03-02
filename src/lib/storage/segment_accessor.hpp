@@ -50,7 +50,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
     return _segment.get_typed_value(offset);
   }
 
-  ~SegmentAccessor() { _segment.access_counter.get(SegmentAccessCounter::AccessType::Random) += _accesses; }
+  ~SegmentAccessor() { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
 
  protected:
   mutable uint64_t _accesses;
@@ -112,7 +112,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
   ~SingleChunkReferenceSegmentAccessor() {
-    _segment.access_counter.get(SegmentAccessCounter::AccessType::Random) += _accesses;
+    _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses;
   }
 
  protected:

@@ -12,7 +12,11 @@
 namespace opossum {
 class Table;
 
-// The SegmentAccessCounter is a collection of counters to register how often and how a segment is accessed.
+// The SegmentAccessCounter is a collection of counters to count how often a segment is accessed.
+// It contains several counters (see AccessType) to differentiate between different access types, like
+// sequential or random access. The individual counters can be accessed using the [] operator.
+// The counters are currently updated by the iterators, segment accessors or from withing the segment itself.
+// Use function access_type(const PosList& positions) to derive the access pattern from the position list.
 class SegmentAccessCounter {
   friend class SegmentAccessCounterTest;
 
@@ -22,36 +26,33 @@ class SegmentAccessCounter {
   enum class AccessType {
     Point /* Single point access */,
     Sequential /* 0, 1, 1, 2, 3, 4 */,
-    Increasing /* 0, 0, 1, 2, 4, 8, 17 */ /* or decreasing */,
+    Monotonic /* 0, 0, 1, 2, 4, 8, 17 */,
     Random /* 0, 1, 0, 42 */,
-    Dictionary,
+    Dictionary /* used to count accesses to the dictionary of the dictionary segment */,
     Count /* Dummy entry to describe the number of elements in this enum class. */
   };
 
-  inline static const std::array<std::string, (size_t)AccessType::Count> access_type_string_mapping = {
-    "Point", "Sequential", "Increasing", "Random", "Dictionary"
+  inline static const std::map<AccessType, const char*> access_type_string_mapping = {
+    {AccessType::Point, "Point"},
+    {AccessType::Sequential, "Sequential"},
+    {AccessType::Monotonic, "Monotonic"},
+    {AccessType::Random, "Random"},
+    {AccessType::Dictionary, "Dictionary"}
   };
 
   SegmentAccessCounter();
-  SegmentAccessCounter(const SegmentAccessCounter& counter);
-  SegmentAccessCounter& operator=(const SegmentAccessCounter& counter);
+  SegmentAccessCounter(const SegmentAccessCounter& other);
+  SegmentAccessCounter& operator=(const SegmentAccessCounter& other);
 
-  CounterType& get(const AccessType type);
-  const CounterType& get(const AccessType type) const;
+  CounterType& operator[](const AccessType type);
+  const CounterType& operator[](const AccessType type) const;
 
   static AccessType access_type(const PosList& positions);
 
-  uint64_t sum() const;
-
   std::string to_string() const;
 
-  void reset();
-
-  // resets the counters for the given tables
-  static void reset(const std::map<std::string, std::shared_ptr<Table>>& tables);
-
  private:
-  std::array<CounterType, (size_t)AccessType::Count> _counters;
+  std::array<CounterType, (size_t)AccessType::Count> _counters = {};
 
   // For access pattern analysis: The following enum is used used to determine how an iterator iterates over its
   // elements. This is done by analysing the first elements in a given PosList and a state machine, defined below.

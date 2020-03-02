@@ -3,7 +3,6 @@
 #include <numeric>
 #include <sstream>
 
-#include "boost/format.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -11,15 +10,14 @@ namespace opossum {
 SegmentAccessCounter::SegmentAccessCounter() {
   DebugAssert((size_t)AccessType::Count == access_type_string_mapping.size(),
     "access_type_string_mapping should contain as many entries as there are access types.");
-  reset();
 }
 
-SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& counter) {
-  _set_counters(counter);
+SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& other) {
+  _set_counters(other);
 }
 
-SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter& counter) {
-  _set_counters(counter);
+SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter& other) {
+  _set_counters(other);
   return *this;
 }
 
@@ -29,16 +27,12 @@ void SegmentAccessCounter::_set_counters(const SegmentAccessCounter& counter) {
   }
 }
 
-SegmentAccessCounter::CounterType& SegmentAccessCounter::get(const AccessType type) {
+SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const AccessType type) {
   return _counters[(size_t)type];
 }
 
-const SegmentAccessCounter::CounterType& SegmentAccessCounter::get(const AccessType type) const {
+const SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const AccessType type) const {
   return _counters[(size_t)type];
-}
-
-uint64_t SegmentAccessCounter::sum() const {
-  return std::accumulate(_counters.cbegin(), _counters.cend() - 1, 0ul);
 }
 
 std::string SegmentAccessCounter::to_string() const {
@@ -51,7 +45,7 @@ std::string SegmentAccessCounter::to_string() const {
   return result;
 }
 
-// Computes the AccessType from the given positions list by determining the access pattern
+// Computes the AccessType by analyzing access pattern given by the psoition list.
 SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList& positions){
   const auto access_pattern = _access_pattern(positions);
   switch (access_pattern) {
@@ -62,36 +56,26 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList
       return AccessType::Sequential;
     case SegmentAccessCounter::AccessPattern::RandomlyIncreasing:
     case SegmentAccessCounter::AccessPattern::RandomlyDecreasing:
-      return AccessType::Increasing;
+      return AccessType::Monotonic;
     case SegmentAccessCounter::AccessPattern::Random:
       return AccessType::Random;
   }
   Fail("This code should never be reached.");
 }
 
-void SegmentAccessCounter::reset() {
-  for (auto& counter : _counters) counter = 0ul;
-}
-
-// Sets all counters of all segments in tables to zero.
-void SegmentAccessCounter::reset(const std::map<std::string, std::shared_ptr<Table>>& tables) {
-  for (const auto& [table_name, table_ptr] : tables) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
-      const auto chunk_ptr = table_ptr->get_chunk(chunk_id);
-      for (auto column_id = ColumnID{0}, count = static_cast<ColumnID>(chunk_ptr->column_count()); column_id < count;
-           ++column_id) {
-        const auto& segment_ptr = chunk_ptr->get_segment(column_id);
-        segment_ptr->access_counter.reset();
-      }
-    }
-  }
-}
-
+// Iterates over the first N (currently 100) elements in positions to determine the access pattern
+// (see enum AccessPattern in header).
+// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPatten
+// and the alphabet is defined by the internal enum Input.
+// The initial state is AccessPattern::Point. positions is iterated through from the beginning. For two adjacent
+// elements (in positions) the difference is computed and mapped to an element of the enum Input.
+// That input is used transition from one state to the next using the predefined two dimensional array
+// _transitions.
 SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const PosList& positions) {
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
 
-  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> _transitions{
+  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> _transitions {
     {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
        AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
       {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
