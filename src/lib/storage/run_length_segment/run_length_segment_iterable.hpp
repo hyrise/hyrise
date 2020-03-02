@@ -78,7 +78,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       --_chunk_offset;
 
       // Make sure to only check the previous end position when we are not in the very first run.
-      if (_end_position_it != end_positions->cbegin() && _chunk_offset <= *(_end_position_it - 1)) {
+      if (_end_position_it != _end_positions->cbegin() && _chunk_offset <= *(_end_position_it - 1)) {
         --_value_it;
         --_null_value_it;
         --_end_position_it;
