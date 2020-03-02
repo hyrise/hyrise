@@ -23,17 +23,17 @@ void SegmentAccessCounter::_set_counters(const SegmentAccessCounter& counter) {
 }
 
 SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const AccessType type) {
-  return _counters[(size_t)type];
+  return _counters[static_cast<size_t>(type)];
 }
 
 const SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const AccessType type) const {
-  return _counters[(size_t)type];
+  return _counters[static_cast<size_t>(type)];
 }
 
 std::string SegmentAccessCounter::to_string() const {
   std::string result = std::to_string(_counters[0]);
-  result.reserve((size_t)AccessType::Count * 19);
-  for (auto access_type = 1u; access_type < (size_t)AccessType::Count; ++access_type) {
+  result.reserve(static_cast<size_t>(AccessType::Count) * 19);
+  for (auto access_type = 1u; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
     result.append(",");
     result.append(std::to_string(_counters[access_type]));
   }
@@ -101,7 +101,7 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
     else if (diff == -1)
       input = Input::NegativeOne;
 
-    access_pattern = _transitions[(size_t)access_pattern][(size_t)input];
+    access_pattern = _transitions[static_cast<size_t>(access_pattern)][static_cast<size_t>(input)];
   }
 
   return access_pattern;
