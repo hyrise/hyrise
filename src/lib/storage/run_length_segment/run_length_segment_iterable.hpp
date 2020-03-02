@@ -60,7 +60,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _null_value_it{null_values->cbegin()},
           _end_position_it{end_positions->cbegin()},
           _end_position_begin_it{end_positions->cbegin()},
-          _end_position_end_it{_end_positions->cend()},
           _chunk_offset{chunk_offset} {}
 
    private:
@@ -90,9 +89,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     void advance(std::ptrdiff_t n) {
       _chunk_offset += n;
 
-      const auto end_position = std::lower_bound(_end_position_begin_it, _end_position_end_it, _chunk_offset);
-      const auto jump_distance_from_begin = std::distance(_end_position_begin_it, end_position);
-      const auto current_distance_from_begin = std::distance(_end_position_begin_it, _end_position_it);
+      const auto end_position = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), _chunk_offset);
+      const auto jump_distance_from_begin = std::distance(_end_positions->cbegin(), end_position);
+      const auto current_distance_from_begin = std::distance(_end_positions->cbegin(), _end_position_it);
       const auto jump_distance = jump_distance_from_begin - current_distance_from_begin;
       _value_it += jump_distance;
       _null_value_it += jump_distance;
@@ -115,7 +114,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
     EndPositionIterator _end_position_begin_it;
-    EndPositionIterator _end_position_end_it;
     ChunkOffset _chunk_offset;
   };
 
