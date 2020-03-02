@@ -10,6 +10,7 @@
 #include "storage/encoding_test.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_access_counter.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 
@@ -281,43 +282,14 @@ TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
   });
 }
 
-TEST_F(EncodedSegmentTest, ValueSegmentCountersAfterInitialization) {
-  const auto row_count = 666u;
-  auto value_segment = create_int_value_segment(row_count);
-  EXPECT_EQ(0, value_segment->access_counter.counter().sum());
-}
-
-TEST_P(EncodedSegmentTest, SegmentCountersAfterInitialization) {
-  auto value_segment = create_int_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
-  EXPECT_EQ(0, base_encoded_segment->access_counter.counter().sum());
-}
-
-TEST_P(EncodedSegmentTest, IteratorCreateAccessSegmentCounters) {
-  auto value_segment = create_int_value_segment();
-  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_create);
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
-  EXPECT_EQ(1, value_segment->access_counter.counter().iterator_create);
-  const auto pos_filter = create_sequential_position_filter();
-
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto iterable = create_iterable_from_segment(encoded_segment);
-    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_create);
-    iterable.for_each([](const auto) {});
-    EXPECT_EQ(1, encoded_segment.access_counter.counter().iterator_create);
-    iterable.for_each(pos_filter, [](const auto) {});
-    EXPECT_EQ(2, encoded_segment.access_counter.counter().iterator_create);
-  });
-}
-
 TEST_F(EncodedSegmentTest, SeqIncreasingAccessValueSegmentCounters) {
   const auto row_count = 666u;
   auto value_segment = create_int_value_segment(row_count);
 
   auto iterable = create_iterable_from_segment(*value_segment);
-  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_seq_access);
+  EXPECT_EQ(0, value_segment->access_counter[SegmentAccessCounter::AccessType::Sequential]);
   iterable.for_each([](const auto) {});
-  EXPECT_EQ(value_segment->size(), value_segment->access_counter.counter().iterator_seq_access);
+  EXPECT_EQ(value_segment->size(), value_segment->access_counter[SegmentAccessCounter::AccessType::Sequential]);
 }
 
 TEST_P(EncodedSegmentTest, SeqIncreasingAccessSegmentCounters) {
@@ -326,9 +298,9 @@ TEST_P(EncodedSegmentTest, SeqIncreasingAccessSegmentCounters) {
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto iterable = create_iterable_from_segment(encoded_segment);
-    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_seq_access);
+    EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Sequential]);
     iterable.for_each([](const auto) {});
-    EXPECT_EQ(encoded_segment.size(), encoded_segment.access_counter.counter().iterator_seq_access);
+    EXPECT_EQ(encoded_segment.size(),encoded_segment.access_counter[SegmentAccessCounter::AccessType::Sequential]);
   });
 }
 
@@ -337,16 +309,16 @@ TEST_P(EncodedSegmentTest, IncreasingSegmentAccessCountersWithPosList) {
   const auto pos_filter = create_sequential_position_filter();
 
   auto value_segment_iterable = create_iterable_from_segment(*value_segment);
-  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_increasing_access);
+  EXPECT_EQ(0, value_segment->access_counter[SegmentAccessCounter::AccessType::Monotonic]);
   value_segment_iterable.for_each(pos_filter, [](const auto) {});
-  EXPECT_EQ(pos_filter->size(), value_segment->access_counter.counter().iterator_increasing_access);
+  EXPECT_EQ(pos_filter->size(), value_segment->access_counter[SegmentAccessCounter::AccessType::Monotonic]);
 
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto base_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
-    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_increasing_access);
+    EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Monotonic]);
     base_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
-    EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter.counter().iterator_increasing_access);
+    EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter[SegmentAccessCounter::AccessType::Monotonic]);
   });
 }
 
@@ -355,16 +327,16 @@ TEST_P(EncodedSegmentTest, RandomSegmentAccessCountersWithPosList) {
   const auto pos_filter = create_random_access_position_filter();
 
   auto value_segment_iterable = create_iterable_from_segment(*value_segment);
-  EXPECT_EQ(0, value_segment->access_counter.counter().iterator_random_access);
+  EXPECT_EQ(0, value_segment->access_counter[SegmentAccessCounter::AccessType::Random]);
   value_segment_iterable.for_each(pos_filter, [](const auto) {});
-  EXPECT_EQ(pos_filter->size(), value_segment->access_counter.counter().iterator_random_access);
+  EXPECT_EQ(pos_filter->size(), value_segment->access_counter[SegmentAccessCounter::AccessType::Random]);
 
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto base_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
-    EXPECT_EQ(0, encoded_segment.access_counter.counter().iterator_random_access);
+    EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Random]);
     base_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
-    EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter.counter().iterator_random_access);
+    EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter[SegmentAccessCounter::AccessType::Random]);
   });
 }
 
@@ -375,17 +347,22 @@ TEST_F(EncodedSegmentTest, DictionaryAccessCounters) {
   auto dictionary_encoded_segment = dynamic_pointer_cast<DictionarySegment<int32_t>>(
       this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary}));
 
-  EXPECT_EQ(0, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  EXPECT_EQ(0, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
   auto iterable = create_iterable_from_segment(*dictionary_encoded_segment);
+  const auto dictionary = dictionary_encoded_segment->dictionary();
   // The iterator requests a reference to the dictionary of the DictionarySegment.
-  // This increases the dictionary_access access count by one.
-  EXPECT_EQ(1, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  // This increases the dictionary count by the size of the dictionary
+  auto expected_count = dictionary->size() * 2;
+  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
   dictionary_encoded_segment->dictionary();
-  EXPECT_EQ(2, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  expected_count = dictionary->size() * 3;
+  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
   dictionary_encoded_segment->lower_bound(42);
-  EXPECT_EQ(3, dictionary_encoded_segment->access_counter.counter().dictionary_access);
-  dictionary_encoded_segment->lower_bound(42);
-  EXPECT_EQ(4, dictionary_encoded_segment->access_counter.counter().dictionary_access);
+  expected_count += std::ceil(std::log2(dictionary->size()));
+  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
+  dictionary_encoded_segment->upper_bound(42);
+  expected_count += std::ceil(std::log2(dictionary->size()));
+  EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
 }
 
 TEST_F(EncodedSegmentTest, SegmentReencoding) {

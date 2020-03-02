@@ -14,125 +14,96 @@
 
 namespace opossum {
 
-template <typename T>
-class SegmentAccessCounterCounterTest : public BaseTest {
- public:
-  static void SetUpTestCase() {}
-
-  void SetUp() override {}
-
-  void TearDown() override {}
-};
-
 class SegmentAccessCounterTest : public BaseTest {
- public:
-  static void SetUpTestCase() {}
-
-  void SetUp() override {}
-
-  void TearDown() override {}
-
  protected:
   using AccessPattern = SegmentAccessCounter::AccessPattern;
-  using Input = SegmentAccessCounter::Input;
+  using AccessType = SegmentAccessCounter::AccessType;
 
-  static AccessPattern _iterator_access_pattern(const std::shared_ptr<const PosList>& positions) {
-    return SegmentAccessCounter::_iterator_access_pattern(positions);
+  static AccessPattern _access_pattern(const std::shared_ptr<const PosList>& positions) {
+    return SegmentAccessCounter::_access_pattern(*positions);
   }
 };
 
-typedef ::testing::Types<uint64_t, std::atomic_uint64_t> CounterTypes;
-TYPED_TEST_SUITE(SegmentAccessCounterCounterTest, CounterTypes, );  // NOLINT(whitespace/parens)
-
-TYPED_TEST(SegmentAccessCounterCounterTest, ZeroOnConstruction) {
-  SegmentAccessCounter::Counter<TypeParam> counter;
-  EXPECT_EQ(0, counter.sum());
+TEST_F(SegmentAccessCounterTest, ZeroOnConstruction) {
+  SegmentAccessCounter counter;
+  for (auto access_type = 0ul; access_type < (size_t)AccessType::Count; ++access_type) {
+    EXPECT_EQ(0, counter[(AccessType)access_type]);
+  }
 }
 
-TYPED_TEST(SegmentAccessCounterCounterTest, Sum36) {
-  SegmentAccessCounter::Counter<TypeParam> counter;
-  EXPECT_EQ(0, counter.sum());
-  counter.other = 1;
-  counter.iterator_create = 2;
-  counter.iterator_seq_access = 3;
-  counter.iterator_increasing_access = 4;
-  counter.iterator_random_access = 5;
-  counter.accessor_create = 6;
-  counter.accessor_access = 7;
-  counter.dictionary_access = 8;
-  EXPECT_EQ(36, counter.sum());
-}
+TEST_F(SegmentAccessCounterTest, ToString) {
+  SegmentAccessCounter counter;
+  counter[AccessType::Point] = 1;
+  counter[AccessType::Sequential] = 20;
+  counter[AccessType::Monotonic] = 300;
+  counter[AccessType::Random] = 4'000;
+  counter[AccessType::Dictionary] = 50'000;
 
-TYPED_TEST(SegmentAccessCounterCounterTest, ToString) {
-  SegmentAccessCounter::Counter<TypeParam> counter;
-  counter.other = 1;
-  counter.iterator_create = 20;
-  counter.iterator_seq_access = 300;
-  counter.iterator_increasing_access = 4'000;
-  counter.iterator_random_access = 50'000;
-  counter.accessor_create = 600'000;
-  counter.accessor_access = 7'000'000;
-  counter.dictionary_access = 80'000'000;
-  const auto expected_str = "1,20,300,4000,50000,600000,7000000,80000000";
+  const auto expected_str = "1,20,300,4000,50000";
   EXPECT_EQ(expected_str, counter.to_string());
 }
 
-TYPED_TEST(SegmentAccessCounterCounterTest, Reset) {
-  SegmentAccessCounter::Counter<TypeParam> counter;
-  counter.other = 1;
-  counter.iterator_create = 20;
-  counter.iterator_seq_access = 300;
-  counter.iterator_increasing_access = 4'000;
-  counter.iterator_random_access = 50'000;
-  counter.accessor_create = 600'000;
-  counter.accessor_access = 7'000'000;
-  counter.dictionary_access = 80'000'000;
-  EXPECT_EQ(87'654'321, counter.sum());
-  counter.reset();
-  EXPECT_EQ(0, counter.sum());
+TEST_F(SegmentAccessCounterTest, CopyConstructor) {
+  SegmentAccessCounter counter1;
+  counter1[AccessType::Point] = 1;
+  counter1[AccessType::Sequential] = 20;
+  counter1[AccessType::Monotonic] = 300;
+  counter1[AccessType::Random] = 4'000;
+  counter1[AccessType::Dictionary] = 50'000;
+
+  SegmentAccessCounter counter2{counter1};
+  for (auto access_type = 0ul; access_type < (size_t)AccessType::Count; ++access_type) {
+    EXPECT_EQ(counter1[(AccessType)access_type], counter2[(AccessType)access_type]);
+  }
 }
 
-TEST_F(SegmentAccessCounterTest, CounterReset) {
-  ValueSegment<int32_t> vs{false};
-  vs.append(42);
-  vs.append(66);
-  vs.append(666);
-  EXPECT_EQ(3, vs.access_counter.counter().sum());
-  vs.access_counter.reset();
-  EXPECT_EQ(0, vs.access_counter.counter().sum());
+TEST_F(SegmentAccessCounterTest, AssignmentOperator) {
+  SegmentAccessCounter counter1;
+  counter1[AccessType::Point] = 1;
+  counter1[AccessType::Sequential] = 20;
+  counter1[AccessType::Monotonic] = 300;
+  counter1[AccessType::Random] = 4'000;
+  counter1[AccessType::Dictionary] = 50'000;
+
+  SegmentAccessCounter counter2;
+  counter2 = counter1;
+  for (auto access_type = 0ul; access_type < (size_t)AccessType::Count; ++access_type) {
+    EXPECT_EQ(counter1[(AccessType)access_type], counter2[(AccessType)access_type]);
+  }
 }
 
-TEST_F(SegmentAccessCounterTest, IteratorAccessPatternIncreasing) {
+TEST_F(SegmentAccessCounterTest, AccessPatternIncreasing) {
   auto positions = std::make_shared<PosList>();
-  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
-  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
-  EXPECT_EQ(AccessPattern::SeqInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::SequentiallyIncreasing, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
-  EXPECT_EQ(AccessPattern::RndInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::RandomlyIncreasing, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{3}});
-  EXPECT_EQ(AccessPattern::RndInc, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::RandomlyIncreasing, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{1}});
-  EXPECT_EQ(AccessPattern::Rnd, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Random, _access_pattern(positions));
 }
-TEST_F(SegmentAccessCounterTest, IteratorAccessPatternDecreasing) {
+
+TEST_F(SegmentAccessCounterTest, AccessPatternDecreasing) {
   auto positions = std::make_shared<PosList>();
-  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::Unknown, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{665}});
-  EXPECT_EQ(AccessPattern::SeqDec, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::SequentiallyDecreasing, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{665}});
-  EXPECT_EQ(AccessPattern::SeqDec, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::SequentiallyDecreasing, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{660}});
-  EXPECT_EQ(AccessPattern::RndDec, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::RandomlyDecreasing, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
-  EXPECT_EQ(AccessPattern::Rnd, _iterator_access_pattern(positions));
+  EXPECT_EQ(AccessPattern::Random, _access_pattern(positions));
 }
 
 }  // namespace opossum

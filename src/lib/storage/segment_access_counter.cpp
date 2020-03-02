@@ -1,9 +1,6 @@
 #include "segment_access_counter.hpp"
 
-#include <numeric>
 #include <sstream>
-
-#include "storage/table.hpp"
 
 namespace opossum {
 

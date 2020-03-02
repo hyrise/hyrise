@@ -10,7 +10,6 @@
 #include "types.hpp"
 
 namespace opossum {
-class Table;
 
 // The SegmentAccessCounter is a collection of counters to count how often a segment is accessed.
 // It contains several counters (see AccessType) to differentiate between different access types, like
