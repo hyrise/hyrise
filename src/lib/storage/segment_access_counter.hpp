@@ -50,7 +50,7 @@ class SegmentAccessCounter {
   std::string to_string() const;
 
  private:
-  std::array<CounterType, (size_t)AccessType::Count> _counters = {};
+  std::array<CounterType, static_cast<size_t>(AccessType::Count)> _counters = {};
 
   // For access pattern analysis: The following enum is used used to determine how an iterator iterates over its
   // elements. This is done by analysing the first elements in a given PosList and a state machine, defined below.
