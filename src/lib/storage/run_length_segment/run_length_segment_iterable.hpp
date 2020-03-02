@@ -7,6 +7,61 @@
 
 #include "utils/performance_warning.hpp"
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+/**
+ * Run length segments store the end positions of runs in a sorted vector. To access a particular position, this vector
+ * has to be searches for the according run. If we previously visited a nearby position, we do not have to execute a
+ * full binary search but can linearly search up to the desired position.
+ *
+ * determine_linear_search_threshold() estimates the threshold of when to use a linear or a binary search. Given the
+ * previous and the current chunk offset, the threshold is used to determine if a linear search is faster for the given
+ * number of skipped positions or whether a binary search is beneficial. The value of 200 has been found by a set of
+ * simple TPC-H measurements (see #2038).
+ */
+constexpr auto LINEAR_SEARCH_THRESHOLD_FACTOR = 200.0f;
+[[maybe_unused]] ChunkOffset determine_linear_search_threshold(const ChunkOffset chunk_size, const size_t value_count) {
+  const auto avg_elements_per_run = static_cast<float>(chunk_size) / value_count;
+  return static_cast<ChunkOffset>(LINEAR_SEARCH_THRESHOLD_FACTOR * std::ceil(avg_elements_per_run));
+}
+
+using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
+[[maybe_unused]] EndPositionIterator search_end_position_for_chunk_offset(
+                                          const ChunkOffset previous_chunk_offset,
+                                          const ChunkOffset current_chunk_offset,
+                                          const size_t previous_end_position_index,
+                                          const size_t linear_search_threshold,
+                                          EndPositionIterator end_position_begin_it,
+                                          EndPositionIterator end_position_end_it) {
+  const int64_t step_size = static_cast<int64_t>(current_chunk_offset) - previous_chunk_offset;
+  /**
+   * Depending on the estimated threshold and the step size, a different search approach is used. The threshold
+   * estimates how long a jump needs to be before a binary search is faster than linearly searching.
+   * Three cases are handled:
+   *   - If the chunk offset is smaller then the previous offset (can happen, e.g., after joins), use a binary
+   *     search from the beginning up to the previous position. Whenever reverse iteration is frequently used, we
+   *     should consider using linear searching here as well (see below, currently blocked by #1531).
+   *   - If the chunk offset is larger than the previous offset and the step size for the next offset is smaller
+   *     than the estimated threshold, search linearly from the previous offset up to the end.
+   *   - If the chunk offset is larger than the previous offset and the step size for the next offset is larger
+   *     than the estimated threshold, use a binary search from the previous offset up to the end.
+   */
+  if (step_size < 0) {
+    return std::lower_bound(end_position_begin_it, end_position_end_it + previous_end_position_index, current_chunk_offset);
+  } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
+    const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) {
+      return offset < current;
+    };
+    return std::find_if_not(end_position_begin_it + previous_end_position_index, end_position_end_it, less_than_current);
+  } else {
+    return std::lower_bound(end_position_begin_it + previous_end_position_index, end_position_end_it, current_chunk_offset);
+  }
+}
+
+} // namespace
+
 namespace opossum {
 
 template <typename T>
@@ -56,6 +111,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                       const pmr_vector<ChunkOffset>* end_positions, ChunkOffset chunk_offset)
         : _values{values},
           _end_positions{end_positions},
+          _linear_search_threshold{determine_linear_search_threshold(*(_end_positions->cend() - 1), _values->size())},
           _value_it{values->cbegin()},
           _null_value_it{null_values->cbegin()},
           _end_position_it{end_positions->cbegin()},
@@ -86,12 +142,16 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void advance(std::ptrdiff_t n) {
+      const auto previous_offset = _chunk_offset;
       _chunk_offset += n;
 
-      const auto end_position = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), _chunk_offset);
-      const auto jump_distance_from_begin = std::distance(_end_positions->cbegin(), end_position);
-      const auto current_distance_from_begin = std::distance(_end_positions->cbegin(), _end_position_it);
-      const auto jump_distance = jump_distance_from_begin - current_distance_from_begin;
+      // TODO(anyone): change to std::distance() when #1531 fixed (next three variables)
+      const auto end_position = search_end_position_for_chunk_offset(previous_offset, _chunk_offset,
+        (_end_position_it - _end_positions->cbegin()),
+        _linear_search_threshold, _end_positions->cbegin(), _end_positions->cend());
+      const auto target_distance_from_begin = end_position - _end_positions->cbegin();
+      const auto current_distance_from_begin = _end_position_it - _end_positions->cbegin();
+      const auto jump_distance = target_distance_from_begin - current_distance_from_begin;
       _value_it += jump_distance;
       _null_value_it += jump_distance;
       _end_position_it += jump_distance;
@@ -108,6 +168,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    private:
     const pmr_vector<T>* _values;
     const pmr_vector<ChunkOffset>* _end_positions;
+
+    // Threshold of when to start using a binary search for the next chunk offset instead of a linear search.
+    ChunkOffset _linear_search_threshold;
 
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
@@ -143,10 +206,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
-          // Estimate threshold using avg run length (i.e., chunk size / run count). The value of 500 has been found by
-          // a set of simple TPC-H measurements (see #XXXX). // TODO:
-          _linear_search_threshold{static_cast<ChunkOffset>(
-              200.0 * std::ceil(static_cast<float>(*(_end_positions->cend() - 1)) / _values->size()))},
+          _linear_search_threshold{determine_linear_search_threshold(*(_end_positions->cend() - 1), _values->size())},
           _prev_chunk_offset{0u},
           _prev_index{0ul} {}
 
@@ -157,34 +217,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
-      auto end_position_it = _end_positions->cend();
 
-      const int64_t step_size = static_cast<int64_t>(current_chunk_offset) - _prev_chunk_offset;
-      /**
-       * Depending on the estimated threshold and the step size, a different search approach is used. The threshold
-       * estimates how long a jump needs to be before a binary search is faster than linearly searching.
-       * Three cases are handled:
-       *   - If the chunk offset is smaller then the previous offset (can happen, e.g., after joins), use a binary
-       *     search search from the beginning up to the previous position. Whenever reverse iteration is frequently
-       *     used, we should consider using linear searching here as well (see below, currently blocked by #1531).
-       *   - If the chunk offset is larger than the previous offset and the step size for the next offset is smaller
-       *     than the estimated threshold, search linearly from the previous offset up to the end.
-       *   - If the chunk offset is larger than the previous offset and the step size for the next offset is larger
-       *     than the estimated threshold, use a binary search from the previous offset up to the end.
-       */
-      if (step_size < 0) {
-        end_position_it =
-            std::lower_bound(_end_positions->cbegin(), _end_positions->cbegin() + _prev_index, current_chunk_offset);
-      } else if (step_size < _linear_search_threshold) {
-        const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) {
-          return offset < current;
-        };
-        end_position_it =
-            std::find_if_not(_end_positions->cbegin() + _prev_index, _end_positions->cend(), less_than_current);
-      } else {
-        end_position_it =
-            std::lower_bound(_end_positions->cbegin() + _prev_index, _end_positions->cend(), current_chunk_offset);
-      }
+      const auto end_position_it = search_end_position_for_chunk_offset(_prev_chunk_offset, current_chunk_offset,
+        _prev_index, _linear_search_threshold, _end_positions->cbegin(), _end_positions->cend());
 
       // TODO(anyone): Use std::distance() when #1531 is resolved.
       const auto current_index = end_position_it - _end_positions->cbegin();
