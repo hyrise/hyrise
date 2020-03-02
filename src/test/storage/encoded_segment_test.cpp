@@ -358,10 +358,10 @@ TEST_F(EncodedSegmentTest, DictionaryAccessCounters) {
   expected_count = dictionary->size() * 3;
   EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
   dictionary_encoded_segment->lower_bound(42);
-  expected_count += std::ceil(std::log2(dictionary->size()));
+  expected_count += static_cast<uint64_t>(std::ceil(std::log2(dictionary->size())));
   EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
   dictionary_encoded_segment->upper_bound(42);
-  expected_count += std::ceil(std::log2(dictionary->size()));
+  expected_count += static_cast<uint64_t>(std::ceil(std::log2(dictionary->size())));
   EXPECT_EQ(expected_count, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
 }
 

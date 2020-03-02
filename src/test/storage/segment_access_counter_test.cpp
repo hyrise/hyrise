@@ -26,8 +26,8 @@ class SegmentAccessCounterTest : public BaseTest {
 
 TEST_F(SegmentAccessCounterTest, ZeroOnConstruction) {
   SegmentAccessCounter counter;
-  for (auto access_type = 0ul; access_type < (size_t)AccessType::Count; ++access_type) {
-    EXPECT_EQ(0, counter[(AccessType)access_type]);
+  for (auto access_type = 0ul; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+    EXPECT_EQ(0, counter[static_cast<AccessType>(access_type)]);
   }
 }
 
@@ -67,7 +67,7 @@ TEST_F(SegmentAccessCounterTest, AssignmentOperator) {
 
   SegmentAccessCounter counter2;
   counter2 = counter1;
-  for (auto access_type = 0ul; access_type < (size_t)AccessType::Count; ++access_type) {
+  for (auto access_type = 0ul; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
     EXPECT_EQ(counter1[static_cast<AccessType>(access_type)], counter2[static_cast<AccessType>(access_type)]);
   }
 }
