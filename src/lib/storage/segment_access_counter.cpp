@@ -5,7 +5,7 @@
 namespace opossum {
 
 SegmentAccessCounter::SegmentAccessCounter() {
-  DebugAssert((size_t)AccessType::Count == access_type_string_mapping.size(),
+  DebugAssert(static_cast<size_t>(AccessType::Count) == access_type_string_mapping.size(),
               "access_type_string_mapping should contain as many entries as there are access types.");
 }
 
