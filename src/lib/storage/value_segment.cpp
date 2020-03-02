@@ -134,7 +134,7 @@ std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const Polymor
     pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
     copy = std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
   } else {
-    copy =  std::make_shared<ValueSegment<T>>(std::move(new_values));
+    copy = std::make_shared<ValueSegment<T>>(std::move(new_values));
   }
   copy->access_counter = access_counter;
   return copy;

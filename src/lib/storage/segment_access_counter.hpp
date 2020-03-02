@@ -32,12 +32,11 @@ class SegmentAccessCounter {
   };
 
   inline static const std::map<AccessType, const char*> access_type_string_mapping = {
-    {AccessType::Point, "Point"},
-    {AccessType::Sequential, "Sequential"},
-    {AccessType::Monotonic, "Monotonic"},
-    {AccessType::Random, "Random"},
-    {AccessType::Dictionary, "Dictionary"}
-  };
+      {AccessType::Point, "Point"},
+      {AccessType::Sequential, "Sequential"},
+      {AccessType::Monotonic, "Monotonic"},
+      {AccessType::Random, "Random"},
+      {AccessType::Dictionary, "Dictionary"}};
 
   SegmentAccessCounter();
   SegmentAccessCounter(const SegmentAccessCounter& other);
@@ -62,8 +61,14 @@ class SegmentAccessCounter {
   // 3 (sequentially decreasing), difference between two neighboring elements is -1 or 0.
   // 4 (randomly decreasing)
   // 5 (random access)
-  enum class AccessPattern { Point, SequentiallyIncreasing, RandomlyIncreasing, SequentiallyDecreasing,
-    RandomlyDecreasing, Random };
+  enum class AccessPattern {
+    Point,
+    SequentiallyIncreasing,
+    RandomlyIncreasing,
+    SequentiallyDecreasing,
+    RandomlyDecreasing,
+    Random
+  };
 
   static AccessPattern _access_pattern(const PosList& positions);
 

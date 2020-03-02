@@ -300,7 +300,7 @@ TEST_P(EncodedSegmentTest, SeqIncreasingAccessSegmentCounters) {
     auto iterable = create_iterable_from_segment(encoded_segment);
     EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Sequential]);
     iterable.for_each([](const auto) {});
-    EXPECT_EQ(encoded_segment.size(),encoded_segment.access_counter[SegmentAccessCounter::AccessType::Sequential]);
+    EXPECT_EQ(encoded_segment.size(), encoded_segment.access_counter[SegmentAccessCounter::AccessType::Sequential]);
   });
 }
 

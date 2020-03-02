@@ -6,12 +6,10 @@ namespace opossum {
 
 SegmentAccessCounter::SegmentAccessCounter() {
   DebugAssert((size_t)AccessType::Count == access_type_string_mapping.size(),
-    "access_type_string_mapping should contain as many entries as there are access types.");
+              "access_type_string_mapping should contain as many entries as there are access types.");
 }
 
-SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& other) {
-  _set_counters(other);
-}
+SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& other) { _set_counters(other); }
 
 SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter& other) {
   _set_counters(other);
@@ -43,7 +41,7 @@ std::string SegmentAccessCounter::to_string() const {
 }
 
 // Computes the AccessType by analyzing access pattern given by the psoition list.
-SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList& positions){
+SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList& positions) {
   const auto access_pattern = _access_pattern(positions);
   switch (access_pattern) {
     case SegmentAccessCounter::AccessPattern::Point:
@@ -72,26 +70,26 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
 
-  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> _transitions {
-    {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
-       AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
-      {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
+  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> _transitions{
+      {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
+        AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
+       {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
         AccessPattern::Random, AccessPattern::Random},
-      {AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing,
+       {AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing, AccessPattern::RandomlyIncreasing,
         AccessPattern::Random, AccessPattern::Random},
-      {AccessPattern::SequentiallyDecreasing, AccessPattern::Random, AccessPattern::Random,
+       {AccessPattern::SequentiallyDecreasing, AccessPattern::Random, AccessPattern::Random,
         AccessPattern::SequentiallyDecreasing, AccessPattern::RandomlyDecreasing},
-      {AccessPattern::RandomlyDecreasing, AccessPattern::Random, AccessPattern::Random,
+       {AccessPattern::RandomlyDecreasing, AccessPattern::Random, AccessPattern::Random,
         AccessPattern::RandomlyDecreasing, AccessPattern::RandomlyDecreasing},
-      {AccessPattern::Random, AccessPattern::Random, AccessPattern::Random, AccessPattern::Random,
+       {AccessPattern::Random, AccessPattern::Random, AccessPattern::Random, AccessPattern::Random,
         AccessPattern::Random}}};
 
   const auto max_items_to_compare = std::min(positions.size(), 100ul);
 
   auto access_pattern = AccessPattern::Point;
   for (auto i = 1ul; i < max_items_to_compare; ++i) {
-    const int64_t diff = static_cast<int64_t>(positions[i].chunk_offset) -
-                         static_cast<int64_t>(positions[i - 1].chunk_offset);
+    const int64_t diff =
+        static_cast<int64_t>(positions[i].chunk_offset) - static_cast<int64_t>(positions[i - 1].chunk_offset);
 
     auto input = Input::Negative;
     if (diff == 0)

@@ -101,8 +101,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:
-    explicit Iterator(ValueIterator begin_value_it, ValueIterator value_it,
-                      NullValueIterator null_value_it)
+    explicit Iterator(ValueIterator begin_value_it, ValueIterator value_it, NullValueIterator null_value_it)
         : _value_it(std::move(value_it)),
           _null_value_it{std::move(null_value_it)},
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
