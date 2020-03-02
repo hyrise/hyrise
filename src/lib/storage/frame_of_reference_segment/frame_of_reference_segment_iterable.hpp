@@ -83,7 +83,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
-      return static_cast<std::ptrdiff_t>(other._chunk_offset) - static_cast<std::ptrdiff_>(_chunk_offset);
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - static_cast<std::ptrdiff_t>(_chunk_offset);
     }
 
     SegmentPosition<T> dereference() const {
