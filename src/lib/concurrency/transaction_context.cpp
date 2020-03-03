@@ -11,7 +11,7 @@
 namespace opossum {
 
 TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
-                                       AutoCommit auto_commit)
+                                       const AutoCommit auto_commit)
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
       _auto_commit{auto_commit},

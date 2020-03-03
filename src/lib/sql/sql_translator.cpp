@@ -418,13 +418,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   AssertInput(insert_data_node->column_expressions().size() == static_cast<size_t>(target_table->column_count()),
               "INSERT: Column count mismatch");
 
-  /**
-   * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
-   */
   if (is_meta_table) {
     return MutateMetaTableNode::make(table_name, MetaTableMutation::Insert, DummyTableNode::make(), insert_data_node);
   }
 
+  /**
+   * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
+   */
   return InsertNode::make(table_name, insert_data_node);
 }
 

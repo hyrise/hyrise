@@ -9,8 +9,6 @@
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
-#include "operators/print.hpp"
-
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {

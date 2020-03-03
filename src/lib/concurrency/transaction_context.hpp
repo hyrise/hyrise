@@ -76,7 +76,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   CommitID commit_id() const;
 
   /**
-   * Flag that indicates whether the context belongs to a transaction or non-transaction (i.e., it auto-commit).
+   * Flag that indicates whether the context belongs to a transaction or non-transaction (i.e., it auto-commits).
    */
   AutoCommit auto_commit() const;
 

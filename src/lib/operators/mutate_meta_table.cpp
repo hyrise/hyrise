@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "hyrise.hpp"
-#include "operators/print.hpp"
 
 namespace opossum {
 
