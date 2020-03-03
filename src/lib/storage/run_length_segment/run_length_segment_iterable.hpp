@@ -22,8 +22,15 @@ using namespace opossum;  // NOLINT
  * simple TPC-H measurements (see #2038).
  */
 constexpr auto LINEAR_SEARCH_THRESHOLD_FACTOR = 200.0f;
-[[maybe_unused]] ChunkOffset determine_linear_search_threshold(const ChunkOffset chunk_size, const size_t value_count) {
-  const auto avg_elements_per_run = static_cast<float>(chunk_size) / value_count;
+[[maybe_unused]] ChunkOffset determine_linear_search_threshold(const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions) {
+  if (end_positions->empty()) {
+    return 0;
+  }
+
+  const ChunkOffset chunk_size = end_positions->back();
+  const size_t run_count = end_positions->size();
+
+  const auto avg_elements_per_run = static_cast<float>(chunk_size) / run_count;
   return static_cast<ChunkOffset>(LINEAR_SEARCH_THRESHOLD_FACTOR * std::ceil(avg_elements_per_run));
 }
 
@@ -110,11 +117,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
                       ChunkOffset chunk_offset)
-        : _end_positions{end_positions},
-          _linear_search_threshold{determine_linear_search_threshold(_end_positions->back(), _end_positions->size())},
-          _value_it{values->cbegin()},
-          _null_value_it{null_values->cbegin()},
-          _end_position_it{end_positions->cbegin()},
+        : _values{values},
+          _null_values{null_values},
+          _end_positions{end_positions},
+          _linear_search_threshold{determine_linear_search_threshold(_end_positions)},
           _chunk_offset{chunk_offset},
           _prev_chunk_offset{0u},
           _prev_index{0ul} {}
@@ -122,46 +128,38 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() {
-      ++_chunk_offset;
-    }
+    void increment() { ++_chunk_offset; }
 
-    void decrement() {
-      --_chunk_offset;
-    }
+    void decrement() { --_chunk_offset; }
 
-    void advance(std::ptrdiff_t n) {
-      _chunk_offset += n;
-    }
+    void advance(std::ptrdiff_t n) { _chunk_offset += n; }
 
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
-      return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
     }
 
     SegmentPosition<T> dereference() const {
       // TODO(anyone): change to std::distance() when #1531 is resolved
       const auto end_position = search_end_position_for_chunk_offset(_prev_chunk_offset, _chunk_offset,
-        _prev_index,
-        _linear_search_threshold, _end_positions->cbegin(), _end_positions->cend());
+        _prev_index, _linear_search_threshold, _end_positions->cbegin(), _end_positions->cend());
       const auto target_distance_from_begin = end_position - _end_positions->cbegin();
 
       _prev_chunk_offset = _chunk_offset;
       _prev_index = target_distance_from_begin;
 
-      return SegmentPosition<T>{*(_value_it + target_distance_from_begin), *(_null_value_it + target_distance_from_begin), _chunk_offset};
+      return SegmentPosition<T>{(*_values)[target_distance_from_begin], (*_null_values)[target_distance_from_begin], _chunk_offset};
     }
 
    private:
+    std::shared_ptr<const pmr_vector<T>> _values;
+    std::shared_ptr<const pmr_vector<bool>> _null_values;
     std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;
 
     // Threshold of when to start using a binary search for the next chunk offset instead of a linear search.
     ChunkOffset _linear_search_threshold;
 
-    ValueIterator _value_it;
-    NullValueIterator _null_value_it;
-    EndPositionIterator _end_position_it;
     ChunkOffset _chunk_offset;
 
     mutable ChunkOffset _prev_chunk_offset;
@@ -196,10 +194,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                  PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
-          _values_it{values->cbegin()},
-          _null_values_it{null_values->cbegin()},
+          _values{values},
+          _null_values{null_values},
           _end_positions{end_positions},
-          _linear_search_threshold{determine_linear_search_threshold(_end_positions->back(), _end_positions->size())},
+          _linear_search_threshold{determine_linear_search_threshold(_end_positions)},
           _prev_chunk_offset{0u},
           _prev_index{0ul} {}
 
@@ -208,27 +206,33 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
       const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
 
-      const auto end_position_it = search_end_position_for_chunk_offset(_prev_chunk_offset, current_chunk_offset,
+      // const auto end_position_it = search_end_position_for_chunk_offset(_prev_chunk_offset, current_chunk_offset,
+      //   _prev_index, _linear_search_threshold, _end_positions->cbegin(), _end_positions->cend());
+
+      // // TODO(anyone): Use std::distance() when #1531 is resolved.
+      // const auto current_index = end_position_it - _end_positions->cbegin();
+
+      // const auto value = *(_values_it + current_index);
+      // const auto is_null = *(_null_values_it + current_index);
+
+      // _prev_chunk_offset = current_chunk_offset;
+      // _prev_index = current_index;
+
+      const auto end_position = search_end_position_for_chunk_offset(_prev_chunk_offset, current_chunk_offset,
         _prev_index, _linear_search_threshold, _end_positions->cbegin(), _end_positions->cend());
-
-      // TODO(anyone): Use std::distance() when #1531 is resolved.
-      const auto current_index = end_position_it - _end_positions->cbegin();
-
-      const auto value = *(_values_it + current_index);
-      const auto is_null = *(_null_values_it + current_index);
+      const auto target_distance_from_begin = end_position - _end_positions->cbegin();
 
       _prev_chunk_offset = current_chunk_offset;
-      _prev_index = current_index;
+      _prev_index = target_distance_from_begin;
 
-      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
+      return SegmentPosition<T>{(*_values)[target_distance_from_begin], (*_null_values)[target_distance_from_begin], chunk_offsets.offset_in_poslist};
     }
 
    private:
-    ValueIterator _values_it;
-    NullValueIterator _null_values_it;
+    std::shared_ptr<const pmr_vector<T>> _values;
+    std::shared_ptr<const pmr_vector<bool>> _null_values;
     std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;
 
     // Threshold of when to start using a binary search for the next chunk offset instead of a linear search.
