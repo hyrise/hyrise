@@ -28,6 +28,9 @@ class AbstractMetaTable : public Noncopyable {
  protected:
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
+  friend class MetaTableTest;
+  friend class MetaPluginsTest;
+  friend class MetaSettingsTest;
 
   explicit AbstractMetaTable(const TableColumnDefinitions& column_definitions);
 

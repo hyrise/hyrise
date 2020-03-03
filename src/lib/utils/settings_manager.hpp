@@ -11,7 +11,7 @@ namespace opossum {
 class SettingsManager : public Noncopyable {
  public:
   bool has_setting(const std::string& name) const;
-  std::shared_ptr<AbstractSetting> get_setting(const std::string& name) const;
+  std::shared_ptr<AbstractSetting> get_setting(const std::string name) const;
   std::vector<std::string> all_settings() const;
 
  protected:
@@ -19,10 +19,10 @@ class SettingsManager : public Noncopyable {
   friend class Hyrise;
   friend class SettingsManagerTest;
 
-  void add(std::shared_ptr<AbstractSetting> setting);
-  void remove(const std::string& name);
+  void add(const std::string& name, std::shared_ptr<AbstractSetting> setting);
+  void remove(const std::string name);
 
-  //private:
+ private:
   std::map<std::string, std::shared_ptr<AbstractSetting>> _settings;
 };
 

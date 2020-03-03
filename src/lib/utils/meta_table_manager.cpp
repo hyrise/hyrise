@@ -1,7 +1,7 @@
 #include "meta_table_manager.hpp"
 
 #include "utils/meta_tables/meta_accurate_segments_table.hpp"
-#include "utils/meta_tables/meta_chunk_orders_table.hpp"
+#include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
@@ -16,7 +16,7 @@ namespace opossum {
 MetaTableManager::MetaTableManager() {
   const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {
       std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
-      std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkOrdersTable>(),
+      std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
       std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
       std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
 

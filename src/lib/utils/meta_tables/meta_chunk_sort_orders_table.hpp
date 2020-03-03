@@ -7,9 +7,9 @@ namespace opossum {
 /**
  * This is a class for showing all sort orders of stored chunks via a meta table.
  */
-class MetaChunkOrdersTable : public AbstractMetaTable {
+class MetaChunkSortOrdersTable : public AbstractMetaTable {
  public:
-  MetaChunkOrdersTable();
+  MetaChunkSortOrdersTable();
 
   const std::string& name() const final;
 

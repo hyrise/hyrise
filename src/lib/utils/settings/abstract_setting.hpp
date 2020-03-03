@@ -29,9 +29,9 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
 
   virtual void set(const std::string& value) = 0;
 
-  void enroll();
+  virtual void enroll();
 
-  void unenroll();
+  virtual void unenroll();
 
   const std::string& name;
 };

@@ -203,9 +203,13 @@ set(
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
     utils/meta_table_manager_test.cpp
+    utils/meta_tables/meta_table_test.cpp
+    utils/meta_tables/meta_plugins_test.cpp
+    utils/meta_tables/meta_settings_test.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
+    utils/setting_test.cpp
     utils/settings_manager_test.cpp
     utils/singleton_test.cpp
     utils/size_estimation_utils_test.cpp

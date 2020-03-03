@@ -572,8 +572,8 @@ set(
     utils/meta_tables/abstract_meta_table.hpp
     utils/meta_tables/meta_accurate_segments_table.cpp
     utils/meta_tables/meta_accurate_segments_table.hpp
-    utils/meta_tables/meta_chunk_orders_table.cpp
-    utils/meta_tables/meta_chunk_orders_table.hpp
+    utils/meta_tables/meta_chunk_sort_orders_table.cpp
+    utils/meta_tables/meta_chunk_sort_orders_table.hpp
     utils/meta_tables/meta_chunks_table.cpp
     utils/meta_tables/meta_chunks_table.hpp
     utils/meta_tables/meta_columns_table.cpp

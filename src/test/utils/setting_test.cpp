@@ -1,0 +1,33 @@
+#include "base_test.hpp"
+
+#include "utils/settings/mock_setting.hpp"
+
+namespace opossum {
+
+class SettingTest : public BaseTest {
+ protected:
+  void SetUp() {
+    Hyrise::reset();
+    mock_setting = std::make_shared<MockSetting>("mock_setting");
+  }
+
+  void TearDown() { Hyrise::reset(); }
+
+  std::shared_ptr<AbstractSetting> mock_setting;
+};
+
+TEST_F(SettingTest, RegistrationAtSettingsManager) {
+  auto& settings_manager = Hyrise::get().settings_manager;
+
+  EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
+
+  mock_setting->enroll();
+
+  EXPECT_TRUE(settings_manager.has_setting("mock_setting"));
+
+  mock_setting->unenroll();
+
+  EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
+}
+
+}  // namespace opossum
