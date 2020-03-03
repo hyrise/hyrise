@@ -14,8 +14,7 @@ namespace opossum {
 // The SegmentAccessCounter is a collection of counters to count how often a segment is accessed.
 // It contains several counters (see AccessType) to differentiate between different access types, like
 // sequential or random access. The individual counters can be accessed using the [] operator.
-// The counters are currently updated by the iterators, segment accessors or from withing the segment itself.
-// Use function access_type(const PosList& positions) to derive the access pattern from the position list.
+// The counters are currently updated by the iterators, segment accessors or from within the segment itself.
 class SegmentAccessCounter {
   friend class SegmentAccessCounterTest;
 
@@ -27,7 +26,7 @@ class SegmentAccessCounter {
     Sequential /* 0, 1, 1, 2, 3, 4 */,
     Monotonic /* 0, 0, 1, 2, 4, 8, 17 */,
     Random /* 0, 1, 0, 42 */,
-    Dictionary /* used to count accesses to the dictionary of the dictionary segment */,
+    Dictionary /* Used to count accesses to the dictionary of the dictionary segment */,
     Count /* Dummy entry to describe the number of elements in this enum class. */
   };
 
@@ -45,6 +44,8 @@ class SegmentAccessCounter {
   CounterType& operator[](const AccessType type);
   const CounterType& operator[](const AccessType type) const;
 
+  // For a given position list, this determines whether its entries are in sequential, monotonic, or random order.
+  // It only looks at the first n values.
   static AccessType access_type(const PosList& positions);
 
   std::string to_string() const;

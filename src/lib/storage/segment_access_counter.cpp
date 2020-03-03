@@ -43,7 +43,6 @@ std::string SegmentAccessCounter::to_string() const {
   return result;
 }
 
-// Computes the AccessType by analyzing access pattern given by the psoition list.
 SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList& positions) {
   const auto access_pattern = _access_pattern(positions);
   switch (access_pattern) {
@@ -61,14 +60,14 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList
   Fail("This code should never be reached.");
 }
 
-// Iterates over the first N (currently 100) elements in positions to determine the access pattern
+// Iterates over the first n (currently 100) elements in positions to determine the access pattern
 // (see enum AccessPattern in header).
-// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPatten
-// and the alphabet is defined by the internal enum Input.
-// The initial state is AccessPattern::Point. positions is iterated through from the beginning. For two adjacent
+// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPatten.
+// The alphabet is defined by the internal enum Input.
+// The initial state is AccessPattern::Point. positions is iterated over from the beginning. For two adjacent
 // elements (in positions) the difference is computed and mapped to an element of the enum Input.
-// That input is used transition from one state to the next using the predefined two dimensional array
-// TRANSITIONS.
+// That input is used to transition from one state to the next. The predefined, two dimensional array, TRANSITIONS,
+// acts as the transition function.
 SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const PosList& positions) {
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
