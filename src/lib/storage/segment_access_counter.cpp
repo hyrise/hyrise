@@ -73,7 +73,7 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
 
-  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS {
+  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS{
       {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
         AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
        {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
