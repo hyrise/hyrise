@@ -18,6 +18,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
     auto begin = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(), ChunkOffset{0}};
     auto end = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
                         static_cast<ChunkOffset>(_segment.size())};
@@ -27,6 +28,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
     auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
                                      position_filter->cbegin(), position_filter->cbegin()};
     auto end = PointAccessIterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
