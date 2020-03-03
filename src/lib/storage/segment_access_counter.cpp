@@ -12,6 +12,9 @@ SegmentAccessCounter::SegmentAccessCounter() {
 SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& other) { _set_counters(other); }
 
 SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter& other) {
+  if (this == &other) {
+    return *this;
+  }
   _set_counters(other);
   return *this;
 }
@@ -65,12 +68,12 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList
 // The initial state is AccessPattern::Point. positions is iterated through from the beginning. For two adjacent
 // elements (in positions) the difference is computed and mapped to an element of the enum Input.
 // That input is used transition from one state to the next using the predefined two dimensional array
-// _transitions.
+// TRANSITIONS.
 SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const PosList& positions) {
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
 
-  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> _transitions{
+  constexpr std::array<std::array<AccessPattern, 5 /*|Input|*/>, 6 /*|AccessPattern|*/> TRANSITIONS {
       {{AccessPattern::Point, AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing,
         AccessPattern::SequentiallyDecreasing, AccessPattern::SequentiallyDecreasing},
        {AccessPattern::SequentiallyIncreasing, AccessPattern::SequentiallyIncreasing, AccessPattern::RandomlyIncreasing,
@@ -101,7 +104,7 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
     else if (diff == -1)
       input = Input::NegativeOne;
 
-    access_pattern = _transitions[static_cast<size_t>(access_pattern)][static_cast<size_t>(input)];
+    access_pattern = TRANSITIONS[static_cast<size_t>(access_pattern)][static_cast<size_t>(input)];
   }
 
   return access_pattern;
