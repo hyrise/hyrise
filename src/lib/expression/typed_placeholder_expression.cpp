@@ -6,6 +6,10 @@ TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID paramet
   PlaceholderExpression(parameter_id),
   _data_type{data_type} {}
 
+std::shared_ptr<AbstractExpression> TypedPlaceholderExpression::deep_copy() const {
+  return std::make_shared<TypedPlaceholderExpression>(parameter_id, _data_type);
+}
+
 DataType TypedPlaceholderExpression::data_type() const { return _data_type; }
 
 }

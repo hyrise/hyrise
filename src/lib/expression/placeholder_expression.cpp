@@ -6,7 +6,6 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "typed_placeholder_expression.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
@@ -26,14 +25,7 @@ std::string PlaceholderExpression::description(const DescriptionMode mode) const
 
 bool PlaceholderExpression::requires_computation() const { return false; }
 
-DataType PlaceholderExpression::data_type() const {
-  const auto *x = dynamic_cast<const TypedPlaceholderExpression *>(this);
-  if (x) {
-    Fail("Wrong method got called");
-  } else {
-    Fail("Cannot obtain DataType of placeholder");
-  }
-}
+DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const PlaceholderExpression*>(&expression),

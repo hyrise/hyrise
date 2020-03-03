@@ -12,6 +12,7 @@ class TypedPlaceholderExpression : public PlaceholderExpression {
  public:
   explicit TypedPlaceholderExpression(const ParameterID parameter_id, DataType data_type);
   DataType data_type() const override;
+  std::shared_ptr<AbstractExpression> deep_copy() const override;
 
  protected:
   DataType _data_type;
