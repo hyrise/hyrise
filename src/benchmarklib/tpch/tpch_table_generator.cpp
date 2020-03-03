@@ -118,7 +118,7 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
     : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
-    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
+    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) { std::cout << "## scale factor is " << _scale_factor << std::endl; }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
@@ -325,7 +325,7 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
   // Allowed as per TPC-H Specification, paragraph 1.5.2
-  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+  return {{"lineitem", {"l_shipdate"}}, {"orders", {"o_orderdate"}}};
 }
 
 void TPCHTableGenerator::_add_constraints(
