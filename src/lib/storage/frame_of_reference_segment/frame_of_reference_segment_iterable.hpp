@@ -163,20 +163,25 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
       const auto& chunk_offsets = this->chunk_offsets();
-
       const auto current_offset = chunk_offsets.offset_in_referenced_chunk;
 
-      const auto is_null = *(_null_value_it + current_offset);
+      const auto block_minimum_offset = current_offset / block_size;
+      _null_value_it += current_offset;
+      _block_minimum_it += block_minimum_offset;
+
       const auto offset_value = _offset_value_decompressor.get(current_offset);
-      const auto block_minimum = *(_block_minimum_it + (current_offset / block_size));
-      const auto value = static_cast<T>(offset_value) + block_minimum;
+      const auto value = static_cast<T>(offset_value) + *_block_minimum_it;
+      const auto is_null = *_null_value_it;
+
+      _null_value_it -= current_offset;
+      _block_minimum_it -= block_minimum_offset;
 
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
-    ReferenceFrameIterator _block_minimum_it;
-    NullValueIterator _null_value_it;
+    mutable ReferenceFrameIterator _block_minimum_it;
+    mutable NullValueIterator _null_value_it;
     mutable OffsetValueDecompressorT _offset_value_decompressor;
   };
 };
