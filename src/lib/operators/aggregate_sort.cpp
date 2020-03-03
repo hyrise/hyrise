@@ -434,7 +434,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     } else {
       // sort input table in whole consecutively by the group by columns
       for (const auto& column_id : _groupby_column_ids) {
-        auto table_wrapper = std::make_shared<TableWrapper>(input_table);
+        auto table_wrapper = std::make_shared<TableWrapper>(sorted_table);
         table_wrapper->execute();
         auto sort = std::make_shared<Sort>(table_wrapper, column_id);
         sort->execute();
