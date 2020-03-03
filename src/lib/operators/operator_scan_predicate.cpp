@@ -145,10 +145,14 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
       OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b}};
 }
 
-OperatorScanPredicate::OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                                             const AllParameterVariant& value,
-                                             const std::optional<AllParameterVariant>& value2)
-    : column_id(column_id), predicate_condition(predicate_condition), value(value), value2(value2) {}
+OperatorScanPredicate::OperatorScanPredicate(const ColumnID init_column_id,
+                                             const PredicateCondition init_predicate_condition,
+                                             const AllParameterVariant& init_value,
+                                             const std::optional<AllParameterVariant>& init_value2)
+    : column_id(init_column_id),
+      predicate_condition(init_predicate_condition),
+      value(init_value),
+      value2(init_value2) {}
 
 bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs) {
   return lhs.column_id == rhs.column_id && lhs.predicate_condition == rhs.predicate_condition &&

@@ -55,8 +55,8 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 namespace opossum {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
-                                 const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions)
-    : type(node_type), node_expressions(node_expressions) {}
+                                 const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions)
+    : type(node_type), node_expressions(init_node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
   Assert(

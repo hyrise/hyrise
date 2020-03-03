@@ -19,17 +19,18 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
-    : JoinNode(join_mode, std::vector<std::shared_ptr<AbstractExpression>>{join_predicate}) {}
+JoinNode::JoinNode(const JoinMode init_join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
+    : JoinNode(init_join_mode, std::vector<std::shared_ptr<AbstractExpression>>{join_predicate}) {}
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates)
-    : AbstractLQPNode(LQPNodeType::Join, join_predicates), join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode init_join_mode,
+                   const std::vector<std::shared_ptr<AbstractExpression>>& init_join_predicates)
+    : AbstractLQPNode(LQPNodeType::Join, init_join_predicates), join_mode(init_join_mode) {
   Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
-  Assert(!join_predicates.empty(), "Non-Cross Joins require predicates");
+  Assert(!join_predicates().empty(), "Non-Cross Joins require predicates");
 }
 
 std::string JoinNode::description(const DescriptionMode mode) const {

@@ -14,7 +14,7 @@ namespace opossum {
 class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode {
  public:
   AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-            const std::vector<std::string>& aliases);
+            const std::vector<std::string>& init_aliases);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;

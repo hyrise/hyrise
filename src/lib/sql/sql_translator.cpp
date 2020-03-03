@@ -1654,22 +1654,22 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
   return expressions;
 }
 
-SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression)
-    : expression(expression) {}
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression)
+    : expression(init_expression) {}
 
-SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                                                    const std::vector<SQLIdentifier>& identifiers)
-    : expression(expression), identifiers(identifiers) {}
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression,
+                                                    const std::vector<SQLIdentifier>& init_identifiers)
+    : expression(init_expression), identifiers(init_identifiers) {}
 
 SQLTranslator::TableSourceState::TableSourceState(
-    const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
-    const std::vector<SelectListElement>& elements_in_order,
-    const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver)
-    : lqp(lqp),
-      elements_by_table_name(elements_by_table_name),
-      elements_in_order(elements_in_order),
-      sql_identifier_resolver(sql_identifier_resolver) {}
+    const std::shared_ptr<AbstractLQPNode>& init_lqp,
+    const std::unordered_map<std::string, std::vector<SelectListElement>>& init_elements_by_table_name,
+    const std::vector<SelectListElement>& init_elements_in_order,
+    const std::shared_ptr<SQLIdentifierResolver>& init_sql_identifier_resolver)
+    : lqp(init_lqp),
+      elements_by_table_name(init_elements_by_table_name),
+      elements_in_order(init_elements_in_order),
+      sql_identifier_resolver(init_sql_identifier_resolver) {}
 
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {

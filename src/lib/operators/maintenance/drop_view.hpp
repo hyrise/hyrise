@@ -12,7 +12,7 @@ namespace opossum {
 // maintenance operator for the "CREATE VIEW" sql statement
 class DropView : public AbstractReadOnlyOperator {
  public:
-  DropView(const std::string& view_name, bool if_exists);
+  DropView(const std::string& init_view_name, bool init_if_exists);
 
   const std::string& name() const override;
   const std::string view_name;
