@@ -106,18 +106,17 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     ParameterID parameter_id(0);
 
-    visit_lqp(unoptimized_lqp, [](const auto& node) {
+    /*visit_lqp(unoptimized_lqp, [](const auto& node) {
        if (node) {
           node->visited = false;
        }
        return LQPVisitation::VisitInputs;
 
-    });
+    });*/
 
 
     visit_lqp(unoptimized_lqp, [&values, &parameter_id, &unoptimized_lqp](const auto& node) {
         if (node) {
-          if (!node->visited) {
             /*if (node->type == LQPNodeType::Aggregate) {
               remove_duplicate_aggregate(node->node_expressions, node, unoptimized_lqp);
             }*/
@@ -142,11 +141,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                     return ExpressionVisitation::VisitArguments;
                 });
             }
-            node->visited = true;
-            return LQPVisitation::VisitInputs;
-          }
         }
-        return LQPVisitation::DoNotVisitInputs;
+        return LQPVisitation::VisitInputs;
     });
 
     return unoptimized_lqp;

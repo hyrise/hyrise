@@ -202,9 +202,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
-
-public:
-  bool visited;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);
