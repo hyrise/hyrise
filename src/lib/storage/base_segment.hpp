@@ -4,6 +4,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
+#include "segment_access_counter.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -13,6 +14,7 @@ namespace opossum {
 class BaseSegment : private Noncopyable {
  public:
   explicit BaseSegment(const DataType data_type);
+
   virtual ~BaseSegment() = default;
 
   // the type of the data contained in this segment
@@ -31,6 +33,8 @@ class BaseSegment : private Noncopyable {
   // Might be inaccurate, especially if the segment contains non-primitive data,
   // such as strings who memory usage is implementation defined
   virtual size_t memory_usage(const MemoryUsageCalculationMode mode) const = 0;
+
+  mutable SegmentAccessCounter access_counter;
 
  private:
   const DataType _data_type;
