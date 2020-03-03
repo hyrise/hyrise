@@ -69,35 +69,70 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
         : _block_minimum_it{std::move(block_minimum_it)},
           _offset_value_it{std::move(offset_value_it)},
           _null_value_it{std::move(null_value_it)},
+          _index_within_frame{0u},
           _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() { ++_chunk_offset; }
+    void increment() {
+      ++_offset_value_it;
+      ++_null_value_it;
+      ++_index_within_frame;
+      ++_chunk_offset;
 
-    void decrement() { --_chunk_offset; }
-
-    void advance(std::ptrdiff_t n) { _chunk_offset += n; }
-
-    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
-
-    std::ptrdiff_t distance_to(const Iterator& other) const {
-      return static_cast<std::ptrdiff_t>(other._chunk_offset) - static_cast<std::ptrdiff_t>(_chunk_offset);
+      if (_index_within_frame >= FrameOfReferenceSegment<T>::block_size) {
+        _index_within_frame = 0u;
+        ++_block_minimum_it;
+      }
     }
 
-    SegmentPosition<T> dereference() const {
-      static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
+    void decrement() {
+      --_offset_value_it;
+      --_null_value_it;
+      --_chunk_offset;
 
-      const auto block_minimum = *(_block_minimum_it + (_chunk_offset / block_size));
-      const auto value = static_cast<T>(*(_offset_value_it + _chunk_offset)) + block_minimum;
-      return SegmentPosition<T>{value, *(_null_value_it + _chunk_offset), _chunk_offset};
+      if (_index_within_frame > 0) {
+        --_index_within_frame;
+      } else {
+        _index_within_frame = FrameOfReferenceSegment<T>::block_size - 1;
+        --_block_minimum_it;
+      }
+    }
+
+
+    void advance(std::ptrdiff_t n) {
+      _offset_value_it += n;
+      _chunk_offset += n;
+      _null_value_it += n;
+      _index_within_frame += n;
+
+      // Set the new block minimum and index within a frame in case the block is changing.
+      if (n > 0 && _index_within_frame >= FrameOfReferenceSegment<T>::block_size) {
+        _index_within_frame = _index_within_frame % FrameOfReferenceSegment<T>::block_size;
+        // At this line, we know we have to move the block minimum iterator further at least once. In case the advance
+        // step is larger than a block, we might increase for several block minima.
+        _block_minimum_it += 1 + n / FrameOfReferenceSegment<T>::block_size;
+      } else if (n < 0 && _index_within_frame < 0) {
+        _index_within_frame = _index_within_frame % FrameOfReferenceSegment<T>::block_size;
+        _block_minimum_it -= 1 + n / FrameOfReferenceSegment<T>::block_size;
+      }
+    }
+
+    bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._offset_value_it - _offset_value_it; }
+
+    SegmentPosition<T> dereference() const {
+      const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
+      return SegmentPosition<T>{value, *_null_value_it, _chunk_offset};
     }
 
    private:
     ReferenceFrameIterator _block_minimum_it;
     OffsetValueIteratorT _offset_value_it;
     NullValueIterator _null_value_it;
+    size_t _index_within_frame;
     ChunkOffset _chunk_offset;
   };
 
