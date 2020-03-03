@@ -106,25 +106,47 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     ParameterID parameter_id(0);
 
+    visit_lqp(unoptimized_lqp, [](const auto& node) {
+       if (node) {
+          node->visited = false;
+       }
+       return LQPVisitation::VisitInputs;
+
+    });
+
+
     visit_lqp(unoptimized_lqp, [&values, &parameter_id, &unoptimized_lqp](const auto& node) {
         if (node) {
-          if (node->type == LQPNodeType::Aggregate) {
-            remove_duplicate_aggregate(node->node_expressions, node, unoptimized_lqp);
-          }
+          if (!node->visited) {
+            /*if (node->type == LQPNodeType::Aggregate) {
+              remove_duplicate_aggregate(node->node_expressions, node, unoptimized_lqp);
+            }*/
             for (auto& root_expression : node->node_expressions) {
                 visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
                     if (expression->type == ExpressionType::Value) {
+                      if (expression->replaced_by) {
+                        const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
+                        std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;
+                        expression = expression->replaced_by;
+
+                      } else {
                         const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
                         std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
                         values.push_back(expression);
-                        expression = std::make_shared<PlaceholderExpression>(parameter_id);
+                        auto new_expression = std::make_shared<PlaceholderExpression>(parameter_id);
+                        expression->replaced_by = new_expression;
+                        expression = new_expression;
                         parameter_id++;
+                      }
                     }
                     return ExpressionVisitation::VisitArguments;
                 });
             }
+            node->visited = true;
+            return LQPVisitation::VisitInputs;
+          }
         }
-        return LQPVisitation::VisitInputs;
+        return LQPVisitation::DoNotVisitInputs;
     });
 
     return unoptimized_lqp;
