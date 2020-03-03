@@ -10,7 +10,7 @@
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
-#include "expression/placeholder_expression.hpp"
+#include "expression/typed_placeholder_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -115,11 +115,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
     });*/
 
 
-    visit_lqp(unoptimized_lqp, [&values, &parameter_id, &unoptimized_lqp](const auto& node) {
+    visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
         if (node) {
-            /*if (node->type == LQPNodeType::Aggregate) {
-              remove_duplicate_aggregate(node->node_expressions, node, unoptimized_lqp);
-            }*/
             for (auto& root_expression : node->node_expressions) {
                 visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
                     if (expression->type == ExpressionType::Value) {
@@ -132,7 +129,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                         const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
                         std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
                         values.push_back(expression);
-                        auto new_expression = std::make_shared<PlaceholderExpression>(parameter_id);
+                        auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
                         expression->replaced_by = new_expression;
                         expression = new_expression;
                         parameter_id++;

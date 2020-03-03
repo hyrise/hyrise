@@ -78,6 +78,8 @@ set(
     expression/lqp_subquery_expression.hpp
     expression/placeholder_expression.cpp
     expression/placeholder_expression.hpp
+    expression/typed_placeholder_expression.cpp
+    expression/typed_placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
     expression/pqp_subquery_expression.cpp

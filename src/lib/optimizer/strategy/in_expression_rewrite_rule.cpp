@@ -122,23 +122,18 @@ void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     const auto& left_expression = in_expression->value();
     const auto& right_side_expressions = static_cast<ListExpression&>(*in_expression->set()).elements();
 
-    std::optional<DataType> common_data_type;
     // Check whether all elements are literal values of the same data type (that is not NULL).
-    if (left_expression->type == ExpressionType::Placeholder) {
-      common_data_type = std::nullopt;
-    } else {
-      common_data_type = left_expression->data_type();
-      for (const auto& element : right_side_expressions) {
-        if (element->type != ExpressionType::Value) {
-          common_data_type = std::nullopt;
-          break;
-        }
-        const auto& value_expression = static_cast<ValueExpression&>(*element);
-        if (variant_is_null(value_expression.value)) continue;
-        if (value_expression.data_type() != *common_data_type) {
-          common_data_type = std::nullopt;
-          break;
-        }
+    std::optional<DataType> common_data_type = left_expression->data_type();
+    for (const auto& element : right_side_expressions) {
+      if (element->type != ExpressionType::Value) {
+        common_data_type = std::nullopt;
+        break;
+      }
+      const auto& value_expression = static_cast<ValueExpression&>(*element);
+      if (variant_is_null(value_expression.value)) continue;
+      if (value_expression.data_type() != *common_data_type) {
+        common_data_type = std::nullopt;
+        break;
       }
     }
 
