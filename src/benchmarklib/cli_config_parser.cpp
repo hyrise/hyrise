@@ -23,13 +23,13 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   }
 
   const auto enable_scheduler = parse_result["scheduler"].as<bool>();
-  const auto cores = parse_result["cores"].as<uint>();
+  const auto cores = parse_result["cores"].as<uint32_t>();
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
   const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
   std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
             << std::endl;
 
-  const auto clients = parse_result["clients"].as<uint>();
+  const auto clients = parse_result["clients"].as<uint32_t>();
   std::cout << "- " + std::to_string(clients) + " simulated clients are scheduling items in parallel" << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
@@ -92,13 +92,15 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto max_runs = parse_result["runs"].as<int64_t>();
   if (max_runs >= 0) {
     std::cout << "- Max runs per item is " << max_runs << std::endl;
+  } else {
+    std::cout << "- Executing items until max duration is up:" << std::endl;
   }
 
-  const auto max_duration = parse_result["time"].as<size_t>();
+  const auto max_duration = parse_result["time"].as<uint64_t>();
   std::cout << "- Max duration per item is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
-  const auto warmup = parse_result["warmup"].as<size_t>();
+  const auto warmup = parse_result["warmup"].as<uint64_t>();
   if (warmup > 0) {
     std::cout << "- Warmup duration per item is " << warmup << " seconds" << std::endl;
   } else {
