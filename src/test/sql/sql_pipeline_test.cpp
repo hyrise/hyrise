@@ -445,7 +445,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   const auto sql =
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
       "UPDATE table_a SET a = 1 WHERE a = 1234";
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
 
   const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();

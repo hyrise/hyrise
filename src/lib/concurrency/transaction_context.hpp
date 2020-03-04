@@ -15,50 +15,55 @@ class CommitContext;
 /**
  * @brief Overview of the different transaction phases
  *
- *  +--------+
- *  | Active |
- *  +--------+
- *      |
- *   Execute operators ---------------+
- *      |                             |
- *      | IF (an operator failed)     | ELSE
- *      |                             |
- *      |                      Finish Transaction -----------------------+
- *      |                             |                                  |
- *      |                             | IF (User requests Commit         | ELSE (User requests Rollback)
- *  +---------+                       |     or Auto-Commit-Mode)         |
- *  | Aborted |                 +------------+               +----------------------+
- *  +---------+                 | Committing |               | ExplicitlyRolledBack |
- *      |                       +------------+               +----------------------+
- *   Rollback operators               |
- *      |                        Commit operators
- *  +-----------------+               |
- *  | ErrorRolledBack |       Wait for all previous
- *  +-----------------+     transaction to be committed
- *                                    |
- *                              +-----------+
- *                              | Committed |
- *                              +-----------+
+ *       +--------+
+ *       | Active |
+ *       +--------+
+ *           |
+ *   Execute operators ------------------------+
+ *           |                                 |
+ *           | IF (an operator failed)         | ELSE
+ *           |                                 |
+ *           |                          Finish Transaction -----------------------+
+ *           |                                 |                                  |
+ *           |                                 | IF (User requests Commit         | ELSE (User requests Rollback)
+ *       +---------+                           |     or Auto-Commit-Mode)         |
+ *       | Aborted |                     +------------+                   +------------------+
+ *       +---------+                     | Committing |                   | RolledBackByUser |
+ *           |                           +------------+                   +------------------+
+ *   Rollback operators                        |
+ *           |                           Commit operators
+ *  +-------------------------+                |
+ *  | RolledBackAfterConflict |       Wait for all previous
+ *  +-------------------------+    transaction to be committed
+ *                                             |
+ *                                       +-----------+
+ *                                       | Committed |
+ *                                       +-----------+
+ *
+ *  RolledBackAfterConflict and RolledBackByUser have to be two different transaction phases, because a final transaction
+ *  state of RolledBackAfterConflict is considered as a failure, while RolledBackByUser is considered as a successful
+ *  transaction. Among other things this has an influence on the result message, the database client receives.
  */
 enum class TransactionPhase {
-  Active,                // Transaction has just been created. Operators may be executed.
-  Aborted,               // One of the operators failed. Transaction needs to be rolled back.
-  ErrorRolledBack,       // Transaction has been rolled back due to error.
-  ExplicitlyRolledBack,  // Transaction has been rolled back due to rollback transaction statement.
-  Committing,            // Commit ID has been assigned. Operators may commit records.
-  Committed,             // Transaction has been committed.
+  Active,                       // Transaction has just been created. Operators may be executed.
+  Aborted,                      // One of the operators failed. Transaction needs to be rolled back.
+  RolledBackAfterConflict,      // Transaction has been rolled back due to error. (Considered as a failure)
+  RolledBackByUser,             // Transaction has been rolled back due to ROLLBACK;-statement. (Considered as a success)
+  Committing,                   // Commit ID has been assigned. Operators may commit records.
+  Committed,                    // Transaction has been committed.
 };
 
 std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
 
 /**
- * @brief Representation of a transaction
+ * @brief Representation of a transactionsql
  */
 class TransactionContext : public std::enable_shared_from_this<TransactionContext> {
   friend class TransactionManager;
 
  public:
-  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id, bool is_auto_commit = true);
+  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id,
+                     IsAutoCommitTransaction is_auto_commit = IsAutoCommitTransaction::Yes);
   ~TransactionContext();
 
   /**
@@ -91,8 +96,11 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   /**
    * Aborts and rolls back the transaction.
+   * @param rollback_reason Specifies whether the rollback happens due to an explicit ROLLBACK; command by
+   * the database user or due to a transaction conflict. We need to know this in order to transition into
+   * the correct transaction phase.
    */
-  void rollback(bool is_explicit = false);
+  void rollback(RollBackReason rollback_reason = RollBackReason::RollBackAfterConflict);
 
   /**
    * Commits the transaction.
@@ -151,7 +159,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Sets the transaction phase to RolledBack.
    */
-  void _mark_as_rolled_back(bool is_explicit = false);
+  void _mark_as_rolled_back(RollBackReason rollback_reason = RollBackReason::RollBackAfterConflict);
 
   /**
    * Sets transaction phase to Committing.
@@ -196,6 +204,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
 
-  const bool _is_auto_commit;
+  const IsAutoCommitTransaction _is_auto_commit;
 };
 }  // namespace opossum

@@ -252,7 +252,7 @@ void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessage&
 }
 
 template <typename SocketType>
-void PostgresProtocolHandler<SocketType>::send_warning_message(const WarningMessage& warning_message) {
+void PostgresProtocolHandler<SocketType>::send_warning_message(const std::string& warning_message) {
   _write_buffer.template put_value(PostgresMessageType::Notice);
   // Message has 2 null terminators: one terminates the error string, the other one terminates the message
   const auto packet_size =

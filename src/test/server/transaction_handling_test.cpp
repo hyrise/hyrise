@@ -78,7 +78,7 @@ TEST_F(TransactionHandlingTest, TransactionContextTest) {
 
   // now that the user rolled back,
   // the transaction context is in the successful state of having been rolled back on purpose
-  EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::ExplicitlyRolledBack);
+  EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::RolledBackByUser);
   EXPECT_TRUE(execution_information.error_message.empty());
 
   // internally the transaction context returned by the pipeline is has been set to nullptr,

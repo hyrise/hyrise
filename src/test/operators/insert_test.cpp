@@ -147,10 +147,10 @@ TEST_F(OperatorsInsertTest, Rollback) {
   get_table1->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table1);
-  auto context1 = Hyrise::get().transaction_manager.new_transaction_context(false);
+  auto context1 = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
   insert->set_transaction_context(context1);
   insert->execute();
-  context1->rollback(true);
+  context1->rollback(RollBackReason::RollBackByUser);
 
   auto get_table2 = std::make_shared<GetTable>(table_name);
   get_table2->execute();

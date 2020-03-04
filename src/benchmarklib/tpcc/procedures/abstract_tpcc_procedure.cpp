@@ -16,14 +16,14 @@ bool AbstractTPCCProcedure::execute() {
               "The SQLExecutor should not already have a transaction context set");
 
   // Private to the AbstractTPCCProcedure. The actual procedures should not directly interact with the context.
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
   _sql_executor.transaction_context = transaction_context;
 
   auto success = _on_execute();
 
   DebugAssert(transaction_context->phase() == TransactionPhase::Committed ||
-                  transaction_context->phase() == TransactionPhase::ExplicitlyRolledBack ||
-                  transaction_context->phase() == TransactionPhase::ErrorRolledBack,
+                  transaction_context->phase() == TransactionPhase::RolledBackByUser ||
+                  transaction_context->phase() == TransactionPhase::RolledBackAfterConflict,
               "Expected TPC-C transaction to either commit or roll back the MVCC transaction");
 
   return success;

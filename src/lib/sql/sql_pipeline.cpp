@@ -82,7 +82,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
     sql_string_offset += statement_string_length;
 
     auto pipeline_statement =
-        std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc, nullptr,
+        std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc,
                                                optimizer, pqp_cache, lqp_cache, cleanup_temporaries);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
@@ -252,7 +252,7 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
     switch (pipeline_statement->transaction_context()->phase()) {
       // Auto-commit statements should always be committed or rolled back at this point
       case TransactionPhase::Committed:
-      case TransactionPhase::ExplicitlyRolledBack:
+      case TransactionPhase::RolledBackByUser:
         _transaction_context = nullptr;
         break;
       default:

@@ -245,6 +245,10 @@ enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
+enum class IsAutoCommitTransaction : bool { Yes = true, No = false };
+
+enum class RollBackReason : bool { RollBackByUser, RollBackAfterConflict };
+
 enum class CleanupTemporaries : bool { Yes = true, No = false };
 
 enum class MemoryUsageCalculationMode { Sampled, Full };

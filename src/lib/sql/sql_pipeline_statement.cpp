@@ -30,7 +30,6 @@ namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc,
-                                           const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<Optimizer>& optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
@@ -39,17 +38,14 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       lqp_cache(lqp_cache),
       _sql_string(sql),
       _use_mvcc(use_mvcc),
-      _transaction_context(transaction_context),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
-      _cleanup_temporaries(cleanup_temporaries),
-      _warning_message(std::nullopt),
-      _is_transaction_statement(false) {
+      _cleanup_temporaries(cleanup_temporaries) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
-  DebugAssert(!_transaction_context || transaction_context->phase() == TransactionPhase::Active,
+  DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
               "Transaction context without MVCC enabled makes no sense");
@@ -93,8 +89,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   SQLTranslator sql_translator{_use_mvcc};
 
   std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-
-  _is_transaction_statement = parsed_sql->getStatements().front()->isType(hsql::kStmtTransaction);
 
   lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
 
@@ -206,7 +200,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
 
-  if (_is_transaction_statement) {
+  if (is_transaction_statement()) {
     _tasks = _get_transaction_tasks();
   } else {
     auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
@@ -226,7 +220,7 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
         if (!_transaction_context || !_transaction_context->is_auto_commit())
           this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
         else
-          _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(false);
+          _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
       })};
     case hsql::kCommitTransaction:
       return {std::make_shared<JobTask>([this] {
@@ -240,9 +234,10 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
         if (!_transaction_context || _transaction_context->is_auto_commit())
           this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
         else
-          _transaction_context->rollback(true);
+          _transaction_context->rollback(RollBackReason::RollBackByUser);
       })};
-    default: return {};
+    default:
+      Fail("Unexpected transaction command!");
   }
 }
 
@@ -251,16 +246,16 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   const auto has_failed = [&]() {
     if (_transaction_context) {
       DebugAssert(_transaction_context->phase() == TransactionPhase::Active ||
-                      _transaction_context->phase() == TransactionPhase::ExplicitlyRolledBack ||
-                      _transaction_context->phase() == TransactionPhase::ErrorRolledBack ||
+                      _transaction_context->phase() == TransactionPhase::RolledBackByUser ||
+                      _transaction_context->phase() == TransactionPhase::RolledBackAfterConflict ||
                       _transaction_context->phase() == TransactionPhase::Committed,
                   "Transaction found in unexpected state");
-      return _transaction_context->phase() == TransactionPhase::ErrorRolledBack;
+      return _transaction_context->phase() == TransactionPhase::RolledBackAfterConflict;
     }
     return false;
   };
 
-  if (has_failed() && !_is_transaction_statement) {
+  if (has_failed() && !is_transaction_statement()) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
 
@@ -290,7 +285,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   if (_transaction_context) {
     Assert(_transaction_context->phase() == TransactionPhase::Active ||
                _transaction_context->phase() == TransactionPhase::Committed ||
-               _transaction_context->phase() == TransactionPhase::ExplicitlyRolledBack,
+               _transaction_context->phase() == TransactionPhase::RolledBackByUser,
            "Transaction should either be still active or have been auto-committed by now");
   }
 
@@ -298,7 +293,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task if the task was an actual operator and not a transaction statement
-  if (!_is_transaction_statement) {
+  if (!is_transaction_statement()) {
     _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
   }
 
@@ -370,5 +365,9 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
 void SQLPipelineStatement::set_warning_message(std::string warning_message) { _warning_message = warning_message; }
 
 std::optional<std::string> SQLPipelineStatement::warning_message() { return _warning_message; }
+
+bool SQLPipelineStatement::is_transaction_statement() {
+  return get_parsed_sql_statement()->getStatements().front()->isType(hsql::kStmtTransaction);
+}
 
 }  // namespace opossum
