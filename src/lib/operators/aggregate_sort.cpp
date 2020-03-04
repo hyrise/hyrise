@@ -426,8 +426,16 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   std::shared_ptr<const Table> sorted_table = input_table;
-  if (_groupby_column_ids.size()) {
-    // Check if value clustering matches group by column
+  if (!_groupby_column_ids.empty()) {
+    /**
+     * Check if the value clustering matches the columns we are grouping by
+     * (these are the columns we need to sort by to achieve value clustering).
+     * If the input is already value clustered according to our needs, this means that values that would end up
+     * in the same cluster are already in the same chunk.
+     * Thus, we can execute all remaining sorts on a per-chunks basis.
+     * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
+     * to achieve the value clustering we need.
+     */
     if (all_chunks_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), all_chunks_value_clustered_by->first) != _groupby_column_ids.end()){
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
       sorted_table = _sort_table_chunk_wise(input_table, all_chunks_value_clustered_by);
