@@ -35,7 +35,7 @@ namespace opossum {
         case TableExportType::COLUMN: {
           meta_header << "TABLE_NAME" << _separator;
           meta_header << "COLUMN_NAME" << _separator;
-          meta_header << "COLUMN_DATA_TYPE" << _separator;
+          meta_header << "COLUMN_DATA_TYPE" << "\n";
           break;
         }
         case TableExportType::SEGMENT: {
