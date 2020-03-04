@@ -23,18 +23,22 @@ class CommitContext;
  *      |                             |
  *      | IF (an operator failed)     | ELSE
  *      |                             |
- *  +---------+                    +------------+
- *  | Aborted |                    | Committing |
- *  +---------+                    +------------+
- *      |                             |
- *   Rollback operators             Commit operators
- *      |                             |
- *  +-----------------+          Wait for all previous
- *  | ErrorRolledBack |        transaction to be committed
+ *      |                      Finish Transaction -----------------------+
+ *      |                             |                                  |
+ *      |                             | IF (User requests Commit         | ELSE (User requests Rollback)
+ *  +---------+                       |     or Auto-Commit-Mode)         |
+ *  | Aborted |                 +------------+               +----------------------+
+ *  +---------+                 | Committing |               | ExplicitlyRolledBack |
+ *      |                       +------------+               +----------------------+
+ *   Rollback operators               |
+ *      |                        Commit operators
  *  +-----------------+               |
- *                                 +-----------+
- *                                 | Committed |
- *                                 +-----------+
+ *  | ErrorRolledBack |       Wait for all previous
+ *  +-----------------+     transaction to be committed
+ *                                    |
+ *                              +-----------+
+ *                              | Committed |
+ *                              +-----------+
  */
 enum class TransactionPhase {
   Active,                // Transaction has just been created. Operators may be executed.
@@ -81,7 +85,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   TransactionPhase phase() const;
 
   /**
-   * Returns true if transaction has been aborted.
+   * Returns true if transaction has been aborted due to an error.
    */
   bool aborted() const;
 

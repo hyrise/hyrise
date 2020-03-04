@@ -157,4 +157,6 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
-
+-   Ivan      Illic
+-   Youri     Kaminsky
+-   Till      Lehmann
