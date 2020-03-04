@@ -1,27 +1,20 @@
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import Lasso
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from sklearn.ensemble import GradientBoostingRegressor
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
-import joblib
-import numpy as np
 import argparse
+import joblib
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pandas as pd
+import warnings
+
 from prepare_calibration_data import import_train_data
 from prepare_tpch import import_test_data
-import os
-
-# store model and metadata about the model in one object (there might be better ways, tbd)
-class CostModel:
-
-    def __init__(self, model, encoding, data_type):
-        self.model = model
-        self.encoding = encoding
-        self.data_type = data_type
-
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import Lasso
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+plt.style.use('ggplot')
 
 def preprocess_data(data):
     # one-hot encoding
@@ -46,7 +39,6 @@ def train_model(train_data, type):
     return model
 
 
-#generate_model_plot(model, model_test_data, type, data_type, encoding, out)
 def generate_model_plot(model, test_data, method, data_type, encoding, out):
     ohe_data = preprocess_data(test_data)
     real_y = np.ravel(ohe_data[['RUNTIME_NS']])
@@ -55,9 +47,11 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
 
     model_scores = calculate_error(ohe_data, pred_y, real_y, model)
 
-    plt.scatter(real_y, pred_y, c='b')
+    plt.scatter(real_y, pred_y, c='orange')
+
+    pred_y = model.predict(ohe_data)
     axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
-    axis_min = min(np.amin(pred_y), np.amin(real_y))
+    axis_min = min(np.amin(pred_y), np.amin(real_y)) * 0.95
     abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
 
     # Plot the best fit line over the actual values
@@ -100,54 +94,8 @@ def calculate_error(test_X, y_true, y_pred, model):
     return scores
 
 
-def train_general_model(train_data, model_type, out):
-    train_X = train_data[['INPUT_ROWS', 'OUTPUT_ROWS']]
-    train_y = np.ravel(train_data[['RUNTIME_NS']])
-
-    if model_type == 'linear':
-        general_model = LinearRegression().fit(train_X, train_y)
-    elif model_type == 'ridge':
-        general_model = Ridge(alpha=1000).fit(train_X, train_y)
-    elif model_type == 'lasso':
-        general_model = Lasso(alpha=1000).fit(train_X, train_y)
-    elif model_type == 'boost':
-        general_model = GradientBoostingRegressor(loss='huber').fit(train_X, train_y)
-
-    # if model_type != 'boost':
-    #     print('general', general_model.coef_)
-
-    filename = '{}/Models/{}_general_model.sav'.format(out, model_type)
-    joblib.dump(general_model, filename)
-
-    return general_model
-
-
-def plot_general_model(test_data, model, model_type, data_type, encoding, out):
-    test_X = test_data[['INPUT_ROWS', 'OUTPUT_ROWS']]
-    test_y = np.ravel(test_data[['RUNTIME_NS']])
-
-    pred_y = model.predict(test_X)
-    model_scores = calculate_error(test_X, pred_y, test_y, model)
-    plt.scatter(test_y, pred_y, c='b')
-    axis_max = max(np.amax(pred_y), np.amax(test_y)) * 1.05
-    axis_min = min(0, np.amin(pred_y), np.amin(test_y))
-    abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
-
-    # Plot the best fit line over the actual values
-    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-
-    plt.title('General Model; Score: {}'.format(model_scores['R2']))
-    plt.ylim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
-    plt.xlim([0, max(np.amax(pred_y), np.amax(test_y)) * 1.05])
-    plt.xlabel("Real Time")
-    plt.ylabel("Predicted Time")
-    output_path = '{}/Plots/{}_{}_{}_general'.format(out, model_type, data_type, encoding)
-    plt.savefig(output_path, bbox_inches='tight')
-    plt.close()
-
-    #return model
-
-
+# needed for prediction with one-hot-encoding in case trainings and test data don't have the same set of values in a
+# categorical data column
 def add_dummy_types(train, test, cols):
     for col in cols:
         diff1 = np.setdiff1d(train[col].unique(), test[col].unique())
@@ -162,9 +110,9 @@ def add_dummy_types(train, test, cols):
 def parseargs(opt=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
-    # in case no test data is given, just split the train data in to train and test dataset
+    # in case no test data is given, the trainings data will be split into trainings and test data
     parser.add_argument('--test', help='Testdata in csv format', action='append', nargs='+')
-    parser.add_argument('--m', help='Model type')
+    parser.add_argument('--m', help='Model type: choose from "linear", "lasso", "ridge", "boost"; Boost is the default"')
     parser.add_argument('--out', help='Output folder')
 
     if (opt):
@@ -181,7 +129,9 @@ def import_data(args):
     train_data = train_data.dropna()
 
     # check whether trainings and testdata have the same format
-    # TBD: should it rather fail otherwise?
+    if test_data.columns.all() != train_data.columns.all():
+        warnings.warn("Warning: Trainings- and Testdata do not have the same format. Unmatched columns will be ignored!")
+
     inter = train_data.columns.intersection(test_data.columns)
     test_data = test_data[inter.tolist()]
     train_data = train_data[inter.tolist()]
@@ -190,21 +140,19 @@ def import_data(args):
 
 
 def main(args):
-    cost_models = []
-    test_data_split = []
-    leftover_test_data = []
-    out = "Output"
+    out = "CostModelOutput"
 
     if args.m:
         model_types = [args.m]
     else:
-        model_types = ['linear', 'lasso', 'ridge', 'boost']
+        model_types = ['boost']
 
     if args.test:
         train_data, test_data = import_data(args)
     else:
         train_data = import_train_data(args.train[0])
         train_data = train_data.dropna()
+        train_data, test_data = train_test_split(train_data)
 
     if args.out:
         out = args.out
@@ -215,13 +163,19 @@ def main(args):
     if not os.path.exists("{}/Plots".format(out)):
         os.makedirs("{}/Plots".format(out))
 
+    # one single model for everything
     for type in model_types:
-        train_general_model(train_data, type, out)
+        gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
+        gmodel = train_model(gtrain_data, type)
+        generate_model_plot(gmodel, gtest_data, type, 'all', 'all', out)
+        filename = '{}/Models/{}_general_model.sav'.format(out, type)
+        joblib.dump(gmodel, filename)
 
-    # make models for different scan operators and combinations of encodings/compressions
+    # make separate models for different scan operators and combinations of encodings/compressions
     for encoding in train_data['ENCODING'].unique():
         for data_type in train_data['DATA_TYPE'].unique():
 
+            # if there is no given test data set, split the given trainings data into test and trainings data
             if not args.test:
                 model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['DATA_TYPE'] == data_type) &
                                                                                     (train_data['ENCODING'] == encoding)])
@@ -229,44 +183,17 @@ def main(args):
                 model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
                 model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
 
-            # TODO: needed to save this?
-            #dfilename = 'data/split_{}_{}_train_data.sav'.format(data_type, encoding)
-            #joblib.dump(model_test_data, dfilename)
-
-            # if there is train data for this combination, train a model
+            # if there is training data for this combination, train a model
             if not model_train_data.empty:
                 for type in model_types:
-                    model_train_data, model_test_data = add_dummy_types(model_train_data, model_test_data, ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE'])
+                    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE'])
                     model = train_model(model_train_data, type)
-
-                    # TODO: needed?
-                    cost_model = CostModel(model, encoding, data_type)
-                    cost_models.append(cost_model)
 
                     filename = '{}/Models/split_{}_{}_{}_model.sav'.format(out, type, data_type, encoding)
                     joblib.dump(model, filename)
 
                     if not model_test_data.empty:
-                        # TODO:  nicer plots
                         generate_model_plot(model, model_test_data, type, data_type, encoding, out)
-                        general_model = joblib.load('{}/Models/{}_general_model.sav'.format(out, type))
-                        plot_general_model(model_test_data, general_model, type, data_type, encoding, out)
-
-                    # test_data_split.append(model_test_data)
-
-            # if we don't have a model for this combination but test_data, add the test_data to test on the
-            #  universal model
-            if not model_test_data.empty:
-                leftover_test_data.append(model_test_data)
-
-    # u_model = make_general_model(train_data, leftover_test_data)
-    # u_cost_model = CostModel(u_model, 'all', 'all')
-    # cost_models.append(u_cost_model)
-
-    #TODO make general model with only input and output rows against time
-
-    # TODO: catch the queries that don't correspond to any model and use the 'general model' for runtime prediction
-    #  of those
 
 
 if __name__ == '__main__':
