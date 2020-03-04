@@ -143,8 +143,11 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void advance(std::ptrdiff_t n) {
+      const auto previous_chunk_offset = _chunk_offset;
       _chunk_offset += n;
-      _end_positions_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), _chunk_offset);
+      _end_positions_it = search_run_end_position_for_chunk_offset(
+           previous_chunk_offset, _chunk_offset, std::distance(_end_positions->cbegin(), _end_positions_it),
+           _linear_search_threshold, _end_positions);
     }
 
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
