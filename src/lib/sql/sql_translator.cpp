@@ -315,16 +315,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   AssertInput(Hyrise::get().storage_manager.has_table(table_name),
               std::string{"Did not find a table with name "} + table_name);
 
-  std::shared_ptr<Table> target_table;
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
   if (is_meta_table) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     AssertInput(Hyrise::get().meta_table_manager.can_insert_into(meta_table_name), "Cannot insert into " + table_name);
-    target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
-  } else {
-    target_table = Hyrise::get().storage_manager.get_table(table_name);
   }
+
+  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
 
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -461,8 +459,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   const auto table_name = std::string{update.table->name};
 
-  std::shared_ptr<Table> target_table;
-
   auto translation_state = _translate_table_ref(*update.table);
 
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
@@ -470,10 +466,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   if (is_meta_table) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     AssertInput(Hyrise::get().meta_table_manager.can_update(meta_table_name), "Cannot update " + table_name);
-    target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
-  } else {
-    target_table = Hyrise::get().storage_manager.get_table(table_name);
   }
+  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
 
   // The LQP that selects the fields to update
   auto selection_lqp = translation_state.lqp;

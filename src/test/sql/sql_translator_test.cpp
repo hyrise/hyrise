@@ -1876,7 +1876,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, DMLOnRegularMetatables) {
+TEST_F(SQLTranslatorTest, DMLOnImmutableMetatables) {
   EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
   EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
@@ -2006,14 +2006,14 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
 }
 
 TEST_F(SQLTranslatorTest, DeleteMetaTable) {
-  const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE plugin_name = 'foo'", UseMvcc::Yes);
+  const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
 
   const auto select_node = StoredTableNode::make("meta_plugins");
 
   // clang-format off
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
-    PredicateNode::make(equals_(select_node->get_column("plugin_name"), "foo"),
+    PredicateNode::make(equals_(select_node->get_column("name"), "foo"),
       ValidateNode::make(
        select_node)),
     DummyTableNode::make());
@@ -2083,18 +2083,17 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
 }
 
 TEST_F(SQLTranslatorTest, UpdateMetaTable) {
-  const auto actual_lqp =
-      compile_query("UPDATE meta_settings SET value = 'foo' WHERE setting_name = 'bar';", UseMvcc::Yes);
+  const auto actual_lqp = compile_query("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes);
 
   const auto select_node = StoredTableNode::make("meta_settings");
 
   // clang-format off
   const auto row_subquery_lqp =
-  PredicateNode::make(equals_(select_node->get_column("setting_name"), "bar"),
+  PredicateNode::make(equals_(select_node->get_column("name"), "bar"),
     ValidateNode::make(
       select_node));
 
-  const auto expressions = expression_vector(select_node->get_column("setting_name"), "foo", select_node->get_column("description"));  // NOLINT
+  const auto expressions = expression_vector(select_node->get_column("name"), "foo", select_node->get_column("description"));  // NOLINT
 
   const auto expected_lqp =
   ChangeMetaTableNode::make("meta_settings", MetaTableChangeType::Update,
