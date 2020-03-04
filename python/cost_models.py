@@ -16,6 +16,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 plt.style.use('ggplot')
 
+
 def preprocess_data(data):
     # one-hot encoding
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
@@ -107,7 +108,7 @@ def add_dummy_types(train, test, cols):
     return [train, test]
 
 
-def parseargs(opt=None):
+def parse_args(opt=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
     # in case no test data is given, the trainings data will be split into trainings and test data
@@ -197,5 +198,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = parseargs()
+    args = parse_args()
     main(args)
