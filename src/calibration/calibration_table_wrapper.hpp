@@ -13,15 +13,17 @@ class CalibrationTableWrapper {
   CalibrationTableWrapper(
     const std::shared_ptr<Table> table,
     const std::string& table_name,
-    const std::vector<ColumnDataDistribution> column_data_distribution_collection);
+    const std::vector<ColumnDataDistribution> column_data_distribution_collection); //TODO change this to optional
 
-  const ColumnDataDistribution get_column_data_distribution(ColumnID id) const;
+    CalibrationTableWrapper(
+            const std::shared_ptr<Table> table,
+            const std::string& table_name);
+
+    const ColumnDataDistribution get_column_data_distribution(ColumnID id) const;
 
   const std::shared_ptr<Table> get_table() const;
 
   const std::string &get_name() const;
-
-  void export_table_meta_data(const std::string& filepath) const;
 
 private:
   const std::shared_ptr<Table> _table;

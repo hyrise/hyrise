@@ -2,8 +2,8 @@
 // Created by Lukas Böhme on 30.12.19.
 //
 
-#include <operators/table_wrapper.hpp>
 #include <operators/export_csv.hpp>
+#include <storage/base_encoded_segment.hpp>
 #include "calibration_table_wrapper.hpp"
 
 namespace opossum {
@@ -16,26 +16,15 @@ namespace opossum {
     assert(table->column_count() == column_data_distribution_collection.size());
   }
 
-  void CalibrationTableWrapper::export_table_meta_data(const std::string &path) const {
-    //TODO Copy Duplicate. How do I export meta data only?
-    CsvMeta meta{};
-    // Column Types
-    for (ColumnID column_id{0}; column_id < _table->column_count(); ++column_id) {
-      ColumnMeta column_meta;
-      column_meta.name = _table->column_name(column_id);
-      column_meta.type = data_type_to_string.left.at(_table->column_data_type(column_id));
-      column_meta.nullable = _table->column_is_nullable(column_id);
+  CalibrationTableWrapper::CalibrationTableWrapper(const std::shared_ptr<Table> table,
+                                                   const std::string &table_name) :
+                                                   _table(table),
+                                                   _name(table_name),
+                                                   _column_data_distribution_collection(){
 
-      meta.columns.push_back(column_meta);
-    }
-
-    nlohmann::json meta_json = meta;
-
-    std::ofstream meta_file_stream(path + "/" + _name + CsvMeta::META_FILE_EXTENSION);
-    meta_file_stream << std::setw(4) << meta_json << std::endl;
   }
 
-    const std::shared_ptr<Table> CalibrationTableWrapper::get_table() const {
+  const std::shared_ptr<Table> CalibrationTableWrapper::get_table() const {
     return _table;
   }
 
