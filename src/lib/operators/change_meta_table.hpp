@@ -11,16 +11,16 @@ namespace opossum {
 class TransactionContext;
 
 /**
- * Operator that modifies meta tables.
+ * Operator that modifies meta tables, e.g. calls insert on the plugins meta table to load a plugin.
  * Expects the table name of the table to modify as a string and both
  * the values to modify and the fully modified values.
  *
  * This is not MVCC safe, so we do nothing on commit or rollback.
  * This is why the operator should only be used in auto-commit queries.
  */
-class MutateMetaTable : public AbstractReadWriteOperator {
+class ChangeMetaTable : public AbstractReadWriteOperator {
  public:
-  explicit MutateMetaTable(const std::string& table_name, const MetaTableMutation& mutation_type,
+  explicit ChangeMetaTable(const std::string& table_name, const MetaTableChangeType& change_type,
                            const std::shared_ptr<const AbstractOperator>& values_to_modify,
                            const std::shared_ptr<const AbstractOperator>& modification_values);
 
@@ -36,8 +36,8 @@ class MutateMetaTable : public AbstractReadWriteOperator {
   void _on_rollback_records() override {}
 
  private:
-  const std::string _table_name;
-  const MetaTableMutation _mutation_type;
+  const std::string _meta_table_name;
+  const MetaTableChangeType _change_type;
 };
 
 }  // namespace opossum

@@ -222,7 +222,7 @@ enum class MemoryUsageCalculationMode { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 
-enum class MetaTableMutation { Insert, Delete, Update };
+enum class MetaTableChangeType { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
 

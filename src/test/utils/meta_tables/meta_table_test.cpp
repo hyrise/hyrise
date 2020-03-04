@@ -83,7 +83,7 @@ class MetaTableTest : public BaseTest {
 
 class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
 
-auto formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
+auto meta_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
   auto stream = std::stringstream{};
   stream << info.param->name();
 
@@ -93,7 +93,8 @@ auto formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(MetaTable, MultiMetaTablesTest, ::testing::ValuesIn(MetaTableTest::meta_tables()), formatter);
+INSTANTIATE_TEST_SUITE_P(MetaTable, MultiMetaTablesTest, ::testing::ValuesIn(MetaTableTest::meta_tables()),
+                         meta_table_test_formatter);
 
 TEST_P(MultiMetaTablesTest, IsImmutable) {
   EXPECT_FALSE(GetParam()->can_insert());

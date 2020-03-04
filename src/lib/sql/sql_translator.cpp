@@ -34,6 +34,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -47,7 +48,6 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/mutate_meta_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -316,13 +316,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
               std::string{"Did not find a table with name "} + table_name);
 
   std::shared_ptr<Table> target_table;
-  bool is_meta_table = false;
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
-  if (MetaTableManager::is_meta_table_name(table_name)) {
+  if (is_meta_table) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     AssertInput(Hyrise::get().meta_table_manager.can_insert_into(meta_table_name), "Cannot insert into " + table_name);
     target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
-    is_meta_table = true;
   } else {
     target_table = Hyrise::get().storage_manager.get_table(table_name);
   }
@@ -419,7 +418,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
               "INSERT: Column count mismatch");
 
   if (is_meta_table) {
-    return MutateMetaTableNode::make(table_name, MetaTableMutation::Insert, DummyTableNode::make(), insert_data_node);
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Insert, DummyTableNode::make(), insert_data_node);
   }
 
   /**
@@ -431,17 +430,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
   const auto table_name = std::string{delete_statement.tableName};
 
-  bool is_meta_table = false;
-
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  if (MetaTableManager::is_meta_table_name(table_name)) {
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  if (is_meta_table) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) &&
                     Hyrise::get().meta_table_manager.can_delete_from(meta_table_name),
                 "Cannot delete from " + table_name);
-    is_meta_table = true;
   }
 
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
@@ -452,7 +450,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   }
 
   if (is_meta_table) {
-    return MutateMetaTableNode::make(table_name, MetaTableMutation::Delete, data_to_delete_node,
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Delete, data_to_delete_node,
                                      DummyTableNode::make());
   }
   return DeleteNode::make(data_to_delete_node);
@@ -464,15 +462,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   const auto table_name = std::string{update.table->name};
 
   std::shared_ptr<Table> target_table;
-  bool is_meta_table = false;
 
   auto translation_state = _translate_table_ref(*update.table);
 
-  if (MetaTableManager::is_meta_table_name(table_name)) {
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  if (is_meta_table) {
     const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
     AssertInput(Hyrise::get().meta_table_manager.can_update(meta_table_name), "Cannot update " + table_name);
     target_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
-    is_meta_table = true;
   } else {
     target_table = Hyrise::get().storage_manager.get_table(table_name);
   }
@@ -515,7 +513,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   const auto updated_values_lqp = ProjectionNode::make(update_expressions, selection_lqp);
 
   if (is_meta_table) {
-    return MutateMetaTableNode::make(table_name, MetaTableMutation::Update, selection_lqp, updated_values_lqp);
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Update, selection_lqp, updated_values_lqp);
   }
   return UpdateNode::make(table_name, selection_lqp, updated_values_lqp);
 }

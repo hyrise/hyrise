@@ -54,7 +54,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
  public:
   TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id,
-                     AutoCommit auto_commit = AutoCommit::No);
+                     AutoCommit is_auto_commit = AutoCommit::No);
   ~TransactionContext();
 
   /**
@@ -78,7 +78,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Flag that indicates whether the context belongs to a transaction or non-transaction (i.e., it auto-commits).
    */
-  AutoCommit auto_commit() const;
+  AutoCommit is_auto_commit() const;
 
   /**
    * Returns the current phase of the transaction
@@ -180,7 +180,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
-  const AutoCommit _auto_commit;
+  const AutoCommit _is_auto_commit;
 
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _read_write_operators;
 

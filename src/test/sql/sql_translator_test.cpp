@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -22,7 +23,6 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
-#include "logical_query_plan/mutate_meta_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -1965,7 +1965,7 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
 
   // clang-format off
   const auto expected_lqp =
-  MutateMetaTableNode::make("meta_plugins", MetaTableMutation::Insert,
+  ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
     DummyTableNode::make(),
     ProjectionNode::make(expression_vector("foo"),
       DummyTableNode::make()));
@@ -2012,7 +2012,7 @@ TEST_F(SQLTranslatorTest, DeleteMetaTable) {
 
   // clang-format off
   const auto expected_lqp =
-   MutateMetaTableNode::make("meta_plugins", MetaTableMutation::Delete,
+   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(select_node->get_column("plugin_name"), "foo"),
       ValidateNode::make(
        select_node)),
@@ -2097,7 +2097,7 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   const auto expressions = expression_vector(select_node->get_column("setting_name"), "foo", select_node->get_column("description"));  // NOLINT
 
   const auto expected_lqp =
-  MutateMetaTableNode::make("meta_settings", MetaTableMutation::Update,
+  ChangeMetaTableNode::make("meta_settings", MetaTableChangeType::Update,
     row_subquery_lqp,
     ProjectionNode::make(expressions,
       row_subquery_lqp));

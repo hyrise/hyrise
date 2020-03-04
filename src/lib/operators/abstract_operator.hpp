@@ -18,6 +18,7 @@ class TransactionContext;
 enum class OperatorType {
   Aggregate,
   Alias,
+  ChangeMetaTable,
   Delete,
   Difference,
   Export,
@@ -31,7 +32,6 @@ enum class OperatorType {
   JoinSortMerge,
   JoinVerification,
   Limit,
-  MutateMetaTable,
   Print,
   Product,
   Projection,

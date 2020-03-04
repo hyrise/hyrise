@@ -6,7 +6,7 @@
 namespace opossum {
 
 MetaSettingsTable::MetaSettingsTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"setting_name", DataType::String, false},
+    : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false},
                                                {"value", DataType::String, false},
                                                {"description", DataType::String, false}}) {}
 

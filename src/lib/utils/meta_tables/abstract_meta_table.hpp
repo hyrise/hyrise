@@ -7,13 +7,16 @@ namespace opossum {
 
 /**
  * This is an abstract class for all meta table objects.
- * Meta tables are significant different from normal tables.
+ * Meta tables are significantly different from normal tables.
  * Information provided by the table is usually not persisted, but gathered on the fly.
  *
- * A meta table provides methods for retrieving, inserting, deleting or updating
- * and the information if the operation may be done.
+ * A meta table may provide methods for retrieving, inserting, deleting or updating.
+ * Not all of these operations are allowed for all meta tables. Therefore, they also provide methods
+ * that indicate whether the particular operation is allowed, e.g., can_insert().
  *
- * Meta tables should be declared as members in the MetaTableManager constructor.
+ * Modifications of a meta table's values ususally trigger some actions, like loading plugins.
+ *
+ * Meta tables should be declared as members in the MetaTableManager constructor body.
  */
 class AbstractMetaTable : public Noncopyable {
  public:
@@ -43,14 +46,14 @@ class AbstractMetaTable : public Noncopyable {
   const std::shared_ptr<Table> generate() const;
 
   /*
-   * Manipulate the meta table by calling _on_insert() / _on_remove.
-   * Additionally, checks if the input values match the column definitions are done.
+   * Manipulates the meta table by calling _on_insert() / _on_remove.
+   * Additionally, checks if the input values match the column definitions.
    */
   void insert(const std::vector<AllTypeVariant>& values);
   void remove(const std::vector<AllTypeVariant>& values);
   void update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values);
 
-  void _assert_data_types(const std::vector<AllTypeVariant>& values) const;
+  void _validate_data_types(const std::vector<AllTypeVariant>& values) const;
 
   // These methods actually perform the table creation and manipulation.
   virtual std::shared_ptr<Table> _on_generate() const = 0;

@@ -15,6 +15,7 @@
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
@@ -24,7 +25,6 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "logical_query_plan/mutate_meta_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -33,6 +33,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import.hpp"
@@ -44,7 +45,6 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/drop_table.hpp"
-#include "operators/mutate_meta_table.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -997,20 +997,20 @@ TEST_F(LQPTranslatorTest, Import) {
   EXPECT_EQ(importer->input_left(), nullptr);
 }
 
-TEST_F(LQPTranslatorTest, MutateMetaTable) {
+TEST_F(LQPTranslatorTest, ChangeMetaTable) {
   // clang-format off
   const auto lqp =
-  MutateMetaTableNode::make("meta_table", MetaTableMutation::Insert,
+  ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
     DummyTableNode::make(),
     DummyTableNode::make());
   // clang-format on
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto mutate_meta_table = std::dynamic_pointer_cast<MutateMetaTable>(pqp);
+  const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
 
-  EXPECT_EQ(mutate_meta_table->type(), OperatorType::MutateMetaTable);
-  EXPECT_EQ(mutate_meta_table->input_left()->type(), OperatorType::TableWrapper);
-  EXPECT_EQ(mutate_meta_table->input_right()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
+  EXPECT_EQ(change_meta_table->input_left()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->input_right()->type(), OperatorType::TableWrapper);
 }
 
 }  // namespace opossum

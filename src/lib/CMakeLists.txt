@@ -110,6 +110,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/change_meta_table_node.cpp
+    logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
@@ -145,8 +147,6 @@ set(
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
-    logical_query_plan/mutate_meta_table_node.cpp
-    logical_query_plan/mutate_meta_table_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
@@ -186,6 +186,8 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/change_meta_table.cpp
+    operators/change_meta_table.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -228,8 +230,6 @@ set(
     operators/maintenance/drop_view.hpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
-    operators/mutate_meta_table.cpp
-    operators/mutate_meta_table.hpp
     operators/operator_join_predicate.cpp
     operators/operator_join_predicate.hpp
     operators/operator_performance_data.cpp

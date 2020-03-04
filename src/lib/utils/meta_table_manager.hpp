@@ -14,7 +14,6 @@ class MetaTableManager : public Noncopyable {
  public:
   static inline const auto META_PREFIX = std::string{"meta_"};
 
-  // Returns name.starts_with(META_PREFIX) as stdlibc++ does not support starts_with yet.
   static bool is_meta_table_name(const std::string& name);
 
   // Returns a sorted list of all meta table names (without prefix)
@@ -37,7 +36,7 @@ class MetaTableManager : public Noncopyable {
  protected:
   friend class Hyrise;
   friend class MetaTableManagerTest;
-  friend class MutateMetaTableTest;
+  friend class ChangeMetaTableTest;
 
   MetaTableManager();
 

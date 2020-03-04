@@ -28,19 +28,22 @@ bool AbstractMetaTable::can_update() const { return false; }
 bool AbstractMetaTable::can_delete() const { return false; }
 
 void AbstractMetaTable::insert(const std::vector<AllTypeVariant>& values) {
-  _assert_data_types(values);
+  Assert(can_insert(), "Cannot insert into " + name() + ".");
+  _validate_data_types(values);
   _on_insert(values);
 }
 
 void AbstractMetaTable::remove(const std::vector<AllTypeVariant>& values) {
-  _assert_data_types(values);
+  Assert(can_delete(), "Cannot delete from " + name() + ".");
+  _validate_data_types(values);
   _on_remove(values);
 }
 
 void AbstractMetaTable::update(const std::vector<AllTypeVariant>& selected_values,
                                const std::vector<AllTypeVariant>& update_values) {
-  _assert_data_types(selected_values);
-  _assert_data_types(update_values);
+  Assert(can_update(), "Cannot update " + name() + ".");
+  _validate_data_types(selected_values);
+  _validate_data_types(update_values);
   _on_update(selected_values, update_values);
 }
 
@@ -57,12 +60,12 @@ void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& selected_v
   Fail("Cannot update " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
-void AbstractMetaTable::_assert_data_types(const std::vector<AllTypeVariant>& values) const {
+void AbstractMetaTable::_validate_data_types(const std::vector<AllTypeVariant>& values) const {
   Assert(values.size() == column_definitions().size(), "Number of values must match column definitions.");
 
-  for (size_t i = 0; i < values.size(); i++) {
-    const auto& value_type = data_type_from_all_type_variant(values.at(i));
-    const auto& column_type = column_definitions().at(i).data_type;
+  for (size_t column = 0; column < values.size(); column++) {
+    const auto& value_type = data_type_from_all_type_variant(values[column]);
+    const auto& column_type = column_definitions()[column].data_type;
     Assert(value_type == column_type, "Data types must match column definitions.");
   }
 }

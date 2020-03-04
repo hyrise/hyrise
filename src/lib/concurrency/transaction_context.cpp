@@ -11,10 +11,10 @@
 namespace opossum {
 
 TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
-                                       const AutoCommit auto_commit)
+                                       const AutoCommit is_auto_commit)
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
-      _auto_commit{auto_commit},
+      _is_auto_commit{is_auto_commit},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {
   Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
@@ -55,7 +55,7 @@ TransactionContext::~TransactionContext() {
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
 CommitID TransactionContext::snapshot_commit_id() const { return _snapshot_commit_id; }
-AutoCommit TransactionContext::auto_commit() const { return _auto_commit; }
+AutoCommit TransactionContext::is_auto_commit() const { return _is_auto_commit; }
 
 CommitID TransactionContext::commit_id() const {
   Assert(_commit_context, "TransactionContext cid only available after commit context has been created.");

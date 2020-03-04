@@ -4,14 +4,16 @@ namespace opossum {
 
 /**
  * This is an abstract class for all settings objects.
+ * A setting is an adjusting screw of any component with a variable value.
+ * That component (or "parent") instantiates and destroys a setting.
  *
- * Settings register itself at the SettingsManager.
- * Therefore it is neccessary that they are owned by a shared pointer (instantiate with std::make_shared).
+ * Settings register themselves at the SettingsManager.
+ * Therefore, it is neccessary that they are owned by a shared pointer (instantiate with std::make_shared).
  * Thus, you need to call unenroll() when the setting is not longer needed (it won't get destructed otherwise,
  * as SettingsManager would still hold a shared pointer to it).
  *
- * Settings provide a getter/setter with a string.
- * When the set(...) method ia called, a setting can invoke a method of its parent that triggers
+ * Settings provide a getter/setter that returns/requires a std::string.
+ * When the set(...) method is called, a setting can invoke a method of its parent that triggers
  * the immediate appliance of the changed value.
  *
  * Settings have a unique name that consists of the name of its parent and the setting

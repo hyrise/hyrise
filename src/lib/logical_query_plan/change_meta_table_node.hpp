@@ -13,14 +13,14 @@ class AbstractExpression;
 /*
  * Node type to represent mutations (insert, delete, update) of a meta table.
  */
-class MutateMetaTableNode : public EnableMakeForLQPNode<MutateMetaTableNode>, public BaseNonQueryNode {
+class ChangeMetaTableNode : public EnableMakeForLQPNode<ChangeMetaTableNode>, public BaseNonQueryNode {
  public:
-  explicit MutateMetaTableNode(const std::string& init_table_name, const MetaTableMutation& init_mutation_type);
+  explicit ChangeMetaTableNode(const std::string& init_table_name, const MetaTableChangeType& init_change_type);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string table_name;
-  const MetaTableMutation mutation_type;
+  const MetaTableChangeType change_type;
 
  protected:
   size_t _on_shallow_hash() const override;

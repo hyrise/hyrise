@@ -19,7 +19,7 @@ bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin)
   return false;
 }
 
-const std::vector<PluginName> PluginManager::loaded_plugins() const {
+std::vector<PluginName> PluginManager::loaded_plugins() const {
   std::vector<std::string> plugin_names;
   plugin_names.reserve(_plugins.size());
 

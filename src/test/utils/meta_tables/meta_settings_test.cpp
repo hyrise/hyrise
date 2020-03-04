@@ -44,7 +44,7 @@ TEST_F(MetaSettingsTest, IsUpdateable) {
 }
 
 TEST_F(MetaSettingsTest, TableGeneration) {
-  const auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"setting_name", DataType::String, false},
+  const auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false},
                                                                              {"value", DataType::String, false},
                                                                              {"description", DataType::String, false}},
                                                       TableType::Data, 5);
@@ -59,7 +59,7 @@ TEST_F(MetaSettingsTest, TableGeneration) {
 TEST_F(MetaSettingsTest, Update) {
   updateTable(meta_settings_table, mock_manipulation_values->get_row(0), mock_manipulation_values->get_row(0));
 
-  const auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"setting_name", DataType::String, false},
+  const auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false},
                                                                              {"value", DataType::String, false},
                                                                              {"description", DataType::String, false}},
                                                       TableType::Data, 5);

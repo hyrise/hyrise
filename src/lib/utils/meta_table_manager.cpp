@@ -18,13 +18,10 @@ MetaTableManager::MetaTableManager() {
       std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
       std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
 
+  _table_names.reserve(_meta_tables.size());
   for (const auto& table : meta_tables) {
     _meta_tables[table->name()] = table;
-  }
-
-  _table_names.reserve(_meta_tables.size());
-  for (const auto& [table_name, _] : _meta_tables) {
-    _table_names.emplace_back(table_name);
+    _table_names.emplace_back(table->name());
   }
   std::sort(_table_names.begin(), _table_names.end());
 }
@@ -43,19 +40,18 @@ std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table
 }
 
 bool MetaTableManager::can_insert_into(const std::string& table_name) const {
-  return (_meta_tables.at(table_name))->can_insert();
+  return _meta_tables.at(table_name)->can_insert();
 }
 
 bool MetaTableManager::can_delete_from(const std::string& table_name) const {
-  return (_meta_tables.at(table_name))->can_delete();
+  return _meta_tables.at(table_name)->can_delete();
 }
 
 bool MetaTableManager::can_update(const std::string& table_name) const {
-  return (_meta_tables.at(table_name))->can_update();
+  return _meta_tables.at(table_name)->can_update();
 }
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values) {
-  Assert(can_insert_into(table_name), "Cannot insert into " + table_name + ".");
   const auto rows = values->get_rows();
 
   for (const auto& row : rows) {
@@ -64,7 +60,6 @@ void MetaTableManager::insert_into(const std::string& table_name, const std::sha
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
-  Assert(can_delete_from(table_name), "Cannot delete from " + table_name + ".");
   const auto& rows = values->get_rows();
 
   for (const auto& row : rows) {
@@ -74,14 +69,12 @@ void MetaTableManager::delete_from(const std::string& table_name, const std::sha
 
 void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values,
                               const std::shared_ptr<const Table>& update_values) {
-  Assert(can_update(table_name), "Cannot update " + table_name + ".");
-
   const auto& selected_rows = selected_values->get_rows();
   const auto& update_rows = update_values->get_rows();
   Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
 
   for (size_t row = 0; row < selected_rows.size(); row++) {
-    _meta_tables.at(table_name)->update(selected_rows.at(row), update_rows.at(row));
+    _meta_tables.at(table_name)->update(selected_rows[row], update_rows[row]);
   }
 }
 

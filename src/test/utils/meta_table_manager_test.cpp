@@ -61,7 +61,7 @@ class MetaTableManagerTest : public BaseTest {
 
 class MetaTableManagerMultiTablesTest : public MetaTableManagerTest, public ::testing::WithParamInterface<MetaTable> {};
 
-auto formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
+auto meta_table_manager_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
   auto stream = std::stringstream{};
   stream << info.param->name();
 
@@ -72,7 +72,7 @@ auto formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(MetaTableManager, MetaTableManagerMultiTablesTest,
-                         ::testing::ValuesIn(MetaTableManagerTest::meta_tables()), formatter);
+                         ::testing::ValuesIn(MetaTableManagerTest::meta_tables()), meta_table_manager_test_formatter);
 
 TEST_F(MetaTableManagerTest, ListAllTables) {
   auto table_names = MetaTableManagerTest::meta_table_names();

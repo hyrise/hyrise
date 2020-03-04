@@ -4,14 +4,14 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
-#include "operators/mutate_meta_table.hpp"
+#include "operators/change_meta_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 #include "utils/meta_tables/meta_mock_table.hpp"
 
 namespace opossum {
 
-class MutateMetaTableTest : public BaseTest {
+class ChangeMetaTableTest : public BaseTest {
  protected:
   void SetUp() {
     Hyrise::reset();
@@ -42,12 +42,12 @@ class MutateMetaTableTest : public BaseTest {
   std::shared_ptr<TransactionContext> context;
 };
 
-TEST_F(MutateMetaTableTest, Insert) {
-  auto mutate_meta_table =
-      std::make_shared<MutateMetaTable>("meta_mock", MetaTableMutation::Insert, input_left, input_right);
+TEST_F(ChangeMetaTableTest, Insert) {
+  auto change_meta_table =
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, input_left, input_right);
 
-  mutate_meta_table->set_transaction_context(context);
-  mutate_meta_table->execute();
+  change_meta_table->set_transaction_context(context);
+  change_meta_table->execute();
 
   context->commit();
 
@@ -55,12 +55,12 @@ TEST_F(MutateMetaTableTest, Insert) {
   EXPECT_EQ(meta_mock_table->insert_values(), input_right->get_output()->get_row(0));
 }
 
-TEST_F(MutateMetaTableTest, Delete) {
-  auto mutate_meta_table =
-      std::make_shared<MutateMetaTable>("meta_mock", MetaTableMutation::Delete, input_left, input_right);
+TEST_F(ChangeMetaTableTest, Delete) {
+  auto change_meta_table =
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Delete, input_left, input_right);
 
-  mutate_meta_table->set_transaction_context(context);
-  mutate_meta_table->execute();
+  change_meta_table->set_transaction_context(context);
+  change_meta_table->execute();
 
   context->commit();
 
@@ -68,12 +68,12 @@ TEST_F(MutateMetaTableTest, Delete) {
   EXPECT_EQ(meta_mock_table->remove_values(), input_left->get_output()->get_row(0));
 }
 
-TEST_F(MutateMetaTableTest, Update) {
-  auto mutate_meta_table =
-      std::make_shared<MutateMetaTable>("meta_mock", MetaTableMutation::Update, input_left, input_right);
+TEST_F(ChangeMetaTableTest, Update) {
+  auto change_meta_table =
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Update, input_left, input_right);
 
-  mutate_meta_table->set_transaction_context(context);
-  mutate_meta_table->execute();
+  change_meta_table->set_transaction_context(context);
+  change_meta_table->execute();
 
   context->commit();
 
@@ -82,16 +82,16 @@ TEST_F(MutateMetaTableTest, Update) {
   EXPECT_EQ(meta_mock_table->update_updated_values(), input_right->get_output()->get_row(0));
 }
 
-TEST_F(MutateMetaTableTest, OnlyAllowsAutoCommit) {
-  auto mutate_meta_table =
-      std::make_shared<MutateMetaTable>("meta_mock", MetaTableMutation::Insert, input_left, input_right);
+TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {
+  auto change_meta_table =
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, input_left, input_right);
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
-  mutate_meta_table->set_transaction_context(transaction_context);
-  mutate_meta_table->execute();
+  change_meta_table->set_transaction_context(transaction_context);
+  change_meta_table->execute();
 
-  EXPECT_TRUE(mutate_meta_table->execute_failed());
+  EXPECT_TRUE(change_meta_table->execute_failed());
 
   transaction_context->rollback();
 }

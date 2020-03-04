@@ -5,8 +5,7 @@
 namespace opossum {
 
 /**
- * This is a class for settings control via a meta table.
- * We only want to update setting values with this.
+ * This meta table controls settings, such as, the available memory budget for an index plugin.
  */
 class MetaSettingsTable : public AbstractMetaTable {
  public:

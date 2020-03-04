@@ -42,6 +42,7 @@ set(
     lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
+    logical_query_plan/change_meta_table_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/create_prepared_plan_node_test.cpp
     logical_query_plan/create_table_node_test.cpp
@@ -59,7 +60,6 @@ set(
     logical_query_plan/lqp_utils_test.cpp
     logical_query_plan/lqp_translator_test.cpp
     logical_query_plan/mock_node_test.cpp
-    logical_query_plan/mutate_meta_table_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
     logical_query_plan/sort_node_test.cpp
@@ -73,6 +73,7 @@ set(
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
+    operators/change_meta_table_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
     operators/export_test.cpp
@@ -95,7 +96,6 @@ set(
     operators/maintenance/create_table_test.cpp
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/drop_table_test.cpp
-    operators/mutate_meta_table_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/operator_join_predicate_test.cpp
     operators/operator_scan_predicate_test.cpp

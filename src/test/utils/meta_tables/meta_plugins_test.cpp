@@ -48,7 +48,7 @@ TEST_F(MetaPluginsTest, IsMutable) {
 TEST_F(MetaPluginsTest, TableGeneration) {
   Hyrise::get().plugin_manager.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"plugin_name", DataType::String, false}}, TableType::Data, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false}}, TableType::Data, 5);
   expected_table->append({pmr_string{"hyriseTestPlugin"}});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
@@ -59,7 +59,7 @@ TEST_F(MetaPluginsTest, TableGeneration) {
 
 TEST_F(MetaPluginsTest, Insert) {
   const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"plugin_name", DataType::String, false}}, TableType::Data, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"name", DataType::String, false}}, TableType::Data, 5);
   expected_table->append({pmr_string{"hyriseTestPlugin"}});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
