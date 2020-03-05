@@ -286,6 +286,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         }
       });
 
+      // elements was allocated with the size of the chunk. As we might have skipped NULL values, we need to resize the
+      // vector to the number of values actually written.
       elements.resize(std::distance(elements.begin(), elements_iter));
 
       histograms[chunk_id] = std::move(histogram);
