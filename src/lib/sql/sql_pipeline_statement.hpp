@@ -103,7 +103,6 @@ class SQLPipelineStatement : public Noncopyable {
   std::optional<std::string> warning_message();
 
  private:
-
   bool is_transaction_statement();
 
   // Returns the tasks that execute transaction statements

@@ -25,8 +25,9 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
 
 TEST_F(TransactionHandlingTest, RollbackTransaction) {
   const std::string query =
-      "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1); "
-      "BEGIN; INSERT INTO users(id) VALUES (2); "
+      "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);"
+      "INSERT INTO users(id) VALUES (2);"
+      "BEGIN; INSERT INTO users(id) VALUES (3);"
       "ROLLBACK; SELECT * FROM users;";
 
   const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
@@ -37,10 +38,12 @@ TEST_F(TransactionHandlingTest, RollbackTransaction) {
   // rollback transaction statement is executed successfully
   // in this case the second insert into the table gets rolled back
   EXPECT_TRUE(execution_information.error_message.empty());
-  EXPECT_EQ(execution_information.result_table->column_count(), 1);
+  EXPECT_EQ(execution_information.result_table->row_count(), 2);
 }
 
-TEST_F(TransactionHandlingTest, TransactionContextTest) {
+// Testing whether the TransactionContext changes its phase correctly
+// and whether the auto-commit property is set correctly in different scenarios
+TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
   std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
 
   auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
@@ -81,8 +84,8 @@ TEST_F(TransactionHandlingTest, TransactionContextTest) {
   EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::RolledBackByUser);
   EXPECT_TRUE(execution_information.error_message.empty());
 
-  // internally the transaction context returned by the pipeline is has been set to nullptr,
-  // in order to force creating a new one, again in "auto-commit" mode
+  // internally the transaction context returned by the pipeline is nullptr
+  // in order to force creating a new one in the next pipeline execution
   transaction_ctx = execution_info_transaction_context_pair.second;
   EXPECT_EQ(transaction_ctx, nullptr);
 }
