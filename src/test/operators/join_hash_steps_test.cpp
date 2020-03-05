@@ -55,8 +55,8 @@ class JoinHashStepsTest : public BaseTest {
 };
 
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
-  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 9};
-  for (auto i = 0; i < 9; ++i) {
+  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
+  for (auto i = 0; i < 10; ++i) {
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
     table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
   }
@@ -196,7 +196,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   materialize_input<int, int, false>(_table_zero_one, ColumnID{0}, histograms, 2);
   for (const auto& radix_count_per_chunk : histograms) {
     for (auto count : radix_count_per_chunk) {
-      // Aging: due to the hashing, we do not know which cluster holds the value
+      // Again, due to the hashing, we do not know which cluster holds the value
       // But we know that two buckets have _table_size_zero_one/2 items and two have none items.
       EXPECT_TRUE(count == this->_chunk_size_zero_one / 2 || count == 0);
       if (count == 0) ++empty_cluster_count;
