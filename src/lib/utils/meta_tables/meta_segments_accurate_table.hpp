@@ -8,9 +8,9 @@ namespace opossum {
  * This is a class for showing information of all stored segments via a meta table.
  * To get less accurate results, use MetaSegmentsTable.
  */
-class MetaAccurateSegmentsTable : public AbstractMetaTable {
+class MetaSegmentsAccurateTable : public AbstractMetaTable {
  public:
-  MetaAccurateSegmentsTable();
+  MetaSegmentsAccurateTable();
 
   const std::string& name() const final;
 

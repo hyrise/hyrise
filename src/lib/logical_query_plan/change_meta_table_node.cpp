@@ -1,13 +1,5 @@
 #include "change_meta_table_node.hpp"
 
-#include <memory>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include "expression/expression_utils.hpp"
-#include "utils/assert.hpp"
-
 namespace opossum {
 
 ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,

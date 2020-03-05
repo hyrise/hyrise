@@ -1,7 +1,7 @@
 #include "../base_test.hpp"
 
+#include "./mock_setting.hpp"
 #include "hyrise.hpp"
-#include "utils/settings/mock_setting.hpp"
 
 namespace opossum {
 
@@ -15,9 +15,7 @@ class SettingsManagerTest : public BaseTest {
 
   void TearDown() { Hyrise::reset(); }
 
-  void add_setting(std::shared_ptr<AbstractSetting> setting) {
-    Hyrise::get().settings_manager.add(setting);
-  }
+  void add_setting(std::shared_ptr<AbstractSetting> setting) { Hyrise::get().settings_manager.add(setting); }
 
   void remove_setting(const std::string& name) { Hyrise::get().settings_manager.remove(name); }
 

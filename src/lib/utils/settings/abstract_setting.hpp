@@ -4,7 +4,7 @@ namespace opossum {
 
 /**
  * This is an abstract class for all settings objects.
- * A setting is an adjusting screw of any component with a variable value.
+ * A setting is a configuration knob of any component with a variable value.
  * That component (or "parent") instantiates and destroys a setting.
  *
  * Settings register themselves at the SettingsManager.

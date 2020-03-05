@@ -1,8 +1,8 @@
 #include "base_test.hpp"
 
+#include "../mock_setting.hpp"
 #include "operators/table_wrapper.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
-#include "utils/settings/mock_setting.hpp"
 
 namespace opossum {
 

@@ -12,8 +12,15 @@ class TransactionContext;
 
 /**
  * Operator that modifies meta tables, e.g. calls insert on the plugins meta table to load a plugin.
- * Expects the table name of the table to modify as a string and both
- * the values to modify and the fully modified values.
+ * It expects the table name of the table to modify as a string.
+ *
+ * The input tables are like the inputs of the Update operator.
+ * If used, they must have the exact same column layout as the meta table (otherwise, it can be dummy tables).
+ * The first input table specifies which rows and columns of the meta table
+ * should be updated or deleted.
+ * For inserts, the second input table contains the rows to insert.
+ * For updates, it must have the same number of rows as the first table and contains the
+ * data that is used to update the rows specified by the first table.
  *
  * This is not MVCC safe, so we do nothing on commit or rollback.
  * This is why the operator should only be used in auto-commit queries.

@@ -570,18 +570,16 @@ set(
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
     utils/meta_tables/abstract_meta_table.hpp
-    utils/meta_tables/meta_accurate_segments_table.cpp
-    utils/meta_tables/meta_accurate_segments_table.hpp
     utils/meta_tables/meta_chunk_sort_orders_table.cpp
     utils/meta_tables/meta_chunk_sort_orders_table.hpp
     utils/meta_tables/meta_chunks_table.cpp
     utils/meta_tables/meta_chunks_table.hpp
     utils/meta_tables/meta_columns_table.cpp
     utils/meta_tables/meta_columns_table.hpp
-    utils/meta_tables/meta_mock_table.cpp
-    utils/meta_tables/meta_mock_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
     utils/meta_tables/meta_plugins_table.hpp
+    utils/meta_tables/meta_segments_accurate_table.cpp
+    utils/meta_tables/meta_segments_accurate_table.hpp
     utils/meta_tables/meta_segments_table.cpp
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
@@ -599,8 +597,6 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/settings/abstract_setting.hpp
     utils/settings/abstract_setting.cpp
-    utils/settings/mock_setting.hpp
-    utils/settings/mock_setting.cpp
     utils/settings_manager.cpp
     utils/settings_manager.hpp
     utils/singleton.hpp

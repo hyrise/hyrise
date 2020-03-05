@@ -13,6 +13,4 @@ void AbstractSetting::enroll() {
 
 void AbstractSetting::unenroll() { Hyrise::get().settings_manager.remove(name); }
 
-//std::string AbstractSetting::name() const {return _name;}
-
 }  // namespace opossum

@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-#include "utils/settings/mock_setting.hpp"
+#include "./mock_setting.hpp"
 
 namespace opossum {
 

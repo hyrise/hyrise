@@ -1,15 +1,15 @@
 #include "../base_test.hpp"
 
+#include "./meta_tables/meta_mock_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
-#include "utils/meta_tables/meta_accurate_segments_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
-#include "utils/meta_tables/meta_mock_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
+#include "utils/meta_tables/meta_segments_accurate_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
@@ -25,7 +25,7 @@ class MetaTableManagerTest : public BaseTest {
   static MetaTables meta_tables() {
     return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
             std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
-            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaAccurateSegmentsTable>(),
+            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>(),
             std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
   }
 

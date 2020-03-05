@@ -8,11 +8,15 @@
 
 namespace opossum {
 
+/**
+ * This component is the central point for accessing all Setting objects.
+ * Settings register here, so any component can get or change their values.
+ */
 class SettingsManager : public Noncopyable {
  public:
   bool has_setting(const std::string& name) const;
-  std::shared_ptr<AbstractSetting> get_setting(const std::string name) const;
-  std::vector<std::string> all_settings() const;
+  std::shared_ptr<AbstractSetting> get_setting(const std::string& name) const;
+  std::vector<std::string> setting_names() const;
 
  protected:
   friend class AbstractSetting;
@@ -20,7 +24,7 @@ class SettingsManager : public Noncopyable {
   friend class SettingsManagerTest;
 
   void add(std::shared_ptr<AbstractSetting> setting);
-  void remove(const std::string name);
+  void remove(const std::string& name);
 
  private:
   std::map<std::string, std::shared_ptr<AbstractSetting>> _settings;
