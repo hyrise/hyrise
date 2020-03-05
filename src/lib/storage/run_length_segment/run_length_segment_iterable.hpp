@@ -51,9 +51,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    * In case we hav already searched for a nearby position (e.g., when a previous not selective filter removed only
    * relatively few lines), we can linearly search the end position. Since position lists are often ordered and modern
    * CPUs are well at prefetching, linear searches are often faster than a complete binary search.
-   * determine_linear_search_offset_distance_threshold() estimates the threshold of when to use a linear or a binary search. Given the
-   * previous and the current chunk offset, the threshold is used to determine if a linear search is faster for the given
-   * number of skipped positions.
+   * determine_linear_search_offset_distance_threshold() estimates the threshold of when to use a linear or a binary
+   * search. Given the previous and the current chunk offset, the threshold is used to determine if a linear search is
+   * faster for the given number of skipped positions.
    */
 
   // LINEAR_SEARCH_ELEMENTS_THRESHOLD denotes the size of the range for that a linear search is faster than using a
@@ -96,17 +96,17 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
      *     than the estimated threshold, use a binary search from the previous offset up to the end.
      */
     if (step_size < 0) {
-      return std::lower_bound(
-          end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index, current_chunk_offset);
+      return std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index,
+                              current_chunk_offset);
     } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
       const auto less_than_current = [current = current_chunk_offset](const ChunkOffset offset) {
         return offset < current;
       };
-      return std::find_if_not(end_positions->cbegin() + previous_end_position_index,
-                                             end_positions->cend(), less_than_current);
+      return std::find_if_not(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
+                              less_than_current);
     } else {
-      return std::lower_bound(end_positions->cbegin() + previous_end_position_index,
-                                             end_positions->cend(), current_chunk_offset);
+      return std::lower_bound(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
+                              current_chunk_offset);
     }
   }
 
