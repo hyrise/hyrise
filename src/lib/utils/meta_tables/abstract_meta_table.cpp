@@ -9,7 +9,7 @@ namespace opossum {
 AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
     : _column_definitions(column_definitions) {}
 
-const std::shared_ptr<Table> AbstractMetaTable::generate() const {
+const std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   const auto table = _on_generate();
 
   if (table->chunk_count()) {
@@ -27,20 +27,20 @@ bool AbstractMetaTable::can_update() const { return false; }
 
 bool AbstractMetaTable::can_delete() const { return false; }
 
-void AbstractMetaTable::insert(const std::vector<AllTypeVariant>& values) {
+void AbstractMetaTable::_insert(const std::vector<AllTypeVariant>& values) {
   Assert(can_insert(), "Cannot insert into " + name() + ".");
   _validate_data_types(values);
   _on_insert(values);
 }
 
-void AbstractMetaTable::remove(const std::vector<AllTypeVariant>& values) {
+void AbstractMetaTable::_remove(const std::vector<AllTypeVariant>& values) {
   Assert(can_delete(), "Cannot delete from " + name() + ".");
   _validate_data_types(values);
   _on_remove(values);
 }
 
-void AbstractMetaTable::update(const std::vector<AllTypeVariant>& selected_values,
-                               const std::vector<AllTypeVariant>& update_values) {
+void AbstractMetaTable::_update(const std::vector<AllTypeVariant>& selected_values,
+                                const std::vector<AllTypeVariant>& update_values) {
   Assert(can_update(), "Cannot update " + name() + ".");
   _validate_data_types(selected_values);
   _validate_data_types(update_values);

@@ -27,15 +27,15 @@ class MetaPluginsTest : public BaseTest {
   void TearDown() { Hyrise::reset(); }
 
   const std::shared_ptr<Table> generateTable(const std::shared_ptr<AbstractMetaTable>& table) const {
-    return table->generate();
+    return table->_generate();
   }
 
   void delete_from(const std::shared_ptr<AbstractMetaTable>& table, const std::vector<AllTypeVariant>& values) {
-    return table->remove(values);
+    return table->_remove(values);
   }
 
   void insert_into(const std::shared_ptr<AbstractMetaTable>& table, const std::vector<AllTypeVariant>& values) {
-    return table->insert(values);
+    return table->_insert(values);
   }
 };
 

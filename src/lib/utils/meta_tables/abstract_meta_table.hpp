@@ -43,15 +43,15 @@ class AbstractMetaTable : public Noncopyable {
    * Generates the meta table on the fly by calling _on_generate().
    * It finalizes the last chunk of the table and sets table statistics.
    */
-  const std::shared_ptr<Table> generate() const;
+  const std::shared_ptr<Table> _generate() const;
 
   /*
    * Manipulates the meta table by calling _on_insert() / _on_remove.
    * Additionally, checks if the input values match the column definitions.
    */
-  void insert(const std::vector<AllTypeVariant>& values);
-  void remove(const std::vector<AllTypeVariant>& values);
-  void update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values);
+  void _insert(const std::vector<AllTypeVariant>& values);
+  void _remove(const std::vector<AllTypeVariant>& values);
+  void _update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values);
 
   void _validate_data_types(const std::vector<AllTypeVariant>& values) const;
 

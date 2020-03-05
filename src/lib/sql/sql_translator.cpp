@@ -318,8 +318,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
   if (is_meta_table) {
-    const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
-    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(meta_table_name), "Cannot insert into " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
   }
 
   const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
@@ -434,10 +433,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
   if (is_meta_table) {
-    const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
-    AssertInput(Hyrise::get().meta_table_manager.has_table(meta_table_name) &&
-                    Hyrise::get().meta_table_manager.can_delete_from(meta_table_name),
-                "Cannot delete from " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
   }
 
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
@@ -464,8 +460,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
   if (is_meta_table) {
-    const auto meta_table_name = table_name.substr(MetaTableManager::META_PREFIX.size());
-    AssertInput(Hyrise::get().meta_table_manager.can_update(meta_table_name), "Cannot update " + table_name);
+    AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
   }
   const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
 

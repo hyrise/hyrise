@@ -6,7 +6,8 @@ namespace opossum {
 
 /**
  * This is a class for showing information of all stored segments via a meta table.
- * To get more accurate results, use MetaAccurateSegmentsTable.
+ * Here, we do not provide the distinct value count per segment.
+ * For slower results with that information use MetaSegmentsAccurateTable.
  */
 class MetaSegmentsTable : public AbstractMetaTable {
  public:

@@ -21,7 +21,7 @@ class MetaTableManager : public Noncopyable {
 
   bool has_table(const std::string& table_name) const;
 
-  // Generates the meta table specified by table_name (which should not include the prefix)
+  // Generates the meta table specified by table_name (which can include the prefix)
   std::shared_ptr<Table> generate_table(const std::string& table_name) const;
 
   bool can_insert_into(const std::string& table_name) const;
@@ -40,7 +40,8 @@ class MetaTableManager : public Noncopyable {
 
   MetaTableManager();
 
-  void add(const std::shared_ptr<AbstractMetaTable>& table);
+  void _add(const std::shared_ptr<AbstractMetaTable>& table);
+  std::string _trim_table_name(const std::string& table_name) const;
 
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;
   std::vector<std::string> _table_names;

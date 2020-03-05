@@ -46,7 +46,7 @@ class MetaTableTest : public BaseTest {
   }
 
   const std::shared_ptr<Table> generateTable(const std::shared_ptr<AbstractMetaTable>& table) const {
-    return table->generate();
+    return table->_generate();
   }
 
  protected:

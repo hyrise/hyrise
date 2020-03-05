@@ -8,9 +8,9 @@ namespace opossum {
 AbstractSetting::AbstractSetting(const std::string& init_name) : name(init_name) {}
 
 void AbstractSetting::enroll() {
-  Hyrise::get().settings_manager.add(std::static_pointer_cast<AbstractSetting>(shared_from_this()));
+  Hyrise::get().settings_manager._add(std::static_pointer_cast<AbstractSetting>(shared_from_this()));
 }
 
-void AbstractSetting::unenroll() { Hyrise::get().settings_manager.remove(name); }
+void AbstractSetting::unenroll() { Hyrise::get().settings_manager._remove(name); }
 
 }  // namespace opossum

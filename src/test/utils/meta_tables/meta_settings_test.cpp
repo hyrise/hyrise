@@ -28,12 +28,12 @@ class MetaSettingsTest : public BaseTest {
   void TearDown() { Hyrise::reset(); }
 
   const std::shared_ptr<Table> generateTable(const std::shared_ptr<AbstractMetaTable>& table) const {
-    return table->generate();
+    return table->_generate();
   }
 
   void updateTable(const std::shared_ptr<AbstractMetaTable>& table, const std::vector<AllTypeVariant>& selected_values,
                    const std::vector<AllTypeVariant>& update_values) const {
-    return table->update(selected_values, update_values);
+    return table->_update(selected_values, update_values);
   }
 };
 
