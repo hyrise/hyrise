@@ -23,7 +23,7 @@ class TransactionContext;
  * data that is used to update the rows specified by the first table.
  *
  * This is not MVCC safe, so we do nothing on commit or rollback.
- * This is why the operator should only be used in auto-commit queries.
+ * This is why throws an exception if not used in auto-commit queries.
  */
 class ChangeMetaTable : public AbstractReadWriteOperator {
  public:

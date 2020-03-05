@@ -89,9 +89,8 @@ TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   change_meta_table->set_transaction_context(transaction_context);
-  change_meta_table->execute();
 
-  EXPECT_TRUE(change_meta_table->execute_failed());
+  EXPECT_THROW(change_meta_table->execute(), std::exception);
 
   transaction_context->rollback();
 }

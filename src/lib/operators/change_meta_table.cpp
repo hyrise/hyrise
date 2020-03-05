@@ -22,11 +22,7 @@ const std::string& ChangeMetaTable::name() const {
 }
 
 std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<TransactionContext> context) {
-  // Meta tables can only be modified during non-transactions
-  if (context->is_auto_commit() == AutoCommit::No) {
-    _mark_as_failed();
-    return nullptr;
-  }
+  Assert(context->is_auto_commit(), "Meta tables cannot be modified during transactions");
 
   switch (_change_type) {
     case MetaTableChangeType::Insert:
