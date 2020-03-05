@@ -78,8 +78,11 @@ class AbstractTableGenerator {
   virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
 
   //newly added
+  std::shared_ptr<Table> _sort_table_mutable(const std::shared_ptr<Table> table, const std::string& column_name, const ChunkOffset chunk_size);
+  std::shared_ptr<Table> _sort_table_chunkwise(const std::shared_ptr<const Table> table, const std::string& column_name, const uint64_t desired_chunk_split_count);
   void _append_chunks(const std::shared_ptr<const Table> from, std::shared_ptr<Table> to);
-  std::shared_ptr<Table> _sort_table(const std::shared_ptr<Table> table, const std::string& column_name, const ChunkOffset chunk_size);
+  void _append_chunk(const std::shared_ptr<const Chunk> from, std::shared_ptr<Table> to);
+
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };
