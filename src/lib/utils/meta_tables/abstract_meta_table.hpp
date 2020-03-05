@@ -43,7 +43,7 @@ class AbstractMetaTable : public Noncopyable {
    * Generates the meta table on the fly by calling _on_generate().
    * It finalizes the last chunk of the table and sets table statistics.
    */
-  const std::shared_ptr<Table> _generate() const;
+  std::shared_ptr<Table> _generate() const;
 
   /*
    * Manipulates the meta table by calling _on_insert() / _on_remove.

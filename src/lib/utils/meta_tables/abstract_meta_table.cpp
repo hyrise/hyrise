@@ -9,7 +9,7 @@ namespace opossum {
 AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
     : _column_definitions(column_definitions) {}
 
-const std::shared_ptr<Table> AbstractMetaTable::_generate() const {
+std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   const auto table = _on_generate();
 
   if (table->chunk_count()) {
