@@ -44,19 +44,26 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   const RunLengthSegment<T>& _segment;
 
   /**
-   * Run length segments store the end positions of runs in a sorted vector. To access a particular position, this vector
-   * has to be searched for the end position of the according run.
-   TODO(martin): If we previously visited a nearby position, we do not
-   * have to execute a full binary search but can linearly search up to the desired position.
-   *
+   * Due to the nature of Run Length encoding, point-access is not in O(1).
+   * Run length segments store the end positions of runs in a sorted vector. To access a particular position, this
+   * vector has to be searched for the end position of the according run. It is possible to find the value of a
+   * position in O(log(n)) by doing a binary search.
+   * In case we hav already searched for a nearby position (e.g., when a previous not selective filter removed only
+   * relatively few lines), we can linearly search the end position. Since position lists are often ordered and modern
+   * CPUs are well at prefetching, linear searches are often faster than a complete binary search.
    * determine_linear_search_threshold() estimates the threshold of when to use a linear or a binary search. Given the
    * previous and the current chunk offset, the threshold is used to determine if a linear search is faster for the given
-   * number of skipped positions or whether a binary search is beneficial. The value of 200 has been found by a set of
-   * simple TPC-H measurements (see #2038).
+   * number of skipped positions.
    */
-  static constexpr auto LINEAR_SEARCH_THRESHOLD_FACTOR = 200.0f;
 
-  static ChunkOffset determine_linear_search_threshold(
+  // LINEAR_SEARCH_ELEMENTS_THRESHOLD denotes the size of the range for that a linear search is faster than using a
+  // binary search on a sorted vector. The value of 200 has been found by a set of simple TPC-H measurements (see #2038).
+  static constexpr auto LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD = 200.0f;
+
+  // This methods estimates the threshold up to which is linear search is faster. Since the end position vector is
+  // (depending on actual data) a highly compressed vector of offsets, the offset distance up to which is linear search
+  // is beneficial can be much larger than LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD.
+  static ChunkOffset determine_linear_search_offset_distance_threshold(
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions) {
     if (end_positions->empty()) {
       return 0;
@@ -66,7 +73,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     const size_t run_count = end_positions->size();
 
     const auto avg_elements_per_run = static_cast<float>(chunk_size) / run_count;
-    return static_cast<ChunkOffset>(LINEAR_SEARCH_THRESHOLD_FACTOR * std::ceil(avg_elements_per_run));
+    return static_cast<ChunkOffset>(LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * std::ceil(avg_elements_per_run));
   }
 
   using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
@@ -79,8 +86,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
     /**
      * Depending on the estimated threshold and the step size, a different search approach is used. The threshold
-     * estimates how long a jump needs to be before a binary search is faster than linearly searching.
-     * Three cases are handled:
+     * estimates how large the offset between the previously searched chunk offset and the currently searched chunk
+     * offset needs to be before a binary search is faster than linearly searching. Three cases are handled:
      *   - If the chunk offset is smaller then the previous offset (can happen, e.g., after joins), use a binary
      *     search from the beginning up to the previous position. Whenever reverse iteration is frequently used, we
      *     should consider using linear searching here as well (see below, currently blocked by #1531).
@@ -124,9 +131,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _end_positions_it{std::move(end_positions_it)},
           _end_position_begin_it{_end_positions->cbegin()},
           _linear_search_threshold{determine_linear_search_threshold(_end_positions)},
-          _chunk_offset{chunk_offset},
-          _prev_chunk_offset{0u},
-          _prev_index{0ul} {}
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -163,7 +168,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
     SegmentPosition<T> dereference() const {
       const auto vector_offset_for_value = std::distance(_end_positions->cbegin(), _end_positions_it);
-      DebugAssert(vector_offset_for_value < static_cast<int64_t>(_values->size()), "What?3");
       return SegmentPosition<T>{(*_values)[vector_offset_for_value], (*_null_values)[vector_offset_for_value],
                                 _chunk_offset};
     }
@@ -179,26 +183,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     ChunkOffset _linear_search_threshold;
 
     ChunkOffset _chunk_offset;
-
-    mutable ChunkOffset _prev_chunk_offset;
-    mutable size_t _prev_index;
   };
 
-  /**
-   * TODO(Martin): move up!
-   * Due to the nature of the encoding, point-access is not in O(1).
-   * However, because we store the last position of runs (i.e. a sorted list)
-   * instead of the run length, it is possible to find the value of a position
-   * in O(log(n)) by doing a binary search. Because of the prefetching
-   * capabilities of the hardware, this might not always be faster than a simple
-   * linear search in O(n). More often than not, the chunk offsets will be ordered,
-   * so we don’t even have to scan the entire vector. Instead we can continue searching
-   * from the previously requested position. This is what this iterator does:
-   * - if it’s the first access, it performs a binary search
-   * - for all subsequent accesses it performs
-   *   - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
-   *   - a binary search in the range [0, previous_end_position] else
-   */
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
