@@ -211,30 +211,33 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 }
 
 std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transaction_tasks() {
-  auto sql_statement = get_parsed_sql_statement();
+  const auto& sql_statement = get_parsed_sql_statement();
   const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  auto* transaction_statement = reinterpret_cast<hsql::TransactionStatement*>(statements.front());
+  auto* transaction_statement = dynamic_cast<hsql::TransactionStatement*>(statements.front());
   switch (transaction_statement->command) {
     case hsql::kBeginTransaction:
       return {std::make_shared<JobTask>([this] {
-        if (!_transaction_context || !_transaction_context->is_auto_commit())
+        if (!_transaction_context || !_transaction_context->is_auto_commit()) {
           this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
-        else
+        } else {
           _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
+        }
       })};
     case hsql::kCommitTransaction:
       return {std::make_shared<JobTask>([this] {
-        if (!_transaction_context || _transaction_context->is_auto_commit())
+        if (!_transaction_context || _transaction_context->is_auto_commit()) {
           this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
-        else
+        } else {
           _transaction_context->commit();
+        }
       })};
     case hsql::kRollbackTransaction:
       return {std::make_shared<JobTask>([this] {
-        if (!_transaction_context || _transaction_context->is_auto_commit())
+        if (!_transaction_context || _transaction_context->is_auto_commit()) {
           this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
-        else
+        } else {
           _transaction_context->rollback(RollBackReason::RollBackByUser);
+        }
       })};
     default:
       Fail("Unexpected transaction command!");

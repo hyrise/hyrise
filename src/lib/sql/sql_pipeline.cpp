@@ -81,9 +81,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement =
-        std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc,
-                                               optimizer, pqp_cache, lqp_cache, cleanup_temporaries);
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
+        statement_string, std::move(parsed_statement), use_mvcc, optimizer, pqp_cache, lqp_cache, cleanup_temporaries);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
@@ -249,14 +248,14 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
 
     _result_tables.emplace_back(table);
 
-    switch (pipeline_statement->transaction_context()->phase()) {
-      // Auto-commit statements should always be committed or rolled back at this point
-      case TransactionPhase::Committed:
-      case TransactionPhase::RolledBackByUser:
-        _transaction_context = nullptr;
-        break;
-      default:
-        _transaction_context = pipeline_statement->transaction_context();
+    if (const auto& previous_transaction_context = pipeline_statement->transaction_context();
+        previous_transaction_context->is_auto_commit()) {
+      DebugAssert(previous_transaction_context->phase() == TransactionPhase::Committed ||
+                      previous_transaction_context->phase() == TransactionPhase::RolledBackByUser,
+                  "Auto-commit statements should always be committed or rolled back at this point");
+      _transaction_context = nullptr;
+    } else {
+      _transaction_context = previous_transaction_context;
     }
   }
 

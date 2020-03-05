@@ -30,8 +30,8 @@ TransactionContext::~TransactionContext() {
                   }
                 }
 
-                const auto is_error_rolled_back = _phase == TransactionPhase::RolledBackAfterConflict;
-                return !an_operator_failed || is_error_rolled_back;
+                const auto is_rolled_back_after_conflict = _phase == TransactionPhase::RolledBackAfterConflict;
+                return !an_operator_failed || is_rolled_back_after_conflict;
               }()),
               "A registered operator failed but the transaction has not been rolled back. You may also see this "
               "exception if an operator threw an uncaught exception.");
