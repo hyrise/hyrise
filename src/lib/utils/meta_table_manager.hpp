@@ -41,7 +41,7 @@ class MetaTableManager : public Noncopyable {
   MetaTableManager();
 
   void _add(const std::shared_ptr<AbstractMetaTable>& table);
-  std::string _trim_table_name(const std::string& table_name) const;
+  static std::string _trim_table_name(const std::string& table_name);
 
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;
   std::vector<std::string> _table_names;

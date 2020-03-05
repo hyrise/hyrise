@@ -4,36 +4,6 @@
 
 namespace opossum {
 
-size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
-  auto distinct_value_count = size_t{0};
-  resolve_data_type(segment->data_type(), [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
-
-    // For dictionary segments, an early (and much faster) exit is possible by using the dictionary size
-    if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
-      distinct_value_count = dictionary_segment->dictionary()->size();
-      return;
-    } else if (const auto fs_dictionary_segment =
-                   std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
-      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
-      return;
-    }
-
-    std::unordered_set<ColumnDataType> distinct_values;
-    auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-    iterable.with_iterators([&](auto it, auto end) {
-      for (; it != end; ++it) {
-        const auto segment_item = *it;
-        if (!segment_item.is_null()) {
-          distinct_values.insert(segment_item.value());
-        }
-      }
-    });
-    distinct_value_count = distinct_values.size();
-  });
-  return distinct_value_count;
-}
-
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -69,6 +39,36 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
       }
     }
   }
+}
+
+size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
+  auto distinct_value_count = size_t{0};
+  resolve_data_type(segment->data_type(), [&](auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+
+    // For dictionary segments, an early (and much faster) exit is possible by using the dictionary size
+    if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
+      distinct_value_count = dictionary_segment->dictionary()->size();
+      return;
+    } else if (const auto fs_dictionary_segment =
+                   std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
+      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
+      return;
+    }
+
+    std::unordered_set<ColumnDataType> distinct_values;
+    auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
+    iterable.with_iterators([&](auto it, auto end) {
+      for (; it != end; ++it) {
+        const auto segment_item = *it;
+        if (!segment_item.is_null()) {
+          distinct_values.insert(segment_item.value());
+        }
+      }
+    });
+    distinct_value_count = distinct_values.size();
+  });
+  return distinct_value_count;
 }
 
 }  // namespace opossum

@@ -86,7 +86,7 @@ void MetaTableManager::_add(const std::shared_ptr<AbstractMetaTable>& table) {
   std::sort(_table_names.begin(), _table_names.end());
 }
 
-std::string MetaTableManager::_trim_table_name(const std::string& table_name) const {
+std::string MetaTableManager::_trim_table_name(const std::string& table_name) {
   return is_meta_table_name(table_name) ? table_name.substr(MetaTableManager::META_PREFIX.size()) : table_name;
 }
 

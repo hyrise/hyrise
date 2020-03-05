@@ -74,9 +74,11 @@ def main():
 	console.sendline("print nation")
 	console.expect("=== Chunk 3 ===")
 
-	# Test Meta Table Modification
-	console.sendline("insert into meta_tables values ('foo')")
-	console.expect("Invalid input error: Cannot insert into meta_tables")
+	# Test meta table modification
+	console.sendline("insert into meta_settings values ('foo', 'bar', 'baz')")
+	console.expect("Invalid input error: Cannot insert into meta_settings")
+	console.sendline("select * from meta_plugins")
+	console.expect("0 rows total")
 	console.sendline("insert into meta_plugins values ('" + build_dir + "/lib/libhyriseTestPlugin" + lib_suffix + "')")
 	console.sendline("select * from meta_plugins")
 	console.expect("hyriseTestPlugin")
