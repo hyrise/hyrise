@@ -51,7 +51,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    * In case we hav already searched for a nearby position (e.g., when a previous not selective filter removed only
    * relatively few lines), we can linearly search the end position. Since position lists are often ordered and modern
    * CPUs are well at prefetching, linear searches are often faster than a complete binary search.
-   * determine_linear_search_threshold() estimates the threshold of when to use a linear or a binary search. Given the
+   * determine_linear_search_offset_distance_threshold() estimates the threshold of when to use a linear or a binary search. Given the
    * previous and the current chunk offset, the threshold is used to determine if a linear search is faster for the given
    * number of skipped positions.
    */
@@ -130,7 +130,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _end_positions{end_positions},
           _end_positions_it{std::move(end_positions_it)},
           _end_position_begin_it{_end_positions->cbegin()},
-          _linear_search_threshold{determine_linear_search_threshold(_end_positions)},
+          _linear_search_threshold{determine_linear_search_offset_distance_threshold(_end_positions)},
           _chunk_offset{chunk_offset} {}
 
    private:
@@ -201,7 +201,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
-          _linear_search_threshold{determine_linear_search_threshold(_end_positions)},
+          _linear_search_threshold{determine_linear_search_offset_distance_threshold(_end_positions)},
           _prev_chunk_offset{0u},
           _prev_index{0ul} {}
 
