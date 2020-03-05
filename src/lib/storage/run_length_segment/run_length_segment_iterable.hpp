@@ -122,6 +122,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           _null_values{null_values},
           _end_positions{end_positions},
           _end_positions_it{std::move(end_positions_it)},
+          _end_position_begin_it{_end_positions->cbegin()},
           _linear_search_threshold{determine_linear_search_threshold(_end_positions)},
           _chunk_offset{chunk_offset},
           _prev_chunk_offset{0u},
@@ -144,7 +145,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
     void decrement() {
       --_chunk_offset;
-      if (_end_positions_it != _end_positions->cbegin() && _chunk_offset <= *(_end_positions_it - 1)) {
+      if (_end_positions_it != _end_position_begin_it && _chunk_offset <= *(_end_positions_it - 1)) {
         // Decrease to previous end position if iterators does not point at the beginning and the chunk offset is
         // less than or equal to the previous end position.
         --_end_positions_it;
@@ -177,6 +178,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     std::shared_ptr<const pmr_vector<bool>> _null_values;
     std::shared_ptr<const pmr_vector<ChunkOffset>> _end_positions;
     EndPositionIterator _end_positions_it;
+    EndPositionIterator _end_position_begin_it;
+
 
     // Threshold of when to start using a binary search for the next chunk offset instead of a linear search.
     ChunkOffset _linear_search_threshold;
