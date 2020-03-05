@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <cmath>
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
@@ -83,32 +84,22 @@ void AbstractTableGenerator::generate_and_store() {
 
   auto sort_order_by_table = _sort_order_by_table();
 
+//#############################################TODO
+//  auto env_chunk_sort_order = std::getenv("CHUNK_SORT_COLUMN");
+//#############################################TODO
 
-  auto env_table_sort_order = std::getenv("TABLE_SORT_ORDER");
-  if (env_table_sort_order != nullptr) {
+  auto env_clustering_order = std::getenv("CLUSTERING_ORDER");
+  if (env_clustering_order != nullptr) {
     // read table sorting configuration from environment variable
     // format: "<table1>:<column1>,<column2>;<table2>:<column1>,<column2>;..."
     // atm we can only sort (cluster) after 1 column per table
-    const auto table_sort_order = std::string(env_table_sort_order);
-    std::cout << "read sorting order: " << table_sort_order << std::endl;
+    const auto clustering_order = std::string(env_clustering_order);
+    const auto clustering_json = nlohmann::json::parse(clustering_order);
+    std::cout << "parsed clustering json:" << std::endl;
+    std::cout << clustering_json.dump(2) << std::endl;
 
-    SortOrderByTable result;
-    if (!table_sort_order.empty()) {
-      std::vector<std::string> table_columns_pairs;
-      boost::algorithm::split(table_columns_pairs, table_sort_order, boost::is_any_of(";"));
-
-      for (const auto& table_columns_pair : table_columns_pairs) {
-        std::vector<std::string> table_and_columns;
-        boost::algorithm::split(table_and_columns, table_columns_pair, boost::is_any_of(":"));
-        Assert(table_and_columns.size() == 2, "expected exactly two entries, but got " + std::to_string(table_and_columns.size()));
-
-        std::vector<std::string> columns;
-        boost::algorithm::split(columns, table_and_columns[1], boost::is_any_of(","));
-        result[table_and_columns[0]] = columns;
-      }
-    }
-
-    sort_order_by_table =  result;
+    SortOrderByTable result = clustering_json;
+    sort_order_by_table = result;
   }
 
   metrics.sort_order_by_table = sort_order_by_table;
@@ -116,12 +107,83 @@ void AbstractTableGenerator::generate_and_store() {
   if (!sort_order_by_table.empty()) {
     std::cout << "- Sorting tables" << std::endl;
 
-    for (const auto& [table_name, column_names] : sort_order_by_table) {
+    for (const auto& [table_name, clustering_columns] : sort_order_by_table) {
+      Assert(clustering_columns.size() >= 1, "you have to specify at least one clustering dimension, otherwise just leave out the table entry");
+      const auto original_table = table_info_by_name[table_name].table;
 
-      Assert(column_names.size() == 1 || column_names.size() == 2, "you have to specify exactly one or two clustering dimensions");
+      uint64_t expected_final_chunk_count = 1;
+      for (const auto& [column_name, num_groups] : clustering_columns) {
+        expected_final_chunk_count *= num_groups;
+      }
+      Assert(expected_final_chunk_count < original_table->row_count(), "cannot have more chunks than rows");
+      constexpr auto MIN_REASONABLE_CHUNK_SIZE = 500;
+      Assert(MIN_REASONABLE_CHUNK_SIZE * expected_final_chunk_count < original_table->row_count(), "chunks in " + table_name + " will have less than " + std::to_string(MIN_REASONABLE_CHUNK_SIZE) + " rows");
 
-      std::cout << "-  Sorting '" << table_name << "' by '" << column_names[0] << "' " << std::flush;
-      Timer per_table_timer;
+      std::cout << "initial table size of " << table_name << " is: " << original_table->row_count() << std::endl;
+
+
+      Timer per_clustering_timer;
+
+      // Idea: We start with "1" chunk (whole table).
+      // With each step, we split chunks, further clustering their contents.
+      // This means that for the first clustering column, we sort the whole table,
+      // while for all subsequent clustering columns, we only sort on chunk level
+
+      // first clustering column
+      const auto& first_column_name = clustering_columns[0].first;
+      const auto first_column_chunksize = static_cast<ChunkOffset>(std::ceil(1.0 * original_table->row_count() / clustering_columns[0].second));
+      std::cout << "-  Clustering '" << table_name << "' by '" << first_column_name << "' " << std::flush;
+
+      auto mutable_sorted_table = _sort_table(original_table, first_column_name, first_column_chunksize);
+      std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
+
+
+
+      for (auto clustering_column_index = 1u;clustering_column_index < clustering_columns.size();clustering_column_index++) {
+        const auto& column_name = clustering_columns[clustering_column_index].first;
+        const auto desired_chunk_count = clustering_columns[clustering_column_index].second;
+
+
+        std::cout << "-  Clustering '" << table_name << "' by '" << column_name << "' " << std::flush;
+
+
+        auto clustered_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
+                                  std::nullopt, UseMvcc::Yes);
+
+
+        for (ChunkID chunk_id{0}; chunk_id < mutable_sorted_table->chunk_count();chunk_id++) {
+          //std::cout << "sorting chunk " << chunk_id << std::endl;
+
+          const auto chunk = mutable_sorted_table->get_chunk(chunk_id);
+          const auto chunk_row_count = chunk->size();
+          const auto sort_chunk_size = static_cast<ChunkOffset>(std::ceil(1.0 * chunk_row_count / desired_chunk_count));
+
+          auto new_table = std::make_shared<Table>(mutable_sorted_table->column_definitions(), TableType::Data,
+                                  sort_chunk_size, UseMvcc::Yes);
+
+          // append single chunk to the table
+          auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+          Segments segments{};
+          for (auto column_id = ColumnID{0}; column_id < new_table->column_count(); ++column_id) {
+            segments.emplace_back(chunk->get_segment(column_id));
+          }
+          new_table->append_chunk(segments, mvcc_data);
+          new_table->last_chunk()->set_ordered_by(*(mutable_sorted_table->last_chunk()->ordered_by()));
+          // append single chunk end
+
+          auto sorted_table = _sort_table(new_table, column_name, sort_chunk_size);
+          _append_chunks(sorted_table, clustered_table);
+        }
+
+        mutable_sorted_table = clustered_table;
+        std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
+      }
+
+      table_info_by_name[table_name].table = mutable_sorted_table;
+      std::cout << "final table size of " << table_name << " is: " << mutable_sorted_table->row_count() << std::endl;
+
+      /*
+
 
       // if we cluster after 2 dimensions, first sort in 100k chunks, then cluster into the given chunksize
       // else directly sort into the given chunksize
@@ -167,8 +229,7 @@ void AbstractTableGenerator::generate_and_store() {
       } else {
         table_info_by_name[table_name].table = mutable_sorted_table;
       }
-
-
+      */
 
 
       /*

@@ -42,4 +42,8 @@ cmake-build-*
 default.profdata
 default.profraw
 
+tpch_cached_tables/
 tpcds_cached_tables/
+
+benchmark_runner/*
+benchmark_results/*

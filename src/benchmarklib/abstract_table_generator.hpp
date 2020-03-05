@@ -43,7 +43,7 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds sort_duration{};
   std::chrono::nanoseconds store_duration{};
   std::chrono::nanoseconds index_duration{};
-  std::map<std::string, std::vector<std::string>> sort_order_by_table;
+  std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> sort_order_by_table;
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
@@ -71,7 +71,7 @@ class AbstractTableGenerator {
 
   // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
   // (right side).
-  using SortOrderByTable = std::map<std::string, std::vector<std::string>>;
+  using SortOrderByTable = std::map<std::string, std::vector<std::pair<std::string, uint32_t>>>;
   virtual SortOrderByTable _sort_order_by_table() const;
 
   // Optionally, the benchmark may add constraints once the tables are generated / loaded from binary
