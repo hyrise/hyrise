@@ -78,7 +78,8 @@ def main():
 	console.sendline("insert into meta_tables values ('foo')")
 	console.expect("Invalid input error: Cannot insert into meta_tables")
 	console.sendline("insert into meta_plugins values ('" + build_dir + "/lib/libhyriseTestPlugin" + lib_suffix + "')")
-	console.expect("0 rows total")
+	console.sendline("select * from meta_plugins")
+	console.expect("hyriseTestPlugin")
 
 	# Test exit command
 	console.sendline("exit")
