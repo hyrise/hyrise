@@ -15,8 +15,8 @@ class SettingsManagerTest : public BaseTest {
 
   void TearDown() { Hyrise::reset(); }
 
-  void add_setting(const std::string& name, std::shared_ptr<AbstractSetting> setting) {
-    Hyrise::get().settings_manager.add(name, setting);
+  void add_setting(std::shared_ptr<AbstractSetting> setting) {
+    Hyrise::get().settings_manager.add(setting);
   }
 
   void remove_setting(const std::string& name) { Hyrise::get().settings_manager.remove(name); }
@@ -30,7 +30,7 @@ TEST_F(SettingsManagerTest, LoadUnloadSetting) {
 
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
 
-  add_setting(mock_setting->name, mock_setting);
+  add_setting(mock_setting);
   EXPECT_TRUE(settings_manager.has_setting("mock_setting"));
 
   auto stored_setting = settings_manager.get_setting("mock_setting");
@@ -49,9 +49,9 @@ TEST_F(SettingsManagerTest, LoadingSameName) {
 
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
 
-  add_setting("mock_setting", mock_setting);
+  add_setting(mock_setting);
 
-  EXPECT_THROW(add_setting("mock_setting", another_mock_setting), std::exception);
+  EXPECT_THROW(add_setting(another_mock_setting), std::exception);
 }
 
 TEST_F(SettingsManagerTest, UnloadNotLoadedSetting) {

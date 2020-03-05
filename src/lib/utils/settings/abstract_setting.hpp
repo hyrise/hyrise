@@ -35,7 +35,7 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
 
   virtual void unenroll();
 
-  const std::string& name;
+  const std::string name;
 };
 
 }  // namespace opossum

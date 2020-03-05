@@ -19,7 +19,7 @@ class SettingsManager : public Noncopyable {
   friend class Hyrise;
   friend class SettingsManagerTest;
 
-  void add(const std::string& name, std::shared_ptr<AbstractSetting> setting);
+  void add(std::shared_ptr<AbstractSetting> setting);
   void remove(const std::string name);
 
  private:
