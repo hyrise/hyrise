@@ -22,8 +22,8 @@ class TransactionContext;
  * For updates, it must have the same number of rows as the first table and contains the
  * data that is used to update the rows specified by the first table.
  *
- * This is not MVCC safe, so we do nothing on commit or rollback.
- * This is why throws an exception if not used in auto-commit queries.
+ * Modifying meta tables is not MVCC safe, so we do nothing on commit or rollback.
+ * This is why the operator throws an exception if not used in auto-commit queries.
  */
 class ChangeMetaTable : public AbstractReadWriteOperator {
  public:

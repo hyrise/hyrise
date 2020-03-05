@@ -16,8 +16,8 @@ class MetaPluginsTest : public BaseTest {
   void SetUp() {
     Hyrise::reset();
     meta_plugins_table = std::make_shared<MetaPluginsTable>();
-    auto& column_definitions = meta_plugins_table->column_definitions();
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    const auto column_definitions = meta_plugins_table->column_definitions();
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     table->append({pmr_string{build_dylib_path("libhyriseTestPlugin")}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();

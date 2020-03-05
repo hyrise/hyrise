@@ -15,8 +15,8 @@ class MetaSettingsTest : public BaseTest {
   void SetUp() {
     Hyrise::reset();
     meta_settings_table = std::make_shared<MetaSettingsTable>();
-    auto& column_definitions = meta_settings_table->column_definitions();
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    const auto column_definitions = meta_settings_table->column_definitions();
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     table->append({pmr_string{"mock_setting"}, pmr_string{"bar"}, pmr_string{"baz"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();

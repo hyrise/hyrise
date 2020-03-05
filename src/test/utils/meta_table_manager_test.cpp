@@ -48,8 +48,8 @@ class MetaTableManagerTest : public BaseTest {
   void SetUp() {
     Hyrise::reset();
 
-    auto& column_definitions = MetaMockTable().column_definitions();
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    const auto column_definitions = MetaMockTable().column_definitions();
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     table->append({pmr_string{"foo"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();

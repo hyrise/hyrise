@@ -70,8 +70,8 @@ class MetaTableTest : public BaseTest {
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
 
-    auto& column_definitions = MetaMockTable().column_definitions();
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    const auto column_definitions = MetaMockTable().column_definitions();
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     table->append({pmr_string{"foo"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();

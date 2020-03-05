@@ -64,8 +64,8 @@ void AbstractMetaTable::_validate_data_types(const std::vector<AllTypeVariant>& 
   Assert(values.size() == column_definitions().size(), "Number of values must match column definitions.");
 
   for (size_t column = 0; column < values.size(); column++) {
-    const auto& value_type = data_type_from_all_type_variant(values[column]);
-    const auto& column_type = column_definitions()[column].data_type;
+    const auto value_type = data_type_from_all_type_variant(values[column]);
+    const auto column_type = column_definitions()[column].data_type;
     Assert(value_type == column_type, "Data types must match column definitions.");
   }
 }
