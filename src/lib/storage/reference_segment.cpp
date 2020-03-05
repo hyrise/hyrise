@@ -30,7 +30,6 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  // TODO: Operator implementieren
   const auto row_id = (*_pos_list)[chunk_offset];
 
   if (row_id.is_null()) return NULL_VALUE;

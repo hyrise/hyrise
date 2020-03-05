@@ -43,7 +43,9 @@ class BaseSegmentIterator
  public:
   // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
   // we still want to use random access (for binary search, distance, ...)
-  typedef std::random_access_iterator_tag iterator_category;
+  /* typedef std::random_access_iterator_tag iterator_category; */
+  // this makes some tests segfault. We think it's due to some bad distance_to implementation, but we're not sure.
+  // It doesn't give a noticable performance boost, so leaving it out might also be fine?
 };
 
 /**
