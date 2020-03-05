@@ -19,9 +19,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
-    auto begin = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(), _segment.end_positions()->cbegin(), ChunkOffset{0}};
-    auto end = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(), _segment.end_positions()->cend(),
-                        static_cast<ChunkOffset>(_segment.size())};
+    auto begin = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
+                          _segment.end_positions()->cbegin(), ChunkOffset{0}};
+    auto end = Iterator{_segment.values(), _segment.null_values(), _segment.end_positions(),
+                        _segment.end_positions()->cend(), static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }
@@ -45,7 +46,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   /**
    * Run length segments store the end positions of runs in a sorted vector. To access a particular position, this vector
    * has to be searched for the end position of the according run.
-   If we previously visited a nearby position, we do not
+   TODO(martin): If we previously visited a nearby position, we do not
    * have to execute a full binary search but can linearly search up to the desired position.
    *
    * determine_linear_search_threshold() estimates the threshold of when to use a linear or a binary search. Given the
@@ -89,17 +90,17 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
      *     than the estimated threshold, use a binary search from the previous offset up to the end.
      */
     if (step_size < 0) {
-      run_end_position_it = std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index,
-                                             current_chunk_offset);
+      run_end_position_it = std::lower_bound(
+          end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index, current_chunk_offset);
     } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
       const auto less_than_current = [current = current_chunk_offset](const ChunkOffset offset) {
         return offset < current;
       };
-      run_end_position_it = std::find_if_not(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
-                                             less_than_current);
+      run_end_position_it = std::find_if_not(end_positions->cbegin() + previous_end_position_index,
+                                             end_positions->cend(), less_than_current);
     } else {
-      run_end_position_it = std::lower_bound(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
-                                             current_chunk_offset);
+      run_end_position_it = std::lower_bound(end_positions->cbegin() + previous_end_position_index,
+                                             end_positions->cend(), current_chunk_offset);
     }
 
     return run_end_position_it;
@@ -116,8 +117,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     explicit Iterator(const std::shared_ptr<const pmr_vector<T>>& values,
                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
-                      EndPositionIterator end_positions_it,
-                      ChunkOffset chunk_offset)
+                      EndPositionIterator end_positions_it, ChunkOffset chunk_offset)
         : _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
@@ -134,12 +134,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     void increment() {
       ++_chunk_offset;
       if (_chunk_offset > *_end_positions_it) {
-        // std::cout << _chunk_offset << " is larger than " << *_end_positions_it << " ===== ";
-        // for (const auto el : *_end_positions) std::cout << el << " - ";
-        // std::cout << std::endl;
         ++_end_positions_it;
-        // std::cout << "distance " << std::distance(_end_positions->cbegin(), _end_positions_it) << " and values size " << _values->size() << " and nulls " << _null_values->size() << std::endl;
-        // DebugAssert(std::distance(_end_positions->cbegin(), _end_positions_it) < static_cast<int64_t>(_values->size()), "What?1");
       }
     }
 
@@ -156,8 +151,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       const auto previous_chunk_offset = _chunk_offset;
       _chunk_offset += n;
       _end_positions_it = search_run_end_position_for_chunk_offset(
-           previous_chunk_offset, _chunk_offset, std::distance(_end_positions->cbegin(), _end_positions_it),
-           _linear_search_threshold, _end_positions);
+          previous_chunk_offset, _chunk_offset, std::distance(_end_positions->cbegin(), _end_positions_it),
+          _linear_search_threshold, _end_positions);
     }
 
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
@@ -180,7 +175,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     EndPositionIterator _end_positions_it;
     EndPositionIterator _end_position_begin_it;
 
-
     // Threshold of when to start using a binary search for the next chunk offset instead of a linear search.
     ChunkOffset _linear_search_threshold;
 
@@ -191,7 +185,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   };
 
   /**
-   * TODO(Martin): move up! // TODO
+   * TODO(Martin): move up!
    * Due to the nature of the encoding, point-access is not in O(1).
    * However, because we store the last position of runs (i.e. a sorted list)
    * instead of the run length, it is possible to find the value of a position
@@ -233,7 +227,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
 
       const auto end_positions_it = search_run_end_position_for_chunk_offset(
-           _prev_chunk_offset, current_chunk_offset, _prev_index, _linear_search_threshold, _end_positions);
+          _prev_chunk_offset, current_chunk_offset, _prev_index, _linear_search_threshold, _end_positions);
       const auto target_distance_from_begin = std::distance(_end_positions->cbegin(), end_positions_it);
 
       _prev_chunk_offset = current_chunk_offset;
