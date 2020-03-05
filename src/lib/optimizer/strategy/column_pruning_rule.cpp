@@ -313,7 +313,8 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
-  required_expressions_by_node[lqp].insert(lqp->column_expressions().begin(), lqp->column_expressions().end());
+  const auto column_expressions = lqp->column_expressions();
+  required_expressions_by_node[lqp].insert(column_expressions.cbegin(), column_expressions.cend());
 
   // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss

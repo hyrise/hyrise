@@ -605,7 +605,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
              "There have to be as many identifier lists as column expressions");
       for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size();
            ++select_list_element_idx) {
-        const auto& subquery_expression = lqp->column_expressions()[select_list_element_idx];
+        const auto subquery_expression = lqp->column_expressions()[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -1317,8 +1317,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   // If all requested expressions are available, no need to create a projection
   if (projection_expressions.empty()) return node;
 
-  projection_expressions.insert(projection_expressions.end(), node->column_expressions().begin(),
-                                node->column_expressions().end());
+  const auto column_expressions = node->column_expressions();
+  projection_expressions.insert(projection_expressions.end(), column_expressions.cbegin(), column_expressions.cend());
 
   return ProjectionNode::make(projection_expressions, node);
 }
