@@ -1,6 +1,11 @@
 #include "segment_meta_data.hpp"
 
 #include "hyrise.hpp"
+#include "resolve_type.hpp"
+#include "storage/base_encoded_segment.hpp"
+#include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 
 namespace opossum {
 
