@@ -22,12 +22,12 @@ class MetaSettingsTest : public BaseTest {
     table_wrapper->execute();
     mock_manipulation_values = table_wrapper->get_output();
     mock_setting = std::make_shared<MockSetting>("mock_setting");
-    mock_setting->enroll();
+    mock_setting->register_at_settings_manager();
   }
 
   void TearDown() { Hyrise::reset(); }
 
-  const std::shared_ptr<Table> generateTable(const std::shared_ptr<AbstractMetaTable>& table) const {
+  const std::shared_ptr<Table> generateMetaTable(const std::shared_ptr<AbstractMetaTable>& table) const {
     return table->_generate();
   }
 
@@ -52,7 +52,7 @@ TEST_F(MetaSettingsTest, TableGeneration) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
 
-  const auto meta_table = generateTable(meta_settings_table);
+  const auto meta_table = generateMetaTable(meta_settings_table);
   EXPECT_TABLE_EQ_UNORDERED(meta_table, table_wrapper->get_output());
 }
 
@@ -67,7 +67,7 @@ TEST_F(MetaSettingsTest, Update) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
   table_wrapper->execute();
 
-  const auto meta_table = generateTable(meta_settings_table);
+  const auto meta_table = generateMetaTable(meta_settings_table);
 
   EXPECT_EQ(mock_setting->set_calls(), 1);
   EXPECT_TABLE_EQ_UNORDERED(meta_table, table_wrapper->get_output());

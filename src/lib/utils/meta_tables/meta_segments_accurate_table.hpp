@@ -7,7 +7,7 @@ namespace opossum {
 /**
  * This is a class for showing information of all stored segments via a meta table.
  * Here, we provide the distinct value count per segment.
- * It is which is expensive to get, as we need to interate over all stored segments.
+ * It is which is expensive to get, as we need to interate over the values of all stored segments.
  * For faster results without that information use MetaSegmentsTable.
  */
 class MetaSegmentsAccurateTable : public AbstractMetaTable {

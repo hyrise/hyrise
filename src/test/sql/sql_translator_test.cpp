@@ -2005,7 +2005,7 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, DeleteMetaTable) {
+TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
 
   const auto select_node = StoredTableNode::make("meta_plugins");

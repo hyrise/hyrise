@@ -14,9 +14,9 @@ namespace opossum {
  * Not all of these operations are allowed for all meta tables. Therefore, they also provide methods
  * that indicate whether the particular operation is allowed, e.g., can_insert().
  *
- * Modifications of a meta table's values ususally trigger some actions, like loading plugins.
+ * Modifications of a meta table's values usually trigger some actions, like loading plugins.
  *
- * Meta tables should be declared as members in the MetaTableManager constructor body.
+ * Meta tables should be added in the MetaTableManager constructor body.
  */
 class AbstractMetaTable : public Noncopyable {
  public:

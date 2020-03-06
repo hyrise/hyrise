@@ -18,15 +18,10 @@ class SettingTest : public BaseTest {
 
 TEST_F(SettingTest, RegistrationAtSettingsManager) {
   auto& settings_manager = Hyrise::get().settings_manager;
-
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
-
-  mock_setting->enroll();
-
+  mock_setting->register_at_settings_manager();
   EXPECT_TRUE(settings_manager.has_setting("mock_setting"));
-
-  mock_setting->unenroll();
-
+  mock_setting->unregister();
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
 }
 

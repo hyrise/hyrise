@@ -9,8 +9,9 @@
 namespace opossum {
 
 /**
- * This component is the central point for accessing all Setting objects.
- * Settings register here, so any component can get or change their values.
+ * The SettingsManager is the central point for accessing all Setting objects.
+ * Settings registered here can be changed from everywhere.
+ * Users change settings through the settings meta table
  */
 class SettingsManager : public Noncopyable {
  public:
