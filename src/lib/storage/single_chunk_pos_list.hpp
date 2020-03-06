@@ -22,11 +22,6 @@ class SingleChunkPosList final : public AbstractPosList {
     return sizeof(this) + size() * sizeof(ChunkOffset);
   };
 
-  // TODO
-  virtual bool operator==(const AbstractPosList* other) const override final {
-    return false;
-  }
-
   virtual bool references_single_chunk() const override final {
     return true;
   }
@@ -41,7 +36,7 @@ class SingleChunkPosList final : public AbstractPosList {
 
   std::vector<ChunkOffset>& get_offsets() {
       return _offsets;
-    }
+  }
 
   PosListIterator<const SingleChunkPosList*, RowID> begin() const {
     return PosListIterator<const SingleChunkPosList*, RowID>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
