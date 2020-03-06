@@ -13,6 +13,7 @@ namespace opossum {
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
