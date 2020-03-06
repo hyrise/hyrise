@@ -186,7 +186,6 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    public:
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
-    using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
     explicit PointAccessIterator(const std::shared_ptr<const pmr_vector<T>>& values,
                                  const std::shared_ptr<const pmr_vector<bool>>& null_values,
