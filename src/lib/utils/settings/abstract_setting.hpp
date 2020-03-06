@@ -32,7 +32,7 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
 
   virtual void register_at_settings_manager();
 
-  virtual void unregister();
+  virtual void unregister_at_settings_manager();
 
   const std::string name;
 };

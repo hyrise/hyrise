@@ -21,7 +21,7 @@ TEST_F(SettingTest, RegistrationAtSettingsManager) {
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
   mock_setting->register_at_settings_manager();
   EXPECT_TRUE(settings_manager.has_setting("mock_setting"));
-  mock_setting->unregister();
+  mock_setting->unregister_at_settings_manager();
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
 }
 

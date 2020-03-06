@@ -45,7 +45,7 @@ class MetaTableTest : public BaseTest {
     return names;
   }
 
-  const std::shared_ptr<Table> generateMetaTable(const std::shared_ptr<AbstractMetaTable>& table) const {
+  const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
     return table->_generate();
   }
 
@@ -104,7 +104,7 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
 
 TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
-  const auto meta_table = generateMetaTable(GetParam());
+  const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
@@ -120,7 +120,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
       ->set_ordered_by({ColumnID{1}, OrderByMode::Ascending});
 
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
-  const auto meta_table = generateMetaTable(GetParam());
+  const auto meta_table = generate_meta_table(GetParam());
 
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
