@@ -1,10 +1,10 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "statistics/statistics_objects/histogram_domain.hpp"
 
 namespace opossum {
 
-class StringHistogramDomainTest : public ::testing::Test {
+class StringHistogramDomainTest : public BaseTest {
  public:
   StringHistogramDomain domain_a{'a', 'z', 4u};
 };

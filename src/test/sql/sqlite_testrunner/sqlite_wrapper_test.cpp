@@ -1,14 +1,13 @@
 #include <optional>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
 namespace opossum {
 
-class SQLiteWrapperTest : public ::testing::Test {
+class SQLiteWrapperTest : public BaseTest {
  public:
   void SetUp() override { sqlite_wrapper.emplace(); }
 
@@ -32,9 +31,9 @@ TEST_F(SQLiteWrapperTest, CreateTableWithSpecialCharsInText) {
 
   const auto expected_table = load_table("resources/test_data/tbl/string_string_special_chars.tbl");
 
-  sqlite_wrapper->create_sqlite_table(*expected_table, "t");
+  sqlite_wrapper->create_sqlite_table(*expected_table, "t2");
 
-  const auto actual_table = sqlite_wrapper->main_connection.execute_query("SELECT * FROM t");
+  const auto actual_table = sqlite_wrapper->main_connection.execute_query("SELECT * FROM t2");
 
   EXPECT_TABLE_EQ(actual_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Lenient,
                   FloatComparisonMode::AbsoluteDifference);

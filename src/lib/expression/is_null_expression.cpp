@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-IsNullExpression::IsNullExpression(const PredicateCondition predicate_condition,
+IsNullExpression::IsNullExpression(const PredicateCondition init_predicate_condition,
                                    const std::shared_ptr<AbstractExpression>& operand)
-    : AbstractPredicateExpression(predicate_condition, {operand}) {
+    : AbstractPredicateExpression(init_predicate_condition, {operand}) {
   Assert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
          "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull");
 }

@@ -4,6 +4,7 @@
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -109,10 +110,7 @@ void BTreeIndexImpl<DataType>::_add_to_heap_memory_usage(const DataType&) {
 template <>
 void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& value) {
   // Track only strings that are longer than the reserved stack space for short string optimization (SSO)
-  static const auto short_string_threshold = pmr_string("").capacity();
-  if (value.size() > short_string_threshold) {
-    _heap_bytes_used += value.size();
-  }
+  _heap_bytes_used += string_heap_size(value);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(BTreeIndexImpl);

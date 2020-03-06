@@ -12,7 +12,6 @@ def main():
   arguments = {}
   arguments["--scale"] = "2"
   arguments["--time"] = "30"
-  arguments["--runs"] = "100"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCC", True)
@@ -30,15 +29,14 @@ def main():
   arguments = {}
   arguments["--scale"] = "1"
   arguments["--time"] = "60"
-  arguments["--runs"] = "100"
   arguments["--consistency_checks"] = "true"
   arguments["--scheduler"] = "true"
-  arguments["--clients"] = "5"
+  arguments["--clients"] = "10"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCC", True)
 
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
-  benchmark.expect_exact("5 simulated clients are scheduling items in parallel")
+  benchmark.expect_exact("10 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("TPC-C scale factor (number of warehouses) is 1")
   benchmark.expect_exact("Results for Delivery")

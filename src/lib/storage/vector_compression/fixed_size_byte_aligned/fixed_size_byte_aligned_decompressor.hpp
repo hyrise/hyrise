@@ -10,7 +10,11 @@ template <typename UnsignedIntType>
 class FixedSizeByteAlignedDecompressor : public BaseVectorDecompressor {
  public:
   explicit FixedSizeByteAlignedDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
-  ~FixedSizeByteAlignedDecompressor() final = default;
+  FixedSizeByteAlignedDecompressor(const FixedSizeByteAlignedDecompressor&) = default;
+  FixedSizeByteAlignedDecompressor(FixedSizeByteAlignedDecompressor&&) = default;
+
+  FixedSizeByteAlignedDecompressor& operator=(const FixedSizeByteAlignedDecompressor& other) { return *this; }
+  FixedSizeByteAlignedDecompressor& operator=(FixedSizeByteAlignedDecompressor&& other) = default;
 
   uint32_t get(size_t i) final { return _data[i]; }
   size_t size() const final { return _data.size(); }

@@ -30,10 +30,10 @@ class Table : private Noncopyable {
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
   // We want a common interface for tables that contain data (TableType::Data) and tables that contain reference
-  // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
+  // segments (TableType::References). The attribute target_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        const std::optional<ChunkOffset> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+        const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
@@ -65,8 +65,8 @@ class Table : private Noncopyable {
 
   UseMvcc uses_mvcc() const;
 
-  // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
-  ChunkOffset max_chunk_size() const;
+  // For data tables, returns the target chunk size (i.e., the number of rows pre-allocated in the ValueSegment).
+  ChunkOffset target_chunk_size() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -203,13 +203,13 @@ class Table : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
  protected:
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
-  const ChunkOffset _max_chunk_size;
+  const ChunkOffset _target_chunk_size;
 
   /**
    * To prevent data races for TableType::Data tables, we must access _chunks atomically.

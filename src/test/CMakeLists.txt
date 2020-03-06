@@ -1,5 +1,6 @@
 set(
     SHARED_SOURCES
+    base_test.cpp
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
@@ -48,6 +49,7 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/export_node_test.cpp
     logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
@@ -66,6 +68,7 @@ set(
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
+    memory/segments_using_allocators_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
@@ -178,6 +181,7 @@ set(
     storage/multi_segment_index_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
+    storage/segment_access_counter_test.cpp
     storage/segment_accessor_test.cpp
     storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
@@ -202,6 +206,7 @@ set(
     utils/plugin_test_utils.hpp
     utils/column_ids_after_pruning_test.cpp
     utils/singleton_test.cpp
+    utils/size_estimation_utils_test.cpp
     utils/string_utils_test.cpp
 )
 
@@ -245,10 +250,22 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
-target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
+endif()
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    target_precompile_headers(hyriseTest PRIVATE
+        <gtest/gtest.h>
+        [["all_parameter_variant.hpp"]]
+        [["storage/create_iterable_from_segment.hpp"]]
+        [["storage/table.hpp"]]
+        [["types.hpp"]]
+    )
+endif()
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest nlohmann_json::nlohmann_json pqxx_static)
+target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries_system(hyriseSystemTest pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

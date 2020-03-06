@@ -30,6 +30,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   //  Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   //}
 
+  // Create table statistics and chunk pruning statistics for added table.
   table->set_table_statistics(TableStatistics::from_table(*table));
   generate_chunk_pruning_statistics(table);
   _tables.emplace(name, std::move(table));

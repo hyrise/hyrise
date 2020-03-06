@@ -31,8 +31,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_concurrent_vector<T> result(values.size());
+pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
+  pmr_vector<T> result(values.size());
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
@@ -50,30 +50,17 @@ namespace opossum {
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
-  auto table =
-      generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                     {num_columns, {DataType::Int}}, num_rows, chunk_size,
-                     std::vector<SegmentEncodingSpec>(num_columns, segment_encoding_spec), std::nullopt, UseMvcc::No);
+  ColumnSpecification column_specification = {
+      {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}, DataType::Int, segment_encoding_spec};
+  auto table = generate_table({num_columns, column_specification}, num_rows, chunk_size, UseMvcc::No);
 
   return table;
 }
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
-    const std::vector<ColumnDataDistribution>& column_data_distributions,
-    const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::optional<ChunkEncodingSpec>& segment_encoding_specs,
-    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
-  Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
-  Assert(column_data_distributions.size() == column_data_types.size(),
-         "Length of value distributions needs to equal length of column data types.");
-  if (column_names) {
-    Assert(column_data_distributions.size() == column_names->size(),
-           "When set, the number of column names needs to equal number of value distributions.");
-  }
-  if (segment_encoding_specs) {
-    Assert(column_data_distributions.size() == segment_encoding_specs->size(),
-           "Length of value distributions needs to equal length of column encodings.");
-  }
+    const std::vector<ColumnSpecification>& column_specifications, const size_t num_rows, const ChunkOffset chunk_size,
+    const UseMvcc use_mvcc) {
+  Assert(chunk_size != 0ul, "Cannot generate table with chunk size 0.");
 
   // To speed up the table generation, the node scheduler is used. To not interfere with any settings for the actual
   // Hyrise process (e.g., the test runner or the calibration), the current scheduler is stored, replaced, and
@@ -82,15 +69,16 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   const auto previous_scheduler = Hyrise::get().scheduler();
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  const auto num_columns = column_data_distributions.size();
+  const auto num_columns = column_specifications.size();
   const auto num_chunks =
       static_cast<size_t>(std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size)));
 
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    const auto column_name = column_names ? (*column_names)[column_id] : "column_" + std::to_string(column_id + 1);
-    column_definitions.emplace_back(column_name, column_data_types[column_id], false);
+    const auto column_name = column_specifications[column_id].name ? column_specifications[column_id].name.value()
+                                                                   : "column_" + std::to_string(column_id + 1);
+    column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
@@ -102,12 +90,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {
-        resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
+        resolve_data_type(column_specifications[column_index].data_type, [&](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
           std::vector<int> values;
           values.reserve(chunk_size);
-          const auto& column_data_distribution = column_data_distributions[column_index];
+          const auto& column_data_distribution = column_specifications[column_index].data_distribution;
 
           std::random_device random_device;
           auto pseudorandom_engine = std::mt19937{};
@@ -149,6 +137,23 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             }
           }
 
+          pmr_vector<bool> null_values;
+
+          /**
+           * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
+           * constructor in a regular interval based on the null_ratio with true.
+           */
+          if (column_specifications[column_index].null_ratio) {
+            null_values.resize(chunk_size, false);
+
+            const double step_size = 1.0 / column_specifications[column_index].null_ratio.value();
+            double current_row_offset = 0.0;
+            while (current_row_offset < chunk_size) {
+              null_values[static_cast<size_t>(std::round(current_row_offset))] = true;
+              current_row_offset += step_size;
+            }
+          }
+
           /**
           * Generate values according to distribution. We first add the given min and max values of that column to avoid
           * early exists via dictionary pruning (no matter which values are later searched, the local segment
@@ -164,14 +169,21 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             values.push_back(generate_value_by_distribution_type());
           }
 
-          auto value_segment =
-              std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
+          std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
+          if (column_specifications[column_index].null_ratio) {
+            value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
+                create_typed_segment_values<ColumnDataType>(values), std::move(null_values));
+          } else {
+            value_segment =
+                std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
+          }
 
-          if (!segment_encoding_specs) {
+          if (!column_specifications[column_index].segment_encoding_spec) {
             segments[column_index] = value_segment;
           } else {
-            segments[column_index] = ChunkEncoder::encode_segment(value_segment, column_data_types[column_index],
-                                                                  segment_encoding_specs->at(column_index));
+            segments[column_index] =
+                ChunkEncoder::encode_segment(value_segment, column_specifications[column_index].data_type,
+                                             column_specifications[column_index].segment_encoding_spec.value());
           }
         });
       }));
@@ -189,9 +201,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     // get added chunk, mark it as immutable and add statistics
     const auto& added_chunk = table->last_chunk();
     added_chunk->finalize();
-    if (!added_chunk->pruning_statistics()) {
-      generate_chunk_pruning_statistics(added_chunk);
-    }
+    generate_chunk_pruning_statistics(added_chunk);
   }
 
   Hyrise::get().scheduler()->wait_for_all_tasks();

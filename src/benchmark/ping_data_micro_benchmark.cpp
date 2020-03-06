@@ -177,7 +177,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
               const auto& chunk = new_table->get_chunk(chunk_id);
               const auto& segment = chunk->get_segment(column_id);
 
-              segment_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << segment->estimate_memory_usage() << "\n";
+              segment_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << segment->memory_usage(MemoryUsageCalculationMode::Full) << "\n";
             }
           }
 

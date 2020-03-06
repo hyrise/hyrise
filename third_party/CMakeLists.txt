@@ -4,6 +4,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()
 
+# Multiple third-party libraries are not written with unity builds in minds, so we disable
+# unity builds for this folder, even if the user manually activated it.
+set(CMAKE_UNITY_BUILD "OFF")
+
 # Build google benchmark
 add_library(
     benchmark

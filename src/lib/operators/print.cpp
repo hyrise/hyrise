@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/lexical_cast.hpp>
+
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/base_encoded_segment.hpp"
@@ -123,11 +125,11 @@ std::shared_ptr<const Table> Print::_on_execute() {
       }
 
       if (has_print_mvcc_flag(_flags) && chunk->has_mvcc_data()) {
-        auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+        auto mvcc_data = chunk->mvcc_data();
 
-        auto begin = mvcc_data->begin_cids[chunk_offset];
-        auto end = mvcc_data->end_cids[chunk_offset];
-        auto tid = mvcc_data->tids[chunk_offset];
+        auto begin = mvcc_data->get_begin_cid(chunk_offset);
+        auto end = mvcc_data->get_end_cid(chunk_offset);
+        auto tid = mvcc_data->get_tid(chunk_offset);
 
         auto begin_string = begin == MvccData::MAX_COMMIT_ID ? "" : std::to_string(begin);
         auto end_string = end == MvccData::MAX_COMMIT_ID ? "" : std::to_string(end);
