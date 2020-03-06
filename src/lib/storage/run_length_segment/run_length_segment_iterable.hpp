@@ -57,7 +57,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    */
 
   // LINEAR_SEARCH_ELEMENTS_THRESHOLD denotes the size of the range for that a linear search is faster than using a
-  // binary search on a sorted vector. The value of 200 has been found by a set of simple TPC-H measurements (see #2038).
+  // binary search on a sorted vector. The value of 200 has been found by a set of simple TPC-H measurements (#2038).
   static constexpr auto LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD = 200.0f;
 
   // This methods estimates the threshold up to which is linear search is faster. Since the end position vector is
