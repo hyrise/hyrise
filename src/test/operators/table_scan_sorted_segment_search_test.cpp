@@ -30,6 +30,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     TestData test_data;
     std::tie(test_data, _order_by, nullable) = GetParam();
     _predicate_condition = test_data.predicate_condition;
+    _nullable = nullable;
     _search_value = test_data.search_value;
     _expected = test_data.expected;
 
@@ -40,9 +41,9 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
       std::reverse(_expected.begin(), _expected.end());
     }
 
-    _segment = std::make_unique<ValueSegment<int32_t>>(nullable);
+    _segment = std::make_unique<ValueSegment<int32_t>>(_nullable);
 
-    if (nullable && nulls_first) {
+    if (_nullable && nulls_first) {
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
@@ -54,7 +55,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
       _segment->append(ascending ? row : table_size - row - 1);
     }
 
-    if (nullable && !nulls_first) {
+    if (_nullable && !nulls_first) {
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
@@ -63,6 +64,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
 
   std::unique_ptr<ValueSegment<int32_t>> _segment;
   PredicateCondition _predicate_condition;
+  bool _nullable;
   int32_t _search_value;
   std::vector<int32_t> _expected;
   OrderByMode _order_by;
@@ -125,7 +127,7 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   const auto iterable = create_iterable_from_segment(*_segment);
   iterable.with_iterators([&](auto input_begin, auto input_end) {
     auto sorted_segment_search =
-        SortedSegmentSearch(input_begin, input_end, _order_by, _predicate_condition, _search_value);
+        SortedSegmentSearch(input_begin, input_end, _order_by, _nullable, _predicate_condition, _search_value);
     sorted_segment_search.scan_sorted_segment([&](auto output_begin, auto output_end) {
       ASSERT_EQ(std::distance(output_begin, output_end), _expected.size());
 
