@@ -162,7 +162,7 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
                              const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                              const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
                              const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
-                             const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables)
+                             const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator),

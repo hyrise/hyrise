@@ -114,7 +114,7 @@ class SQLTranslator final {
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
                 const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
-                const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables);
+                const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
