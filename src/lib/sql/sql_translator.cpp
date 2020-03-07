@@ -34,6 +34,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -316,11 +317,19 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
-  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
-  AssertInput(Hyrise::get().storage_manager.has_table(table_name),
-              std::string{"Did not find a table with name "} + table_name);
 
-  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  std::shared_ptr<Table> target_table;
+  if (is_meta_table) {
+    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
+    target_table = Hyrise::get().meta_table_manager.generate_table(table_name);
+  } else {
+    AssertInput(Hyrise::get().storage_manager.has_table(table_name),
+                std::string{"Did not find a table with name "} + table_name);
+    target_table = Hyrise::get().storage_manager.get_table(table_name);
+  }
+
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto insert_data_projection_required = false;
@@ -412,18 +421,31 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   AssertInput(insert_data_node->column_expressions().size() == static_cast<size_t>(target_table->column_count()),
               "INSERT: Column count mismatch");
 
+  if (is_meta_table) {
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Insert, DummyTableNode::make(), insert_data_node);
+  }
+
   /**
    * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
    */
-
   return InsertNode::make(table_name, insert_data_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
-  const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
-  auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
+  const auto table_name = std::string{delete_statement.tableName};
 
-  AssertInput(!MetaTableManager::is_meta_table_name(delete_statement.tableName), "Cannot modify meta tables");
+  const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  std::shared_ptr<AbstractLQPNode> data_to_delete_node;
+
+  if (is_meta_table) {
+    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
+    data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
+  } else {
+    data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
+  }
+
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
@@ -431,6 +453,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
     data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
   }
 
+  if (is_meta_table) {
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Delete, data_to_delete_node,
+                                     DummyTableNode::make());
+  }
   return DeleteNode::make(data_to_delete_node);
 }
 
@@ -438,9 +464,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
 
   const auto table_name = std::string{update.table->name};
-  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
 
   auto translation_state = _translate_table_ref(*update.table);
+
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  std::shared_ptr<Table> target_table;
+  if (is_meta_table) {
+    AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
+    target_table = Hyrise::get().meta_table_manager.generate_table(table_name);
+  } else {
+    AssertInput(Hyrise::get().storage_manager.has_table(table_name),
+                std::string{"Did not find a table with name "} + table_name);
+    target_table = Hyrise::get().storage_manager.get_table(table_name);
+  }
 
   // The LQP that selects the fields to update
   auto selection_lqp = translation_state.lqp;
@@ -467,7 +504,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   }
 
   // Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
-  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
@@ -480,6 +516,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   // LQP that computes the updated values
   const auto updated_values_lqp = ProjectionNode::make(update_expressions, selection_lqp);
 
+  if (is_meta_table) {
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Update, selection_lqp, updated_values_lqp);
+  }
   return UpdateNode::make(table_name, selection_lqp, updated_values_lqp);
 }
 
@@ -584,7 +623,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
              "There have to be as many identifier lists as column expressions");
       for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size();
            ++select_list_element_idx) {
-        const auto& subquery_expression = lqp->column_expressions()[select_list_element_idx];
+        const auto subquery_expression = lqp->column_expressions()[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -684,6 +723,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   }
 
   const auto static_table_node = StaticTableNode::make(meta_table, false);
+  const auto validated_static_table_node = _validate_if_active(static_table_node);
 
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
@@ -694,7 +734,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
 
-  return static_table_node;
+  return validated_static_table_node;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition& join) {
@@ -1336,8 +1376,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   // If all requested expressions are available, no need to create a projection
   if (projection_expressions.empty()) return node;
 
-  projection_expressions.insert(projection_expressions.end(), node->column_expressions().begin(),
-                                node->column_expressions().end());
+  const auto column_expressions = node->column_expressions();
+  projection_expressions.insert(projection_expressions.end(), column_expressions.cbegin(), column_expressions.cend());
 
   return ProjectionNode::make(projection_expressions, node);
 }

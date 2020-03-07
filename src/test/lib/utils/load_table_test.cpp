@@ -28,4 +28,8 @@ TEST_F(LoadTableTest, AllChunksFinalized) {
   }
 }
 
+TEST_F(LoadTableTest, WindowsEncoding) {
+  EXPECT_THROW(load_table("resources/test_data/tbl/float_int_crlf.tbl", 2), std::exception);
+}
+
 }  // namespace opossum
