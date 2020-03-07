@@ -204,7 +204,7 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;
   // The current LQP might not be cacheable if it involves a meta table
-  bool _cacheable;
+  bool _cacheable{true};
   std::shared_ptr<SQLIdentifierResolver> _sql_identifier_resolver;
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
