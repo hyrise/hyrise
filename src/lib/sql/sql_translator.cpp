@@ -132,10 +132,10 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 
 namespace opossum {
 
-SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
-                             const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables)
+SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}, meta_tables) {}
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{},
+                    std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>()) {}
 
 SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParserResult& result) {
   _cacheable = true;
@@ -158,16 +158,21 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
   return {result_nodes, {_cacheable, parameter_ids}};
 }
 
-SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
-                             const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                             const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
-                             const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
+SQLTranslator::SQLTranslator(
+    const UseMvcc use_mvcc, const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
+    const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+    const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
+    const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator),
       _with_descriptions(with_descriptions),
       _meta_tables(meta_tables) {}
+
+SQLTranslator::SQLTranslator(
+    const UseMvcc use_mvcc, const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}, meta_tables) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
@@ -679,7 +684,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   }
 
   const auto static_table_node = StaticTableNode::make(meta_table, false);
-  const auto validated_static_table_node = _validate_if_active(static_table_node);
 
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
@@ -690,7 +694,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
 
-  return validated_static_table_node;
+  return static_table_node;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition& join) {

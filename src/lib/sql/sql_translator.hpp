@@ -20,11 +20,21 @@ namespace opossum {
 class AggregateNode;
 class LQPSubqueryExpression;
 
+/**
+ * Holds information about the query translation such as:
+ * cacheable :                            indicates if the resulting LQP can be cached
+ * parameter_ids_of_value_placeholders :  the parameter ids of value placeholders
+*/
 struct TranslationInfo {
   bool cacheable{true};
   std::vector<ParameterID> parameter_ids_of_value_placeholders{};
 };
 
+/**
+ * Return value of translate_parser_result().
+ * lqp_node :          the actual LQP
+ * translation_info :  meta info struct
+*/
 struct SQLTranslationResult {
   std::vector<std::shared_ptr<AbstractLQPNode>> lqp_nodes;
   TranslationInfo translation_info;
@@ -43,9 +53,7 @@ class SQLTranslator final {
   /**
    * @param use_mvcc  Whether ValidateNodes should be compiled into the plan
    */
-  explicit SQLTranslator(const UseMvcc use_mvcc,
-                         std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>> meta_tables =
-                             std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>());
+  explicit SQLTranslator(const UseMvcc use_mvcc);
 
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
@@ -109,11 +117,22 @@ class SQLTranslator final {
    *                                                for each encountered parameter
    * @param with_descriptions                       Contains a mapping of LQPs and associated WITH aliases, which
    *                                                already got evaluated
+   * @param _meta_tables                            Contains a map of meta table names to meta tables that have already
+   *                                                been loaded by other subqueries
    */
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
                 const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
+                const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables);
+
+  /**
+  * Internal constructor to create an SQLTranslator with empty context used for Subqueries
+  * @param use_mvcc     Whether ValidateNodes should be compiled into the plan
+  * @param meta_tables  Contains a map of meta table names to meta tables that have already
+  *                     been loaded by other subqueries
+  */
+  SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
@@ -185,7 +204,7 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;
   // The current LQP might not be cacheable if it involves a meta table
-  bool _cacheable{true};
+  bool _cacheable;
   std::shared_ptr<SQLIdentifierResolver> _sql_identifier_resolver;
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
