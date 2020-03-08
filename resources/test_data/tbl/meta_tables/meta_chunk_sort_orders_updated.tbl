@@ -1,0 +1,3 @@
+table_name|chunk_id|column_id|order_mode
+string|int|int|string
+int_int|0|1|AscendingNullsFirst

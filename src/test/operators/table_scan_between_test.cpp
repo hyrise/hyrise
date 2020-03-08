@@ -78,6 +78,12 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
       }
     });
 
+    if (ordered_by_mode) {
+      for (ChunkID chunk_id{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
+        data_table->get_chunk(chunk_id)->set_ordered_by(std::make_pair(ColumnID{0}, *ordered_by_mode));
+      }
+    }
+
     data_table->last_chunk()->finalize();
 
     if (ordered_by_mode) {

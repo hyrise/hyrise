@@ -1,0 +1,9 @@
+# This file is a blacklist for the undefined behavior sanitizer (ubsan). It is not a suppression file (*-ignore.txt).
+# The difference is that this file is read at compile-time while the suppression files are read at runtime.
+# We cannot use a suppression because UBsan requires -fsanitize-recover to be set for these to work. That flag, in turn
+# prevents the exit code from being set, and, as a result the CI from failing if UBsan finds undefined behavior.
+
+[undefined]
+# The hash map seems to reinterpret memory addresses in some semi-legal (but working) way. Example:
+# ska::bytell_hash_map<int, int> h; h.emplace(11, 11); std::cout << h[11] << std::endl;
+src:*bytell_hash_map.hpp

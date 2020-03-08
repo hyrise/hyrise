@@ -65,9 +65,10 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   table = std::make_shared<Table>(table_column_definitions, TableType::Data);
   auto chunk_values = value_generator(table_size);
 
+  std::random_device random_device;
+  std::mt19937 generator(random_device());
+
   if (mode == "Shuffled") {
-    std::random_device random_device;
-    std::mt19937 generator(random_device());
     std::shuffle(chunk_values.begin(), chunk_values.end(), generator);
   }
 
@@ -81,10 +82,9 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
     pmr_vector<bool> null_values(value_vector.size(), false);
     // setting 10% of the values NULL
-    std::fill(null_values.begin(), null_values.begin() + static_cast<int>(std::round(value_vector.size() * 0.1)), true);
+    auto null_elements = static_cast<int>(std::round(value_vector.size() * 0.1));
+    std::fill(null_values.begin(), null_values.begin() + null_elements, true);
     if (mode == "Shuffled") {
-      std::random_device random_device;
-      std::mt19937 generator(random_device());
       std::shuffle(null_values.begin(), null_values.end(), generator);
     }
 
@@ -105,6 +105,14 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
     if (mode == "Sorted") {
       chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
     } else if (mode == "SortedDescending") {
+      chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
+    }
+  }
+  if (mode == "SortedDescending") {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+
       chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
     }
   }
