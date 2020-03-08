@@ -71,6 +71,7 @@ class SQLPipelineStatementTest : public BaseTest {
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
     _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+    _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -82,6 +83,7 @@ class SQLPipelineStatementTest : public BaseTest {
   TableColumnDefinitions _int_int_int_column_definitions;
 
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -683,6 +685,22 @@ TEST_F(SQLPipelineStatementTest, PrecheckDDLOperators) {
 
   auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
   EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
+}
+
+TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
+  const auto meta_table_query = "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables";
+
+  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+                          .create_pipeline_statement();
+  sql_pipeline.get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 0u);
+  EXPECT_FALSE(_lqp_cache->has(meta_table_query));
+
+  EXPECT_EQ(_pqp_cache->size(), 0u);
+  EXPECT_FALSE(_pqp_cache->has(meta_table_query));
 }
 
 }  // namespace opossum
