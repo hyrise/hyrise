@@ -32,7 +32,7 @@ void test_output(const std::shared_ptr<AbstractOperator> in,
                  const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
                  const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                  bool test_aggregate_on_reference_table = true) {
-  // load expected results from file
+  // Load expected results from file.
   std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
@@ -50,7 +50,7 @@ void test_output(const std::shared_ptr<AbstractOperator> in,
   }
 
   {
-    // Test the Aggregate on stored table data
+    // Test the Aggregate on stored table data.
     auto aggregate = std::make_shared<T>(in, aggregates, groupby_column_ids);
     aggregate->execute();
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
@@ -178,7 +178,7 @@ class AggregateSortedTest : public BaseTest {
   }
 
  protected:
-  void test_ordered_by_flag_set_correct(const std::shared_ptr<Table> test_table) {
+  void test_ordered_by_flag_set_correctly(const std::shared_ptr<Table> test_table) {
     const auto chunk_count = test_table->chunk_count();
     for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = test_table->get_chunk(chunk_id);
@@ -887,9 +887,9 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
 
 TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    auto sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
     sort.execute();
-    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl",
@@ -899,9 +899,9 @@ TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
 
 TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    auto sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
     sort.execute();
-    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl",
@@ -911,9 +911,9 @@ TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
 
 TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    auto sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
     sort.execute();
-    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl",
@@ -923,9 +923,9 @@ TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
 
 TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    Sort sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
+    auto sort = Sort(this->_table_wrapper_1_1, sort_by_column_id);
     sort.execute();
-    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
     sorted_table_wrapper->execute();
     test_output<AggregateSort>(sorted_table_wrapper, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl",
@@ -934,15 +934,15 @@ TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
 }
 
 TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
-  // Test for sorted for each column
+  // Test for sorted by each column.
   const auto input_table = this->_table_wrapper_multi_columns->get_output();
   const auto column_count = input_table->column_count();
   for (ColumnID sorted_by_column_id = ColumnID{0}; sorted_by_column_id < column_count; ++sorted_by_column_id) {
-    Sort sort = Sort(this->_table_wrapper_multi_columns, sorted_by_column_id);
+    auto sort = Sort(this->_table_wrapper_multi_columns, sorted_by_column_id);
     sort.execute();
-    std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+    const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
     sorted_table_wrapper->execute();
-    // Group and aggregate by every column combination
+    // Group and aggregate by every column combination.
     for (ColumnID group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {
       for (ColumnID aggregate_by_column_id = ColumnID{0}; aggregate_by_column_id < column_count;
            ++aggregate_by_column_id) {
@@ -965,9 +965,9 @@ TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
 }
 
 TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
-  Sort sort = Sort(this->_table_wrapper_multi_columns, ColumnID{1});
+  auto sort = Sort(this->_table_wrapper_multi_columns, ColumnID{1});
   sort.execute();
-  std::shared_ptr<TableWrapper> sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
+  const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sort.get_output());
   sorted_table_wrapper->execute();
   auto table = sorted_table_wrapper->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{

@@ -63,17 +63,17 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   std::shared_ptr<Table> table;
 
   table = std::make_shared<Table>(table_column_definitions, TableType::Data);
-  auto values = value_generator(table_size);
+  auto chunk_values = value_generator(table_size);
 
   if (mode == "Shuffled") {
     std::random_device random_device;
     std::mt19937 generator(random_device());
-    std::shuffle(values.begin(), values.end(), generator);
+    std::shuffle(chunk_values.begin(), chunk_values.end(), generator);
   }
 
   for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
-    const auto first = values.cbegin() + CHUNK_SIZE * chunk_index;
-    const auto last = values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
+    const auto first = chunk_values.cbegin() + CHUNK_SIZE * chunk_index;
+    const auto last = chunk_values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
     auto value_vector = pmr_vector<Type>(first, last);
     if (mode == "SortedDescending") {
       std::reverse(value_vector.begin(), value_vector.end());
@@ -81,7 +81,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
     pmr_vector<bool> null_values(value_vector.size(), false);
     // setting 10% of the values NULL
-    std::fill(null_values.begin(), null_values.begin() + std::round(value_vector.size() * 0.1), true);
+    std::fill(null_values.begin(), null_values.begin() + static_cast<int>(std::round(value_vector.size() * 0.1)), true);
     if (mode == "Shuffled") {
       std::random_device random_device;
       std::mt19937 generator(random_device());

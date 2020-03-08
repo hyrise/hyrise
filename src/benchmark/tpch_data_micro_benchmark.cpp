@@ -198,15 +198,14 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
 
 /**
  * The objective of this benchmark is to measure performance improvements when having
- * - a sorted column
- * - an aggregation grouping by that column.
+ * a sort-based aggregate on a sorted column
  */
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::State& state) {
   // Take e.g. TPC-H LineItem (biggest table in dataset)
   // Assumption: We joined on shipmode, which is why we are sorted by that column
-  // Aggregate: group by ship mode and count(l_orderkey_id)
+  // Aggregate: group by shipmode and count(l_orderkey_id)
 
-  std::shared_ptr<TableWrapper>& line_item = _table_wrapper_map.at("lineitem");
+  const auto& line_item = _table_wrapper_map.at("lineitem");
   const auto l_orderkey_id = ColumnID{0};
   const auto l_shipmode_id = ColumnID{10};
 
@@ -218,8 +217,8 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::St
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{max_(pqp_column_(
       group_by_column, table_scan_output->column_data_type(group_by_column),
       table_scan_output->column_is_nullable(group_by_column), table_scan_output->column_name(group_by_column)))};
-  const auto aggregate = std::make_shared<AggregateSort>(sorted_line_item, aggregate_expressions, group_by);
   for (auto _ : state) {
+    const auto aggregate = std::make_shared<AggregateSort>(sorted_line_item, aggregate_expressions, group_by);
     aggregate->execute();
   }
 }

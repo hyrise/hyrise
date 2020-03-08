@@ -1,18 +1,17 @@
-#include "predicate_reordering_rule.hpp"
-
 #include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <expression/between_expression.hpp>
 
 #include "constant_mappings.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/between_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "predicate_reordering_rule.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
@@ -115,19 +114,18 @@ void PredicateReorderingRule::_reorder_predicates(
 
   // hack to evaluate sorted between scan: put any BetweenExpressions first
   std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
-            [&](std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>& left,
-                    auto& right) {
-    const std::shared_ptr<AbstractLQPNode> node = left.first;
-    const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-    if (!predicate_node) {
-      return false;
-    }
-    const auto predicate = predicate_node->predicate();
-    const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate);
-    return between_expression != nullptr;
-  });
+            [&](std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>& left, auto& right) {
+              const std::shared_ptr<AbstractLQPNode> node = left.first;
+              const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+              if (!predicate_node) {
+                return false;
+              }
+              const auto predicate = predicate_node->predicate();
+              const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate);
+              return between_expression != nullptr;
+            });
 
- /*
+  /*
   std::cout << "Reordered query plan:" << std::endl;
   for (auto& node: nodes_and_cardinalities) {
     const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node.first);
@@ -144,8 +142,6 @@ void PredicateReorderingRule::_reorder_predicates(
     }
   }
   */
-
-
 
   // Ensure that nodes are chained correctly
   nodes_and_cardinalities.back().first->set_left_input(input);
