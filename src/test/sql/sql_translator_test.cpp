@@ -1907,6 +1907,24 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
+  const auto actual_lqp = compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
+                                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name");
+
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  const auto static_table_node = StaticTableNode::make(meta_table);
+  const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
+
+  const auto a_equals_b = equals_(table_name_column, table_name_column);
+  const auto expected_lqp =
+      JoinNode::make(JoinMode::Inner, a_equals_b, static_table_node, static_table_node);
+
+  const auto table_1 = std::static_pointer_cast<StaticTableNode>(actual_lqp->left_input())->table;
+  const auto table_2 = std::static_pointer_cast<StaticTableNode>(actual_lqp->right_input())->table;
+  EXPECT_EQ(table_1, table_2);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, DMLOnImmutableMetatables) {
   EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
   EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
