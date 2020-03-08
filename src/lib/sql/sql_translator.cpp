@@ -721,7 +721,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     (*_meta_tables)[meta_table_name] = meta_table;
   }
 
-  const auto static_table_node = StaticTableNode::make(meta_table, false);
+  const auto static_table_node = StaticTableNode::make(meta_table);
 
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
