@@ -2046,8 +2046,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
     PredicateNode::make(equals_(LQPColumnReference(select_node, meta_table->column_id_by_name("name")), "foo"),
-      ValidateNode::make(
-       select_node)),
+                        select_node),
     DummyTableNode::make());
   // clang-format on
 
@@ -2123,8 +2122,7 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   // clang-format off
   const auto row_subquery_lqp =
   PredicateNode::make(equals_(LQPColumnReference(select_node, meta_table->column_id_by_name("name")), "bar"),
-    ValidateNode::make(
-      select_node));
+                      select_node);
 
   const auto expressions = expression_vector(LQPColumnReference(select_node,
                                                                 meta_table->column_id_by_name("name")), "foo",

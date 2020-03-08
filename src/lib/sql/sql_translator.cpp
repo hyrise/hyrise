@@ -444,9 +444,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
     data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
   } else {
     data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
+    Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
   }
-
-  Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
     const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);
@@ -487,7 +486,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   // The update operator wants ReferenceSegments on its left side. Also, we should make sure that we do not update
   // invalid rows.
-  Assert(lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
+  Assert(is_meta_table || lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
 
   if (update.where) {
     const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
@@ -723,7 +722,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   }
 
   const auto static_table_node = StaticTableNode::make(meta_table, false);
-  const auto validated_static_table_node = _validate_if_active(static_table_node);
 
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
@@ -734,7 +732,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
 
-  return validated_static_table_node;
+  return static_table_node;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition& join) {
