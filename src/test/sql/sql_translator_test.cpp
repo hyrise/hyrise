@@ -1916,8 +1916,7 @@ TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
   const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
 
   const auto a_equals_b = equals_(table_name_column, table_name_column);
-  const auto expected_lqp =
-      JoinNode::make(JoinMode::Inner, a_equals_b, static_table_node, static_table_node);
+  const auto expected_lqp = JoinNode::make(JoinMode::Inner, a_equals_b, static_table_node, static_table_node);
 
   const auto table_1 = std::static_pointer_cast<StaticTableNode>(actual_lqp->left_input())->table;
   const auto table_2 = std::static_pointer_cast<StaticTableNode>(actual_lqp->right_input())->table;
