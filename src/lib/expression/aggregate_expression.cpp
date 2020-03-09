@@ -13,9 +13,9 @@
 
 namespace opossum {
 
-AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
+AggregateExpression::AggregateExpression(const AggregateFunction init_aggregate_function,
                                          const std::shared_ptr<AbstractExpression>& argument)
-    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(aggregate_function) {}
+    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(init_aggregate_function) {}
 
 std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];

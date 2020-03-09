@@ -11,7 +11,7 @@ namespace opossum {
 
 class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode {
  public:
-  explicit UnionNode(const UnionMode union_mode);
+  explicit UnionNode(const UnionMode init_union_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;

@@ -20,7 +20,7 @@ class TableStatistics;
  */
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
-  explicit StoredTableNode(const std::string& table_name);
+  explicit StoredTableNode(const std::string& init_table_name);
 
   LQPColumnReference get_column(const std::string& name) const;
 

@@ -14,7 +14,7 @@ namespace opossum {
 class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
  public:
   // Some tables should not be copied but recreated. Currently, this applies to meta tables.
-  explicit StaticTableNode(const std::shared_ptr<Table>& table);
+  explicit StaticTableNode(const std::shared_ptr<Table>& init_table);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

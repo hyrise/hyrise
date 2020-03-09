@@ -12,8 +12,8 @@
 namespace opossum {
 
 SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                   const std::vector<OrderByMode>& order_by_modes)
-    : AbstractLQPNode(LQPNodeType::Sort, expressions), order_by_modes(order_by_modes) {
+                   const std::vector<OrderByMode>& init_order_by_modes)
+    : AbstractLQPNode(LQPNodeType::Sort, expressions), order_by_modes(init_order_by_modes) {
   Assert(expressions.size() == order_by_modes.size(), "Expected as many Expressions as OrderByModes");
 }
 

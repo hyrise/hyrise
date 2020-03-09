@@ -70,9 +70,9 @@ class SQLTranslator final {
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
   // for equal SQL expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
   struct SelectListElement {
-    explicit SelectListElement(const std::shared_ptr<AbstractExpression>& expression);
-    SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                      const std::vector<SQLIdentifier>& identifiers);
+    explicit SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression);
+    SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression,
+                      const std::vector<SQLIdentifier>& init_identifiers);
 
     std::shared_ptr<AbstractExpression> expression;
     std::vector<SQLIdentifier> identifiers;
@@ -84,10 +84,10 @@ class SQLTranslator final {
   // columns from input tables
   struct TableSourceState final {
     TableSourceState() = default;
-    TableSourceState(const std::shared_ptr<AbstractLQPNode>& lqp,
-                     const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
-                     const std::vector<SelectListElement>& elements_in_order,
-                     const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
+    TableSourceState(const std::shared_ptr<AbstractLQPNode>& init_lqp,
+                     const std::unordered_map<std::string, std::vector<SelectListElement>>& init_elements_by_table_name,
+                     const std::vector<SelectListElement>& init_elements_in_order,
+                     const std::shared_ptr<SQLIdentifierResolver>& init_sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
 
