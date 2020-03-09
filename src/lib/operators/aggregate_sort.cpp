@@ -264,15 +264,18 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
   return segments;
 }
 
-std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_ptr<const Table> input_table,
-      const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by) {
-  auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, input_table->target_chunk_size(), UseMvcc::No);
+std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
+    const std::shared_ptr<const Table> input_table,
+    const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by) {
+  auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data,
+                                              input_table->target_chunk_size(), UseMvcc::No);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto new_chunk = std::make_shared<Chunk>(_get_segments_of_chunk(input_table, chunk_id));
     std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
-    auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::Data, std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+    auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), TableType::Data,
+                                                            std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
 
     // all sort operator on single-chunk table
     auto input_order_by = input_table->get_chunk(chunk_id)->ordered_by();
@@ -436,10 +439,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (all_chunks_value_clustered_by &&
-        !all_chunks_value_clustered_by->empty() &&
-    std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(all_chunks_value_clustered_by->begin()))
-        != _groupby_column_ids.end()){
+    if (all_chunks_value_clustered_by && !all_chunks_value_clustered_by->empty() &&
+        std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(all_chunks_value_clustered_by->begin())) !=
+            _groupby_column_ids.end()) {
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
       sorted_table = _sort_table_chunk_wise(input_table, all_chunks_value_clustered_by);
     } else {

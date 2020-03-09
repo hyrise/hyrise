@@ -222,12 +222,10 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
   _ordered_by.emplace(ordered_by);
 }
 
-const std::optional<std::vector<ColumnID>>& Chunk::value_clustered_by() const {
-  return _value_clustered_by;
-}
+const std::optional<std::vector<ColumnID>>& Chunk::value_clustered_by() const { return _value_clustered_by; }
 
 void Chunk::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
-  // TODO Should we check for mutable chunk here?
+  Assert(!is_mutable(), "Cannot set value_clustered_by on mutable chunks.");
   _value_clustered_by.emplace(value_clustered_by);
 }
 
