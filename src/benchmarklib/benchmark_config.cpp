@@ -26,26 +26,4 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const Chunk
 
 BenchmarkConfig BenchmarkConfig::get_default_config() { return BenchmarkConfig(); }
 
-// This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
-const char* BenchmarkConfig::description = R"(
-============================
-Benchmark Configuration JSON
-============================
-All options can also be provided as a JSON config file. This must be the only
-argument passed in. The options are identical to and behave like the CLI options.
-Example:
-{
-  "scheduler": true,
-  "time": 5
-}
-
-The JSON config can also include benchmark-specific options (e.g. TPCH's scale
-option). They will be parsed like the
-CLI options.
-
-{
-  "scale": 0.1
-}
-)";
-
 }  // namespace opossum
