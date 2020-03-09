@@ -115,7 +115,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
  protected:
-  mutable uint64_t _accesses{0};   // TODO: block überfrühten Merge
+  mutable uint64_t _accesses{0};
   const PosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
