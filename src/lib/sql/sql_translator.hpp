@@ -66,8 +66,6 @@ class SQLTranslator final {
    */
   std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
-  bool cacheable();
-
  private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
   // for equal SQL expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
