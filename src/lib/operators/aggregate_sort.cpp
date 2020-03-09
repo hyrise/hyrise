@@ -652,10 +652,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     aggregate_index++;
   }
 
-  // Append output to result table.
   result_table->append_chunk(_output_segments);
 
-  // Set order_by flag.
   const auto chunk = result_table->last_chunk();
   auto order_by = sorted_table->get_chunk(ChunkID{0})->ordered_by();
   if (order_by) {

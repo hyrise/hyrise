@@ -112,9 +112,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     chunk->replace_segment(column_id, encoded_segment);
   }
 
-  if (!chunk->pruning_statistics()) {
-    generate_chunk_pruning_statistics(chunk);
-  }
+  generate_chunk_pruning_statistics(chunk);
 }
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,

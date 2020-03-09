@@ -8,6 +8,7 @@
 #include "storage/storage_manager.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
+#include "utils/settings_manager.hpp"
 #include "utils/singleton.hpp"
 
 namespace opossum {
@@ -34,6 +35,7 @@ class Hyrise : public Singleton<Hyrise> {
   StorageManager storage_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
+  SettingsManager settings_manager;
   Topology topology;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be

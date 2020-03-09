@@ -67,6 +67,19 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
     for (; encoded_seq_it != encoded_seq_end; expected_it++, encoded_seq_it++) {
       EXPECT_EQ(*encoded_seq_it, *expected_it);
     }
+
+    // Test advancing the iterators to the middle of the sequence.
+    expected_it = expected_values.cbegin() + (expected_values.size() / 2);
+    encoded_seq_it = encoded_sequence.cbegin() + (expected_values.size() / 2);
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
+
+    // Test decrement and negative advance.
+    expected_it = expected_values.cend() - 1;  // Last element
+    encoded_seq_it = encoded_sequence.cend() - 1;
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
+    expected_it -= expected_values.size() / 2;
+    encoded_seq_it -= expected_values.size() / 2;
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
   }
 };
 

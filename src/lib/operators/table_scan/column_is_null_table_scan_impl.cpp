@@ -68,7 +68,8 @@ void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment&
       } else {
         begin = first_not_null;
       }
-    } else {  // NULLs last.
+    } else {
+      // NULLs last.
       const auto first_null = std::lower_bound(
           begin, end, bool{}, [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
       if (predicate_is_null) {

@@ -147,7 +147,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     probe_column_id = _primary_predicate.column_ids.second;
   }
 
-  // if the input operators are swapped, we also have to swap the column pairs and the predicate conditions
+  // If the input operators are swapped, we also have to swap the column pairs and the predicate conditions
   // of the secondary join predicates.
   auto adjusted_secondary_predicates = _secondary_predicates;
 
@@ -266,18 +266,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto keep_nulls_probe_column = _mode == JoinMode::Left || _mode == JoinMode::Right ||
                                          _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse;
 
-    // Pre-partitioning:
-    // Save chunk offsets into the input relation.
-    const auto build_chunk_offsets = determine_chunk_offsets(_build_input_table);
-    const auto probe_chunk_offsets = determine_chunk_offsets(_probe_input_table);
-
     // Containers used to store histograms for (potentially subsequent) radix
     // partitioning phase (in cases _radix_bits > 0). Created during materialization phase.
     std::vector<std::vector<size_t>> histograms_build_column;
     std::vector<std::vector<size_t>> histograms_probe_column;
 
-    // Output containers of materialization phase. Type similar to the output
-    // of radix partitioning phase to allow short cut for _radix_bits == 0
+    // Output containers of materialization phase. Uses the same output type as
+    // the radix partitioning phase to allow shortcut for _radix_bits == 0
     // (in this case, we can skip the partitioning altogether).
     RadixContainer<BuildColumnType> materialized_build_column;
     RadixContainer<ProbeColumnType> materialized_probe_column;
@@ -300,7 +295,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //                 |                                    |
     //        materialize_input()                  materialize_input()
     //                 |                                    |
-    //  ( partition_radix_parallel() )       ( partition_radix_parallel() )
+    //      ( partition_by_radix() )            ( partition_by_radix() )
     //                 |                                    |
     //               build()                                |
     //                   \_                               _/
@@ -318,20 +313,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       if (keep_nulls_build_column) {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-            _build_input_table, _column_ids.first, build_chunk_offsets, histograms_build_column, _radix_bits);
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits);
       } else {
         materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-            _build_input_table, _column_ids.first, build_chunk_offsets, histograms_build_column, _radix_bits);
+            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits);
       }
 
       if (_radix_bits > 0) {
         // radix partition the build table
         if (keep_nulls_build_column) {
-          radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, true>(
-              materialized_build_column, build_chunk_offsets, histograms_build_column, _radix_bits);
+          radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
+              materialized_build_column, histograms_build_column, _radix_bits);
         } else {
-          radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, false>(
-              materialized_build_column, build_chunk_offsets, histograms_build_column, _radix_bits);
+          radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
+              materialized_build_column, histograms_build_column, _radix_bits);
         }
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
         materialized_build_column.clear();
@@ -345,9 +340,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // case, we DO need all rows.
       if (_secondary_predicates.empty() &&
           (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition);
+        hash_tables =
+            build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits);
       } else {
-        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions);
+        hash_tables =
+            build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits);
       }
     }));
     jobs.back()->schedule();
@@ -359,20 +356,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // Materialize probe column.
       if (keep_nulls_probe_column) {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-            _probe_input_table, _column_ids.second, probe_chunk_offsets, histograms_probe_column, _radix_bits);
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits);
       } else {
         materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-            _probe_input_table, _column_ids.second, probe_chunk_offsets, histograms_probe_column, _radix_bits);
+            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits);
       }
 
       if (_radix_bits > 0) {
         // radix partition the probe column.
         if (keep_nulls_probe_column) {
-          radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, true>(
-              materialized_probe_column, probe_chunk_offsets, histograms_probe_column, _radix_bits);
+          radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, true>(
+              materialized_probe_column, histograms_probe_column, _radix_bits);
         } else {
-          radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, false>(
-              materialized_probe_column, probe_chunk_offsets, histograms_probe_column, _radix_bits);
+          radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, false>(
+              materialized_probe_column, histograms_probe_column, _radix_bits);
         }
         // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
         materialized_probe_column.clear();
@@ -391,12 +388,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //   right here is hacky, but during probing we assume NULL values on the build side do not matter, so we'd have no
     //   chance detecting a NULL value on the build side there.
     if (_mode == JoinMode::AntiNullAsTrue) {
-      const auto& build_column_null_values = radix_build_column.null_value_bitvector;
-      const auto build_has_any_null_value = std::any_of(
-          build_column_null_values->begin(), build_column_null_values->end(), [](bool is_null) { return is_null; });
-
-      if (build_has_any_null_value) {
-        return _join_hash._build_output_table({});
+      for (const auto& build_side_partition : radix_build_column) {
+        for (const auto null_value : build_side_partition.null_values) {
+          if (null_value) {
+            return _join_hash._build_output_table({});
+          }
+        }
       }
     }
 
@@ -405,12 +402,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      */
     std::vector<PosList> build_side_pos_lists;
     std::vector<PosList> probe_side_pos_lists;
-    const size_t partition_count = radix_probe_column.partition_offsets.size();
+    const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);
 
     // simple heuristic: half of the rows of the probe relation will match
-    const size_t result_rows_per_partition = _probe_input_table->row_count() / partition_count / 2;
+    const size_t result_rows_per_partition =
+        _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
     for (size_t i = 0; i < partition_count; i++) {
       build_side_pos_lists[i].reserve(result_rows_per_partition);
       probe_side_pos_lists[i].reserve(result_rows_per_partition);
