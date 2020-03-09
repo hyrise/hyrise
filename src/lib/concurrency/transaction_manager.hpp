@@ -55,6 +55,8 @@ class TransactionManager : public Noncopyable {
 
   /**
    * Creates a new transaction context
+   * @param is_auto_commit Declares whether the transaction is created (and will also commit)
+   * automatically or explicitly created and committed through a user command.
    */
   std::shared_ptr<TransactionContext> new_transaction_context(
       IsAutoCommitTransaction is_auto_commit = IsAutoCommitTransaction::Yes);
