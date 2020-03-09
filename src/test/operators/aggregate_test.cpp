@@ -988,7 +988,7 @@ TEST_F(AggregateSortedTest, AggregateOnPresortedValueClustered) {
   for(auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = _table_sorted_value_clustered->get_chunk(chunk_id);
     chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Ascending));
-    chunk->set_value_clustered_by(std::make_pair(ColumnID{0}, ValueClusteringType::Radix));
+    chunk->set_value_clustered_by({ColumnID{0}});
   }
 
   auto _table_wrapper_sorted_value_clustered = std::make_shared<TableWrapper>(_table_sorted_value_clustered);

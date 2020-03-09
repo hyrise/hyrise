@@ -210,8 +210,6 @@ enum class UnionMode { Positions, All };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
-enum class ValueClusteringType {Radix};
-
 enum class TableType { References, Data };
 
 enum class DescriptionMode { SingleLine, MultiLine };

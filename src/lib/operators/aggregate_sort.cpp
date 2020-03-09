@@ -265,7 +265,7 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
 }
 
 std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_ptr<const Table> input_table,
-      const std::optional<std::pair<ColumnID, ValueClusteringType>>& all_chunks_value_clustered_by) {
+      const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by) {
   auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, input_table->target_chunk_size(), UseMvcc::No);
 
   const auto chunk_count = input_table->chunk_count();
@@ -429,14 +429,17 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   if (!_groupby_column_ids.empty()) {
     /**
      * Check if the value clustering matches the columns we are grouping by
-     * (these are the columns we need to sort by to achieve value clustering).
+     * (these are the columns we would need to sort by to achieve value clustering).
      * If the input is already value clustered according to our needs, this means that values that would end up
      * in the same cluster are already in the same chunk.
      * Thus, we can execute all remaining sorts on a per-chunks basis.
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (all_chunks_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), all_chunks_value_clustered_by->first) != _groupby_column_ids.end()){
+    if (all_chunks_value_clustered_by &&
+        !all_chunks_value_clustered_by->empty() &&
+    std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(all_chunks_value_clustered_by->begin()))
+        != _groupby_column_ids.end()){
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
       sorted_table = _sort_table_chunk_wise(input_table, all_chunks_value_clustered_by);
     } else {

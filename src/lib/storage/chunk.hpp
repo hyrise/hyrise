@@ -152,8 +152,8 @@ class Chunk : private Noncopyable {
    * If a chunk is value clustered in any way, the clustering type and the ColumnID of the segment by which it is
    * clustered will be returned.
    */
-  const std::optional<std::pair<ColumnID, ValueClusteringType>>& value_clustered_by() const;
-  void set_value_clustered_by(const std::pair<ColumnID, ValueClusteringType>& value_clustered_by);
+  const std::optional<std::vector<ColumnID>>& value_clustered_by() const;
+  void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
@@ -196,7 +196,7 @@ class Chunk : private Noncopyable {
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
-  std::optional<std::pair<ColumnID, ValueClusteringType>> _value_clustered_by;
+  std::optional<std::vector<ColumnID>> _value_clustered_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
   // Default value of zero means "not set"
