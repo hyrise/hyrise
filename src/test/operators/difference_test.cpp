@@ -81,7 +81,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
 }
 
 TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
-  // Verify that order_by flag is not set when not present in left input
+  // Verify that the order_by flag is not set when it's not present in left input.
   const auto difference_unsorted = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference_unsorted->execute();
 
