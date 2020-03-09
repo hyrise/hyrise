@@ -33,7 +33,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     for (auto _ : state) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result).lqp_nodes.at(0);
       LQPTranslator{}.translate_node(result_node);
     }
   }
@@ -51,7 +51,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     for (auto _ : state) {
-      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result).lqp_nodes.at(0);
       LQPTranslator{}.translate_node(result_node);
     }
   }

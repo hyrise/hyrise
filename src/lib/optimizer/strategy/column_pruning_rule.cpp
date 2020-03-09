@@ -154,7 +154,8 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::CreateTable:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
-    case LQPNodeType::Update: {
+    case LQPNodeType::Update:
+    case LQPNodeType::ChangeMetaTable: {
       const auto& left_input_expressions = node->left_input()->column_expressions();
       locally_required_expressions.insert(left_input_expressions.begin(), left_input_expressions.end());
 

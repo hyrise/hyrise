@@ -7,6 +7,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "sql/sql_translator.hpp"
 #include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
 
@@ -118,6 +119,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output{true};
+  TranslationInfo _translation_info;
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
