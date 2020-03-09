@@ -395,6 +395,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     const auto sort = std::make_shared<Sort>(sorted_wrapper, column_id);
     sort->execute();
     sorted_table = sort->get_output();
+    // If the last column is sorted here, it needs to be set accordingly.
+    // This overrides order_by on purpose (only the last order prevails).
     order_by = std::make_pair(column_id, OrderByMode::Ascending);
   }
 

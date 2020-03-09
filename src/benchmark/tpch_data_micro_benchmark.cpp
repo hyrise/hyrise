@@ -1,6 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "cert-err58-cpp"
-
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
@@ -199,9 +196,10 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
 /**
  * The objective of this benchmark is to measure performance improvements when having
  * a sort-based aggregate on a sorted column
+ * This is not a TPC-H benchmark, it just uses TPC-H data (there are few joins on non-key columns in TPC-H).
  */
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::State& state) {
-  // Take e.g. TPC-H LineItem (biggest table in dataset)
+  // In this case, we take TPC-H LineItem (biggest table in dataset)
   // Assumption: We joined on shipmode, which is why we are sorted by that column
   // Aggregate: group by shipmode and count(l_orderkey_id)
 
