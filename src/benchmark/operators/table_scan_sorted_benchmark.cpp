@@ -108,14 +108,6 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
       chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
     }
   }
-  if (mode == "SortedDescending") {
-    const auto chunk_count = table->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = table->get_chunk(chunk_id);
-
-      chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Descending));
-    }
-  }
 
   table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
