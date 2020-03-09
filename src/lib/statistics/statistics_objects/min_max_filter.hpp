@@ -16,7 +16,7 @@ namespace opossum {
 template <typename T>
 class MinMaxFilter : public AbstractStatisticsObject {
  public:
-  explicit MinMaxFilter(T min, T max);
+  explicit MinMaxFilter(T init_min, T init_max);
   ~MinMaxFilter() override = default;
 
   // cppcoreguidelines-special-member-functions

@@ -45,9 +45,9 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   return std::nullopt;
 }
 
-OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids,
-                                             const PredicateCondition predicate_condition)
-    : column_ids(column_ids), predicate_condition(predicate_condition) {}
+OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& init_column_ids,
+                                             const PredicateCondition init_predicate_condition)
+    : column_ids(init_column_ids), predicate_condition(init_predicate_condition) {}
 
 void OperatorJoinPredicate::flip() {
   std::swap(column_ids.first, column_ids.second);

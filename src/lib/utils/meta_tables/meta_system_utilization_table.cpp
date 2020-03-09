@@ -23,85 +23,50 @@
 
 #endif
 
+#include "meta_system_utilization_table.hpp"
+
 #include "hyrise.hpp"
-#include "meta_table_generator.hpp"
 
 namespace opossum {
 
-size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
-  auto distinct_value_count = size_t{0};
-  resolve_data_type(segment->data_type(), [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
+MetaSystemUtilizationTable::MetaSystemUtilizationTable()
+    : AbstractMetaTable(TableColumnDefinitions{{"cpu_system_usage", DataType::Float, false},
+                                               {"cpu_process_usage", DataType::Float, false},
+                                               {"load_average_1_min", DataType::Float, false},
+                                               {"load_average_5_min", DataType::Float, false},
+                                               {"load_average_15_min", DataType::Float, false},
+                                               {"system_ram_total", DataType::Long, false},
+                                               {"system_ram_free", DataType::Long, false},
+                                               {"process_virtual_memory", DataType::Long, false},
+                                               {"process_physical_memory", DataType::Long, false}}) {}
 
-    // For dictionary segments, an early (and much faster) exit is possible by using the dictionary size
-    if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
-      distinct_value_count = dictionary_segment->dictionary()->size();
-      return;
-    } else if (const auto fs_dictionary_segment =
-                   std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
-      distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
-      return;
-    }
-
-    std::unordered_set<ColumnDataType> distinct_values;
-    auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-    iterable.with_iterators([&](auto it, auto end) {
-      for (; it != end; ++it) {
-        const auto segment_item = *it;
-        if (!segment_item.is_null()) {
-          distinct_values.insert(segment_item.value());
-        }
-      }
-    });
-    distinct_value_count = distinct_values.size();
-  });
-  return distinct_value_count;
+const std::string& MetaSystemUtilizationTable::name() const {
+  static const auto name = std::string{"system_utilization"};
+  return name;
 }
 
-void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        const auto& chunk = table->get_chunk(chunk_id);
-        const auto& segment = chunk->get_segment(column_id);
-
-        const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
-
-        const auto estimated_size = segment->memory_usage(mode);
-        AllTypeVariant encoding = NULL_VALUE;
-        AllTypeVariant vector_compression = NULL_VALUE;
-        if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
-          encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
-
-          if (encoded_segment->compressed_vector_type()) {
-            std::stringstream ss;
-            ss << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string{ss.str()};
-          }
-        }
-
-        if (mode == MemoryUsageCalculationMode::Full) {
-          const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
-          meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
-                              vector_compression, static_cast<int64_t>(estimated_size)});
-        } else {
-          meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
-                              static_cast<int64_t>(estimated_size)});
-        }
-      }
-    }
-  }
+void MetaSystemUtilizationTable::init() {
+  _get_system_cpu_usage();
+  _get_process_cpu_usage();
 }
 
-struct LoadAvg {
-  float load_1_min;
-  float load_5_min;
-  float load_15_min;
-};
+std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-LoadAvg get_load_avg() {
+  const auto system_cpu_usage = _get_system_cpu_usage();
+  const auto process_cpu_usage = _get_process_cpu_usage();
+  const auto load_avg = _get_load_avg();
+  const auto system_memory_usage = _get_system_memory_usage();
+  const auto process_memory_usage = _get_process_memory_usage();
+
+  output_table->append({system_cpu_usage, process_cpu_usage, load_avg.load_1_min, load_avg.load_5_min,
+                        load_avg.load_15_min, system_memory_usage.total_ram, system_memory_usage.free_ram,
+                        process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
+
+  return output_table;
+}
+
+MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
 #if defined __linux__
 
   std::ifstream load_avg_file;
@@ -134,7 +99,7 @@ LoadAvg get_load_avg() {
   Fail("Method not implemented for this platform");
 }
 
-int get_cpu_count() {
+int MetaSystemUtilizationTable::_get_cpu_count() {
 #if defined __linux__
 
   std::ifstream cpu_info_file;
@@ -163,7 +128,7 @@ int get_cpu_count() {
   Fail("Method not implemented for this platform");
 }
 
-float get_system_cpu_usage() {
+float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 #if defined __linux__
 
   static uint64_t last_user_time = 0u, last_user_nice_time = 0u, last_kernel_time = 0u, last_idle_time = 0u;
@@ -185,7 +150,7 @@ float get_system_cpu_usage() {
   last_kernel_time = kernel_time;
   last_idle_time = idle_time;
 
-  auto cpus = get_cpu_count();
+  auto cpus = _get_cpu_count();
 
   return (100.0 * used) / (total * cpus);
 
@@ -212,7 +177,7 @@ float get_system_cpu_usage() {
   last_total_ticks = total_ticks;
   last_idle_ticks = idle_ticks;
 
-  auto cpus = get_cpu_count();
+  auto cpus = _get_cpu_count();
 
   return 100.0f * (1.0f - (static_cast<float>(idle) / static_cast<float>(total))) / cpus;
 
@@ -221,7 +186,7 @@ float get_system_cpu_usage() {
   Fail("Method not implemented for this platform");
 }
 
-float get_process_cpu_usage() {
+float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 #if defined __linux__
 
   static clock_t last_clock_time = 0u, last_kernel_time = 0u, last_user_time = 0u;
@@ -238,7 +203,7 @@ float get_process_cpu_usage() {
   last_kernel_time = kernel_time;
   last_clock_time = clock_time;
 
-  auto cpus = get_cpu_count();
+  auto cpus = _get_cpu_count();
 
   return (100.0 * used) / (total * cpus);
 
@@ -274,22 +239,13 @@ float get_process_cpu_usage() {
   Fail("Method not implemented for this platform");
 }
 
-struct SystemMemoryUsage {
-  int64_t total_ram;
-  int64_t total_swap;
-  int64_t total_memory;
-  int64_t free_ram;
-  int64_t free_swap;
-  int64_t free_memory;
-};
-
-SystemMemoryUsage get_system_memory_usage() {
+MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #if defined __linux__
 
   struct sysinfo memory_info;
   sysinfo(&memory_info);
 
-  SystemMemoryUsage memory_usage;
+  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
   memory_usage.total_ram = memory_info.totalram * memory_info.mem_unit;
   memory_usage.total_swap = memory_info.totalswap * memory_info.mem_unit;
   memory_usage.free_ram = memory_info.freeram * memory_info.mem_unit;
@@ -324,7 +280,7 @@ SystemMemoryUsage get_system_memory_usage() {
     Fail("Unable to access host_page_size or host_statistics64");
   }
 
-  SystemMemoryUsage memory_usage;
+  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
   memory_usage.total_ram = physical_memory;
   memory_usage.total_swap = swap_usage.xsu_total;
   memory_usage.free_swap = swap_usage.xsu_avail;
@@ -340,7 +296,7 @@ SystemMemoryUsage get_system_memory_usage() {
 }
 
 #if defined __linux__
-int64_t int_from_string(std::string input_string) {
+int64_t MetaSystemUtilizationTable::_int_from_string(std::string input_string) {
   size_t index = 0;
   size_t begin = 0, end = input_string.length() - 1;
 
@@ -360,23 +316,18 @@ int64_t int_from_string(std::string input_string) {
 }
 #endif
 
-struct ProcessMemoryUsage {
-  int64_t virtual_memory;
-  int64_t physical_memory;
-};
-
-ProcessMemoryUsage get_process_memory_usage() {
+MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
 #if defined __linux__
 
   std::ifstream self_status_file;
   self_status_file.open("/proc/self/status", std::ifstream::in);
 
-  ProcessMemoryUsage memory_usage;
+  MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage;
   for (std::string self_status_line; std::getline(self_status_file, self_status_line);) {
     if (self_status_line.rfind("VmSize", 0) == 0) {
-      memory_usage.virtual_memory = int_from_string(self_status_line) * 1000;
+      memory_usage.virtual_memory = _int_from_string(self_status_line) * 1000;
     } else if (self_status_line.rfind("VmRSS", 0) == 0) {
-      memory_usage.physical_memory = int_from_string(self_status_line) * 1000;
+      memory_usage.physical_memory = _int_from_string(self_status_line) * 1000;
     }
   }
 
@@ -397,23 +348,6 @@ ProcessMemoryUsage get_process_memory_usage() {
 #endif
 
   Fail("Method not implemented for this platform");
-}
-
-void init_workload_meta_data() {
-  get_system_cpu_usage();
-  get_process_cpu_usage();
-}
-
-void gather_workload_meta_data(const std::shared_ptr<Table>& meta_table) {
-  auto system_cpu_usage = get_system_cpu_usage();
-  auto process_cpu_usage = get_process_cpu_usage();
-  auto load_avg = get_load_avg();
-  auto system_memory_usage = get_system_memory_usage();
-  auto process_memory_usage = get_process_memory_usage();
-
-  meta_table->append({system_cpu_usage, process_cpu_usage, load_avg.load_1_min, load_avg.load_5_min,
-                      load_avg.load_15_min, system_memory_usage.total_ram, system_memory_usage.free_ram,
-                      process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
 }
 
 }  // namespace opossum

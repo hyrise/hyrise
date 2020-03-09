@@ -40,6 +40,12 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   // return empty table if input file is empty
   if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
 
+  {
+    std::string line;
+    std::getline(csvfile, line);
+    Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
+  }
+
   /**
    * Load the whole file(!) into a std::string using the, hopefully, fastest method to do so.
    * TODO(anybody) Maybe use mmap() in the future. The current approach needs to have the entire file in RAM, mmap might
