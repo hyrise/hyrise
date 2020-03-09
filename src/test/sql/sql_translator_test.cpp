@@ -9,6 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -1875,7 +1876,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, DMLOnMetatables) {
+TEST_F(SQLTranslatorTest, DMLOnImmutableMetatables) {
   EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
   EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
@@ -1959,6 +1960,20 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
+  const auto actual_lqp = compile_query("INSERT INTO meta_plugins VALUES ('foo');");
+
+  // clang-format off
+  const auto expected_lqp =
+  ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Insert,
+    DummyTableNode::make(),
+    ProjectionNode::make(expression_vector("foo"),
+      DummyTableNode::make()));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, DeleteWithoutMVCC) {
   EXPECT_THROW(compile_query("DELETE FROM int_float;"), std::logic_error);
 }
@@ -1985,6 +2000,23 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
     PredicateNode::make(greater_than_(int_float_a, 5),
       ValidateNode::make(
         stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
+  const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
+
+  const auto select_node = StoredTableNode::make("meta_plugins");
+
+  // clang-format off
+  const auto expected_lqp =
+   ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
+    PredicateNode::make(equals_(select_node->get_column("name"), "foo"),
+      ValidateNode::make(
+       select_node)),
+    DummyTableNode::make());
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2044,6 +2076,29 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
   UpdateNode::make("int_float",
     row_subquery_lqp,
     ProjectionNode::make(expression_vector(cast_(int_float_b, DataType::Int), cast_(3, DataType::Float)),
+      row_subquery_lqp));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateMetaTable) {
+  const auto actual_lqp = compile_query("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes);
+
+  const auto select_node = StoredTableNode::make("meta_settings");
+
+  // clang-format off
+  const auto row_subquery_lqp =
+  PredicateNode::make(equals_(select_node->get_column("name"), "bar"),
+    ValidateNode::make(
+      select_node));
+
+  const auto expressions = expression_vector(select_node->get_column("name"), "foo", select_node->get_column("description"));  // NOLINT
+
+  const auto expected_lqp =
+  ChangeMetaTableNode::make("meta_settings", MetaTableChangeType::Update,
+    row_subquery_lqp,
+    ProjectionNode::make(expressions,
       row_subquery_lqp));
   // clang-format on
 

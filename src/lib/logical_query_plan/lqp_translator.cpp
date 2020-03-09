@@ -10,6 +10,7 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
+#include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"
 #include "create_view_node.hpp"
@@ -32,6 +33,7 @@
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
+#include "operators/change_meta_table.hpp"
 #include "operators/delete.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
@@ -123,6 +125,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Union:              return _translate_union_node(node);
+    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
 
       // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -439,6 +442,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   return std::make_shared<Validate>(input_operator);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator_left = translate_node(node->left_input());
+  const auto input_operator_right = translate_node(node->right_input());
+  const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
+  return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
+                                           input_operator_left, input_operator_right);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
