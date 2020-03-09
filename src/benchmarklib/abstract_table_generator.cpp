@@ -25,7 +25,8 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"sort_duration", metrics.sort_duration.count()},
           {"store_duration", metrics.store_duration.count()},
           {"index_duration", metrics.index_duration.count()},
-          {"sort_order_by_table", metrics.sort_order_by_table}};
+          {"clustering_order_by_table", metrics.clustering_order_by_table},
+          {"chunk_order_by_table", metrics.chunk_order_by_table}};
 }
 
 BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& table) : table(table) {}
@@ -116,14 +117,10 @@ void AbstractTableGenerator::generate_and_store() {
   std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
 
   /**
-   * Sort tables if a sort order was defined by the benchmark
+   * Cluster, then sort tables if a sort order was defined by the benchmark
    */
 
-  auto sort_order_by_table = _sort_order_by_table();
-
-//#############################################TODO
-//  auto env_chunk_sort_order = std::getenv("CHUNK_SORT_COLUMN");
-//#############################################TODO
+  auto clustering_order_by_table = _sort_order_by_table();
 
   auto env_clustering_order = std::getenv("CLUSTERING_ORDER");
   if (env_clustering_order != nullptr) {
@@ -135,16 +132,24 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "parsed clustering json:" << std::endl;
     std::cout << clustering_json.dump(2) << std::endl;
 
-    SortOrderByTable result = clustering_json;
-    sort_order_by_table = result;
+    SortOrderByTable tmp = clustering_json;
+    clustering_order_by_table = tmp;
   }
+  metrics.clustering_order_by_table = clustering_order_by_table;
 
-  metrics.sort_order_by_table = sort_order_by_table;
+  std::map<std::string, std::string> chunk_order_by_table;
+  auto env_chunk_order = std::getenv("CHUNK_ORDER");
+  if (env_chunk_order != nullptr) {
+    const auto chunk_order = std::string(env_chunk_order);
+    std::map<std::string, std::string> tmp = nlohmann::json::parse(chunk_order);
+    chunk_order_by_table = tmp;
+  }
+  // chunk_order_by_table might later be updated, so do not write it into the metrics just yet
 
-  if (!sort_order_by_table.empty()) {
+  if (!clustering_order_by_table.empty()) {
     std::cout << "- Sorting tables" << std::endl;
 
-    for (const auto& [table_name, clustering_columns] : sort_order_by_table) {
+    for (const auto& [table_name, clustering_columns] : clustering_order_by_table) {
       Assert(clustering_columns.size() >= 1, "you have to specify at least one clustering dimension, otherwise just leave out the table entry");
       const auto original_table = table_info_by_name[table_name].table;
 
@@ -157,8 +162,6 @@ void AbstractTableGenerator::generate_and_store() {
       Assert(MIN_REASONABLE_CHUNK_SIZE * expected_final_chunk_count < original_table->row_count(), "chunks in " + table_name + " will have less than " + std::to_string(MIN_REASONABLE_CHUNK_SIZE) + " rows");
 
       std::cout << "initial table size of " << table_name << " is: " << original_table->row_count() << std::endl;
-
-
       Timer per_clustering_timer;
 
       // Idea: We start with "1" chunk (whole table).
@@ -185,6 +188,24 @@ void AbstractTableGenerator::generate_and_store() {
         std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
       }
 
+
+      // Step 2 - clustering is done, now sort within chunks
+      if (chunk_order_by_table.find(table_name) != chunk_order_by_table.end()) {
+        Assert(clustering_order_by_table.find(table_name) != clustering_order_by_table.end(), "chunk ordering without table clustering does not make sense");
+
+        const auto& column_name = chunk_order_by_table[table_name];
+        std::cout << "-  Sorting '" << table_name << "' on chunk level by '" << column_name << "' " << std::flush;
+        mutable_sorted_table = _sort_table_chunkwise(mutable_sorted_table, column_name, 1);
+        std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
+      } else {
+        if (clustering_order_by_table.find(table_name) != clustering_order_by_table.end()) {
+          // table was clustered, but not explicitly sorted on chunk level
+          // thus, the chunk level sorting of the last clustering is still in effect
+          chunk_order_by_table[table_name] = clustering_columns.back().first;
+        }
+      }
+
+      metrics.chunk_order_by_table = chunk_order_by_table;
       table_info_by_name[table_name].table = mutable_sorted_table;
       std::cout << "final table size of " << table_name << " is: " << mutable_sorted_table->row_count() << std::endl;
 

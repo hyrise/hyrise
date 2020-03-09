@@ -8,13 +8,13 @@ class TPCHBenchmark(AbstractBenchmark):
     return "/home/Alexander.Loeser/hyrise/build-release/hyriseBenchmarkTPCH"
 
   def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch_random_access2"
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch_random_access_tmp"
 
   def time(self):
     return 60
 
   def scale(self):
-    return .1
+    return 1
   
   def chunk_sizes(self):
     return [25000]
@@ -57,13 +57,42 @@ class TPCHBenchmark(AbstractBenchmark):
       #  "orders": ["o_orderdate"]
       #},
       "q6_discount": {
-        "lineitem": [
-          ["l_shipdate", 60],
-          ["l_discount", 2],
-        ],
-        "orders": [
-          ["o_orderdate", 50]
-        ]
+        "clustering_order": {
+          "lineitem": [
+            ["l_shipdate", 75]
+          ],
+          "orders": [
+            ["o_orderdate", 50]
+          ]
+        },
+        "chunk_order": {
+          "lineitem": "l_discount"
+        }
+      },
+      "q6_2d_discount_discount": {
+        "clustering_order": {
+          "lineitem": [
+            ["l_shipdate", 75],
+            ["l_discount", 2]
+          ],
+          "orders": [
+            ["o_orderdate", 50]
+          ]
+        }
+      },
+      "q6_2d_discount_shipdate": {
+        "clustering_order": {
+          "lineitem": [
+            ["l_shipdate", 75],
+            ["l_discount", 2]
+          ],
+          "orders": [
+            ["o_orderdate", 50]
+          ]
+        },
+        "chunk_order": {
+          "lineitem": "l_shipdate"
+        }
       },
       #"q6_quantity": {
       #  "lineitem": ["l_shipdate", "l_quantity"],

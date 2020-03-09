@@ -15,9 +15,11 @@ AVAILABLE_BENCHMARKS = {
 
 
 def run_benchmark(benchmark, config_name, chunk_size):
-  table_sort_order = build_sort_order_string(benchmark.sort_orders()[config_name])
+  sort_orders = benchmark.sort_orders()[config_name]
   process_env = os.environ.copy()
-  process_env["CLUSTERING_ORDER"] = table_sort_order
+  process_env["CLUSTERING_ORDER"] = json.dumps(sort_orders["clustering_order"])
+  if "chunk_order" in sort_orders:
+    process_env["CHUNK_ORDER"] = json.dumps(sort_orders["chunk_order"])
 
 
   # not sure if using "--cache_binary_tables" is a good idea.
