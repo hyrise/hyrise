@@ -27,6 +27,7 @@ class StorageManager : public Noncopyable {
    * @{
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
+  void replace_table(const std::string& name, std::shared_ptr<Table> table);
   void drop_table(const std::string& name);
   std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const std::string& name) const;
