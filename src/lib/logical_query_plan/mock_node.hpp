@@ -26,14 +26,14 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {},
+  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {},
                     const TableConstraintDefinitions& constraints = {});
 
   LQPColumnReference get_column(const std::string& column_name) const;
 
   const ColumnDefinitions& column_definitions() const;
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
   const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override;
 

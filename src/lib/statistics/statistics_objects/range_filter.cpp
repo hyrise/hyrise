@@ -15,10 +15,10 @@
 namespace opossum {
 
 template <typename T>
-RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
-    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {
-      DebugAssert(!this->ranges.empty(), "Cannot construct empty RangeFilter");
-    }
+RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
+    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(init_ranges)) {
+  DebugAssert(!ranges.empty(), "Cannot construct empty RangeFilter");
+}
 
 template <typename T>
 Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,

@@ -15,16 +15,14 @@ class JoinHashTypesTest : public BaseTest {};
 
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {
-  Partition<T> elements;
+  Partition<T> partition;
   for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
     RowID row_id{ChunkID{17}, i};
-    elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
+    partition.elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
+    partition.null_values.emplace_back(false);
   }
 
-  auto hash_maps =
-      build<T, HashType>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
-                                           std::vector<size_t>{elements.size()}, std::make_shared<std::vector<bool>>()},
-                         JoinHashBuildMode::AllPositions);
+  auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0);
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_maps.size(), 1);
@@ -35,10 +33,10 @@ void test_hash_map(const std::vector<T>& values) {
   for (const auto& pos_list_pair : first_hash_map) {
     row_count += pos_list_pair.size();
   }
-  EXPECT_EQ(row_count, elements.size());
+  EXPECT_EQ(row_count, partition.elements.size());
 
   ChunkOffset offset = ChunkOffset{0};
-  for (const auto& element : elements) {
+  for (const auto& element : partition.elements) {
     const auto probe_value = element.value;
 
     const auto result_list = *first_hash_map.find(probe_value);

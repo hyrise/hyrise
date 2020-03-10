@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name)
-    : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
+StoredTableNode::StoredTableNode(const std::string& init_table_name)
+    : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
 
 LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
@@ -60,7 +60,7 @@ std::string StoredTableNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_expressions() const {
   // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
   // that in the constructor and (b) because we don't have column pruning information in the constructor
   if (!_column_expressions) {

@@ -17,6 +17,10 @@ TEST_F(CsvParserTest, SingleFloatColumn) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
+TEST_F(CsvParserTest, WindowsEncoding) {
+  EXPECT_THROW(CsvParser::parse("resources/test_data/csv/float_crlf.csv"), std::exception);
+}
+
 TEST_F(CsvParserTest, FloatIntTable) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int.csv");
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", 2);

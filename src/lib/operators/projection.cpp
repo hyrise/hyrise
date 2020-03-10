@@ -20,9 +20,9 @@
 
 namespace opossum {
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
-                       const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
-    : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
+Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
+    : AbstractReadOnlyOperator(OperatorType::Projection, input_operator), expressions(init_expressions) {}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -110,7 +110,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
           if (pos_list->references_single_chunk()) {
             const auto& referenced_table = reference_segment->referenced_table();
             const auto& referenced_chunk = referenced_table->get_chunk(pos_list->common_chunk_id());
-            const auto& referenced_segment = referenced_chunk->get_segment(pqp_column_expression->column_id);
+            const auto& referenced_segment = referenced_chunk->get_segment(reference_segment->referenced_column_id());
             referenced_dictionary_segment = std::dynamic_pointer_cast<BaseDictionarySegment>(referenced_segment);
           }
 

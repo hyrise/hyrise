@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& table)
-    : BaseNonQueryNode(LQPNodeType::StaticTable), table(table) {}
+StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
+    : BaseNonQueryNode(LQPNodeType::StaticTable), table(init_table) {}
 
 std::string StaticTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
@@ -28,7 +28,7 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& StaticTableNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
   // that in the constructor
   if (!_column_expressions) {

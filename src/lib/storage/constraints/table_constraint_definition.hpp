@@ -14,8 +14,8 @@ enum class IsPrimaryKey : bool { Yes = true, No = false };
 struct TableConstraintDefinition final {
   TableConstraintDefinition() = default;
 
-  TableConstraintDefinition(std::unordered_set<ColumnID> column_ids, const IsPrimaryKey is_primary_key = IsPrimaryKey::No)
-      : columns(std::move(column_ids)), is_primary_key(is_primary_key) {}
+  TableConstraintDefinition(std::unordered_set<ColumnID> column_ids, const IsPrimaryKey init_is_primary_key = IsPrimaryKey::No)
+      : columns(std::move(column_ids)), is_primary_key(init_is_primary_key) {}
 
   bool operator==(const TableConstraintDefinition& rhs) const {
     return columns == rhs.columns && is_primary_key == rhs.is_primary_key;

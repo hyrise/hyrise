@@ -123,6 +123,7 @@ Contact: firstname.lastname@hpi.de
 -   Mathias   Flüggen
 -   Johannes  Frohnhofen
 -   Pascal    Führlich
+-   Carl      Gödecken
 -   Adrian    Holfter
 -   Sven      Ihde
 -   Jonathan  Janetzki
@@ -151,6 +152,8 @@ Contact: firstname.lastname@hpi.de
 -   Daniel    Stolpe
 -   Jonathan  Striebel
 -   Nils      Thamm
+-   Hendrik   Tjabben
+-   Justin    Trautmann
 -   Carsten   Walther
 -   Marcel    Weisgut
 -   Lukas     Wenzel
