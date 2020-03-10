@@ -92,11 +92,11 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
   return result;
 }
 
-void Chunk::finalize() {
+void Chunk::finalize(bool skip_mvcc_check) {
   Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
   _is_mutable = false;
 
-  if (has_mvcc_data()) {
+  if (has_mvcc_data() && !skip_mvcc_check) {
     const auto chunk_size = size();
     Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
     _mvcc_data->max_begin_cid = CommitID{0};
