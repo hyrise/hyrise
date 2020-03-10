@@ -4,8 +4,8 @@
 
 namespace opossum {
 
-SQLIdentifier::SQLIdentifier(const std::string& column_name, const std::optional<std::string>& table_name)
-    : column_name(column_name), table_name(table_name) {}
+SQLIdentifier::SQLIdentifier(const std::string& init_column_name, const std::optional<std::string>& init_table_name)
+    : column_name(init_column_name), table_name(init_table_name) {}
 
 bool SQLIdentifier::operator==(const SQLIdentifier& rhs) const {
   return column_name == rhs.column_name && table_name == rhs.table_name;

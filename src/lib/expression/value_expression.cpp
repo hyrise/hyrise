@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-ValueExpression::ValueExpression(const AllTypeVariant& value)
-    : AbstractExpression(ExpressionType::Value, {}), value(value) {}
+ValueExpression::ValueExpression(const AllTypeVariant& init_value)
+    : AbstractExpression(ExpressionType::Value, {}), value(init_value) {}
 
 bool ValueExpression::requires_computation() const { return false; }
 
