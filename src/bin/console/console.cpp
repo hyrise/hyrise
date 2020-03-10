@@ -150,6 +150,9 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+
+  Hyrise::get().default_lqp_cache = _lqp_cache;
+  Hyrise::get().default_pqp_cache = _pqp_cache;
 }
 
 int Console::read() {
