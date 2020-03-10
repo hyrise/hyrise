@@ -565,6 +565,8 @@ set(
     utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/log_manager.cpp
+    utils/log_manager.hpp
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
@@ -578,6 +580,8 @@ set(
     utils/meta_tables/meta_chunks_table.hpp
     utils/meta_tables/meta_columns_table.cpp
     utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_log_table.cpp
+    utils/meta_tables/meta_log_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
     utils/meta_tables/meta_plugins_table.hpp
     utils/meta_tables/meta_segments_accurate_table.cpp
