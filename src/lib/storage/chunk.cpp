@@ -92,7 +92,7 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
   return result;
 }
 
-void Chunk::finalize(bool skip_mvcc_check) {
+void Chunk::finalize(const bool skip_mvcc_check) {
   Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
   _is_mutable = false;
 
