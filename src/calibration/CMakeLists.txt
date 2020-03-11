@@ -7,6 +7,8 @@ add_executable(
     calibration.cpp
     calibration_table_wrapper.cpp
     calibration_table_wrapper.hpp
+    csv_writer.cpp
+    csv_writer.hpp
     lqp_generator.cpp
     lqp_generator.hpp
     measurement_export.cpp
