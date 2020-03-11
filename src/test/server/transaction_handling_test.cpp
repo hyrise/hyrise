@@ -91,7 +91,8 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
   EXPECT_EQ(transaction_ctx, nullptr);
 }
 
-// other transactions don't see the changes of uncommitted transactions
+// unit test ensuring that transactions don't see the changes of other uncommitted transactions
+// read more about visibility of transaction changes on the MVCC wiki page
 TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
   std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
 
@@ -104,6 +105,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
 
   transaction_ctx = execution_info_transaction_context_pair.second;
 
+  // user A wants to delete a row from the table and starts transaction
   query = "BEGIN; DELETE FROM users WHERE id = 1;";
 
   execution_info_transaction_context_pair =
@@ -111,7 +113,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
   execution_information = execution_info_transaction_context_pair.first;
   transaction_ctx = execution_info_transaction_context_pair.second;
 
-  // some other users executes query to print all elements in table
+  // meanwhile user B checks all elements in that table
   std::string query_2 = "SELECT * FROM users;";
 
   auto transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context();
@@ -121,21 +123,19 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
 
   auto execution_information_2 = execution_info_transaction_context_pair_2.first;
 
-  // the DELETE statement has not been committed yet
-  // that's why that change is not yet visible
+  // the DELETE statement from user A has not been committed yet
+  // that's why the change is not visible yet
   EXPECT_TRUE(execution_information_2.error_message.empty());
   EXPECT_EQ(execution_information_2.result_table->row_count(), 1);
 
+  // user A finally commits the transaction
   query = "COMMIT;";
 
   execution_info_transaction_context_pair =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
   execution_information = execution_info_transaction_context_pair.first;
 
-  // now the first user has committed
-  EXPECT_TRUE(execution_information.error_message.empty());
-
-  // some other users executes query to print all elements in table
+  // user B checks all elements in that table again
   query_2 = "SELECT * FROM users;";
 
   transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context();
