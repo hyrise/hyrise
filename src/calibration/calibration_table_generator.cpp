@@ -1,10 +1,10 @@
-#include "table_generator.hpp"
+#include "calibration_table_generator.hpp"
 #include "storage/table.hpp"
 #include "constant_mappings.hpp"
 
 namespace opossum {
 
-  TableGenerator::TableGenerator(std::shared_ptr<TableGeneratorConfig> config) {
+  CalibrationTableGenerator::CalibrationTableGenerator(std::shared_ptr<TableGeneratorConfig> config) {
       // Generate all possible permutations of column types
     for (DataType data_type : config->data_types){
       for (EncodingType encoding_type : config->encoding_types){
@@ -28,7 +28,7 @@ namespace opossum {
     _row_counts.assign(config->row_counts.begin(), config->row_counts.end());
   }
 
-  std::vector<std::shared_ptr<const CalibrationTableWrapper>> TableGenerator::generate() const {
+  std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::generate() const {
     auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
     table_wrappers.reserve(_chunk_offsets.size() * _row_counts.size());
 

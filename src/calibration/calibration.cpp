@@ -11,7 +11,7 @@
 
 #include "lqp_generator.hpp"
 #include "measurement_export.hpp"
-#include "table_generator.hpp"
+#include "calibration_table_generator.hpp"
 #include "table_export.hpp"
 #include "benchmark_builder.hpp"
 
@@ -29,7 +29,7 @@ int main() {
           {1000}, //TODO rename to chunk_size
           {1500, 60175, 25, 15000, 2000, 8000, 5, 100}
   });
-  auto table_generator = TableGenerator(table_config);
+  auto table_generator = CalibrationTableGenerator(table_config);
   const auto tables = table_generator.generate();
 
   auto const path_train = "./data/train";

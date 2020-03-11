@@ -15,8 +15,8 @@ add_executable(
     measurement_export.hpp
     table_export.cpp
     table_export.hpp
-    table_generator.cpp
-    table_generator.hpp
+        calibration_table_generator.cpp
+        calibration_table_generator.hpp
 )
 
 target_link_libraries(
