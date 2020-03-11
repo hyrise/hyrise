@@ -30,7 +30,7 @@ namespace opossum {
         _config = config;
     }
 
-    void BenchmarkBuilder::export_benchmark(const BenchmarkType type, const float SCALE_FACTOR) const {
+    void BenchmarkBuilder::export_benchmark(const BenchmarkType type, const float SCALE_FACTOR) {
       switch(type){
         case BenchmarkType::TCPH:   _run_tcph(SCALE_FACTOR); break;
         case BenchmarkType::TCPDS:  _run_tcpds(SCALE_FACTOR); break;

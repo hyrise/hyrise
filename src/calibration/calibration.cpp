@@ -37,9 +37,9 @@ int main() {
 
   const auto measurement_export = MeasurementExport(path_train);
   auto lqp_generator = LQPGenerator();
-  const auto table_export = TableExport(path_train);
+  auto table_export = TableExport(path_train);
 
-  const auto benchmark_builder = BenchmarkBuilder(path_test);
+  auto benchmark_builder = BenchmarkBuilder(path_test);
 
   benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
 

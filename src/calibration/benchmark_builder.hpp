@@ -15,12 +15,12 @@ class BenchmarkBuilder {
     BenchmarkBuilder(const std::string& path_to_dir);
     BenchmarkBuilder(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config);
 
-    void export_benchmark(const BenchmarkType type, const float SCALE_FACTOR) const;
+    void export_benchmark(const BenchmarkType type, const float SCALE_FACTOR);
 
   private:
-    const std::string&      _path_to_dir;
+    const std::string& _path_to_dir;
     const MeasurementExport _measurement_export;
-    const TableExport       _table_export;
+    TableExport _table_export;
 
 
     std::shared_ptr<BenchmarkConfig> _config;

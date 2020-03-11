@@ -116,7 +116,7 @@ namespace opossum {
         visit_expression(el, [&](const auto& expression) {
             if (expression->type == ExpressionType::LQPColumn) {
 
-              // INPUT_ROWS_LEFT TODO this does not extract anything
+              // INPUT_ROWS_LEFT
               ss << (op->input_left() != nullptr ? std::to_string(op->input_table_left()->row_count()) : "null") << _separator;
 
               // OUTPUT_ROWS

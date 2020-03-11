@@ -3,6 +3,7 @@
 #include "string"
 #include "storage/table.hpp"
 #include "calibration_table_wrapper.hpp"
+#include "csv_writer.hpp"
 
 namespace opossum {
 
@@ -14,7 +15,7 @@ class TableExport{
  public:
     TableExport(const std::string& path_to_dir);
 
-    void export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const;
+    void export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
 
 private:
   const std::string& _path_to_dir;
@@ -23,22 +24,21 @@ private:
   const std::string _column_meta_file_name = "column_meta";
   const std::string _segment_meta_file_name = "segment_meta";
 
-  const std::string _table_file_path = _path_to_dir + "/" + _table_meta_file_name + ".csv";
-  const std::string _column_file_path = _path_to_dir + "/" + _column_meta_file_name + ".csv";
-  const std::string _segment_file_path = _path_to_dir + "/" + _segment_meta_file_name + ".csv";
+  const std::vector<const std::string> _get_header(const TableExportType type) const { //TODO How to make this constexpr?
+    switch (type){
+      case TableExportType::TABLE: return std::vector<const std::string>({"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"});
+      case TableExportType::COLUMN: return std::vector<const std::string>({"TABLE_NAME", "COLUMN_NAME", "COLUMN_DATA_TYPE"});
+      case TableExportType::SEGMENT: return std::vector<const std::string>({"TABLE_NAME", "COLUMN_NAME", "CHUNK_ID", "ENCODING_TYPE", "COMPRESSION_TYPE"});
+    }
+    throw std::runtime_error("Requested header for unknown TableExportType.");
+  }
 
-  const std::string _separator = ",";
+  CSVWriter _table_csv_writer = CSVWriter(_path_to_dir + "/" + _table_meta_file_name + ".csv", _get_header(TableExportType::TABLE));
+  CSVWriter _column_csv_writer = CSVWriter(_path_to_dir + "/" + _column_meta_file_name + ".csv", _get_header(TableExportType::COLUMN));
+  CSVWriter _segment_csv_writer = CSVWriter(_path_to_dir + "/" + _segment_meta_file_name + ".csv", _get_header(TableExportType::SEGMENT));
 
-  const std::string _get_header(const TableExportType type) const;
-
-  const std::string& _get_relative_path(const TableExportType type) const ;
-
-  void _create_file(const TableExportType type) const;
-
-  const std::string _export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const;
-  const std::string _export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const;
-  const std::string _export_segment_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) const;
-
-  void _append_to_file(const TableExportType type, const std::string &str) const;
+  void _export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
+  void _export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
+  void _export_segment_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
 };
 }
