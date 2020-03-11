@@ -160,7 +160,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                 });
           } else {
             // End of dictionary segment shortcut - handle all other referenced segments and ReferenceSegments that
-            // reference more than a single chunk by materializing themm into a ValueSegment
+            // reference more than a single chunk by materializing them into a ValueSegment
             bool has_null = false;
             auto values = pmr_vector<ColumnDataType>(segment->size());
             auto null_values = pmr_vector<bool>(

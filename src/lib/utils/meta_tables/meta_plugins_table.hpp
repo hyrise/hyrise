@@ -14,14 +14,14 @@ class MetaPluginsTable : public AbstractMetaTable {
 
   const std::string& name() const final;
 
-  bool can_insert() const;
-  bool can_delete() const;
+  bool can_insert() const final;
+  bool can_delete() const final;
 
  protected:
-  std::shared_ptr<Table> _on_generate() const;
+  std::shared_ptr<Table> _on_generate() const final;
 
-  void _on_insert(const std::vector<AllTypeVariant>& values);
-  void _on_remove(const std::vector<AllTypeVariant>& values);
+  void _on_insert(const std::vector<AllTypeVariant>& values) final;
+  void _on_remove(const std::vector<AllTypeVariant>& values) final;
 };
 
 }  // namespace opossum
