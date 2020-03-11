@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include "boost/bimap.hpp"
 #include <vector>
@@ -10,6 +12,8 @@ namespace opossum {
     public:
       CSVWriter(std::string file_path, const std::vector<const std::string> headers, const char delimiter = ',', const bool replace_file = true);
 
+      static constexpr std::string_view NA = "null";
+
       template <class T>
       void set_value(const std::string& key, const T& value){
 
@@ -21,7 +25,7 @@ namespace opossum {
         DebugAssert(
                 _current_row.find(key) == _current_row.end() ,
                 "\nCSV Writer ERROR: Added value for column '" + key + "' for file '" + _file_path + "' twice. \n" +
-                "Please validate header and value insertion. "
+                "Please validate header and value insertion. Reminder: use write_row() to write and flush all values."
         );
 
         //Check if we added a value for an unknown column/header

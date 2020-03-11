@@ -36,7 +36,7 @@ namespace opossum {
         return true;
       })(_current_row, _headers),
       "CSV Writer ERROR: Tried to write row to file '" + _file_path + "' with missing values for one or more columns. \n" +
-           "Please validate header and value insertion."
+           "Please validate header and value insertion. You might forgot a column or "
       );
 
       // Check if file header is equal to header in memory
