@@ -19,7 +19,7 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override { return forward_constraints(); }
+  const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override;
 
   const std::vector<OrderByMode> order_by_modes;
 

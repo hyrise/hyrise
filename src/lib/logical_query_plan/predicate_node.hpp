@@ -29,7 +29,7 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override { return forward_constraints(); }
+  const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const override;
 
   std::shared_ptr<AbstractExpression> predicate() const;
 
