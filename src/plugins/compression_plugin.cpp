@@ -4,12 +4,12 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -17,10 +17,17 @@ const std::string CompressionPlugin::description() const { return "CompressionPl
 
 void CompressionPlugin::start() {
   Hyrise::get().log_manager.add_message(description(), "Initialized!");
+  _memory_budget_setting = std::make_shared<MemoryBudgetSetting>();
+  _memory_budget_setting->register_at_settings_manager();
   _loop_thread = std::make_unique<PausableLoopThread>(THREAD_INTERVAL, [&](size_t) { _optimize_compression(); });
 }
 
 void CompressionPlugin::_optimize_compression() {
+  if (_memory_budget_setting->get() == "5000") {
+    Hyrise::get().log_manager.add_message(description(), "Target memory budget sufficient, not optimizing.");
+    return;
+  }
+
   if (_optimized) return;
 
   _optimized = true;
@@ -31,7 +38,7 @@ void CompressionPlugin::_optimize_compression() {
   }
   auto table = Hyrise::get().storage_manager.get_table("lineitem");
 
-  const auto column_id = ColumnID{15}; //l_comment
+  const auto column_id = ColumnID{15};  //l_comment
   if (table->column_count() <= static_cast<ColumnCount>(column_id)) {
     Hyrise::get().log_manager.add_message(description(), "No optimization possible with given parameters!");
     return;
@@ -55,11 +62,11 @@ void CompressionPlugin::_optimize_compression() {
   }
 
   auto mb_saved = (memory_usage_old - memory_usage_new) / 1'000'000;
-  Hyrise::get().log_manager.add_message(description(), "Applied new compression configuration - saved " + std::to_string(mb_saved) + "MB.");
+  Hyrise::get().log_manager.add_message(
+      description(), "Applied new compression configuration - saved " + std::to_string(mb_saved) + "MB.");
 }
 
-void CompressionPlugin::stop() {}
-
+void CompressionPlugin::stop() { _memory_budget_setting->unregister_at_settings_manager(); }
 
 EXPORT_PLUGIN(CompressionPlugin)
 
