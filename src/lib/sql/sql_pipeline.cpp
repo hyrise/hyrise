@@ -248,11 +248,15 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
 
     _result_tables.emplace_back(table);
 
-    if (const auto& previous_transaction_context = pipeline_statement->transaction_context();
-        previous_transaction_context->is_auto_commit()) {
+    const auto& previous_transaction_context = pipeline_statement->transaction_context();
+
+    if (previous_transaction_context->is_auto_commit()) {
       DebugAssert(previous_transaction_context->phase() == TransactionPhase::Committed ||
                       previous_transaction_context->phase() == TransactionPhase::RolledBackByUser,
                   "Auto-commit statements should always be committed or rolled back at this point");
+      _transaction_context = nullptr;
+    } else if (previous_transaction_context->phase() == TransactionPhase::Committed ||
+               previous_transaction_context->phase() == TransactionPhase::RolledBackByUser) {
       _transaction_context = nullptr;
     } else {
       _transaction_context = previous_transaction_context;

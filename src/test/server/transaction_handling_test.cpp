@@ -21,6 +21,7 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
   EXPECT_TRUE(execution_information.error_message.empty());
   EXPECT_EQ(execution_information.result_table, nullptr);
   EXPECT_EQ(execution_information.custom_command_complete_message.value(), "COMMIT");
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table("users")->row_count(), 1);
 }
 
 TEST_F(TransactionHandlingTest, RollbackTransaction) {
@@ -88,6 +89,65 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
   // in order to force creating a new one in the next pipeline execution
   transaction_ctx = execution_info_transaction_context_pair.second;
   EXPECT_EQ(transaction_ctx, nullptr);
+}
+
+// other transactions don't see the changes of uncommitted transactions
+TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
+  std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
+
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto execution_info_transaction_context_pair =
+      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+
+  auto execution_information = execution_info_transaction_context_pair.first;
+
+  transaction_ctx = execution_info_transaction_context_pair.second;
+
+  query = "BEGIN; DELETE FROM users WHERE id = 1;";
+
+  execution_info_transaction_context_pair =
+      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+  execution_information = execution_info_transaction_context_pair.first;
+  transaction_ctx = execution_info_transaction_context_pair.second;
+
+  // some other users executes query to print all elements in table
+  std::string query_2 = "SELECT * FROM users;";
+
+  auto transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto execution_info_transaction_context_pair_2 =
+      QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, transaction_ctx_2);
+
+  auto execution_information_2 = execution_info_transaction_context_pair_2.first;
+
+  // the DELETE statement has not been committed yet
+  // that's why that change is not yet visible
+  EXPECT_TRUE(execution_information_2.error_message.empty());
+  EXPECT_EQ(execution_information_2.result_table->row_count(), 1);
+
+  query = "COMMIT;";
+
+  execution_info_transaction_context_pair =
+      QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
+  execution_information = execution_info_transaction_context_pair.first;
+
+  // now the first user has committed
+  EXPECT_TRUE(execution_information.error_message.empty());
+
+  // some other users executes query to print all elements in table
+  query_2 = "SELECT * FROM users;";
+
+  transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context();
+
+  execution_info_transaction_context_pair_2 =
+      QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, transaction_ctx_2);
+
+  execution_information_2 = execution_info_transaction_context_pair_2.first;
+
+  // now the changes of the DELETE statement are visible
+  EXPECT_TRUE(execution_information_2.error_message.empty());
+  EXPECT_EQ(execution_information_2.result_table->row_count(), 0);
 }
 
 }  // namespace opossum
