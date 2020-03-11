@@ -22,7 +22,7 @@ namespace opossum {
  */
 class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<AbstractSetting> {
  public:
-  explicit AbstractSetting(const std::string& init_name);
+  explicit AbstractSetting(const std::string& init_name, const std::string& init_value);
 
   virtual ~AbstractSetting() = default;
 
@@ -37,6 +37,8 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
   virtual void unregister_at_settings_manager();
 
   const std::string name;
+ protected:
+  std::string _value;
 };
 
 }  // namespace opossum
