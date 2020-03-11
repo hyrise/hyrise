@@ -19,7 +19,8 @@ class MetaSettingsTable : public AbstractMetaTable {
   friend class MetaSettingsTest;
   std::shared_ptr<Table> _on_generate() const final;
 
-  void _on_update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values) final;
+  void _on_update(const std::vector<AllTypeVariant>& selected_values,
+                  const std::vector<AllTypeVariant>& update_values) final;
 };
 
 }  // namespace opossum
