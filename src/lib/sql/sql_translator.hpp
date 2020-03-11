@@ -19,6 +19,7 @@ namespace opossum {
 
 class AggregateNode;
 class LQPSubqueryExpression;
+class Table;
 
 /**
  * Holds information about the query translation such as:
