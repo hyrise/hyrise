@@ -13,8 +13,8 @@ add_executable(
     lqp_generator.hpp
         operator_feature_export.cpp
         operator_feature_export.hpp
-    table_export.cpp
-    table_export.hpp
+        table_feature_export.cpp
+        table_feature_export.hpp
         calibration_table_generator.cpp
         calibration_table_generator.hpp
 )

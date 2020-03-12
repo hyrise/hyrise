@@ -2,7 +2,7 @@
 
 #include <benchmark_config.hpp>
 #include "string"
-#include "table_export.hpp"
+#include "table_feature_export.hpp"
 #include "operator_feature_export.hpp"
 
 namespace opossum{
@@ -20,7 +20,7 @@ class BenchmarkBuilder {
   private:
     const std::string& _path_to_dir;
     const OperatorFeatureExport _measurement_export;
-    TableExport _table_export;
+    TableFeatureExport _table_export;
 
 
     std::shared_ptr<BenchmarkConfig> _config;

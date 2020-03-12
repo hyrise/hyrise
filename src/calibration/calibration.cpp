@@ -12,7 +12,7 @@
 #include "lqp_generator.hpp"
 #include "operator_feature_export.hpp"
 #include "calibration_table_generator.hpp"
-#include "table_export.hpp"
+#include "table_feature_export.hpp"
 #include "benchmark_builder.hpp"
 
 #include "benchmark_config.hpp"
@@ -37,7 +37,7 @@ int main() {
 
   const auto measurement_export = OperatorFeatureExport(path_train);
   auto lqp_generator = LQPGenerator();
-  auto table_export = TableExport(path_train);
+  auto table_export = TableFeatureExport(path_train);
 
   auto benchmark_builder = BenchmarkBuilder(path_test);
 

@@ -12,7 +12,7 @@ namespace opossum {
     BenchmarkBuilder::BenchmarkBuilder(const std::string& path_to_dir):
         _path_to_dir(path_to_dir),
         _measurement_export(OperatorFeatureExport(path_to_dir)),
-        _table_export(TableExport(path_to_dir))
+        _table_export(TableFeatureExport(path_to_dir))
     {
       auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
       config->max_runs = 1;
@@ -25,7 +25,7 @@ namespace opossum {
     BenchmarkBuilder::BenchmarkBuilder(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config):
         _path_to_dir(path_to_dir),
         _measurement_export(OperatorFeatureExport(path_to_dir)),
-        _table_export(TableExport(path_to_dir))
+        _table_export(TableFeatureExport(path_to_dir))
     {
         _config = config;
     }
