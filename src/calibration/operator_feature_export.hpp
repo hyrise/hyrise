@@ -6,9 +6,9 @@
 #include "constant_mappings.hpp"
 
 namespace opossum {
-class MeasurementExport {
+class OperatorFeatureExport {
  public:
-  explicit MeasurementExport(const std::string& path_to_dir);
+  explicit OperatorFeatureExport(const std::string& path_to_dir);
 
   void export_to_csv(std::shared_ptr<const AbstractOperator> op) const;
 

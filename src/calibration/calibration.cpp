@@ -10,7 +10,7 @@
 #include "scheduler/operator_task.hpp"
 
 #include "lqp_generator.hpp"
-#include "measurement_export.hpp"
+#include "operator_feature_export.hpp"
 #include "calibration_table_generator.hpp"
 #include "table_export.hpp"
 #include "benchmark_builder.hpp"
@@ -35,7 +35,7 @@ int main() {
   auto const path_train = "./data/train";
   auto const path_test = "./data/test";
 
-  const auto measurement_export = MeasurementExport(path_train);
+  const auto measurement_export = OperatorFeatureExport(path_train);
   auto lqp_generator = LQPGenerator();
   auto table_export = TableExport(path_train);
 

@@ -11,8 +11,8 @@ add_executable(
     csv_writer.hpp
     lqp_generator.cpp
     lqp_generator.hpp
-    measurement_export.cpp
-    measurement_export.hpp
+        operator_feature_export.cpp
+        operator_feature_export.hpp
     table_export.cpp
     table_export.hpp
         calibration_table_generator.cpp

@@ -3,7 +3,7 @@
 #include <benchmark_config.hpp>
 #include "string"
 #include "table_export.hpp"
-#include "measurement_export.hpp"
+#include "operator_feature_export.hpp"
 
 namespace opossum{
 enum BenchmarkType{
@@ -19,7 +19,7 @@ class BenchmarkBuilder {
 
   private:
     const std::string& _path_to_dir;
-    const MeasurementExport _measurement_export;
+    const OperatorFeatureExport _measurement_export;
     TableExport _table_export;
 
 

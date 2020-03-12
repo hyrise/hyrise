@@ -4,7 +4,7 @@
 #include <expression/expression_utils.hpp>
 #include <logical_query_plan/stored_table_node.hpp>
 #include <regex>
-#include "measurement_export.hpp"
+#include "operator_feature_export.hpp"
 #include "constant_mappings.hpp"
 #include "storage/table.hpp"
 #include "hyrise.hpp"
@@ -12,12 +12,12 @@
 
 namespace opossum {
 
-    MeasurementExport::MeasurementExport(const std::string& path_to_dir) : _path_to_dir(path_to_dir){
+    OperatorFeatureExport::OperatorFeatureExport(const std::string& path_to_dir) : _path_to_dir(path_to_dir){
       //Create dir if not exists
       std::filesystem::create_directories(path_to_dir);
     }
 
-    void MeasurementExport::export_to_csv(std::shared_ptr<const AbstractOperator> op) const {
+    void OperatorFeatureExport::export_to_csv(std::shared_ptr<const AbstractOperator> op) const {
       if (op != nullptr){
         //Export current operator
         _export_typed_operator(op);
@@ -28,7 +28,7 @@ namespace opossum {
       }
     }
 
-    void MeasurementExport::_export_typed_operator(std::shared_ptr<const AbstractOperator> op) const {
+    void OperatorFeatureExport::_export_typed_operator(std::shared_ptr<const AbstractOperator> op) const {
       switch(op->type()){
         case OperatorType::TableScan: _export_table_scan(op); break;
         default: break;
@@ -36,7 +36,7 @@ namespace opossum {
     }
 
     // TABLE_SCAN
-    void MeasurementExport::_export_table_scan(std::shared_ptr<const AbstractOperator> op) const {
+    void OperatorFeatureExport::_export_table_scan(std::shared_ptr<const AbstractOperator> op) const {
       auto csv_writer = _csv_writers.at(op->type());
 
       const auto node = op->lqp_node;
