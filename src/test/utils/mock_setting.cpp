@@ -3,7 +3,7 @@
 namespace opossum {
 
 MockSetting::MockSetting(const std::string& init_name)
-    : AbstractSetting(init_name, "mock_value"), _get_calls(0), _set_calls(0) {}
+    : AbstractSetting(init_name), _value(std::string{"mock_value"}), _get_calls(0), _set_calls(0) {}
 
 const std::string& MockSetting::description() const {
   static const auto description = std::string{"mock_description"};

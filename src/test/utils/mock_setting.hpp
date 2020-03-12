@@ -23,6 +23,7 @@ class MockSetting : public AbstractSetting {
   size_t set_calls() const;
 
  private:
+  std::string _value;
   size_t _get_calls;
   size_t _set_calls;
 };
