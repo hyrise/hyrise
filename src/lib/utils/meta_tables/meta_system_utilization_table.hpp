@@ -25,7 +25,7 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
   };
 
  protected:
-  std::shared_ptr<Table> _on_generate();
+  std::shared_ptr<Table> _on_generate() const final;
 
   struct LoadAvg {
     float load_1_min;
@@ -38,13 +38,13 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
     int64_t physical_memory;
   };
 
-  LoadAvg _get_load_avg();
-  int _get_cpu_count();
-  float _get_system_cpu_usage();
-  float _get_process_cpu_usage();
-  SystemMemoryUsage _get_system_memory_usage();
-  int64_t _int_from_string(std::string input_string);
-  ProcessMemoryUsage _get_process_memory_usage();
+  LoadAvg _get_load_avg() const;
+  int _get_cpu_count() const;
+  float _get_system_cpu_usage() const;
+  float _get_process_cpu_usage() const;
+  SystemMemoryUsage _get_system_memory_usage() const;
+  int64_t _int_from_string(std::string input_string) const;
+  ProcessMemoryUsage _get_process_memory_usage() const;
 };
 
 }  // namespace opossum

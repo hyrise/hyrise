@@ -36,7 +36,7 @@ const std::string& MetaSystemInformationTable::name() const {
   return name;
 }
 
-std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
+std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   const MetaSystemUtilizationTable::SystemMemoryUsage system_memory_usage = _get_system_memory_usage();
@@ -46,7 +46,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
   return output_table;
 }
 
-MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemInformationTable::_get_system_memory_usage() {
+MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemInformationTable::_get_system_memory_usage() const {
 #if defined __linux__
 
   struct sysinfo memory_info;

@@ -49,7 +49,7 @@ void MetaSystemUtilizationTable::init() {
   _get_process_cpu_usage();
 }
 
-std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
+std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   const auto system_cpu_usage = _get_system_cpu_usage();
@@ -65,7 +65,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
   return output_table;
 }
 
-MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
+MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() const {
 #if defined __linux__
 
   std::ifstream load_avg_file;
@@ -98,7 +98,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   Fail("Method not implemented for this platform");
 }
 
-int MetaSystemUtilizationTable::_get_cpu_count() {
+int MetaSystemUtilizationTable::_get_cpu_count() const {
 #if defined __linux__
 
   std::ifstream cpu_info_file;
@@ -127,7 +127,7 @@ int MetaSystemUtilizationTable::_get_cpu_count() {
   Fail("Method not implemented for this platform");
 }
 
-float MetaSystemUtilizationTable::_get_system_cpu_usage() {
+float MetaSystemUtilizationTable::_get_system_cpu_usage() const {
 #if defined __linux__
 
   static uint64_t last_user_time = 0u, last_user_nice_time = 0u, last_kernel_time = 0u, last_idle_time = 0u;
@@ -185,7 +185,7 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
   Fail("Method not implemented for this platform");
 }
 
-float MetaSystemUtilizationTable::_get_process_cpu_usage() {
+float MetaSystemUtilizationTable::_get_process_cpu_usage() const {
 #if defined __linux__
 
   static clock_t last_clock_time = 0u, last_kernel_time = 0u, last_user_time = 0u;
@@ -238,7 +238,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
   Fail("Method not implemented for this platform");
 }
 
-MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
+MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() const {
 #if defined __linux__
 
   struct sysinfo memory_info;
@@ -295,7 +295,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 }
 
 #if defined __linux__
-int64_t MetaSystemUtilizationTable::_int_from_string(std::string input_string) {
+int64_t MetaSystemUtilizationTable::_int_from_string(std::string input_string) const {
   size_t index = 0;
   size_t begin = 0, end = input_string.length() - 1;
 
@@ -315,7 +315,7 @@ int64_t MetaSystemUtilizationTable::_int_from_string(std::string input_string) {
 }
 #endif
 
-MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
+MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() const {
 #if defined __linux__
 
   std::ifstream self_status_file;
