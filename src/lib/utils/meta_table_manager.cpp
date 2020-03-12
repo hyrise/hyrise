@@ -8,17 +8,32 @@
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
+#include "utils/meta_tables/meta_system_information_table.hpp"
+#include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
+<<<<<<< HEAD
   const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {
       std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
       std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
       std::make_shared<MetaLogTable>(),
       std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>(),
       std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
+=======
+  const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {std::make_shared<MetaTablesTable>(),
+                                                                       std::make_shared<MetaColumnsTable>(),
+                                                                       std::make_shared<MetaChunksTable>(),
+                                                                       std::make_shared<MetaChunkSortOrdersTable>(),
+                                                                       std::make_shared<MetaSegmentsTable>(),
+                                                                       std::make_shared<MetaSegmentsAccurateTable>(),
+                                                                       std::make_shared<MetaPluginsTable>(),
+                                                                       std::make_shared<MetaSettingsTable>(),
+                                                                       std::make_shared<MetaSystemInformationTable>(),
+                                                                       std::make_shared<MetaSystemUtilizationTable>()};
+>>>>>>> bensk1/system_utilization
 
   _table_names.reserve(_meta_tables.size());
   for (const auto& table : meta_tables) {
@@ -26,6 +41,8 @@ MetaTableManager::MetaTableManager() {
     _table_names.emplace_back(table->name());
   }
   std::sort(_table_names.begin(), _table_names.end());
+
+  std::static_pointer_cast<MetaSystemUtilizationTable>(_meta_tables.at("system_utilization"))->init();
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {

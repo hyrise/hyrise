@@ -25,7 +25,7 @@ const std::string& MetaSegmentsAccurateTable::name() const {
   return name;
 }
 
-std::shared_ptr<Table> MetaSegmentsAccurateTable::_on_generate() const {
+std::shared_ptr<Table> MetaSegmentsAccurateTable::_on_generate() {
   PerformanceWarning("Accurate segment information are expensive to gather. Use with caution.");
 
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
