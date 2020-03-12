@@ -13,6 +13,9 @@
 #include "statistics/table_statistics.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "resolve_type.hpp"
+#include "storage/pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/segment_encoding_utils.hpp"
 
 namespace opossum {
 
@@ -56,12 +59,29 @@ void ClusteringPlugin::_optimize_clustering() {
       auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
       Segments segments{};
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        segments.emplace_back(chunk->get_segment(column_id));
+        const auto base_segment = chunk->get_segment(column_id);
+        std::shared_ptr<BaseSegment> new_segment;
+        const auto data_type = table->column_data_type(column_id);
+        new_segment = encode_and_compress_segment(base_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
+        segments.emplace_back(new_segment);
       }
       table->append_chunk(segments, mvcc_data);
       table->get_chunk(chunk_id)->set_ordered_by({sort_column_id,  OrderByMode::Ascending});
       table->get_chunk(chunk_id)->finalize();
     }
+
+    // for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    //   auto chunk = table->get_chunk(chunk_id);
+    //   for (ColumnID column_)
+    // const auto base_segment = chunk->get_segment(column_id);
+    // memory_usage_old += base_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+
+    // std::shared_ptr<BaseSegment> new_segment;
+    // new_segment = encode_and_compress_segment(base_segment, data_type, SegmentEncodingSpec{EncodingType::LZ4});
+    // memory_usage_new += new_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+
+    // chunk->replace_segment(column_id, new_segment);
+    // }
 
     table->set_table_statistics(TableStatistics::from_table(*table));
     generate_chunk_pruning_statistics(table);
