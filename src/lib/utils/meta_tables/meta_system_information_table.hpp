@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
+#include "meta_system_utilization_table.hpp"
 
 namespace opossum {
 
@@ -15,6 +16,8 @@ class MetaSystemInformationTable : public AbstractMetaTable {
 
  protected:
   std::shared_ptr<Table> _on_generate();
+
+  MetaSystemUtilizationTable::SystemMemoryUsage _get_system_memory_usage();
 };
 
 }  // namespace opossum

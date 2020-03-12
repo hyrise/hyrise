@@ -15,15 +15,6 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
 
   void init();
 
- protected:
-  std::shared_ptr<Table> _on_generate();
-
-  struct LoadAvg {
-    float load_1_min;
-    float load_5_min;
-    float load_15_min;
-  };
-
   struct SystemMemoryUsage {
     int64_t total_ram;
     int64_t total_swap;
@@ -31,6 +22,15 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
     int64_t free_ram;
     int64_t free_swap;
     int64_t free_memory;
+  };
+
+ protected:
+  std::shared_ptr<Table> _on_generate();
+
+  struct LoadAvg {
+    float load_1_min;
+    float load_5_min;
+    float load_15_min;
   };
 
   struct ProcessMemoryUsage {
