@@ -71,9 +71,6 @@ const char* const tpch_query_1 =
  * LIMIT 100;
  *
  * The limit is not part of the printed query but hidden in the specification text.
- *
- * Changes:
- *  1. Random values are hardcoded
  */
 const char* const tpch_query_2 =
     R"(SELECT 'TPC-H_Q02', s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
@@ -98,9 +95,6 @@ const char* const tpch_query_2 =
  * LIMIT 10
  *
  * The limit is not part of the printed query but hidden in the specification text.
- *
- * Changes:
- *  1. Random values are hardcoded
  */
 const char* const tpch_query_3 =
     R"(SELECT 'TPC-H_Q03', l_orderkey, SUM(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority
@@ -134,8 +128,7 @@ const char* const tpch_query_3 =
  * ORDER BY o_orderpriority;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -176,8 +169,7 @@ const char* const tpch_query_4 =
  *      revenue DESC;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -243,11 +235,10 @@ const char* const tpch_query_6 =
  * ORDER BY supp_nation, cust_nation, l_year;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  3. Extract is not supported
+ *  2. Extract is not supported
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_7 =
@@ -327,10 +318,9 @@ const char* const tpch_query_7 =
  * ORDER BY o_year;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
- *  3. Extract is not supported
+ *  2. Extract is not supported
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_8 =
@@ -370,8 +360,7 @@ const char* const tpch_query_8 =
  * ORDER BY nation, o_year DESC;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. Extract is not supported
+ *  1. Extract is not supported
  *    a. Use SUBSTR instead
  */
 const char* const tpch_query_9 =
@@ -423,8 +412,7 @@ const char* const tpch_query_9 =
  * The limit is not part of the printed query but hidden in the specification text.
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -460,10 +448,6 @@ const char* const tpch_query_10 =
  *        AND n_name = '[NATION]'
  *    )
  * ORDER BY value DESC;
- *
- * Changes:
- *  1. Random values are hardcoded
-
  */
 const char* const tpch_query_11 =
     R"(SELECT 'TPC-H_Q11', ps_partkey, SUM(ps_supplycost * ps_availqty) as value FROM partsupp, supplier, nation
@@ -501,8 +485,7 @@ const char* const tpch_query_11 =
  * ORDER BY l_shipmode;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -532,8 +515,7 @@ const char* const tpch_query_12 =
  * ORDER BY custdist DESC, c_count DESC;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. Subselect column aliases are moved into subselect because SQLite does not support aliases at the original position
+ *  1. Subselect column aliases are moved into subselect because SQLite does not support aliases at the original position
  */
 
 const char* const tpch_query_13 =
@@ -558,8 +540,7 @@ const char* const tpch_query_13 =
  *    AND l_shipdate < date '[DATE]' + interval '1' month;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -594,8 +575,7 @@ const char* const tpch_query_14 =
  * drop view revenue[STREAM_ID];
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. "revenue[STREAM_ID]" renamed to "revenue"
+ *  1. "revenue[STREAM_ID]" renamed to "revenue_view"
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
@@ -630,10 +610,6 @@ const char* const tpch_query_15 =
  *    )
  * GROUP BY p_brand, p_type, p_size
  * ORDER BY supplier_cnt DESC, p_brand, p_type, p_size;
- *
- * Changes:
- *  1. Random values are hardcoded
-
  */
 const char* const tpch_query_16 =
     R"(SELECT 'TPC-H_Q16', p_brand, p_type, p_size, count(distinct ps_suppkey) as supplier_cnt
@@ -658,10 +634,6 @@ const char* const tpch_query_16 =
  *        FROM lineitem
  *        WHERE l_partkey = p_partkey
  *    );
- *
- * Changes:
- *  1. Random values are hardcoded
-
  */
 const char* const tpch_query_17 =
     R"(SELECT 'TPC-H_Q17', SUM(l_extendedprice) / 7.0 as avg_yearly FROM lineitem, part WHERE p_partkey = l_partkey
@@ -689,10 +661,6 @@ const char* const tpch_query_17 =
  * LIMIT 100;
  *
  * The limit is not part of the printed query but hidden in the specification text.
- *
- * Changes:
- *  1. Random values are hardcoded
-
  */
 const char* const tpch_query_18 =
     R"(SELECT 'TPC-H_Q18', c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, SUM(l_quantity)
@@ -736,9 +704,6 @@ const char* const tpch_query_18 =
  *        AND l_shipmode in ('AIR', 'AIR REG')
  *        AND l_shipinstruct = 'DELIVER IN PERSON'
  *    );
- *
- * Changes:
- *  1. Random values are hardcoded
  */
 const char* const tpch_query_19 =
 
@@ -782,8 +747,7 @@ const char* const tpch_query_19 =
  * ORDER BY s_name;
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -829,8 +793,7 @@ const char* const tpch_query_20 =
  * The limit is not part of the printed query but hidden in the specification text.
  *
  * Changes:
- *  1. Random values are hardcoded
- *  2. dates are not supported
+ *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
 

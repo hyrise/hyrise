@@ -150,16 +150,20 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
   insert->set_transaction_context(context1);
   insert->execute();
+
+  const auto check = [&]() {
+    auto get_table2 = std::make_shared<GetTable>(table_name);
+    get_table2->execute();
+    auto validate = std::make_shared<Validate>(get_table2);
+    auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
+    validate->set_transaction_context(context2);
+    validate->execute();
+    EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  };
+  check();
+
   context1->rollback();
-
-  auto get_table2 = std::make_shared<GetTable>(table_name);
-  get_table2->execute();
-  auto validate = std::make_shared<Validate>(get_table2);
-  auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
-  validate->set_transaction_context(context2);
-  validate->execute();
-
-  EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  check();
 }
 
 TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {

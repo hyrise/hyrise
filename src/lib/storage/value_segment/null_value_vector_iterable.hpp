@@ -16,7 +16,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
  public:
   using ValueType = bool;
 
-  explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
+  explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -33,13 +33,13 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   }
 
  private:
-  const pmr_concurrent_vector<bool>& _null_values;
+  const pmr_vector<bool>& _null_values;
 
  private:
   class Iterator : public BaseSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
     using ValueType = bool;
-    using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
+    using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
@@ -67,7 +67,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
    public:
     using ValueType = bool;
-    using NullValueVector = pmr_concurrent_vector<bool>;
+    using NullValueVector = pmr_vector<bool>;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values,

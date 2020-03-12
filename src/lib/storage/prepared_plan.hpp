@@ -16,7 +16,7 @@ class AbstractExpression;
  */
 class PreparedPlan final {
  public:
-  PreparedPlan(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids);
+  PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp, const std::vector<ParameterID>& init_parameter_ids);
 
   std::shared_ptr<PreparedPlan> deep_copy() const;
 

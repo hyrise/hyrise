@@ -4,8 +4,8 @@
 
 namespace opossum {
 
-DropTable::DropTable(const std::string& table_name, const bool if_exists)
-    : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(table_name), if_exists(if_exists) {}
+DropTable::DropTable(const std::string& init_table_name, const bool init_if_exists)
+    : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
 
 const std::string& DropTable::name() const {
   static const auto name = std::string{"DropTable"};

@@ -25,7 +25,7 @@ class AttributeVectorIterable;
 class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
  public:
   AbstractDereferencedColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                          const PredicateCondition predicate_condition);
+                                          const PredicateCondition init_predicate_condition);
 
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 

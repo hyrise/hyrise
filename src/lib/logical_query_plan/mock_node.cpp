@@ -11,8 +11,8 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
-    : AbstractLQPNode(LQPNodeType::Mock), name(name), _column_definitions(column_definitions) {}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
+    : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
 
 LQPColumnReference MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
@@ -26,7 +26,7 @@ LQPColumnReference MockNode::get_column(const std::string& column_name) const {
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> MockNode::column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
   if (!_column_expressions) {

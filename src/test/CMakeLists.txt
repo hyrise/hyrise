@@ -1,5 +1,6 @@
 set(
     SHARED_SOURCES
+    base_test.cpp
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
@@ -41,6 +42,7 @@ set(
     lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
+    logical_query_plan/change_meta_table_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/create_prepared_plan_node_test.cpp
     logical_query_plan/create_table_node_test.cpp
@@ -48,6 +50,7 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/export_node_test.cpp
     logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
@@ -66,9 +69,11 @@ set(
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
+    memory/segments_using_allocators_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
+    operators/change_meta_table_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
     operators/export_test.cpp
@@ -179,6 +184,7 @@ set(
     storage/multi_segment_index_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
+    storage/segment_access_counter_test.cpp
     storage/segment_accessor_test.cpp
     storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
@@ -194,14 +200,23 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/column_ids_after_pruning_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
     utils/meta_table_manager_test.cpp
+    utils/meta_tables/meta_mock_table.cpp
+    utils/meta_tables/meta_mock_table.hpp
+    utils/meta_tables/meta_table_test.cpp
+    utils/meta_tables/meta_plugins_test.cpp
+    utils/meta_tables/meta_settings_test.cpp
+    utils/mock_setting.hpp
+    utils/mock_setting.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
-    utils/column_ids_after_pruning_test.cpp
+    utils/setting_test.cpp
+    utils/settings_manager_test.cpp
     utils/singleton_test.cpp
     utils/size_estimation_utils_test.cpp
     utils/string_utils_test.cpp
@@ -247,7 +262,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
-target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
@@ -264,6 +278,6 @@ endif()
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest nlohmann_json::nlohmann_json pqxx_static)
+target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries_system(hyriseSystemTest pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)
