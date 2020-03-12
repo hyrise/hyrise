@@ -10,10 +10,10 @@ enum BenchmarkType{
     TCPH, TCPDS, JOB
 };
 
-class BenchmarkBuilder {
+class CalibrationBenchmarkRunner {
   public:
-    BenchmarkBuilder(const std::string& path_to_dir);
-    BenchmarkBuilder(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config);
+    CalibrationBenchmarkRunner(const std::string& path_to_dir);
+    CalibrationBenchmarkRunner(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config);
 
     void export_benchmark(const BenchmarkType type, const float SCALE_FACTOR);
 

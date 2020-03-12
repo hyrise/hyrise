@@ -4,12 +4,12 @@
 #include <file_based_benchmark_item_runner.hpp>
 #include <tpcds/tpcds_table_generator.hpp>
 #include <file_based_table_generator.hpp>
-#include "benchmark_builder.hpp"
+#include "calibration_benchmark_runner.hpp"
 #include "hyrise.hpp"
 
 namespace opossum {
 
-    BenchmarkBuilder::BenchmarkBuilder(const std::string& path_to_dir):
+    CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir):
         _path_to_dir(path_to_dir),
         _measurement_export(OperatorFeatureExport(path_to_dir)),
         _table_export(TableFeatureExport(path_to_dir))
@@ -22,7 +22,7 @@ namespace opossum {
       _config = config;
     }
 
-    BenchmarkBuilder::BenchmarkBuilder(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config):
+    CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config):
         _path_to_dir(path_to_dir),
         _measurement_export(OperatorFeatureExport(path_to_dir)),
         _table_export(TableFeatureExport(path_to_dir))
@@ -30,7 +30,7 @@ namespace opossum {
         _config = config;
     }
 
-    void BenchmarkBuilder::export_benchmark(const BenchmarkType type, const float SCALE_FACTOR) {
+    void CalibrationBenchmarkRunner::export_benchmark(const BenchmarkType type, const float SCALE_FACTOR) {
       switch(type){
         case BenchmarkType::TCPH:   _run_tcph(SCALE_FACTOR); break;
         case BenchmarkType::TCPDS:  _run_tcpds(SCALE_FACTOR); break;
@@ -57,7 +57,7 @@ namespace opossum {
       }
     }
 
-    void BenchmarkBuilder::_run_tcph(const float SCALE_FACTOR) const {
+    void CalibrationBenchmarkRunner::_run_tcph(const float SCALE_FACTOR) const {
       constexpr auto USE_PREPARED_STATEMENTS = false;
 
       // const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{5}};
@@ -69,7 +69,7 @@ namespace opossum {
       benchmark_runner->run();
     }
 
-    void BenchmarkBuilder::_run_tcpds(const float SCALE_FACTOR) const {
+    void CalibrationBenchmarkRunner::_run_tcpds(const float SCALE_FACTOR) const {
       const std::string query_path = "hyrise/resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification";
 
       auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(_config, query_path, std::unordered_set<std::string>{});
@@ -80,7 +80,7 @@ namespace opossum {
       benchmark_runner->run();
     }
 
-    void BenchmarkBuilder::_run_job(const float SCALE_FACTOR) const { //TODO Remove SCALE_FACTOR HERE
+    void CalibrationBenchmarkRunner::_run_job(const float SCALE_FACTOR) const { //TODO Remove SCALE_FACTOR HERE
       const auto table_path = "hyrise/imdb_data";
       const auto query_path = "hyrise/third_party/join-order-benchmark";
       const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};

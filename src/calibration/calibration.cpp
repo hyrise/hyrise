@@ -13,7 +13,7 @@
 #include "operator_feature_export.hpp"
 #include "calibration_table_generator.hpp"
 #include "table_feature_export.hpp"
-#include "benchmark_builder.hpp"
+#include "calibration_benchmark_runner.hpp"
 
 #include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
@@ -39,7 +39,7 @@ int main() {
   auto lqp_generator = LQPGenerator();
   auto table_export = TableFeatureExport(path_train);
 
-  auto benchmark_builder = BenchmarkBuilder(path_test);
+  auto benchmark_builder = CalibrationBenchmarkRunner(path_test);
 
   benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
 

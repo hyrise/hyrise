@@ -2,8 +2,8 @@
 add_executable(
     hyriseCalibration
 
-    benchmark_builder.cpp
-    benchmark_builder.hpp
+        calibration_benchmark_runner.cpp
+        calibration_benchmark_runner.hpp
     calibration.cpp
     calibration_table_wrapper.cpp
     calibration_table_wrapper.hpp
