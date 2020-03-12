@@ -37,7 +37,7 @@ class CompressionPlugin : public AbstractPlugin {
     void set(const std::string& value) final { _value = value; }
   };
 
-  constexpr static std::chrono::milliseconds THREAD_INTERVAL = std::chrono::milliseconds(1'000);
+  constexpr static std::chrono::milliseconds THREAD_INTERVAL = std::chrono::milliseconds(7'500);
 
   std::unique_ptr<PausableLoopThread> _loop_thread;
 
