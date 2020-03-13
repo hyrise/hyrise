@@ -110,6 +110,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/change_meta_table_node.cpp
+    logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
@@ -184,6 +186,8 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/change_meta_table.cpp
+    operators/change_meta_table.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -566,6 +570,26 @@ set(
     utils/make_bimap.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
+    utils/meta_tables/abstract_meta_table.cpp
+    utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_chunk_sort_orders_table.cpp
+    utils/meta_tables/meta_chunk_sort_orders_table.hpp
+    utils/meta_tables/meta_chunks_table.cpp
+    utils/meta_tables/meta_chunks_table.hpp
+    utils/meta_tables/meta_columns_table.cpp
+    utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_plugins_table.cpp
+    utils/meta_tables/meta_plugins_table.hpp
+    utils/meta_tables/meta_segments_accurate_table.cpp
+    utils/meta_tables/meta_segments_accurate_table.hpp
+    utils/meta_tables/meta_segments_table.cpp
+    utils/meta_tables/meta_segments_table.hpp
+    utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_tables_table.cpp
+    utils/meta_tables/meta_tables_table.hpp
+    utils/meta_tables/segment_meta_data.cpp
+    utils/meta_tables/segment_meta_data.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -573,6 +597,10 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
+    utils/settings/abstract_setting.hpp
+    utils/settings/abstract_setting.cpp
+    utils/settings_manager.cpp
+    utils/settings_manager.hpp
     utils/singleton.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp

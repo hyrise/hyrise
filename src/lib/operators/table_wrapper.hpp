@@ -14,7 +14,7 @@ namespace opossum {
  */
 class TableWrapper : public AbstractReadOnlyOperator {
  public:
-  explicit TableWrapper(const std::shared_ptr<const Table>& table);
+  explicit TableWrapper(const std::shared_ptr<const Table>& init_table);
 
   const std::string& name() const override;
 
