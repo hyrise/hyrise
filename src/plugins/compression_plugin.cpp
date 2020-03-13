@@ -127,7 +127,7 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 
 void CompressionPlugin::_optimize_compression() {
   const auto current_system_memory_usage = get_whole_system_memory_usage();
-  const auto system_memory_usage_budget = std::stol(_memory_budget_setting->get());
+  const auto system_memory_usage_budget = std::stoll(_memory_budget_setting->get());
   const auto memory_usage_reduction =
       static_cast<int64_t>(current_system_memory_usage) - static_cast<int64_t>(system_memory_usage_budget);
   auto achieved_memory_usage_reduction = int64_t{0};
