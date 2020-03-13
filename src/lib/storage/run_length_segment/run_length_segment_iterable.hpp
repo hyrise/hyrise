@@ -48,7 +48,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    * Run length segments store the end positions of runs in a sorted vector. To access a particular position, this
    * vector has to be searched for the end position of the according run. It is possible to find the value of a
    * position in O(log(n)) by doing a binary search.
-   * In case we hav already searched for a nearby position (e.g., when a previous not selective filter removed only
+   * In case we have already searched for a nearby position (e.g., when a previous not selective filter removed only
    * relatively few lines), we can linearly search the end position. Since position lists are often ordered and modern
    * CPUs are well at prefetching, linear searches are often faster than a complete binary search.
    * determine_linear_search_offset_distance_threshold() estimates the threshold of when to use a linear or a binary
@@ -56,13 +56,16 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    * faster for the given number of skipped positions.
    */
 
-  // LINEAR_SEARCH_ELEMENTS_THRESHOLD denotes the size of the range for that a linear search is faster than using a
-  // binary search on a sorted vector. The value of 200 has been found by a set of simple TPC-H measurements (#2038).
+  // LINEAR_SEARCH_ELEMENTS_THRESHOLD denotes the distance for that a linear search is faster than using a binary
+  // search on a sorted vector. The value of 200 has been found by a set of simple TPC-H measurements (#2038).
   static constexpr auto LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD = 200.0f;
 
-  // This methods estimates the threshold up to which is linear search is faster. Since the end position vector is
-  // (depending on actual data) a highly compressed vector of offsets, the offset distance up to which is linear search
+  // This method estimates the threshold up to which linear search is faster. Since the end position vector is
+  // a highly compressed vector of offsets (depending on actual data), the offset distance up to which is linear search
   // is beneficial can be much larger than LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD.
+  // Example: for a sorted segment of 65k elements with 10 distinct elements, the expected run length is 6.5k. We would
+  // use linear searches for offset distances of LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * 6.5. For sorted vectors with
+  // few distinct values (superb cases for run length encoding), binary searches are barely used.
   static ChunkOffset determine_linear_search_offset_distance_threshold(
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions) {
     if (end_positions->empty()) {
@@ -87,7 +90,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
      * Depending on the estimated threshold and the step size, a different search approach is used. The threshold
      * estimates how large the offset between the previously searched chunk offset and the currently searched chunk
      * offset needs to be before a binary search is faster than linearly searching. Three cases are handled:
-     *   - If the chunk offset is smaller then the previous offset (can happen, e.g., after joins), use a binary
+     *   - If the chunk offset is smaller than the previous offset (can happen, e.g., after joins), use a binary
      *     search from the beginning up to the previous position. Whenever reverse iteration is frequently used, we
      *     should consider using linear searching here as well (see below, currently blocked by #1531).
      *   - If the chunk offset is larger than the previous offset and the step size for the next offset is smaller
