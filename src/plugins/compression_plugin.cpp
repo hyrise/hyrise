@@ -82,9 +82,12 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 
   // TODO: check if we should inrease or decrease the memory.
 
+  auto encoded_segment_count = size_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    if (achieved_memory_usage_reduction >= desired_memory_usage_reduction) {
-      // Finish as soon as we have achieved the desired reduction in memory usage.
+    if ((desired_memory_usage_reduction > 0 && achieved_memory_usage_reduction >= desired_memory_usage_reduction) ||
+       (desired_memory_usage_reduction < 0 && achieved_memory_usage_reduction < desired_memory_usage_reduction))  {
+      // Finish as soon as we have achieved the desired reduction in memory usage OR break if we have used up the
+      // the budget for increasing the memory usage.
       break;
     }
 
@@ -102,14 +105,17 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 
     chunk->replace_segment(column_id, encoded_segment);
     achieved_memory_usage_reduction += memory_usage_old - memory_usage_new;
+    ++encoded_segment_count;
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   if (memory_usage_old != memory_usage_new) {
+    Assert(encoded_segment_count > 0, "Memory usage changed, but no segment encoding has been adapted.");
     const auto memory_change_in_megabytes =
         (static_cast<double>(memory_usage_old) - static_cast<double>(memory_usage_new)) / 1'000'000;
     std::stringstream stringstream;
-    stringstream << "Encoded " << table_name << "." << column_name << " using " + encoding_name << ": ";
+    stringstream << "Encoded " << encoded_segment_count << " of " << chunk_count << " segments of " << table_name;
+    stringstream << "." << column_name << " using " + encoding_name << ": ";
     stringstream << ((memory_change_in_megabytes > 0) ? "saved " : "added ");
     stringstream << std::fixed << std::setprecision(2) << std::abs(memory_change_in_megabytes) << " MB ";
     stringstream << (column_was_accessed ? "." : " (column has never been accessed).");
@@ -120,14 +126,8 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 }
 
 void CompressionPlugin::_optimize_compression() {
-  if (_memory_budget_setting->get() == "5000") {
-    Hyrise::get().log_manager.add_message(description(), "Target memory budget sufficient, not optimizing.");
-    return;
-  }
-
   const auto current_system_memory_usage = get_whole_system_memory_usage();
-  const auto system_memory_usage_budget =
-      static_cast<int64_t>(current_system_memory_usage * 0.75);  // TODO: obtain via settings
+  const auto system_memory_usage_budget = std::stol(_memory_budget_setting->get());
   const auto memory_usage_reduction =
       static_cast<int64_t>(current_system_memory_usage) - static_cast<int64_t>(system_memory_usage_budget);
   auto achieved_memory_usage_reduction = int64_t{0};
@@ -142,7 +142,7 @@ void CompressionPlugin::_optimize_compression() {
       break;
     }
 
-    const auto column_was_accessed = column_config[4] == "ACCESSED" ? true : false;
+    const auto column_was_accessed = column_config[0] == "ACCESSED" ? true : false;
     if (memory_usage_reduction > 0) {
       // We need to reduce: apply greedy changes.
       achieved_memory_usage_reduction +=
@@ -156,6 +156,16 @@ void CompressionPlugin::_optimize_compression() {
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
+
+  if (static_cast<int64_t>(current_system_memory_usage - achieved_memory_usage_reduction) > system_memory_usage_budget) {
+    const auto current_system_memory_usage_megabytes = get_whole_system_memory_usage() / 1'000'000;
+    const auto memory_budget_megabytes = system_memory_usage_budget / 1'000'000;
+    std::stringstream stringstream;
+    stringstream << "The memory budget of " << memory_budget_megabytes << " MB is infeasible (currrent system size is ";
+    stringstream << current_system_memory_usage_megabytes << " MB).";
+    Hyrise::get().log_manager.add_message(description(), stringstream.str());
+  }
+  Hyrise::get().log_manager.add_message(description(), "Compression optimization done.");
 }
 
 void CompressionPlugin::stop() {
