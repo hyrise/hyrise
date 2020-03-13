@@ -205,7 +205,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     info.pen_width = total.count();
   }
 
-  _duration_by_operator_name[op->name()] += op->performance_data().walltime;
+  _duration_by_operator_name[op->name()] += op->performance_data->walltime;
 
   info.label = label;
   _add_vertex(op, info);

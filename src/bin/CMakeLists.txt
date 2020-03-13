@@ -15,7 +15,6 @@ add_executable(
 
     playground.cpp
 )
-target_link_libraries_system(hyrisePlayground nlohmann_json::nlohmann_json)
 
 target_link_libraries(
     hyrisePlayground

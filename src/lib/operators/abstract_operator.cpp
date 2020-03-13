@@ -21,8 +21,8 @@ namespace opossum {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
-                                   std::unique_ptr<OperatorPerformanceData> performance_data)
-    : performance_data(std::move(performance_data)), _type(type), _input_left(left), _input_right(right) {}
+                                   std::unique_ptr<OperatorPerformanceData> init_performance_data)
+    : performance_data(std::move(init_performance_data)), _type(type), _input_left(left), _input_right(right) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
