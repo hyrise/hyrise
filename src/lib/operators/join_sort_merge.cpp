@@ -923,7 +923,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
     // Threshold of expected rows per partition over which parallel output jobs are spawned.
-    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
+    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10000;
 
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
@@ -941,7 +941,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         Segments segments;
         _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
         _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
-        output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
+        auto output_chunk = std::make_shared<Chunk>(std::move(segments));
+        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
+            _secondary_join_predicates.empty()) {
+          const ColumnID first_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+          const ColumnID second_join_column =
+              static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
+                                    _sort_merge_join._primary_predicate.column_ids.second);
+          output_chunk->finalize();
+          output_chunk->set_value_clustered_by({first_join_column, second_join_column});
+        }
+        output_chunks[pos_list_id] = output_chunk;
       };
 
       if (write_output_concurrently) {
