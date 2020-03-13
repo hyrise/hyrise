@@ -265,7 +265,7 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
 }
 
 std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
-    const std::shared_ptr<const Table> input_table,
+    const std::shared_ptr<const Table>& input_table,
     const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by) {
   auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data,
                                               input_table->target_chunk_size(), UseMvcc::No);

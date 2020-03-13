@@ -923,7 +923,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
 
     // Threshold of expected rows per partition over which parallel output jobs are spawned.
-    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10000;
+    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
 
     // Determine if writing output in parallel is necessary.
     // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
