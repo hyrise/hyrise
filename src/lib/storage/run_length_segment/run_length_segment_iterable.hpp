@@ -81,10 +81,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
   static EndPositionIterator search_end_positions_for_chunk_offset(
-      const ChunkOffset previous_chunk_offset, const ChunkOffset current_chunk_offset,
+      const ChunkOffset previous_chunk_offset, const ChunkOffset chunk_offset,
       const size_t previous_end_position_index, const size_t linear_search_threshold,
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions) {
-    const int64_t step_size = static_cast<int64_t>(current_chunk_offset) - previous_chunk_offset;
+    const int64_t step_size = static_cast<int64_t>(chunk_offset) - previous_chunk_offset;
 
     /**
      * Depending on the estimated threshold and the step size, a different search approach is used. The threshold
@@ -100,16 +100,16 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
      */
     if (step_size < 0) {
       return std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index,
-                              current_chunk_offset);
+                              chunk_offset);
     } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
-      const auto less_than_current = [current = current_chunk_offset](const ChunkOffset offset) {
-        return offset < current;
+      const auto less_than_current = [&](const ChunkOffset offset) {
+        return offset < chunk_offset;
       };
       return std::find_if_not(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
                               less_than_current);
     } else {
       return std::lower_bound(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
-                              current_chunk_offset);
+                              chunk_offset);
     }
   }
 
