@@ -51,11 +51,36 @@ std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::share
   return encoder->encode(segment, data_type);
 }
 
-/**
- * @brief Returns the vector compression type for a given compressed vector type.
- *
- * For the difference of the two, please take a look at compressed_vector_type.hpp.
- */
+SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const BaseSegment>& segment) {
+  SegmentEncodingSpec result;
+  resolve_data_type(segment->data_type(), [&](const auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+
+    if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
+      Fail("Reference segments cannot be encoded.");
+    }
+
+    const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
+    if (unencoded_segment) {
+      result = SegmentEncodingSpec{EncodingType::Unencoded};
+      return;
+    }
+
+    const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+    if (encoded_segment) {
+      std::optional<VectorCompressionType> vector_compression = std::nullopt;
+      if (!encoded_segment->compressed_vector_type()) {
+        vector_compression = parent_vector_compression_type(*encoded_segment->compressed_vector_type());
+      }
+      result = SegmentEncodingSpec{encoded_segment->encoding_type(), vector_compression};
+      return;
+    }
+
+    Fail("Unexpected segment encoding found.");
+  });
+  return result;
+}
+
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type) {
   switch (compressed_vector_type) {
     case CompressedVectorType::FixedSize4ByteAligned:

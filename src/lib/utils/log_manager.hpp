@@ -1,8 +1,8 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>
 #include <chrono>
 #include <functional>
-#include <tbb/concurrent_vector.h>
 
 #include "types.hpp"
 #include "utils/settings/abstract_setting.hpp"

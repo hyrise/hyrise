@@ -28,37 +28,25 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
                                                           const DataType data_type,
                                                           const SegmentEncodingSpec& encoding_spec) {
   std::shared_ptr<BaseSegment> result;
-  resolve_data_type(data_type, [&](auto type) {
+  resolve_data_type(data_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
-
-    // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
-    // and store them within the segment instead of a chunk-owned list of statistics.
 
     if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
       Fail("Reference segments cannot be encoded.");
     }
 
-    // Check if early exit is possible when passed segment is currently unencoded and the same is requested.
-    const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
-    if (unencoded_segment && encoding_spec.encoding_type == EncodingType::Unencoded) {
+    // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
+    // and store them within the segment instead of a chunk-owned list of statistics.
+
+    // Check if early exit is possible when passed segment is already encoded with requested spec.
+    // If case no vector compression is specified, only the correct encoding type is checked and the current vector
+    // compression type is ignored.
+    const auto current_segment_encoding_spec = get_segment_encoding_spec(segment);
+    if (current_segment_encoding_spec == encoding_spec ||
+        (!encoding_spec.vector_compression_type &&
+         current_segment_encoding_spec.encoding_type == encoding_spec.encoding_type)) {
       result = segment;
       return;
-    }
-
-    // Check for early exit, when requested segment encoding is already being used for the passed segment.
-    const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-    if (encoded_segment && encoded_segment->encoding_type() == encoding_spec.encoding_type) {
-      // Encoded segments do not need to be reencoded when the requested encoding is already present and either
-      // (i) no vector compression is given or (ii) the vector encoding is also already present. Hence, with
-      // {EncodingType::Dictionary} being in place, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}
-      // does not reencode the segment.
-      if (!encoding_spec.vector_compression_type ||
-          (encoding_spec.vector_compression_type && encoded_segment->compressed_vector_type() &&
-           *encoding_spec.vector_compression_type ==
-               parent_vector_compression_type(*encoded_segment->compressed_vector_type()))) {
-        result = segment;
-        return;
-      }
     }
 
     // In case of unencoded re-encoding, an AnySegmentIterable iterable is used to manually setup
@@ -69,7 +57,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       pmr_vector<bool> null_values;
 
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-      iterable.with_iterators([&](auto it, auto end) {
+      iterable.with_iterators([&](auto it, const auto end) {
         const auto segment_size = std::distance(it, end);
         values.resize(segment_size);
         null_values.resize(segment_size);
