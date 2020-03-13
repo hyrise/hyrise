@@ -1,15 +1,53 @@
+#include <chrono>
+
 #include "compression_plugin.hpp"
 
+#include "constant_mappings.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
-#include "resolve_type.hpp"
+
+namespace {
+
+using namespace opossum;  // NOLINT
+
+SegmentEncodingSpec get_segment_encoding_from_encoding_name(const std::string encoding_name) {
+  auto encoding_name_cleaned = encoding_name;
+
+  std::optional<VectorCompressionType> vector_compression = std::nullopt;
+  if (encoding_name.find("SIMDBP128") != std::string::npos) {
+    vector_compression = VectorCompressionType::SimdBp128;
+    encoding_name_cleaned = encoding_name_cleaned.substr(0, encoding_name_cleaned.size() - 9);
+  } else if (encoding_name.find("FSBA") != std::string::npos) {
+    vector_compression = VectorCompressionType::FixedSizeByteAligned;
+    encoding_name_cleaned = encoding_name_cleaned.substr(0, encoding_name_cleaned.size() - 4);
+  }
+
+  const auto encoding_type = encoding_type_to_string.right.at(encoding_name_cleaned);
+  auto encoding_spec = SegmentEncodingSpec{encoding_type};
+  if (vector_compression) {
+    encoding_spec.vector_compression_type = *vector_compression;
+  }
+  return encoding_spec;
+}
+
+size_t get_whole_system_memory_usage() {
+  auto result = size_t{0};
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+    result += table->memory_usage(MemoryUsageCalculationMode::Sampled);
+  }
+  return result;
+}
+
+}  // namespace
 
 namespace opossum {
 
@@ -20,46 +58,100 @@ void CompressionPlugin::start() {
   _loop_thread = std::make_unique<PausableLoopThread>(THREAD_INTERVAL, [&](size_t) { _optimize_compression(); });
 }
 
-void CompressionPlugin::_optimize_compression() {
-  if (_optimized) return;
-
-  _optimized = true;
-
-  if (!Hyrise::get().storage_manager.has_table("lineitem")) {
-    Hyrise::get().log_manager.add_message(description(), "No optimization possible with given parameters!");
-    return;
-  }
-  auto table = Hyrise::get().storage_manager.get_table("lineitem");
-
-  const auto column_id = ColumnID{15}; //l_comment
-  if (table->column_count() <= static_cast<ColumnCount>(column_id)) {
-    Hyrise::get().log_manager.add_message(description(), "No optimization possible with given parameters!");
-    return;
+int64_t CompressionPlugin::_compress_column(const std::string table_name, const std::string column_name,
+                                            const std::string encoding_name, const bool column_was_accessed,
+                                            const int64_t desired_memory_usage_reduction) {
+  if (!Hyrise::get().storage_manager.has_table(table_name)) {
+    const auto message = "Table " + table_name + " not found. TPC-H data is probably not loaded.";
+    Hyrise::get().log_manager.add_message(description(), message);
+    return 0ul;
   }
 
+  auto table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto column_id = table->column_id_by_name(column_name);
   const auto data_type = table->column_data_type(column_id);
+  const auto chunk_count = table->chunk_count();
 
-  size_t memory_usage_old = 0;
-  size_t memory_usage_new = 0;
+  const auto segment_encoding_spec = get_segment_encoding_from_encoding_name(encoding_name);
 
-  for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  auto memory_usage_old = int64_t{0};
+  auto memory_usage_new = int64_t{0};
+  auto achieved_memory_usage_reduction = int64_t{0};
+
+  // TODO: check if we should inrease or decrease the memory.
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    if (achieved_memory_usage_reduction >= desired_memory_usage_reduction) {
+      // Finish as soon as we have achieved the desired reduction in memory usage.
+      break;
+    }
+
     auto chunk = table->get_chunk(chunk_id);
     const auto base_segment = chunk->get_segment(column_id);
+
+    if (get_segment_encoding_spec(base_segment) == segment_encoding_spec) {
+      continue;
+    }
+
     memory_usage_old += base_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
 
-    std::shared_ptr<BaseSegment> new_segment;
-    new_segment = encode_and_compress_segment(base_segment, data_type, SegmentEncodingSpec{EncodingType::LZ4});
-    memory_usage_new += new_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+    const auto encoded_segment = ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec);
+    memory_usage_new += encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
 
-    chunk->replace_segment(column_id, new_segment);
+    chunk->replace_segment(column_id, encoded_segment);
+    achieved_memory_usage_reduction += memory_usage_old - memory_usage_new;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  auto mb_saved = (memory_usage_old - memory_usage_new) / 1'000'000;
-  Hyrise::get().log_manager.add_message(description(), "Applied new compression configuration - saved " + std::to_string(mb_saved) + "MB.");
+  if (memory_usage_old != memory_usage_new) {
+    const auto memory_change_in_megabytes =
+        (static_cast<double>(memory_usage_old) - static_cast<double>(memory_usage_new)) / 1'000'000;
+    std::stringstream stringstream;
+    stringstream << "Encoded " << table_name << "." << column_name << " using " + encoding_name << ": ";
+    stringstream << ((memory_change_in_megabytes > 0) ? "saved " : "added ");
+    stringstream << std::fixed << std::setprecision(2) << std::abs(memory_change_in_megabytes) << " MB ";
+    stringstream << (column_was_accessed ? "." : " (column has never been accessed).");
+    Hyrise::get().log_manager.add_message(description(), stringstream.str());
+  }
+
+  return memory_usage_old - memory_usage_new;
 }
 
-void CompressionPlugin::stop() {}
+void CompressionPlugin::_optimize_compression() {
+  const auto current_system_memory_usage = get_whole_system_memory_usage();
+  const auto system_memory_usage_budget =
+      static_cast<int64_t>(current_system_memory_usage * 0.75);  // TODO: obtain via settings
+  const auto memory_usage_reduction =
+      static_cast<int64_t>(current_system_memory_usage) - static_cast<int64_t>(system_memory_usage_budget);
+  auto achieved_memory_usage_reduction = int64_t{0};
 
+  for (const auto& column_config : _static_compression_config) {
+    if (memory_usage_reduction > 0 && memory_usage_reduction < achieved_memory_usage_reduction) {
+      // If we want to reduce and we have already reduced more than requested: break.
+      break;
+    } else if (memory_usage_reduction < 0 && memory_usage_reduction > achieved_memory_usage_reduction) {
+      // If we can increase the budget and have achieved more than allowed: break.
+      // We can overshoot the budget here.
+      break;
+    }
+
+    const auto column_was_accessed = column_config[4] == "ACCESSED" ? true : false;
+    if (memory_usage_reduction > 0) {
+      // We need to reduce: apply greedy changes.
+      achieved_memory_usage_reduction +=
+          _compress_column(column_config[1], column_config[2], column_config[3], column_was_accessed,
+                           memory_usage_reduction - achieved_memory_usage_reduction);
+    } else if (memory_usage_reduction < 0 && column_was_accessed) {
+      // We can increase: use DictFSBA for everything that is accessed.
+      achieved_memory_usage_reduction +=
+          _compress_column(column_config[1], column_config[2], "DictionaryFSBA", column_was_accessed,
+                           memory_usage_reduction - achieved_memory_usage_reduction);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  }
+}
+
+void CompressionPlugin::stop() { _loop_thread->pause(); }
 
 EXPORT_PLUGIN(CompressionPlugin)
 
