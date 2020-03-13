@@ -42,7 +42,9 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
     // If case no vector compression is specified, only the correct encoding type is checked and the current vector
     // compression type is ignored.
     const auto current_segment_encoding_spec = get_segment_encoding_spec(segment);
-    if (current_segment_encoding_spec == encoding_spec || (!encoding_spec.vector_compression_type && current_segment_encoding_spec.encoding_type == encoding_spec.encoding_type)) {
+    if (current_segment_encoding_spec == encoding_spec ||
+        (!encoding_spec.vector_compression_type &&
+         current_segment_encoding_spec.encoding_type == encoding_spec.encoding_type)) {
       result = segment;
       return;
     }
