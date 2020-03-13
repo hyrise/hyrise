@@ -45,7 +45,7 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto table_scan = std::make_shared<TableScan>(
-      table_wrapper, greater_than_(BaseTest::get_column_expression(table_wrapper, ColumnID{0}), 1));
+      table_wrapper, greater_than_(get_column_expression(table_wrapper, ColumnID{0}), 1));
   table_scan->execute();
 
   auto& performance_data = table_scan->performance_data;
