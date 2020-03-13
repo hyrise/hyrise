@@ -24,7 +24,7 @@ class RangeFilter : public AbstractStatisticsObject {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
 
-  explicit RangeFilter(std::vector<std::pair<T, T>> ranges);
+  explicit RangeFilter(std::vector<std::pair<T, T>> init_ranges);
   ~RangeFilter() override = default;
 
   // cppcoreguidelines-special-member-functions

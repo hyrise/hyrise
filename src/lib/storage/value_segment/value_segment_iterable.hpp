@@ -55,6 +55,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
  private:
   class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
@@ -95,6 +96,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
@@ -142,6 +144,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   class NonNullPointAccessIterator
       : public BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
@@ -170,6 +173,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueVectorIterator = typename pmr_vector<T>::const_iterator;

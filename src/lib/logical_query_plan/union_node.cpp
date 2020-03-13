@@ -11,7 +11,8 @@
 
 namespace opossum {
 
-UnionNode::UnionNode(const UnionMode union_mode) : AbstractLQPNode(LQPNodeType::Union), union_mode(union_mode) {}
+UnionNode::UnionNode(const UnionMode init_union_mode)
+    : AbstractLQPNode(LQPNodeType::Union), union_mode(init_union_mode) {}
 
 std::string UnionNode::description(const DescriptionMode mode) const {
   return "[UnionNode] Mode: " + union_mode_to_string.left.at(union_mode);

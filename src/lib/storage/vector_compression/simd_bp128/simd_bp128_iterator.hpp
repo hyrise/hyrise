@@ -19,6 +19,8 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   using Packing = SimdBp128Packing;
 
  public:
+  typedef std::random_access_iterator_tag iterator_category;
+
   // The SimdBp128Iterator simply wraps a SimdBp128Decompressor (which implements the logic to cache and extract
   // blocks/meta blocks) to allow STL algorithms (e.g., std::lower_bound) to be used on a compressed vector. However,
   // please be aware of #1531. The fixed-size-byte-aligned vector compression uses std::vector for the underlying data

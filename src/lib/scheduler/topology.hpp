@@ -19,13 +19,13 @@ class memory_resource;
 namespace opossum {
 
 struct TopologyCpu final {
-  explicit TopologyCpu(CpuID cpu_id) : cpu_id(cpu_id) {}
+  explicit TopologyCpu(CpuID init_cpu_id) : cpu_id(init_cpu_id) {}
 
   CpuID cpu_id = INVALID_CPU_ID;
 };
 
 struct TopologyNode final {
-  explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
+  explicit TopologyNode(std::vector<TopologyCpu>&& init_cpus) : cpus(std::move(init_cpus)) {}
 
   std::vector<TopologyCpu> cpus;
 };
