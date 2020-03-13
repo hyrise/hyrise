@@ -208,7 +208,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
       if (adapted_chunk_order) {
-        (*output_chunks_iter)->finalize(true);
+        (*output_chunks_iter)->finalize();
         (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
       }
 
