@@ -457,8 +457,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       if (last_chunk->is_mutable()) {
         last_chunk->finalize();
       }
-        // If the last column is sorted here, it needs to be set accordingly.
-        // This overrides order_by on purpose (only the last order prevails).
+      // If the last column is sorted here, it needs to be set accordingly.
+      // This overrides order_by on purpose (only the last order prevails).
       last_chunk->set_ordered_by(std::make_pair(_groupby_column_ids.back(), OrderByMode::Ascending));
     }
   }
