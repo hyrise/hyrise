@@ -59,6 +59,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   template <typename OffsetValueIteratorT>
   class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
@@ -136,6 +137,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
 

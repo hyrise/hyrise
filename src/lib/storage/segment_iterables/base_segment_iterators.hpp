@@ -62,6 +62,7 @@ struct ChunkOffsetMapping {
 template <typename Derived, typename Value>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
+  typedef std::random_access_iterator_tag iterator_category;
   explicit BasePointAccessSegmentIterator(PosList::const_iterator position_filter_begin,
                                           PosList::const_iterator position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}

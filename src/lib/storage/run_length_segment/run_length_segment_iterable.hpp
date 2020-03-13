@@ -47,6 +47,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
  private:
   class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
@@ -132,6 +133,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    */
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
 

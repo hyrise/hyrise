@@ -22,6 +22,7 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   using ValueType = std::string_view;
 
  public:
+  typedef std::random_access_iterator_tag iterator_category;
   FixedStringIterator(size_t string_length, Storage& vector, size_t pos = 0)
       : _string_length(string_length), _chars(vector), _pos(pos) {}
 
