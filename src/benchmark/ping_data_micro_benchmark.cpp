@@ -332,7 +332,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length. 1");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length. 2");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length. 3");
@@ -479,7 +479,7 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
   }
 }
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenPerformance)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenIndexScan)->Apply(CustomArguments);
 
