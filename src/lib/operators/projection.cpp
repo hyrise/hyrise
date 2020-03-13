@@ -163,8 +163,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             // reference more than a single chunk by materializing them into a ValueSegment
             bool has_null = false;
             auto values = pmr_vector<ColumnDataType>(segment->size());
-            auto null_values = pmr_vector<bool>(
-                input_table.column_is_nullable(pqp_column_expression->column_id) ? segment->size() : 0);
+            // Not sure why we have wrong nullable information for c_last_name.
+            // auto null_values = pmr_vector<bool>(
+            //     input_table.column_is_nullable(pqp_column_expression->column_id) ? segment->size() : 0);
+            auto null_values = pmr_vector<bool>(segment->size());
 
             auto chunk_offset = ChunkOffset{0};
             segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
