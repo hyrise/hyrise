@@ -4,8 +4,8 @@
 
 namespace opossum {
 
-NullValueRatioStatistics::NullValueRatioStatistics(const float ratio)
-    : AbstractStatisticsObject(DataType::Null), ratio(ratio) {}
+NullValueRatioStatistics::NullValueRatioStatistics(const float init_ratio)
+    : AbstractStatisticsObject(DataType::Null), ratio(init_ratio) {}
 
 std::shared_ptr<AbstractStatisticsObject> NullValueRatioStatistics::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,

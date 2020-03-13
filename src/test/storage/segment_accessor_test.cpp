@@ -114,16 +114,20 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}));
 }
 
-TEST_F(SegmentAccessorTest, TestSingleChunkReferenceSegmentAccessorNull) {
-  auto pos_list = PosList{NULL_ROW_ID};
-  pos_list.guarantee_single_chunk();
+TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
+  const auto& access_counter = vc_int->access_counter;
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 0ul);
 
-  auto rc_single_chunk =
-      std::make_shared<ReferenceSegment>(tbl, ColumnID{1u}, std::make_shared<PosList>(std::move(pos_list)));
+  // Create segment accessor in a new scope to ensure its destructor, which writes the access counters, is called.
+  {
+    auto vc_int_base_accessor = create_segment_accessor<int>(vc_int);
 
-  auto rc_single_chunk_accessor = create_segment_accessor<pmr_string>(rc_single_chunk);
-  ASSERT_NE(rc_single_chunk_accessor, nullptr);
-  EXPECT_FALSE(rc_single_chunk_accessor->access(ChunkOffset{0}));
+    EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), 4);
+    EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 6);
+    EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), 3);
+  }
+
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3ul);
 }
 
 }  // namespace opossum

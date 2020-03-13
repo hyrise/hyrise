@@ -9,7 +9,6 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -62,7 +61,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // For the vast majority of node types, AbstractLQPNode::node_expression holds all expressions required by this
     // node.
     case LQPNodeType::Alias:
-    case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:
     case LQPNodeType::CreateView:
     case LQPNodeType::DropView:
@@ -152,10 +150,12 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       }
     } break;
 
-    // No pruning of the input columns to Delete, Update and Insert, they need them all.
+    // No pruning of the input columns for these nodes as they need them all.
+    case LQPNodeType::CreateTable:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
-    case LQPNodeType::Update: {
+    case LQPNodeType::Update:
+    case LQPNodeType::ChangeMetaTable: {
       const auto& left_input_expressions = node->left_input()->column_expressions();
       locally_required_expressions.insert(left_input_expressions.begin(), left_input_expressions.end());
 
@@ -313,7 +313,8 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
-  required_expressions_by_node[lqp].insert(lqp->column_expressions().begin(), lqp->column_expressions().end());
+  const auto column_expressions = lqp->column_expressions();
+  required_expressions_by_node[lqp].insert(column_expressions.cbegin(), column_expressions.cend());
 
   // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss

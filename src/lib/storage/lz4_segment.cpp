@@ -431,13 +431,13 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
 
   if (_string_offsets) {
     auto new_string_offsets = *_string_offsets ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
-    return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
-                                            std::move(new_dictionary), std::move(new_string_offsets), _block_size,
-                                            _last_block_size, _compressed_size, _num_elements);
+    return std::make_shared<LZ4Segment>(std::move(new_lz4_blocks), std::move(new_null_values),
+                                        std::move(new_dictionary), std::move(new_string_offsets), _block_size,
+                                        _last_block_size, _compressed_size, _num_elements);
   } else {
-    return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
-                                            std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
-                                            _num_elements);
+    return std::make_shared<LZ4Segment>(std::move(new_lz4_blocks), std::move(new_null_values),
+                                        std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
+                                        _num_elements);
   }
 }
 
@@ -449,11 +449,7 @@ size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode) const {
   // The null value vector is only stored if there is at least 1 null value in the segment.
   auto null_value_vector_size = size_t{0u};
   if (_null_values) {
-    null_value_vector_size = _null_values->size() * sizeof(bool);
-    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    null_value_vector_size =
-        sizeof(_null_values) +
-        (_null_values->size() % CHAR_BIT ? null_value_vector_size / CHAR_BIT + 1 : null_value_vector_size / CHAR_BIT);
+    null_value_vector_size = _null_values->capacity() / CHAR_BIT;
   }
 
   // The overhead of storing each block in a separate vector.

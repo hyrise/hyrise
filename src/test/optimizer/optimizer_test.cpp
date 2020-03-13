@@ -107,8 +107,8 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
   class LQPBreakingRule : public AbstractRule {
    public:
-    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
-        : out_of_plan_expression(out_of_plan_expression) {}
+    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
+        : out_of_plan_expression(init_out_of_plan_expression) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
@@ -135,7 +135,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   // A "rule" that just collects the nodes it was applied to
   class MockRule : public AbstractRule {
    public:
-    explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes) : nodes(nodes) {}
+    explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
       nodes.emplace(root);
@@ -214,7 +214,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   size_t counter{0};
   class MockRule : public AbstractRule {
    public:
-    explicit MockRule(size_t& counter) : counter(counter) {}
+    explicit MockRule(size_t& init_counter) : counter(init_counter) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override { ++counter; }
 

@@ -161,7 +161,7 @@ try {
               // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
               sh "cd clang-debug-unity-odr && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             } else {
-              Utils.markStageSkippedForConditional("clangDebugUnity")
+              Utils.markStageSkippedForConditional("clangDebugUnityODR")
             }
           }
         }, clangDebugTidy: {
@@ -300,6 +300,7 @@ try {
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
+          sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
           sh "./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {
