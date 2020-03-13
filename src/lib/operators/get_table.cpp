@@ -208,6 +208,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
       if (adapted_chunk_order) {
+        // Finalizing the output chunk here is safe because this path is only taken for
+        // a sorted chunk. Chunks should never be sorted when they are still mutable
         (*output_chunks_iter)->finalize();
         (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
       }
