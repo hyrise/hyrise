@@ -14,6 +14,7 @@
 #include "sql_identifier_resolver.hpp"
 #include "sql_identifier_resolver_proxy.hpp"
 #include "storage/lqp_view.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
