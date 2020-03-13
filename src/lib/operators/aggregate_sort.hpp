@@ -114,6 +114,13 @@ class AggregateSort : public AbstractAggregateOperator {
                                       [[maybe_unused]] const uint64_t value_count,
                                       [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;
+
+ private:
+  std::shared_ptr<Table> _sort_table_chunk_wise(
+      const std::shared_ptr<const Table> input_table,
+      const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by);
+
+  Segments _get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id);
 };
 
 }  // namespace opossum

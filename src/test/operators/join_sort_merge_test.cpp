@@ -54,4 +54,30 @@ TEST_F(OperatorsJoinSortMergeTest, DeepCopy) {
   EXPECT_NE(join_operator_copy->input_right(), nullptr);
 }
 
+TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
+  const auto test_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
+      TableType::Data);
+
+  test_table->append({1, 2, 3});
+  test_table->append({2, 1, 4});
+  test_table->append({1, 2, 5});
+
+  const auto test_input = std::make_shared<TableWrapper>(test_table);
+
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals};
+  const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Left, primary_predicate);
+
+  test_input->execute();
+  join_operator->execute();
+
+  const auto output_table = join_operator->get_output();
+
+  const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
+  for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
+    const auto actual_value_clustering = *(output_table->get_chunk(chunk_id)->value_clustered_by());
+    EXPECT_EQ(expected_value_clustering, actual_value_clustering);
+  }
+}
+
 }  // namespace opossum

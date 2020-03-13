@@ -189,7 +189,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   }
 }
 
-std::shared_ptr<Chunk> Table::last_chunk() {
+std::shared_ptr<Chunk> Table::last_chunk() const {
   DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
