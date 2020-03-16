@@ -1,6 +1,7 @@
 #ifdef __linux__
 
 #include <sys/sysinfo.h>
+#include <numa.h>
 
 #endif
 
