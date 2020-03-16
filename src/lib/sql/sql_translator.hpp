@@ -19,7 +19,7 @@ namespace opossum {
 
 class AggregateNode;
 class LQPSubqueryExpression;
-class Table;// TODO: block until Jenskins is adapted to include a PCH-free build
+class Table;
 
 /**
  * Holds information about the query translation such as:
