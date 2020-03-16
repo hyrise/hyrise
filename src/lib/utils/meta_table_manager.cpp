@@ -32,7 +32,7 @@ MetaTableManager::MetaTableManager() {
   }
   std::sort(_table_names.begin(), _table_names.end());
 
-  std::static_pointer_cast<MetaSystemUtilizationTable>(_meta_tables.at("system_utilization"))->init();
+  static_cast<MetaSystemUtilizationTable&>(*_meta_tables.at("system_utilization")).init();
 }
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {

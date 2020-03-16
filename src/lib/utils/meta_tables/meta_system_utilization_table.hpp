@@ -1,13 +1,13 @@
 #pragma once
 
-#include "utils/meta_tables/abstract_meta_table.hpp"
+#include "utils/meta_tables/abstract_meta_system_table.hpp"
 
 namespace opossum {
 
 /**
  * This is a class for showing dynamic system information such as CPU and RAM load.
  */
-class MetaSystemUtilizationTable : public AbstractMetaTable {
+class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
  public:
   MetaSystemUtilizationTable();
 
@@ -39,11 +39,10 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
   };
 
   LoadAvg _get_load_avg();
-  int _get_cpu_count();
   float _get_system_cpu_usage();
   float _get_process_cpu_usage();
   SystemMemoryUsage _get_system_memory_usage();
-  int64_t _int_from_string(std::string input_string);
+  int64_t _parse_line(std::string input_string);
   ProcessMemoryUsage _get_process_memory_usage();
 };
 

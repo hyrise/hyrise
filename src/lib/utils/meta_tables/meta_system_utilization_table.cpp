@@ -2,24 +2,27 @@
 #include <fstream>
 #include <iostream>
 
-#include "sys/types.h"
+#include <sys/types.h>
 
-#if defined __linux__
+#ifdef __linux__
 
-#include "sys/sysinfo.h"
-#include "sys/times.h"
+#include <sys/sysinfo.h>
+#include <sys/times.h>
+#include <numa.h>
 
-#elif defined __APPLE__
+#endif
 
-#include "mach/mach.h"
-#include "mach/mach_error.h"
-#include "mach/mach_host.h"
-#include "mach/mach_init.h"
-#include "mach/mach_time.h"
-#include "mach/vm_map.h"
-#include "mach/vm_statistics.h"
-#include "sys/resource.h"
-#include "sys/sysctl.h"
+#ifdef __APPLE__
+
+#include <mach/mach.h>
+#include <mach/mach_error.h>
+#include <mach/mach_host.h>
+#include <mach/mach_init.h>
+#include <mach/mach_time.h>
+#include <mach/vm_map.h>
+#include <mach/vm_statistics.h>
+#include <sys/resource.h>
+#include <sys/sysctl.h>
 
 #endif
 
@@ -30,13 +33,13 @@
 namespace opossum {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"cpu_system_usage", DataType::Float, false},
+    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_usage", DataType::Float, false},
                                                {"cpu_process_usage", DataType::Float, false},
                                                {"load_average_1_min", DataType::Float, false},
                                                {"load_average_5_min", DataType::Float, false},
                                                {"load_average_15_min", DataType::Float, false},
-                                               {"system_ram_total", DataType::Long, false},
-                                               {"system_ram_free", DataType::Long, false},
+                                               {"system_memory_total", DataType::Long, false},
+                                               {"system_memory_free", DataType::Long, false},
                                                {"process_virtual_memory", DataType::Long, false},
                                                {"process_physical_memory", DataType::Long, false}}) {}
 
@@ -67,7 +70,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
 }
 
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
-#if defined __linux__
+#ifdef __linux__
 
   std::ifstream load_avg_file;
   load_avg_file.open("/proc/loadavg", std::ifstream::in);
@@ -81,8 +84,9 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   load_avg_file.close();
 
   return {load_avg_values[0], load_avg_values[1], load_avg_values[2]};
+#endif
 
-#elif defined __APPLE__
+#ifdef __APPLE__
 
   loadavg load_avg;
   size_t size = sizeof(load_avg);
@@ -99,37 +103,8 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   Fail("Method not implemented for this platform");
 }
 
-int MetaSystemUtilizationTable::_get_cpu_count() {
-#if defined __linux__
-
-  std::ifstream cpu_info_file;
-  cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
-
-  uint32_t processors = 0;
-  for (std::string cpu_info_line; std::getline(cpu_info_file, cpu_info_line);) {
-    if (cpu_info_line.rfind("processor", 0) == 0) ++processors;
-  }
-
-  cpu_info_file.close();
-
-  return processors;
-
-#elif defined __APPLE__
-
-  uint32_t processors;
-  size_t size = sizeof(processors);
-  if (sysctlbyname("hw.ncpu", &processors, &size, nullptr, 0) != 0) {
-    Fail("Unable to call sysctl hw.ncpu");
-  }
-
-  return processors;
-#endif
-
-  Fail("Method not implemented for this platform");
-}
-
 float MetaSystemUtilizationTable::_get_system_cpu_usage() {
-#if defined __linux__
+#ifdef __linux__
 
   static uint64_t last_user_time = 0u, last_user_nice_time = 0u, last_kernel_time = 0u, last_idle_time = 0u;
 
@@ -153,8 +128,9 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
   auto cpus = _get_cpu_count();
 
   return (100.0 * used) / (total * cpus);
+#endif
 
-#elif defined __APPLE__
+#ifdef __APPLE__
 
   static uint64_t last_total_ticks = 0u, last_idle_ticks = 0u;
 
@@ -187,7 +163,7 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 }
 
 float MetaSystemUtilizationTable::_get_process_cpu_usage() {
-#if defined __linux__
+#ifdef __linux__
 
   static clock_t last_clock_time = 0u, last_kernel_time = 0u, last_user_time = 0u;
   struct tms timeSample;
@@ -203,11 +179,17 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
   last_kernel_time = kernel_time;
   last_clock_time = clock_time;
 
-  auto cpus = _get_cpu_count();
+  int cpus;
+  if (numa_available() != -1) {
+    cpus = numa_num_task_cpus();
+  } else {
+    cpus = _get_cpu_count();
+  }
 
   return (100.0 * used) / (total * cpus);
+#endif
 
-#elif defined __APPLE__
+#ifdef __APPLE__
 
   static uint64_t last_clock_time = 0u, last_system_time = 0u, last_user_time = 0u;
 
@@ -221,9 +203,8 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
     Fail("Unable to access rusage");
   }
 
-  uint32_t nano = 1'000'000'000, micro = 1'000;
-  uint64_t system_time = resource_usage.ru_stime.tv_sec * nano + resource_usage.ru_stime.tv_usec * micro;
-  uint64_t user_time = resource_usage.ru_utime.tv_sec * nano + resource_usage.ru_utime.tv_usec * micro;
+  uint64_t system_time = resource_usage.ru_stime.tv_sec / std::nano + resource_usage.ru_stime.tv_usec / std::micro;
+  uint64_t user_time = resource_usage.ru_utime.tv_sec / std::nano + resource_usage.ru_utime.tv_usec / std::micro;
 
   auto used = (user_time - last_user_time) + (system_time - last_system_time);
   auto total = (clock_time - last_clock_time) * info.numer / info.denom;
@@ -240,7 +221,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 }
 
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
-#if defined __linux__
+#ifdef __linux__
 
   struct sysinfo memory_info;
   sysinfo(&memory_info);
@@ -254,8 +235,9 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   memory_usage.free_memory = memory_usage.free_ram + memory_usage.free_swap;
 
   return memory_usage;
+#endif
 
-#elif defined __APPLE__
+#ifdef __APPLE__
 
   int64_t physical_memory;
   size_t size = sizeof(physical_memory);
@@ -295,8 +277,8 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   Fail("Method not implemented for this platform");
 }
 
-#if defined __linux__
-int64_t MetaSystemUtilizationTable::_int_from_string(std::string input_string) {
+#ifdef __linux__
+int64_t MetaSystemUtilizationTable::_parse_line(std::string input_string) {
   size_t index = 0;
   size_t begin = 0, end = input_string.length() - 1;
 
@@ -317,7 +299,7 @@ int64_t MetaSystemUtilizationTable::_int_from_string(std::string input_string) {
 #endif
 
 MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
-#if defined __linux__
+#ifdef __linux__
 
   std::ifstream self_status_file;
   self_status_file.open("/proc/self/status", std::ifstream::in);
@@ -325,17 +307,18 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage;
   for (std::string self_status_line; std::getline(self_status_file, self_status_line);) {
     if (self_status_line.rfind("VmSize", 0) == 0) {
-      memory_usage.virtual_memory = _int_from_string(self_status_line) * 1000;
+      memory_usage.virtual_memory = _parse_line(self_status_line) * 1000;
     } else if (self_status_line.rfind("VmRSS", 0) == 0) {
-      memory_usage.physical_memory = _int_from_string(self_status_line) * 1000;
+      memory_usage.physical_memory = _parse_line(self_status_line) * 1000;
     }
   }
 
   self_status_file.close();
 
   return memory_usage;
+#endif
 
-#elif defined __APPLE__
+#ifdef __APPLE__
 
   struct task_basic_info info;
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
