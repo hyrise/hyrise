@@ -1,7 +1,7 @@
 #pragma once
 
-#include "utils/meta_tables/abstract_meta_table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "utils/meta_tables/abstract_meta_table.hpp"
 
 namespace opossum {
 
@@ -13,8 +13,8 @@ class AbstractMetaSystemTable : public AbstractMetaTable {
   virtual const std::string& name() const = 0;
 
  protected:
- 	AbstractMetaSystemTable(const TableColumnDefinitions& column_definitions);
- 	int _get_cpu_count();
+  explicit AbstractMetaSystemTable(const TableColumnDefinitions& column_definitions);
+  int _get_cpu_count();
 };
 
 }  // namespace opossum

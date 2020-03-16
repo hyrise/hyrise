@@ -1,7 +1,7 @@
 #ifdef __linux__
 
-#include <sys/sysinfo.h>
 #include <numa.h>
+#include <sys/sysinfo.h>
 
 #endif
 
@@ -28,9 +28,9 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
 
   auto numa_cpus = cpus;
 #ifdef __linux__
-    if (numa_available() != -1) {
-      numa_cpus = numa_num_task_cpus();
-    }
+  if (numa_available() != -1) {
+    numa_cpus = numa_num_task_cpus();
+  }
 #endif
 
   int64_t ram;
@@ -52,7 +52,5 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
 
   return output_table;
 }
-
-
 
 }  // namespace opossum

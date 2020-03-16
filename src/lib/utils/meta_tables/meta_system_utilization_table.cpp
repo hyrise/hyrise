@@ -1,14 +1,8 @@
-#include <chrono>
-#include <fstream>
-#include <iostream>
-
-#include <sys/types.h>
-
 #ifdef __linux__
 
+#include <numa.h>
 #include <sys/sysinfo.h>
 #include <sys/times.h>
-#include <numa.h>
 
 #endif
 
@@ -26,6 +20,12 @@
 
 #endif
 
+#include <sys/types.h>
+
+#include <chrono>
+#include <fstream>
+#include <iostream>
+
 #include "meta_system_utilization_table.hpp"
 
 #include "hyrise.hpp"
@@ -34,14 +34,14 @@ namespace opossum {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
     : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_usage", DataType::Float, false},
-                                               {"cpu_process_usage", DataType::Float, false},
-                                               {"load_average_1_min", DataType::Float, false},
-                                               {"load_average_5_min", DataType::Float, false},
-                                               {"load_average_15_min", DataType::Float, false},
-                                               {"system_memory_total", DataType::Long, false},
-                                               {"system_memory_free", DataType::Long, false},
-                                               {"process_virtual_memory", DataType::Long, false},
-                                               {"process_physical_memory", DataType::Long, false}}) {}
+                                                     {"cpu_process_usage", DataType::Float, false},
+                                                     {"load_average_1_min", DataType::Float, false},
+                                                     {"load_average_5_min", DataType::Float, false},
+                                                     {"load_average_15_min", DataType::Float, false},
+                                                     {"system_memory_total", DataType::Long, false},
+                                                     {"system_memory_free", DataType::Long, false},
+                                                     {"process_virtual_memory", DataType::Long, false},
+                                                     {"process_physical_memory", DataType::Long, false}}) {}
 
 const std::string& MetaSystemUtilizationTable::name() const {
   static const auto name = std::string{"system_utilization"};
@@ -203,8 +203,10 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
     Fail("Unable to access rusage");
   }
 
-  uint64_t system_time = resource_usage.ru_stime.tv_sec * std::nano::den + resource_usage.ru_stime.tv_usec * std::micro::den;
-  uint64_t user_time = resource_usage.ru_utime.tv_sec * std::nano::den + resource_usage.ru_utime.tv_usec * std::micro::den;
+  uint64_t system_time =
+      resource_usage.ru_stime.tv_sec * std::nano::den + resource_usage.ru_stime.tv_usec * std::micro::den;
+  uint64_t user_time =
+      resource_usage.ru_utime.tv_sec * std::nano::den + resource_usage.ru_utime.tv_usec * std::micro::den;
 
   auto used = (user_time - last_user_time) + (system_time - last_system_time);
   auto total = (clock_time - last_clock_time) * info.numer / info.denom;

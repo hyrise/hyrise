@@ -28,7 +28,7 @@ int AbstractMetaSystemTable::_get_cpu_count() {
   }
 
   cpu_info_file.close();
-  
+
   return processors;
 #endif
 
