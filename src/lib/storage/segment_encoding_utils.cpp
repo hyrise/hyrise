@@ -69,7 +69,7 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const BaseSe
     const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
     if (encoded_segment) {
       std::optional<VectorCompressionType> vector_compression = std::nullopt;
-      if (!encoded_segment->compressed_vector_type()) {
+      if (encoded_segment->compressed_vector_type()) {
         vector_compression = parent_vector_compression_type(*encoded_segment->compressed_vector_type());
       }
       result = SegmentEncodingSpec{encoded_segment->encoding_type(), vector_compression};

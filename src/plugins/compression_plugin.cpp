@@ -63,6 +63,9 @@ void CompressionPlugin::start() {
 int64_t CompressionPlugin::_compress_column(const std::string table_name, const std::string column_name,
                                             const std::string encoding_name, const bool column_was_accessed,
                                             const int64_t desired_memory_usage_reduction) {
+  constexpr auto SLEEP_BETWEEN_SEGMENTS_MS = 100;
+  constexpr auto SLEEP_BETWEEN_COLUMNS_MS = 300;
+
   if (!Hyrise::get().storage_manager.has_table(table_name)) {
     const auto message = "Table " + table_name + " not found. TPC-H data is probably not loaded.";
     Hyrise::get().log_manager.add_message(description(), message);
@@ -94,19 +97,23 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
     auto chunk = table->get_chunk(chunk_id);
     const auto base_segment = chunk->get_segment(column_id);
 
-    if (get_segment_encoding_spec(base_segment) == segment_encoding_spec) {
+    const auto current_encoding_spec = get_segment_encoding_spec(base_segment);
+    if (current_encoding_spec.encoding_type == segment_encoding_spec.encoding_type &&
+        (!segment_encoding_spec.vector_compression_type || segment_encoding_spec.vector_compression_type == current_encoding_spec.vector_compression_type)) {
       continue;
     }
 
-    memory_usage_old += base_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+    const auto previous_segment_size = base_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+    memory_usage_old += previous_segment_size;
 
     const auto encoded_segment = ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec);
-    memory_usage_new += encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+    const auto new_segment_size = encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+    memory_usage_new += new_segment_size;
 
     chunk->replace_segment(column_id, encoded_segment);
-    achieved_memory_usage_reduction += memory_usage_old - memory_usage_new;
+    achieved_memory_usage_reduction += previous_segment_size - new_segment_size;
     ++encoded_segment_count;
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_BETWEEN_SEGMENTS_MS));
   }
 
   if (memory_usage_old != memory_usage_new) {
@@ -120,9 +127,12 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
     stringstream << std::fixed << std::setprecision(2) << std::abs(memory_change_in_megabytes) << " MB ";
     stringstream << (column_was_accessed ? "." : " (column has never been accessed).");
     Hyrise::get().log_manager.add_message(description(), stringstream.str());
+
+    // Sleep after segments have been encoded to lower the impact of the plugin.
+    std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_BETWEEN_COLUMNS_MS));
   }
 
-  return memory_usage_old - memory_usage_new;
+  return achieved_memory_usage_reduction;
 }
 
 void CompressionPlugin::_optimize_compression() {
@@ -154,7 +164,6 @@ void CompressionPlugin::_optimize_compression() {
           _compress_column(column_config[1], column_config[2], "DictionaryFSBA", column_was_accessed,
                            memory_usage_reduction - achieved_memory_usage_reduction);
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
   }
 
   if (static_cast<int64_t>(current_system_memory_usage - achieved_memory_usage_reduction) > system_memory_usage_budget) {

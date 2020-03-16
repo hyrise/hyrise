@@ -47,6 +47,6 @@ class Print : public AbstractReadOnlyOperator {
   PrintFlags _flags;
 
   static constexpr uint16_t _min_cell_width = 8;
-  static constexpr uint16_t _max_cell_width = 20;
+  static constexpr uint16_t _max_cell_width = 120;
 };
 }  // namespace opossum
