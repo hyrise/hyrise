@@ -203,8 +203,8 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
     Fail("Unable to access rusage");
   }
 
-  uint64_t system_time = resource_usage.ru_stime.tv_sec / std::nano + resource_usage.ru_stime.tv_usec / std::micro;
-  uint64_t user_time = resource_usage.ru_utime.tv_sec / std::nano + resource_usage.ru_utime.tv_usec / std::micro;
+  uint64_t system_time = resource_usage.ru_stime.tv_sec * std::nano::den + resource_usage.ru_stime.tv_usec * std::micro::den;
+  uint64_t user_time = resource_usage.ru_utime.tv_sec * std::nano::den + resource_usage.ru_utime.tv_usec * std::micro::den;
 
   auto used = (user_time - last_user_time) + (system_time - last_system_time);
   auto total = (clock_time - last_clock_time) * info.numer / info.denom;

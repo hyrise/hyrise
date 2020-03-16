@@ -11,7 +11,7 @@
 namespace opossum {
 
 MetaSystemInformationTable::MetaSystemInformationTable()
-    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false}, 
+    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
                                                      {"ram", DataType::Long, false},
                                                      {"numa_cpu_count", DataType::Int, false}}) {}
 
@@ -26,7 +26,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
   auto cpus = _get_cpu_count();
 
   auto numa_cpus = cpus;
-#ifdef __APPLE__
+#ifdef __linux__
     if (numa_available() != -1) {
       numa_cpus = numa_num_task_cpus();
     }
