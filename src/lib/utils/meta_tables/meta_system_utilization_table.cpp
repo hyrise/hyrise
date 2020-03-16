@@ -127,7 +127,7 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 
   auto cpus = _get_cpu_count();
 
-  return (100.0 * used) / (total * cpus);
+  return static_cast<float>((100.0 * used) / (total * cpus));
 #endif
 
 #ifdef __APPLE__
@@ -186,7 +186,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
     cpus = _get_cpu_count();
   }
 
-  return (100.0 * used) / (total * cpus);
+  return static_cast<float>((100.0 * used) / (total * cpus));
 #endif
 
 #ifdef __APPLE__
@@ -211,11 +211,13 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
   auto used = (user_time - last_user_time) + (system_time - last_system_time);
   auto total = (clock_time - last_clock_time) * info.numer / info.denom;
 
+  auto cpus = _get_cpu_count();
+
   last_clock_time = clock_time;
   last_user_time = user_time;
   last_system_time = system_time;
 
-  return (100.0f * used) / (total);
+  return static_cast<float>((100.0f * used) / (total * cpus));
 
 #endif
 
