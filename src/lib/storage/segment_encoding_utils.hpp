@@ -32,7 +32,7 @@ std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::share
                                                                 const SegmentEncodingSpec& encoding_spec);
 
 /**
- * @return the segment encoding spec for thes given segment.
+ * @return the segment encoding spec for the given segment.
  */
 SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const BaseSegment>& segment);
 

@@ -52,33 +52,21 @@ std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::share
 }
 
 SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const BaseSegment>& segment) {
-  SegmentEncodingSpec result;
-  resolve_data_type(segment->data_type(), [&](const auto type) {
-    using ColumnDataType = typename decltype(type)::type;
+  Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
 
-    if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
-      Fail("Reference segments cannot be encoded.");
+  if (std::dynamic_pointer_cast<const BaseValueSegment>(segment)) {
+    return SegmentEncodingSpec{EncodingType::Unencoded};
+  }
+
+  if (const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment)) {
+    std::optional<VectorCompressionType> vector_compression;
+    if (encoded_segment->compressed_vector_type()) {
+      vector_compression = parent_vector_compression_type(*encoded_segment->compressed_vector_type());
     }
+    return SegmentEncodingSpec{encoded_segment->encoding_type(), vector_compression};
+  }
 
-    const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(segment);
-    if (unencoded_segment) {
-      result = SegmentEncodingSpec{EncodingType::Unencoded};
-      return;
-    }
-
-    const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-    if (encoded_segment) {
-      std::optional<VectorCompressionType> vector_compression = std::nullopt;
-      if (!encoded_segment->compressed_vector_type()) {
-        vector_compression = parent_vector_compression_type(*encoded_segment->compressed_vector_type());
-      }
-      result = SegmentEncodingSpec{encoded_segment->encoding_type(), vector_compression};
-      return;
-    }
-
-    Fail("Unexpected segment encoding found.");
-  });
-  return result;
+  Fail("Unexpected segment encoding found.");
 }
 
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type) {

@@ -137,6 +137,9 @@ void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncod
     const auto segment = chunk->get_segment(column_id);
     const auto segment_spec = spec.at(column_id);
 
+    ASSERT_EQ(segment_spec.encoding_type, get_segment_encoding_spec(segment).encoding_type);
+    ASSERT_TRUE(!segment_spec.vector_compression_type ||
+                *get_segment_encoding_spec(segment).vector_compression_type == *segment_spec.vector_compression_type);
     if (segment_spec.encoding_type == EncodingType::Unencoded) {
       const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
       ASSERT_NE(value_segment, nullptr);
