@@ -1,6 +1,10 @@
 #include "hyrise.hpp"
 #include "utils/plugin_manager.hpp"
 
+#include <iostream>
+#include <filesystem>
+#include <fstream>
+
 #include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "file_based_benchmark_item_runner.hpp"
@@ -11,6 +15,17 @@
 #include "tpcds/tpcds_table_generator.hpp"
 
 using namespace opossum;  // NOLINT
+
+const nlohmann::json _read_clustering_config(const std::string& filename) {
+  if (!std::filesystem::exists(filename)) {
+    std::cout << "clustering config file not found: " << filename << std::endl;
+    std::exit(1);
+  }
+
+  std::ifstream ifs(filename);
+  const auto clustering_config = nlohmann::json::parse(ifs);
+  return clustering_config;
+}
 
 int main(int argc, const char* argv[]) {
   if (argc != 3) {
@@ -97,6 +112,23 @@ int main(int argc, const char* argv[]) {
 
   // actually run the benchmark
   benchmark_runner->run();
+
+  // after the benchmark was executed, add more interesting statistics to the json.
+  // we could also modify the benchmark to directly export this information, but that feels hacky.
+  Assert(config->output_file_path, "you must specify an output file path");
+  std::ifstream benchmark_result_file(*config->output_file_path);
+  auto benchmark_result_json = nlohmann::json::parse(benchmark_result_file);
+  benchmark_result_file.close();
+
+  const auto clustering_config_json = _read_clustering_config("clustering_config.json");
+
+  // store clustering config
+  benchmark_result_json["clustering_config"] = clustering_config_json;
+
+
+  std::ofstream final_result_file(*config->output_file_path);
+  final_result_file << benchmark_result_json.dump(2) << std::endl;
+  final_result_file.close();
 
   return 0;
 }
