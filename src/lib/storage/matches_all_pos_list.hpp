@@ -28,9 +28,9 @@ class MatchesAllPosList : public AbstractPosList {
     return RowID{_common_chunk_id, static_cast<ChunkOffset>(n)};
   }
 
-  bool empty() const override final { return size() == 0; }
+  bool empty() const final { return size() == 0; }
 
-  size_t size() const override final { return _common_chunk_size_on_creation; }
+  size_t size() const final { return _common_chunk_size_on_creation; }
 
   size_t memory_usage(const MemoryUsageCalculationMode) const final { return sizeof *this; }
 

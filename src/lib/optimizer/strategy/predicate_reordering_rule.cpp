@@ -25,7 +25,7 @@ using namespace opossum;  // NOLINT
 bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type == LQPNodeType::Predicate) return true;
 
-  // Validate can be seen as a Predicate on the MVCC column
+    // Validate can be seen as a Predicate on the MVCC column
 #if 0
   if (node->type == LQPNodeType::Validate) return true;
 #endif
