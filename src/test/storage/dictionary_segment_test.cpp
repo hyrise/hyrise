@@ -114,7 +114,7 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentDouble) {
   vs_double->append(1.1);
 
   auto segment = ChunkEncoder::encode_segment(vs_double, DataType::Double,
-                                             SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+                                              SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<double>>(segment);
 
   // Test attribute_vector size
