@@ -34,7 +34,8 @@ namespace opossum {
       switch(type){
         case BenchmarkType::TCPH:   _run_tcph(SCALE_FACTOR); break;
         case BenchmarkType::TCPDS:  _run_tcpds(SCALE_FACTOR); break;
-        case BenchmarkType::JOB:    _run_job(SCALE_FACTOR); break;
+        case BenchmarkType::JOB:    _run_job(); break;
+        default: throw std::runtime_error("Provided unknown BenchmarkType.");
       }
 
       auto& pqp_cache = Hyrise::get().default_pqp_cache;
@@ -76,7 +77,7 @@ namespace opossum {
       benchmark_runner->run();
     }
 
-    void CalibrationBenchmarkRunner::_run_job(const float SCALE_FACTOR) const { //TODO Remove SCALE_FACTOR HERE
+    void CalibrationBenchmarkRunner::_run_job() const {
       const auto table_path = "hyrise/imdb_data";
       const auto query_path = "hyrise/third_party/join-order-benchmark";
       const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};

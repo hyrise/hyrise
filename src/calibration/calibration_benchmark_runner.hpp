@@ -27,7 +27,7 @@ class CalibrationBenchmarkRunner {
 
     void _run_tcph(const float SCALE_FACTOR) const;
     void _run_tcpds(const float SCALE_FACTOR) const;
-    void _run_job(const float SCALE_FACTOR) const;
+    void _run_job() const;
 
     void _export_measurements();
 };
