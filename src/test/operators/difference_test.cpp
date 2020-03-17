@@ -104,7 +104,8 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
     ASSERT_TRUE(ordered_by);
-    const auto order_by_vector = std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
+    const auto order_by_vector =
+        std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
     EXPECT_EQ(ordered_by, order_by_vector);
   }
 }
