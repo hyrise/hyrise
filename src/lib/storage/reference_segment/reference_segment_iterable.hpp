@@ -31,7 +31,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     const auto& position_filter = _segment.pos_list();
 
-    resolve_pos_list_type(position_filter, [&functor](auto pos_list) {
+    resolve_pos_list_type(position_filter, [&functor, &referenced_table, &referenced_column_id](auto pos_list) {
       const auto begin_it = pos_list->begin();
       const auto end_it = pos_list->end();
 

@@ -142,7 +142,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
 
 void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                       PosList& matches,
-                                                      const std::shared_ptr<const PosList>& position_filter,
+                                                      const std::shared_ptr<const AbstractPosList>& position_filter,
                                                       const OrderByMode order_by_mode) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;

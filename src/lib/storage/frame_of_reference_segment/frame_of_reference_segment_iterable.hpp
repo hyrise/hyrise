@@ -40,7 +40,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(decompressor)>;
 
-      resolve_pos_list_type(position_filter, [&functor, *this](auto& pos_list) {
+      resolve_pos_list_type(position_filter, [&functor, &decompressor, *this](auto& pos_list) {
         using PosListIteratorType = std::decay_t<decltype(pos_list->cbegin())>;
         auto begin = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{
             &_segment.block_minima(), &_segment.null_values(), std::move(decompressor), pos_list->cbegin(),
