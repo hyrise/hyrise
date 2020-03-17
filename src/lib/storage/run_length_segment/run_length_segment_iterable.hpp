@@ -33,11 +33,12 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
     resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
       using PosListIteratorType = decltype(pos_list->cbegin());
-      auto begin =
-          PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(),
-                            pos_list->cbegin(), pos_list->cbegin()};
+      auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
+                                                            _segment.end_positions().get(), pos_list->cbegin(),
+                                                            pos_list->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
-                                    _segment.end_positions().get(), pos_list->cbegin(), pos_list->cend()};
+                                                          _segment.end_positions().get(), pos_list->cbegin(),
+                                                          pos_list->cend()};
 
       functor(begin, end);
     });

@@ -155,8 +155,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
 
    public:
-    explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
-                                        _PosListIteratorType position_filter_begin,
+    explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it, _PosListIteratorType position_filter_begin,
                                         _PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>,
                                          _PosListIteratorType>{std::move(position_filter_begin),
@@ -188,8 +187,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
-                                 _PosListIteratorType position_filter_begin,
-                                 _PosListIteratorType position_filter_it)
+                                 _PosListIteratorType position_filter_begin, _PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
                                          _PosListIteratorType>{std::move(position_filter_begin),
                                                                std::move(position_filter_it)},

@@ -49,7 +49,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
 
-    resolve_pos_list_type(position_filter, [&position_filter_size, &functor, &decompressed_filtered_segment, *this](auto& pos_list) {
+    resolve_pos_list_type(position_filter, [&position_filter_size, &functor, &decompressed_filtered_segment,
+                                            *this](auto& pos_list) {
       // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
       // element. If the requested element is not within that block, the next block will be decompressed and written to
       // `cached_block` while the value and the new block id are returned. In case the requested element is within the

@@ -7,9 +7,9 @@
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
 
-#include "storage/pos_list.hpp"
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
+#include "storage/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {

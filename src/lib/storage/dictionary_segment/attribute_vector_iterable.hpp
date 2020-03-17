@@ -33,10 +33,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
       resolve_pos_list_type(position_filter, [&vector, &functor, *this](auto& pos_list) {
         using PosListIteratorType = std::decay_t<decltype(pos_list->cbegin())>;
-        auto begin = PointAccessIterator<ZsDecompressorType, PosListIteratorType>{_null_value_id, vector.create_decompressor(),
-                                                           pos_list->cbegin(), pos_list->cbegin()};
-        auto end = PointAccessIterator<ZsDecompressorType, PosListIteratorType>{_null_value_id, vector.create_decompressor(),
-                                                         pos_list->cbegin(), pos_list->cend()};
+        auto begin = PointAccessIterator<ZsDecompressorType, PosListIteratorType>{
+            _null_value_id, vector.create_decompressor(), pos_list->cbegin(), pos_list->cbegin()};
+        auto end = PointAccessIterator<ZsDecompressorType, PosListIteratorType>{
+            _null_value_id, vector.create_decompressor(), pos_list->cbegin(), pos_list->cend()};
         functor(begin, end);
       });
     });
@@ -99,11 +99,11 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     using PosListIteratorType = _PosListIteratorType;
     using ValueType = ValueID;
     PointAccessIterator(const ValueID null_value_id, ZsDecompressorType&& attribute_decompressor,
-                        const _PosListIteratorType&& position_filter_begin,
-                        _PosListIteratorType&& position_filter_it)
+                        const _PosListIteratorType&& position_filter_begin, _PosListIteratorType&& position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, _PosListIteratorType>,
-                                         SegmentPosition<ValueID>, _PosListIteratorType>{std::move(position_filter_begin),
-                                                                   std::move(position_filter_it)},
+                                         SegmentPosition<ValueID>, _PosListIteratorType>{std::move(
+                                                                                             position_filter_begin),
+                                                                                         std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{std::move(attribute_decompressor)} {}
 

@@ -123,9 +123,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
                         ZsDecompressorType attribute_decompressor, _PosListIteratorType position_filter_begin,
                         _PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, _PosListIteratorType>,
-                                         SegmentPosition<T>, _PosListIteratorType>{std::move(position_filter_begin),
-                                                             std::move(position_filter_it)},
+        : BasePointAccessSegmentIterator<
+              PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, _PosListIteratorType>, SegmentPosition<T>,
+              _PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
           _dictionary_begin_it{std::move(dictionary_begin_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{std::move(attribute_decompressor)} {}

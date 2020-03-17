@@ -47,7 +47,7 @@ TEST_F(MatchesAllPosListTest, AddAfterMatchedAllTest) {
   const auto insert_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto get_table_to_add = std::make_shared<GetTable>(table_to_add_name);
   get_table_to_add->execute();
-  
+
   auto insert = std::make_shared<Insert>(table_name, get_table_to_add);
   insert->set_transaction_context(insert_context);
   insert->execute();

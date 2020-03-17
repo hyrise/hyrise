@@ -8,7 +8,9 @@ namespace opossum {
 class MatchesAllPosList : public AbstractPosList {
  public:
   explicit MatchesAllPosList(std::shared_ptr<const Chunk> common_chunk, const ChunkID common_chunk_id)
-      : _common_chunk(common_chunk), _common_chunk_id(common_chunk_id), _common_chunk_size_on_creation(common_chunk->size()) {}
+      : _common_chunk(common_chunk),
+        _common_chunk_id(common_chunk_id),
+        _common_chunk_size_on_creation(common_chunk->size()) {}
 
   MatchesAllPosList& operator=(MatchesAllPosList&& other) = default;
 
