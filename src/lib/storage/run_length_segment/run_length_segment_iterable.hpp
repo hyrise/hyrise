@@ -60,12 +60,12 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   // search on a sorted vector. The value of 200 has been found by a set of simple TPC-H measurements (#2038).
   static constexpr auto LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD = 200.0f;
 
-  // This method estimates the threshold up to which linear search is faster. Since the end position vector is
-  // a highly compressed vector of offsets (depending on actual data), the offset distance up to which is linear search
-  // is beneficial can be much larger than LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD.
+  // This method estimates the threshold up to which linear search is faster for a given run-length vector. Since the
+  // end position vector is a highly compressed vector of offsets (depending on actual data), the offset distance up to
+  // which linear search is beneficial, can be much larger than LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD.
   // Example: for a sorted segment of 65k elements with 10 distinct elements, the expected run length is 6.5k. We would
-  // use linear searches for offset distances of LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * 6.5. For sorted vectors with
-  // few distinct values (superb cases for run length encoding), binary searches are barely used.
+  // use linear searches for offset distances of LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * 6.5. Hence, for sorted
+  // vectors with few distinct values (superb cases for run length encoding), binary searches are barely used.
   static ChunkOffset determine_linear_search_offset_distance_threshold(
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions) {
     if (end_positions->empty()) {
