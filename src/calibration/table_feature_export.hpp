@@ -24,11 +24,11 @@ private:
   const std::string _column_meta_file_name = "column_meta";
   const std::string _segment_meta_file_name = "segment_meta";
 
-  const std::vector<const std::string> _get_header(const TableFeatureExportType type) const { //TODO How to make this constexpr?
+  const std::vector<std::string> _get_header(const TableFeatureExportType type) const { //TODO How to make this constexpr?
     switch (type){
-      case TableFeatureExportType::TABLE: return std::vector<const std::string>({"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"});
-      case TableFeatureExportType::COLUMN: return std::vector<const std::string>({"TABLE_NAME", "COLUMN_NAME", "COLUMN_DATA_TYPE"});
-      case TableFeatureExportType::SEGMENT: return std::vector<const std::string>({"TABLE_NAME", "COLUMN_NAME", "CHUNK_ID", "ENCODING_TYPE", "COMPRESSION_TYPE"});
+      case TableFeatureExportType::TABLE: return std::vector<std::string>({"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"});
+      case TableFeatureExportType::COLUMN: return std::vector<std::string>({"TABLE_NAME", "COLUMN_NAME", "COLUMN_DATA_TYPE"});
+      case TableFeatureExportType::SEGMENT: return std::vector<std::string>({"TABLE_NAME", "COLUMN_NAME", "CHUNK_ID", "ENCODING_TYPE", "COMPRESSION_TYPE"});
     }
     throw std::runtime_error("Requested header for unknown TableFeatureExportType.");
   }

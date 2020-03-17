@@ -15,10 +15,10 @@ class OperatorFeatureExport {
  private:
   const std::string& _path_to_dir;
 
-  [[nodiscard]] std::optional<const std::vector<const std::string>> _get_header(const OperatorType type) const {
+  [[nodiscard]] std::optional<const std::vector<std::string>> _get_header(const OperatorType type) const {
     std::stringstream ss;
     switch(type){
-      case OperatorType::TableScan: return std::vector<const std::string>({"INPUT_ROWS_LEFT", "OUTPUT_ROWS", "RUNTIME_NS", "SCAN_TYPE", "TABLE_NAME", "COLUMN_NAME", "SCAN_IMPLEMENTATION"});
+      case OperatorType::TableScan: return std::vector<std::string>({"INPUT_ROWS_LEFT", "OUTPUT_ROWS", "RUNTIME_NS", "SCAN_TYPE", "TABLE_NAME", "COLUMN_NAME", "SCAN_IMPLEMENTATION"});
       default: return {};
     }
   }
