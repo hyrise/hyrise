@@ -58,11 +58,7 @@ namespace opossum {
     }
 
     void CalibrationBenchmarkRunner::_run_tcph(const float SCALE_FACTOR) const {
-      constexpr auto USE_PREPARED_STATEMENTS = false;
-
-      // const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{5}};
-      // auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, USE_PREPARED_STATEMENTS, SCALE_FACTOR, tpch_query_ids_benchmark);
-      auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, USE_PREPARED_STATEMENTS, SCALE_FACTOR);
+      auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, false, SCALE_FACTOR);
       auto benchmark_runner = std::make_shared<BenchmarkRunner>(
               *_config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(SCALE_FACTOR, _config), BenchmarkRunner::create_context(*_config));
       Hyrise::get().benchmark_runner = benchmark_runner;
