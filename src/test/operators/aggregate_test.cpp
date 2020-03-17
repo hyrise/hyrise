@@ -184,19 +184,20 @@ class AggregateSortedTest : public BaseTest {
     const auto chunk_count = test_table->chunk_count();
     for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = test_table->get_chunk(chunk_id);
-      const auto ordered_by = chunk->ordered_by();
-      if (ordered_by) {
-        const auto ordered_segment = chunk->get_segment(ordered_by->first);
+      const auto ordered_by_vector = chunk->ordered_by();
+      if (ordered_by_vector) {
+        const auto ordered_by = ordered_by_vector->front();
+        const auto ordered_segment = chunk->get_segment(ordered_by.first);
         segment_with_iterators(*ordered_segment, [&](auto it, auto end) {
           it++;
           auto prev_iterator = --it;
-          if (ordered_by->second == OrderByMode::Ascending || ordered_by->second == OrderByMode::AscendingNullsLast) {
+          if (ordered_by.second == OrderByMode::Ascending || ordered_by.second == OrderByMode::AscendingNullsLast) {
             while (it != end) {
               EXPECT_TRUE(it->value() >= prev_iterator->value());
               ++it;
             }
-          } else if (ordered_by->second == OrderByMode::Descending ||
-                     ordered_by->second == OrderByMode::DescendingNullsLast) {
+          } else if (ordered_by.second == OrderByMode::Descending ||
+                     ordered_by.second == OrderByMode::DescendingNullsLast) {
             while (it != end) {
               EXPECT_TRUE(it->value() <= prev_iterator->value());
               ++it;

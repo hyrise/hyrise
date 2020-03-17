@@ -33,11 +33,18 @@ std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsVa
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
+  bool sorted_segment_scanned = false;
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
-  if (ordered_by && ordered_by->first == _column_id) {
-    _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
-  } else {
-    // Select optimized or generic scanning implementation based on segment type
+
+  if (ordered_by) {
+    for (const auto order_by : *ordered_by) {
+      if (order_by.first == _column_id) {
+        _scan_sorted_segment(segment, chunk_id, matches, position_filter, order_by.second);
+        sorted_segment_scanned = true;
+      }
+    }
+  }
+  if (!sorted_segment_scanned) {
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
     } else {

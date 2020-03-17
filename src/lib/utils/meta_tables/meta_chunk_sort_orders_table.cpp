@@ -30,9 +30,9 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
       const auto ordered_by = chunk->ordered_by();
       if (ordered_by) {
         std::stringstream order_by_mode_steam;
-        order_by_mode_steam << ordered_by->second;
+        order_by_mode_steam << ordered_by->front().second;
         output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id),
-                              static_cast<int32_t>(ordered_by->first), pmr_string{order_by_mode_steam.str()}});
+                              static_cast<int32_t>(ordered_by->front().first), pmr_string{order_by_mode_steam.str()}});
       }
     }
   }

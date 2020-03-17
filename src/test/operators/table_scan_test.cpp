@@ -53,7 +53,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> load_and_encode_table(
       const std::string& path, const ChunkOffset chunk_size = 2,
-      const std::optional<std::pair<ColumnID, OrderByMode>> ordered_by = std::nullopt) {
+      const std::optional<std::vector<std::pair<ColumnID, OrderByMode>>> ordered_by = std::nullopt) {
     const auto table = load_table(path, chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{};
@@ -89,12 +89,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
     return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 4,
-                                 std::make_optional(std::make_pair(ColumnID(0), OrderByMode::Ascending)));
+                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), OrderByMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
     return load_and_encode_table("resources/test_data/tbl/int_only_null.tbl", 4,
-                                 std::make_optional(std::make_pair(ColumnID(0), OrderByMode::Ascending)));
+                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), OrderByMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {
@@ -1131,7 +1131,8 @@ TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
     ASSERT_TRUE(ordered_by);
-    EXPECT_EQ(ordered_by, std::make_pair(ColumnID{0}, OrderByMode::Ascending));
+    const auto order_by_vector = std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
+    EXPECT_EQ(ordered_by, order_by_vector);
   }
 }
 

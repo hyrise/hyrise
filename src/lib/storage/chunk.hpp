@@ -145,8 +145,9 @@ class Chunk : private Noncopyable {
    * the ColumnID of the segment by which it is sorted will be returned.
    * This is currently taken advantage of in, e.g., the ColumnVsValueScan. See #1519 for more details.
    */
-  const std::optional<std::pair<ColumnID, OrderByMode>>& ordered_by() const;
+  const std::optional<std::vector<std::pair<ColumnID, OrderByMode>>>& ordered_by() const;
   void set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by);
+  void set_ordered_by(const std::vector<std::pair<ColumnID, OrderByMode>>& ordered_by);
 
   /**
    * If a chunk is value clustered in any way, the clustering type and the ColumnID of the segment by which it is
@@ -195,7 +196,7 @@ class Chunk : private Noncopyable {
   Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
-  std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
+  std::optional<std::vector<std::pair<ColumnID, OrderByMode>>> _ordered_by;
   std::optional<std::vector<ColumnID>> _value_clustered_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
