@@ -240,6 +240,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
+// TODO
 // Currently disabled, when MatchesAll gives better performance we should consider removing the rule
 /* TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off

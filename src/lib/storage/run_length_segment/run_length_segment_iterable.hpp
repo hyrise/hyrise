@@ -2,9 +2,10 @@
 
 #include <algorithm>
 
+#include "storage/run_length_segment.hpp"
 #include "storage/segment_iterables.hpp"
 
-#include "storage/run_length_segment.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -17,24 +18,26 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    auto begin =
-        Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(), _segment.end_positions()->cbegin(), 0u};
+    _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
+    auto begin = Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(),
+                          _segment.end_positions()->cbegin(), _segment.end_positions()->cbegin(), ChunkOffset{0}};
     auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(),
-                        static_cast<ChunkOffset>(_segment.size())};
+                        _segment.end_positions()->cbegin(), static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+
     resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
       using PosListIteratorType = decltype(pos_list->cbegin());
-      auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
-                                                            _segment.end_positions().get(), pos_list->cbegin(),
-                                                            pos_list->cbegin()};
+      auto begin =
+          PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(),
+                            pos_list->cbegin(), pos_list->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
-                                                          _segment.end_positions().get(), pos_list->cbegin(),
-                                                          pos_list->cend()};
+                                    _segment.end_positions().get(), pos_list->cbegin(), pos_list->cend()};
 
       functor(begin, end);
     });
@@ -55,21 +58,21 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
 
    public:
-    explicit Iterator(const ValueIterator& value_it, const NullValueIterator& null_value_it,
-                      const EndPositionIterator& end_position_it, const ChunkOffset start_position)
-        : _value_it{value_it},
-          _null_value_it{null_value_it},
-          _end_position_it{end_position_it},
-          _end_position_it_begin{end_position_it},
-          _current_position{start_position} {}
+    explicit Iterator(ValueIterator value_it, NullValueIterator null_value_it, EndPositionIterator end_position_it,
+                      EndPositionIterator end_position_begin_it, ChunkOffset chunk_offset)
+        : _value_it{std::move(value_it)},
+          _null_value_it{std::move(null_value_it)},
+          _end_position_it{std::move(end_position_it)},
+          _end_position_begin_it{std::move(end_position_begin_it)},
+          _chunk_offset{chunk_offset} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
-      ++_current_position;
+      ++_chunk_offset;
 
-      if (_current_position > *_end_position_it) {
+      if (_chunk_offset > *_end_position_it) {
         ++_value_it;
         ++_null_value_it;
         ++_end_position_it;
@@ -77,10 +80,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void decrement() {
-      --_current_position;
+      --_chunk_offset;
 
       // Make sure to only check the previous end position when we are not in the very first run.
-      if (_end_position_it != _end_position_it_begin && _current_position <= *(_end_position_it - 1)) {
+      if (_end_position_it != _end_position_begin_it && _chunk_offset <= *(_end_position_it - 1)) {
         --_value_it;
         --_null_value_it;
         --_end_position_it;
@@ -88,6 +91,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void advance(std::ptrdiff_t n) {
+      PerformanceWarning("Using repeated increment/decrement for random access");
       // The easy way for now
       if (n < 0) {
         for (std::ptrdiff_t i = n; i < 0; ++i) {
@@ -100,22 +104,20 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       }
     }
 
-    bool equal(const Iterator& other) const { return _current_position == other._current_position; }
+    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
-      return std::ptrdiff_t{other._current_position} - std::ptrdiff_t{_current_position};
+      return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
     }
 
-    SegmentPosition<T> dereference() const {
-      return SegmentPosition<T>{*_value_it, *_null_value_it, _current_position};
-    }
+    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
 
    private:
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
     EndPositionIterator _end_position_it;
-    EndPositionIterator _end_position_it_begin;
-    ChunkOffset _current_position;
+    EndPositionIterator _end_position_begin_it;
+    ChunkOffset _chunk_offset;
   };
 
   /**
@@ -143,7 +145,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     explicit PointAccessIterator(const pmr_vector<T>* values, const pmr_vector<bool>* null_values,
                                  const pmr_vector<ChunkOffset>* end_positions,
                                  const _PosListIteratorType position_filter_begin,
-                                 _PosListIteratorType position_filter_it)
+                                 _PosListIteratorType&& position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
                                          _PosListIteratorType>{std::move(position_filter_begin),
                                                                std::move(position_filter_it)},

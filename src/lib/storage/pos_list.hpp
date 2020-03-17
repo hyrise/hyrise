@@ -54,8 +54,12 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   PosList& operator=(PosList&& other) = default;
 
-  // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
-  // to enable some optimizations.
+  // If we know that all entries in the PosList share a single ChunkID, we can optimize the indirection by retrieving
+  // the respective chunk once and using only the ChunkOffsets to access values. As the consumer will likely call
+  // table->get_chunk(common_chunk_id), we require that the common chunk id is valid, i.e., the PosList contains no NULL
+  // values. Note that this is not about NULL values being referenced, but about NULL value contained in the PosList
+  // itself.
+
   void guarantee_single_chunk() { _references_single_chunk = true; }
 
   // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
@@ -65,10 +69,11 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
           [&]() {
             if (size() == 0) return true;
             const auto& common_chunk_id = (*this)[0].chunk_id;
-            return std::all_of(cbegin(), cend(),
-                               [&](const auto& row_id) { return row_id.chunk_id == common_chunk_id; });
+            return std::all_of(cbegin(), cend(), [&](const auto& row_id) {
+              return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
+            });
           }(),
-          "Chunk was marked as referencing only a single chunk, but references more");
+          "PosList was marked as referencing a single chunk, but references more");
     }
     return _references_single_chunk;
   }
@@ -78,6 +83,7 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
     DebugAssert(references_single_chunk(),
                 "Can only retrieve the common_chunk_id if the PosList is guaranteed to reference a single chunk.");
     Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
+    Assert((*this)[0].chunk_id != INVALID_CHUNK_ID, "PosList that references_single_chunk must not contain NULL");
     return (*this)[0].chunk_id;
   }
 

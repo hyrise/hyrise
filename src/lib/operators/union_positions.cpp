@@ -149,8 +149,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
    * time as merging the two ReferenceMatrices
    */
 
-  // Somewhat random way to decide on a chunk size.
-  const auto out_chunk_size = std::max(left_input_table.max_chunk_size(), input_table_right()->max_chunk_size());
+  const auto out_chunk_size = Chunk::DEFAULT_SIZE;
 
   size_t chunk_row_idx = 0;
   for (; left_idx < num_rows_left || right_idx < num_rows_right;) {

@@ -11,9 +11,9 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-AbstractExpression::AbstractExpression(const ExpressionType type,
-                                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
-    : type(type), arguments(arguments) {}
+AbstractExpression::AbstractExpression(const ExpressionType init_type,
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
+    : type(init_type), arguments(init_arguments) {}
 
 bool AbstractExpression::requires_computation() const { return true; }
 

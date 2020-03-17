@@ -21,15 +21,15 @@ class BTreeIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
-    segment = std::make_shared<ValueSegment<pmr_string>>(values);
+    segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
     index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
 
-  std::vector<pmr_string> values;
-  std::vector<pmr_string> sorted;
+  pmr_vector<pmr_string> values;
+  pmr_vector<pmr_string> sorted;
   std::shared_ptr<BTreeIndex> index = nullptr;
   std::shared_ptr<ValueSegment<pmr_string>> segment = nullptr;
 
@@ -79,17 +79,17 @@ TEST_F(BTreeIndexTest, IndexProbes) {
     MemoryConsumptionVeryShortStringEmpty
   Tested functions:
     size_t memory_consumption() const;
-  
+
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|
   |[A] index is empty               |    true |   false |
   |[B] index has NULL positions     |    true |   false |
   |[C] index has non-NULL positions |    true |   false |
-  
+
   Base Choice:
     A2, B1, C1
   Further derived combinations:
-    A2, B1, C2 
+    A2, B1, C2
     A2, B2, C1
    (A1, B1, C1) --infeasible---+
     A1, B2, C2 <-alternative-<-+
@@ -97,8 +97,8 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 
 // A2, B2, C1
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
-  values = {"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
+  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
@@ -128,7 +128,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
 // A2, B1, C2
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
   const auto& dict_segment_string_nulls =
-      BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
+      create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
   const auto& index =
       std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_nulls}));
 
@@ -158,7 +158,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
 
 // A2, B1, C1
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
-  const auto& dict_segment_string_mixed = BaseTest::create_dict_segment_by_type<pmr_string>(
+  const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
                          "b", "z", "x", std::nullopt});
   const auto& index =
@@ -190,7 +190,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
 
 // A1, B2, C2
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
-  const auto& dict_segment_string_empty = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
+  const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
   const auto& index =
       std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_empty}));
 
@@ -250,9 +250,10 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   ASSERT_LE(pmr_string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
-  values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
-            "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  auto local_values = pmr_vector<pmr_string>{
+      "hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
+      "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
+  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
