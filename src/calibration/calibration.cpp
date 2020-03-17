@@ -35,13 +35,13 @@ int main() {
   auto const path_train = "./data/train";
   auto const path_test = "./data/test";
 
-  const auto measurement_export = OperatorFeatureExport(path_train);
+  const auto feature_export = OperatorFeatureExport(path_train);
   auto lqp_generator = LQPGenerator();
   auto table_export = TableFeatureExport(path_train);
 
-  auto benchmark_builder = CalibrationBenchmarkRunner(path_test);
+  auto benchmark_runner = CalibrationBenchmarkRunner(path_test);
 
-  benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
+  benchmark_runner.export_benchmark(BenchmarkType::TCPH, 0.01f);
 
   for (const auto &table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
