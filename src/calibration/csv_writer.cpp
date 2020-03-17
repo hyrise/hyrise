@@ -12,7 +12,7 @@ namespace opossum {
 
     CSVWriter::CSVWriter(
             std::string file_path,
-            const std::vector<std::string> headers,
+            const std::vector<std::string> headers, // headers for csv file, if the file for file_path already exists, it must have equal headers
             const char delimiter,
             bool replace_file) :
             _headers(headers),
@@ -79,7 +79,7 @@ namespace opossum {
               "Please validate header and value insertion."
       );
 
-      // Construct row as string
+      // construct row as string
       std::stringstream ss;
       auto header_size = _headers.size();
       for (unsigned long header_id = 0; header_id < header_size - 1; ++header_id){ // header_size - 1 to skip last header
@@ -88,13 +88,13 @@ namespace opossum {
       }
       ss << _current_row[_headers.back()] << std::endl;
 
-      // Save constructed row in file
+      // save constructed row in file
       std::fstream file;
       file.open(_file_path, std::ofstream::out | std::ofstream::app);
       file << ss.str();
       file.close();
 
-      //Reset current row
+      // reset current row
       _current_row.clear();
     }
 
