@@ -107,7 +107,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
                                                      const DataType data_type,
                                                      const SegmentEncodingSpec& segment_encoding_spec) {
-    return encode_and_compress_segment(base_segment, data_type, segment_encoding_spec);
+    return std::dynamic_pointer_cast<BaseEncodedSegment>(ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec));
   }
 };
 

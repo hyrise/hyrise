@@ -37,7 +37,7 @@ class GroupKeyIndexTest : public BaseTest {
     value_segment_str->append(NULL_VALUE);  // 11
 
     dict_segment =
-        encode_and_compress_segment(value_segment_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
+        ChunkEncoder::encode_segment(value_segment_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
     index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment}));
 

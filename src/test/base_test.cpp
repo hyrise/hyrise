@@ -33,7 +33,7 @@ std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_
   }
 
   const auto& dict_segment =
-      encode_and_compress_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
+      ChunkEncoder::encode_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
 
   return std::static_pointer_cast<DictionarySegment<T>>(dict_segment);
 }

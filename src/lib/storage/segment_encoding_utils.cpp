@@ -39,18 +39,6 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   return encoder->create_new();
 }
 
-std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::shared_ptr<const BaseSegment>& segment,
-                                                                const DataType data_type,
-                                                                const SegmentEncodingSpec& encoding_spec) {
-  auto encoder = create_encoder(encoding_spec.encoding_type);
-
-  if (encoding_spec.vector_compression_type) {
-    encoder->set_vector_compression(*encoding_spec.vector_compression_type);
-  }
-
-  return encoder->encode(segment, data_type);
-}
-
 SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const BaseSegment>& segment) {
   Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
 
