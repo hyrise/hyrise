@@ -81,7 +81,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
   static EndPositionIterator search_end_positions_for_chunk_offset(
-      const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions
+      const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
       const ChunkOffset previous_chunk_offset, const ChunkOffset chunk_offset,
       const size_t previous_end_position_index, const size_t linear_search_threshold) {
     const int64_t step_size = static_cast<int64_t>(chunk_offset) - previous_chunk_offset;
