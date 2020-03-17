@@ -178,7 +178,6 @@ void CompressionPlugin::_optimize_compression() {
 }
 
 void CompressionPlugin::stop() {
-  _loop_thread->pause();
   _memory_budget_setting->unregister_at_settings_manager();
 }
 
