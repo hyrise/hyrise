@@ -4,11 +4,14 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <vector>
 
 #include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
+#include "operators/get_table.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -25,6 +28,44 @@ const nlohmann::json _read_clustering_config(const std::string& filename) {
   std::ifstream ifs(filename);
   const auto clustering_config = nlohmann::json::parse(ifs);
   return clustering_config;
+}
+
+void _extract_get_tables(const std::shared_ptr<const AbstractOperator> pqp_node, std::set<std::shared_ptr<const GetTable>>& get_table_operators) {
+  if (pqp_node->type() == OperatorType::GetTable) {
+    auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp_node);
+    Assert(get_table_op, "could not cast to GetTable");
+    get_table_operators.insert(get_table_op);
+  } else {
+    if (pqp_node->input_left()) _extract_get_tables(pqp_node->input_left(), get_table_operators);
+    if (pqp_node->input_right()) _extract_get_tables(pqp_node->input_right(), get_table_operators);
+  }
+}
+
+const nlohmann::json _compute_pruned_chunks_per_table() {
+  std::map<std::string, std::vector<size_t>> pruned_chunks_per_table;
+
+  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin(); iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
+    const auto& [query_string, physical_query_plan] = *iter;
+
+    std::set<std::shared_ptr<const GetTable>> get_table_operators;
+    _extract_get_tables(physical_query_plan, get_table_operators);
+
+    // Queries are cached just once (per parameter combination).
+    // Thus, we need to check how often the concrete queries were executed.
+    auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(Hyrise::get().default_pqp_cache->unsafe_cache());
+    const size_t frequency = gdfs_cache.frequency(query_string);
+    Assert(frequency > 0, "found a pqp for a query that was not cached");
+
+    for (const auto& get_table : get_table_operators) {
+      const auto& table_name = get_table->table_name();
+      const auto& number_of_pruned_chunks = get_table->pruned_chunk_ids().size();
+      for (size_t run{0}; run < frequency; run++) {
+        pruned_chunks_per_table[table_name].push_back(number_of_pruned_chunks);
+      }
+    }
+  }
+
+  return pruned_chunks_per_table;
 }
 
 int main(int argc, const char* argv[]) {
@@ -68,7 +109,6 @@ int main(int argc, const char* argv[]) {
 
   std::shared_ptr<BenchmarkRunner> benchmark_runner;
 
-  //TODO: cluster-config mit rausschreiben
   //TODO: parameter scale, chunksize und runtime steuerbar machen
 
   // init benchmark runner
@@ -124,6 +164,7 @@ int main(int argc, const char* argv[]) {
 
   // store clustering config
   benchmark_result_json["clustering_config"] = clustering_config_json;
+  benchmark_result_json["number_of_pruned_chunks"] = _compute_pruned_chunks_per_table();
 
 
   std::ofstream final_result_file(*config->output_file_path);
