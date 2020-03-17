@@ -12,12 +12,28 @@ namespace opossum {
 
     CSVWriter::CSVWriter(
             std::string file_path,
-            const std::vector<const std::string> headers,
+            const std::vector<std::string> headers,
             const char delimiter,
             bool replace_file) :
             _headers(headers),
             _file_path(std::move(file_path)),
             _delimiter(delimiter){
+
+      // Get path from string
+      std::filesystem::path boost_path(_file_path);
+
+      // Extract directory path from file
+      const auto directory_path = boost_path.parent_path();
+
+      // Check if directory already exists, if not create the directory
+      if (!std::filesystem::exists(directory_path)){
+        std::filesystem::create_directories(directory_path);
+      }
+
+      //Check if directory_path is actually a directory. If we do not create the directory, we cannot be sure if the provided path is valid
+      DebugAssert(std::filesystem::is_directory(directory_path), directory_path.string() + " is not a directory.");
+
+      //if we want to replace the existing file, create a new one and insert headers.
       if (replace_file){
         _create_file_with_headers();
       }
@@ -26,7 +42,7 @@ namespace opossum {
     void CSVWriter::write_row() {
       // Check if we have values for all columns
       DebugAssert(
-      ([&](std::map<std::string, std::string> map, std::vector<const std::string> headers) -> bool{
+      ([&](std::map<std::string, std::string> map, std::vector<std::string> headers) -> bool{
         for (auto const& header: headers){
           // If header is not in current_row trigger error
           if (_current_row.find(header) == _current_row.end()){
@@ -41,7 +57,7 @@ namespace opossum {
 
       // Check if file header is equal to header in memory
       DebugAssert(
-              ([&](const std::string& file_path, std::vector<const std::string> headers, const char delimiter) -> bool{
+              ([&](const std::string& file_path, std::vector<std::string> headers, const char delimiter) -> bool{
                   std::ifstream check_file;
 
                   check_file.open(file_path);
@@ -49,7 +65,7 @@ namespace opossum {
                   auto correct_header = false;
 
                   getline(check_file, first_line); {
-                    std::vector<const std::string> to_test_headers;
+                    std::vector<std::string> to_test_headers;
                     boost::split(to_test_headers, first_line, [delimiter](char c){return c == delimiter;});
 
                     if(to_test_headers == headers){

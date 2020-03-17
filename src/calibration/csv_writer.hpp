@@ -10,7 +10,7 @@ namespace opossum {
     class CSVWriter {
 
     public:
-      CSVWriter(std::string file_path, const std::vector<const std::string> headers, const char delimiter = ',', const bool replace_file = true);
+      CSVWriter(std::string file_path, const std::vector<std::string> headers, const char delimiter = ',', const bool replace_file = true);
 
       static constexpr std::string_view NA = "null";
 
@@ -42,13 +42,13 @@ namespace opossum {
                 "Please validate value insertion for this specific column or delimiter settings."
         );
 
-        _current_row.try_emplace(key, stringified_value);
+        _current_row.insert(std::pair<std::string, std::string>(key, stringified_value));
       }
 
       void write_row();
 
     private:
-      const std::vector<const std::string> _headers;
+      const std::vector<std::string> _headers;
 
       std::map<std::string, std::string> _current_row;
 

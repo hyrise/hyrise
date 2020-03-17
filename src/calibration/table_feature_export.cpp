@@ -7,8 +7,6 @@
 
 namespace opossum {
     TableFeatureExport::TableFeatureExport(const std::string &path_to_dir) : _path_to_dir(path_to_dir){
-      //Create dir if not exists
-      std::filesystem::create_directories(path_to_dir);
     }
 
     void TableFeatureExport::export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
