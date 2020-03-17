@@ -15,20 +15,17 @@ class CalibrationBenchmarkRunner {
     CalibrationBenchmarkRunner(const std::string& path_to_dir);
     CalibrationBenchmarkRunner(const std::string& path_to_dir, std::shared_ptr<BenchmarkConfig> config);
 
-    void export_benchmark(const BenchmarkType type, const float SCALE_FACTOR);
+    void run_benchmark(const BenchmarkType type, const float SCALE_FACTOR, const int number_of_executions);
 
   private:
-    const std::string& _path_to_dir;
-    const OperatorFeatureExport _measurement_export;
+    const OperatorFeatureExport _feature_export;
     TableFeatureExport _table_export;
 
 
     std::shared_ptr<BenchmarkConfig> _config;
 
-    void _run_tcph(const float SCALE_FACTOR) const;
-    void _run_tcpds(const float SCALE_FACTOR) const;
-    void _run_job() const;
-
-    void _export_measurements();
+    std::shared_ptr<BenchmarkRunner> _build_tcph(const float SCALE_FACTOR) const;
+    std::shared_ptr<BenchmarkRunner> _build_tcpds(const float SCALE_FACTOR) const;
+    std::shared_ptr<BenchmarkRunner> _build_job() const;
 };
 }  // namespace opossum

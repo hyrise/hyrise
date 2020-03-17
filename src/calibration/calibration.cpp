@@ -41,13 +41,12 @@ int main() {
 
   auto benchmark_runner = CalibrationBenchmarkRunner(path_test);
 
-  benchmark_runner.export_benchmark(BenchmarkType::TCPH, 0.01f);
+  benchmark_runner.run_benchmark(BenchmarkType::TCPH, 0.01f, 10);
 
   for (const auto &table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
 
     lqp_generator.generate(OperatorType::TableScan, table);
-//    lqp_generator.generate(OperatorType::JoinHash, table);
   }
 
     const auto lqps = lqp_generator.get_lqps();
@@ -58,7 +57,7 @@ int main() {
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
       // Execute LQP directly after generation
-      measurement_export.export_to_csv(pqp);
+      feature_export.export_to_csv(pqp);
     }
 
   for (const auto &table : tables){
