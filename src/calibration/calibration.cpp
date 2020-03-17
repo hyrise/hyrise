@@ -10,10 +10,10 @@
 #include "scheduler/operator_task.hpp"
 
 #include "lqp_generator.hpp"
-#include "measurement_export.hpp"
-#include "table_generator.hpp"
-#include "table_export.hpp"
-#include "benchmark_builder.hpp"
+#include "operator_feature_export.hpp"
+#include "calibration_table_generator.hpp"
+#include "table_feature_export.hpp"
+#include "calibration_benchmark_runner.hpp"
 
 #include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
@@ -21,32 +21,32 @@
 using namespace opossum;  // NOLINT
 
 int main() {
+
   auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
           {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String, DataType::Null},
-          {EncodingType::Dictionary, EncodingType::FixedStringDictionary, EncodingType ::FrameOfReference, EncodingType::LZ4, EncodingType::RunLength, EncodingType::Unencoded},
+          {EncodingType::Dictionary},
           {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)},
-          {1000}, //TODO rename to chunk_size
-          {100, 1000, 10000}
+          {100000}, //TODO rename to chunk_size
+          {1500, 3000, 6000, 10000, 20000, 30000, 60175, 25, 15000, 2000, 8000, 5, 100}
   });
-  auto table_generator = TableGenerator(table_config);
+  auto table_generator = CalibrationTableGenerator(table_config);
   const auto tables = table_generator.generate();
 
   auto const path_train = "./data/train";
   auto const path_test = "./data/test";
 
-  const auto measurement_export = MeasurementExport(path_train);
+  const auto feature_export = OperatorFeatureExport(path_train);
   auto lqp_generator = LQPGenerator();
-  const auto table_export = TableExport(path_train);
+  auto table_export = TableFeatureExport(path_train);
 
-  const auto benchmark_builder = BenchmarkBuilder(path_test);
+  auto benchmark_runner = CalibrationBenchmarkRunner(path_test);
 
-  benchmark_builder.export_benchmark(BenchmarkType::TCPH, 0.01f);
+  benchmark_runner.run_benchmark(BenchmarkType::TCPH, 0.01f, 10);
 
   for (const auto &table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
 
     lqp_generator.generate(OperatorType::TableScan, table);
-//    lqp_generator.generate(OperatorType::JoinHash, table);
   }
 
     const auto lqps = lqp_generator.get_lqps();
@@ -57,7 +57,7 @@ int main() {
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
       // Execute LQP directly after generation
-      measurement_export.export_to_csv(pqp);
+      feature_export.export_to_csv(pqp);
     }
 
   for (const auto &table : tables){

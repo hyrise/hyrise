@@ -30,7 +30,4 @@ def import_test_data(tpch):
 
 
 def main():
-    tpch = [arg for arg in sys.argv[1:]]
-    test_data = import_test_data(tpch)
-
-    #TODO output for piping
+    pass

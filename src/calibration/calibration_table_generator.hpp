@@ -20,9 +20,9 @@ struct TableGeneratorConfig{
   std::set<int> row_counts;
 };
 
-class TableGenerator {
+class CalibrationTableGenerator {
  public:
-  explicit TableGenerator(std::shared_ptr<TableGeneratorConfig> config);
+  explicit CalibrationTableGenerator(std::shared_ptr<TableGeneratorConfig> config);
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> generate() const;
 
  private:

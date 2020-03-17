@@ -106,6 +106,7 @@ namespace opossum {
       }
     }
 
+    //TODO extract to new namespace
     std::vector<LQPGenerator::ColumnPair> LQPGenerator::_get_column_pairs(const std::shared_ptr<const CalibrationTableWrapper>& table) const {
       /*
        * ColumnVsColumn Scans occur when the value of a predicate is a column.
