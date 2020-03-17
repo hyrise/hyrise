@@ -126,7 +126,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (env_clustering_order != nullptr) {
     // read table sorting configuration from environment variable
     // format: "<table1>:<column1>,<column2>;<table2>:<column1>,<column2>;..."
-    // atm we can only sort (cluster) after 1 column per table
+    // atm we can only sort after 1 column per table
     const auto clustering_order = std::string(env_clustering_order);
     const auto clustering_json = nlohmann::json::parse(clustering_order);
     std::cout << "parsed clustering json:" << std::endl;
@@ -135,6 +135,9 @@ void AbstractTableGenerator::generate_and_store() {
     SortOrderByTable tmp = clustering_json;
     clustering_order_by_table = tmp;
   }
+
+  // TODO hacky way to skip the normal sorting/clustering process, as the clustering plugin deals with that.
+  clustering_order_by_table = {};
   metrics.clustering_order_by_table = clustering_order_by_table;
 
   std::map<std::string, std::string> chunk_order_by_table;
@@ -150,6 +153,8 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Sorting tables" << std::endl;
 
     for (const auto& [table_name, clustering_columns] : clustering_order_by_table) {
+      Assert(table_name.size() > 0, "this is just to avoid unused variable warnings");
+      /*
       Assert(clustering_columns.size() >= 1, "you have to specify at least one clustering dimension, otherwise just leave out the table entry");
       const auto original_table = table_info_by_name[table_name].table;
 
@@ -208,7 +213,7 @@ void AbstractTableGenerator::generate_and_store() {
       metrics.chunk_order_by_table = chunk_order_by_table;
       table_info_by_name[table_name].table = mutable_sorted_table;
       std::cout << "final table size of " << table_name << " is: " << mutable_sorted_table->row_count() << std::endl;
-
+      */
       /*
 
 

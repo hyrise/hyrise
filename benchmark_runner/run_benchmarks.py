@@ -15,18 +15,24 @@ AVAILABLE_BENCHMARKS = {
 
 
 def run_benchmark(benchmark, config_name, chunk_size):
-  sort_orders = benchmark.sort_orders()[config_name]
-  process_env = os.environ.copy()
-  process_env["CLUSTERING_ORDER"] = json.dumps(sort_orders["clustering_order"])
-  if "chunk_order" in sort_orders:
-    process_env["CHUNK_ORDER"] = json.dumps(sort_orders["chunk_order"])
+  # write clustering config into the config json
+  sort_order = benchmark.sort_orders()[config_name]
+  with open ("clustering_config.json", "w") as clustering_config_file:
+    clustering_config_file.write(json.dumps(sort_order) + "\n")
 
+  # ensure that the results directory exists
+  if not os.path.exists(benchmark.result_path()):
+    os.makedirs(benchmark.result_path())
+
+  process_env = os.environ.copy()
+  process_env["BENCHMARK_TO_RUN"] = benchmark.name()
 
   # not sure if using "--cache_binary_tables" is a good idea.
   # if a second benchmark does not provide new clustering columns, the old clustering will be loaded and preserved from the table cache.
   # this might influence subsequent benchmarks (e.g. via pruning)
   p = Popen(
-            [benchmark.exec_path(), "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
+            #[benchmark.exec_path(), "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
+            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
             env=process_env,
             stdout=sys.stdout,
             stdin=sys.stdin,

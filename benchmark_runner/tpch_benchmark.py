@@ -5,10 +5,10 @@ class TPCHBenchmark(AbstractBenchmark):
   	return "tpch"
 
   def exec_path(self):
-    return "/home/Alexander.Loeser/hyrise/build-release/hyriseBenchmarkTPCH"
+    return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
 
   def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch_random_access_tmp"
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpch_plugin"
 
   def time(self):
     return 60
@@ -22,10 +22,10 @@ class TPCHBenchmark(AbstractBenchmark):
   def sort_orders(self):
     return {
       #"nosort": {},
-      #"default": {
-      #  "lineitem": [["l_shipdate", 100]],
-      #  "orders": [["o_orderdate", 50]]
-      #},
+      "default": {
+        "lineitem": [["l_shipdate", 240]],
+        "orders": [["o_orderdate", 60]]
+      },
       #"highest_1d_gain": {
       #  "customer": ["c_mktsegment"],
       #  "lineitem": ["l_receiptdate"],
@@ -57,42 +57,26 @@ class TPCHBenchmark(AbstractBenchmark):
       #  "orders": ["o_orderdate"]
       #},
       "q6_discount": {
-        "clustering_order": {
-          "lineitem": [
-            ["l_shipdate", 75]
-          ],
-          "orders": [
-            ["o_orderdate", 50]
-          ]
-        },
-        "chunk_order": {
-          "lineitem": "l_discount"
-        }
+        "lineitem": [
+          ["l_shipdate", 240],
+          ["l_discount", 1]
+        ],
+        "orders": [["o_orderdate", 60]]
       },
       "q6_2d_discount_discount": {
-        "clustering_order": {
-          "lineitem": [
-            ["l_shipdate", 75],
-            ["l_discount", 2]
-          ],
-          "orders": [
-            ["o_orderdate", 50]
-          ]
-        }
+        "lineitem": [
+          ["l_shipdate", 120],
+          ["l_discount", 2]
+        ],
+        "orders": [["o_orderdate", 60]]
       },
       "q6_2d_discount_shipdate": {
-        "clustering_order": {
-          "lineitem": [
-            ["l_shipdate", 75],
-            ["l_discount", 2]
-          ],
-          "orders": [
-            ["o_orderdate", 50]
-          ]
-        },
-        "chunk_order": {
-          "lineitem": "l_shipdate"
-        }
+        "lineitem": [
+          ["l_shipdate", 120],
+          ["l_discount", 2],
+          ["l_shipdate", 1]
+        ],
+        "orders": [["o_orderdate", 60]]
       },
       #"q6_quantity": {
       #  "lineitem": ["l_shipdate", "l_quantity"],

@@ -47,3 +47,4 @@ tpcds_cached_tables/
 
 benchmark_runner/*
 benchmark_results/*
+clustering_config.json
