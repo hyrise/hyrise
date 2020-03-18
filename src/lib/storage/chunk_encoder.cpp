@@ -9,6 +9,7 @@
 #include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/base_segment_encoder.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -27,19 +28,17 @@ namespace opossum {
 std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<BaseSegment>& segment,
                                                           const DataType data_type,
                                                           const SegmentEncodingSpec& encoding_spec) {
+  Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
+
   std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
-
-    if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
-      Fail("Reference segments cannot be encoded.");
-    }
 
     // TODO(anyone): After #1489, build segment statistics in encode_segment() instead of encode_chunk()
     // and store them within the segment instead of a chunk-owned list of statistics.
 
     // Check if early exit is possible when passed segment is already encoded with requested spec.
-    // If case no vector compression is specified, only the correct encoding type is checked and the current vector
+    // In case no vector compression is specified, only the correct encoding type is checked and the current vector
     // compression type is ignored.
     const auto current_segment_encoding_spec = get_segment_encoding_spec(segment);
     if (current_segment_encoding_spec == encoding_spec ||
@@ -75,7 +74,12 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       });
       result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     } else {
-      result = encode_and_compress_segment(segment, data_type, encoding_spec);
+      auto encoder = create_encoder(encoding_spec.encoding_type);
+      if (encoding_spec.vector_compression_type) {
+        encoder->set_vector_compression(*encoding_spec.vector_compression_type);
+      }
+
+      result = encoder->encode(segment, data_type);
     }
   });
   return result;
