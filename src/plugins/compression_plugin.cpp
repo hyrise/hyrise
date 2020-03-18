@@ -143,6 +143,9 @@ void CompressionPlugin::_optimize_compression() {
   auto achieved_memory_usage_reduction = int64_t{0};
 
   for (const auto& column_config : _static_compression_config) {
+    if (_stop_requested) {
+      break;
+    }
     if (memory_usage_reduction > 0 && memory_usage_reduction < achieved_memory_usage_reduction) {
       // If we want to reduce and we have already reduced more than requested: break.
       break;
@@ -178,6 +181,7 @@ void CompressionPlugin::_optimize_compression() {
 }
 
 void CompressionPlugin::stop() {
+  _stop_requested = true;
   _memory_budget_setting->unregister_at_settings_manager();
 }
 

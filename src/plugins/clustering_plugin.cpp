@@ -6,6 +6,7 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "storage/base_segment.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -62,7 +63,7 @@ void ClusteringPlugin::_optimize_clustering() {
         const auto base_segment = chunk->get_segment(column_id);
         std::shared_ptr<BaseSegment> new_segment;
         const auto data_type = table->column_data_type(column_id);
-        new_segment = encode_and_compress_segment(base_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
+        new_segment = ChunkEncoder::encode_segment(base_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
         segments.emplace_back(new_segment);
       }
       table->append_chunk(segments, mvcc_data);
