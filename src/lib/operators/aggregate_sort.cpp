@@ -280,18 +280,20 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     // all sort operator on single-chunk table
     auto input_order_by = input_table->get_chunk(chunk_id)->ordered_by();
     auto output_order_by = input_order_by;
-    auto skip_sorted_column = false;
+    auto skip_sorting = false;
     for (const auto& column_id : _groupby_column_ids) {
       // Skip already sorted columns
       if (input_order_by) {
         for (const auto ordered_by : *input_order_by) {
           if (ordered_by.first == column_id) {
-            skip_sorted_column = true;
+            skip_sorting = true;
             break;
           }
         }
       }
-      if (!skip_sorted_column) {
+      if (!skip_sorting) {
+        // The aggregate sort operator requires each column to be sorted
+        // This ensures that values that belong together are continuous.
         auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
         table_wrapper->execute();
         auto sort = std::make_shared<Sort>(table_wrapper, column_id);
@@ -299,7 +301,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
         single_chunk_table = sort->get_output();
         output_order_by = {std::pair<ColumnID, OrderByMode>(std::make_pair(column_id, OrderByMode::Ascending))};
       }
-      skip_sorted_column = false;
+      skip_sorting = false;
     }
 
     // add sorted chunk to output table

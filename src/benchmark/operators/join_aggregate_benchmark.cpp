@@ -118,8 +118,8 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   return std::make_shared<TableWrapper>(ages_table);
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Join_Aggregate_Sort)(benchmark::State& state) {
-  _clear_cache();
+template <typename AggType, typename JoinType>
+void BM_Join_Aggregate(benchmark::State& state) {
 
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
   table_wrapper_left->execute();
@@ -134,49 +134,25 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Join_Aggregate_Sort)(benchmark::State
 
   std::vector<ColumnID> groupby = {ColumnID{3}};
 
-  auto join = std::make_shared<JoinSortMerge>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+  auto join = std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                                               operator_join_predicate);
   join->execute();
-  auto warm_up = std::make_shared<AggregateSort>(join, aggregates, groupby);
+  auto warm_up = std::make_shared<AggType>(join, aggregates, groupby);
   warm_up->execute();
 
   for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+    auto join = std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                                                 operator_join_predicate);
     join->execute();
-    auto aggregate_sort = std::make_shared<AggregateSort>(join, aggregates, groupby);
+    auto aggregate_sort = std::make_shared<AggType>(join, aggregates, groupby);
     aggregate_sort->execute();
   }
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Join_Aggregate_Hash)(benchmark::State& state) {
-  _clear_cache();
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinHash);
 
-  auto table_wrapper_left = create_ages_table(TABLE_SIZE);
-  table_wrapper_left->execute();
-  auto table_wrapper_right = create_zip_table(TABLE_SIZE);
-  table_wrapper_right->execute();
-
-  auto operator_join_predicate = OperatorJoinPredicate(std::make_pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
-
-  auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{
-    std::static_pointer_cast<AggregateExpression>(avg_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
-
-  std::vector<ColumnID> groupby = {ColumnID{3}};
-
-  auto join = std::make_shared<JoinHash>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                                         operator_join_predicate);
-  join->execute();
-  auto warm_up = std::make_shared<AggregateHash>(join, aggregates, groupby);
-  warm_up->execute();
-
-  for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                                           operator_join_predicate);
-    join->execute();
-    auto aggregate_hash = std::make_shared<AggregateHash>(join, aggregates, groupby);
-    aggregate_hash->execute();
-  }
-}
 
 }

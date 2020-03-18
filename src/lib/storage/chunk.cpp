@@ -224,19 +224,19 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
   if (!_ordered_by) {
     _ordered_by.emplace({ordered_by});
   }
-  for (auto order_by_it = (*_ordered_by).begin(); order_by_it != (*_ordered_by).end(); ++order_by_it) {
+  for (auto order_by_it = _ordered_by->begin(); order_by_it != _ordered_by->end(); ++order_by_it) {
     if (order_by_it->first == ordered_by.first) {
       if (order_by_it->second == ordered_by.second) {
         // Order by information for given ColumnID already set
         return;
       }
       // Need to update OrderByMode for given ColumnID
-      (*_ordered_by).emplace(order_by_it, ordered_by);
+      _ordered_by->emplace(order_by_it, ordered_by);
       return;
     }
   }
   // OrderByMode for given ColumnID is not set yet
-  (*_ordered_by).emplace_back(ordered_by);
+  _ordered_by->emplace_back(ordered_by);
 }
 
 void Chunk::set_ordered_by(const std::vector<std::pair<ColumnID, OrderByMode>>& ordered_by) {
