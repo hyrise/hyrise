@@ -48,6 +48,8 @@ class BenchmarkRunner : Noncopyable {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
+  const BenchmarkConfig _config;
+
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
@@ -65,7 +67,6 @@ class BenchmarkRunner : Noncopyable {
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
-  const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
   std::unique_ptr<AbstractTableGenerator> _table_generator;

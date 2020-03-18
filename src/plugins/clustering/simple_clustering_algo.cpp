@@ -127,7 +127,7 @@ void SimpleClusteringAlgo::run() {
       // first clustering column
       const auto& first_column_name = clustering_columns[0].first;
       const auto first_column_chunksize = static_cast<ChunkOffset>(std::ceil(1.0 * original_table->row_count() / clustering_columns[0].second));
-      std::cout << "-  Clustering '" << table_name << "' by '" << first_column_name << "' " << std::flush;
+      std::cout << "-  Clustering '" << table_name << "' by '" << first_column_name << "', split up is " << first_column_chunksize  << " " << std::flush;
 
       auto mutable_sorted_table = _sort_table_mutable(original_table, first_column_name, first_column_chunksize);
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;

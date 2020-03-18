@@ -31,8 +31,7 @@ def run_benchmark(benchmark, config_name, chunk_size):
   # if a second benchmark does not provide new clustering columns, the old clustering will be loaded and preserved from the table cache.
   # this might influence subsequent benchmarks (e.g. via pruning)
   p = Popen(
-            #[benchmark.exec_path(), "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
-            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
+            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
             env=process_env,
             stdout=sys.stdout,
             stdin=sys.stdin,
