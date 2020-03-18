@@ -5,7 +5,6 @@
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
 #include "expression/expression_functional.hpp"
-#include "operators/print.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/aggregate_sort.hpp"
@@ -18,7 +17,6 @@
 
 namespace {
 
-constexpr auto NUMBER_OF_CHUNKS = size_t{10};
 constexpr auto TABLE_SIZE = size_t{1'000};
 
 }
