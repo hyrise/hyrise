@@ -43,8 +43,6 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds sort_duration{};
   std::chrono::nanoseconds store_duration{};
   std::chrono::nanoseconds index_duration{};
-  std::map<std::string, std::vector<std::pair<std::string, uint32_t>>> clustering_order_by_table;
-  std::map<std::string, std::string> chunk_order_by_table;
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
@@ -72,18 +70,11 @@ class AbstractTableGenerator {
 
   // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
   // (right side).
-  using SortOrderByTable = std::map<std::string, std::vector<std::pair<std::string, uint32_t>>>;
+  using SortOrderByTable = std::map<std::string, std::string>;
   virtual SortOrderByTable _sort_order_by_table() const;
 
   // Optionally, the benchmark may add constraints once the tables are generated / loaded from binary
   virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
-
-  //newly added
-  std::shared_ptr<Table> _sort_table_mutable(const std::shared_ptr<Table> table, const std::string& column_name, const ChunkOffset chunk_size);
-  std::shared_ptr<Table> _sort_table_chunkwise(const std::shared_ptr<const Table> table, const std::string& column_name, const uint64_t desired_chunk_split_count);
-  void _append_chunks(const std::shared_ptr<const Table> from, std::shared_ptr<Table> to);
-  void _append_chunk(const std::shared_ptr<const Chunk> from, std::shared_ptr<Table> to);
-
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };

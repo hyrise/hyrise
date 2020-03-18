@@ -1,9 +1,3 @@
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/third_party
-    ${PROJECT_SOURCE_DIR}/third_party
-)
-
 function(add_plugin)
     cmake_parse_arguments(
         PARSED_ARGS
