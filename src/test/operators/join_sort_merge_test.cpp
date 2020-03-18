@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "operators/join_sort_merge.hpp"
+#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 
@@ -99,8 +100,8 @@ TEST_F(OperatorsJoinSortMergeTest, MaintainSortedness) {
 
   const auto output_table = join_operator->get_output();
 
-  const std::vector<std::pair<ColumnID, OrderByMode>> expected_sorted_columns{std::make_pair(ColumnID{0}, OrderByMode::Ascending),
-                                                                             std::make_pair(ColumnID{4}, OrderByMode::Ascending)};
+  const std::vector<std::pair<ColumnID, OrderByMode>> expected_sorted_columns{
+      std::make_pair(ColumnID{0}, OrderByMode::Ascending), std::make_pair(ColumnID{4}, OrderByMode::Ascending)};
   for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
     const auto actual_sorted_columns = *(output_table->get_chunk(chunk_id)->ordered_by());
     EXPECT_EQ(expected_sorted_columns, actual_sorted_columns);
