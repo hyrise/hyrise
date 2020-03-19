@@ -28,7 +28,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    initial_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   std::atomic_int successful_increments{0};
@@ -79,7 +79,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   // Really pessimistic, but at least 2 statements should have made it
@@ -148,7 +148,7 @@ TEST_F(StressTest, TestTransactionInserts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    EXPECT_FLOAT_EQ(table->get_value<int32_t>(ColumnID{0}, 0), iterations_per_thread);
+    EXPECT_FLOAT_EQ(*table->get_value<int32_t>(ColumnID{0}, 0), iterations_per_thread);
   }
 
   // Really pessimistic, but at least 2 statements should have made it

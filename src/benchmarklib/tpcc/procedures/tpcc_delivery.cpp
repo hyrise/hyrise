@@ -26,10 +26,10 @@ bool TPCCDelivery::_on_execute() {
 
     // TODO(anyone): Selecting MIN(NO_O_ID) IS NULL and using it here would not be necessary if get_value returned
     // NULLs as nullopt
-    if (new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) continue;
+    if (*new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) continue;
 
     // The oldest undelivered order in that district
-    const auto no_o_id = new_order_table->get_value<int32_t>(ColumnID{1}, 0);
+    const auto no_o_id = *new_order_table->get_value<int32_t>(ColumnID{1}, 0);
 
     // Delete from NEW_ORDER
     const auto new_order_update_pair =
@@ -45,7 +45,7 @@ bool TPCCDelivery::_on_execute() {
                               " AND O_D_ID = " + std::to_string(d_id) + " AND O_ID = " + std::to_string(no_o_id));
     const auto& order_table = order_select_pair.second;
     Assert(order_table && order_table->row_count() == 1, "Did not find order");
-    auto o_c_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
+    auto o_c_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
 
     // Update ORDER
     const auto order_update_pair =
@@ -62,7 +62,7 @@ bool TPCCDelivery::_on_execute() {
         " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(no_o_id));
     const auto& order_line_table = order_line_select_pair.second;
     Assert(order_line_table && order_line_table->row_count() == 1, "Did not find order lines");
-    const auto amount = order_line_table->get_value<double>(ColumnID{0}, 0);
+    const auto amount = *order_line_table->get_value<double>(ColumnID{0}, 0);
 
     // Set delivery date in ORDER_LINE
     const auto order_line_update_pair =
