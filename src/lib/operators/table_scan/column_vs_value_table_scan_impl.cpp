@@ -19,9 +19,9 @@ namespace opossum {
 ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id,
                                                        const PredicateCondition& init_predicate_condition,
-                                                       const AllTypeVariant& value)
+                                                       const AllTypeVariant& init_value)
     : AbstractDereferencedColumnTableScanImpl{in_table, column_id, init_predicate_condition},
-      value{value},
+      value{init_value},
       _column_is_nullable{in_table->column_is_nullable(column_id)} {
   Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(value),
          "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "

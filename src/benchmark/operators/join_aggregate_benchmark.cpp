@@ -46,7 +46,7 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   int zip_count = 1;
-  int zip_code = 10000;
+  int zip_code = 10'000;
   size_t total_entries = 0;
   bool finished = false;
 
@@ -141,13 +141,14 @@ void BM_Join_Aggregate(benchmark::State& state) {
       OperatorJoinPredicate(std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
   auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{
-      std::static_pointer_cast<AggregateExpression>(avg_(pqp_column_(ColumnID{1}, DataType::Int, false, "b")))};
+      std::static_pointer_cast<AggregateExpression>(avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "b")))};
 
-  std::vector<ColumnID> groupby = {ColumnID{3}};
+  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{2}};
 
   auto join =
       std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
   join->execute();
+
   auto warm_up = std::make_shared<AggType>(join, aggregates, groupby);
   warm_up->execute();
 

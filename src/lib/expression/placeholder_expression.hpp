@@ -10,7 +10,7 @@ namespace opossum {
  */
 class PlaceholderExpression : public AbstractExpression {
  public:
-  explicit PlaceholderExpression(const ParameterID parameter_id);
+  explicit PlaceholderExpression(const ParameterID init_parameter_id);
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;

@@ -26,8 +26,8 @@ class SegmentAccessorTest : public BaseTest {
     vc_str->append("!");
     vc_str->append(NULL_VALUE);
 
-    dc_int = encode_and_compress_segment(vc_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
-    dc_str = encode_and_compress_segment(vc_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
+    dc_int = ChunkEncoder::encode_segment(vc_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
+    dc_str = ChunkEncoder::encode_segment(vc_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
     tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int, false},
                                                          TableColumnDefinition{"dc_str", DataType::String, false}},
@@ -112,6 +112,22 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{2}), "Hello,");
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{3}));
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}));
+}
+
+TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
+  const auto& access_counter = vc_int->access_counter;
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 0ul);
+
+  // Create segment accessor in a new scope to ensure its destructor, which writes the access counters, is called.
+  {
+    auto vc_int_base_accessor = create_segment_accessor<int>(vc_int);
+
+    EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), 4);
+    EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 6);
+    EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), 3);
+  }
+
+  EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3ul);
 }
 
 }  // namespace opossum

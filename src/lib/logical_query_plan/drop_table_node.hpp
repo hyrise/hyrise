@@ -7,7 +7,7 @@ namespace opossum {
 
 class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public BaseNonQueryNode {
  public:
-  DropTableNode(const std::string& table_name, bool if_exists);
+  DropTableNode(const std::string& init_table_name, bool init_if_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

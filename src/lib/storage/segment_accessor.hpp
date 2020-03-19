@@ -53,7 +53,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   ~SegmentAccessor() { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
 
  protected:
-  mutable uint64_t _accesses;
+  mutable uint64_t _accesses{0};
   const SegmentType& _segment;
 };
 
@@ -115,7 +115,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
  protected:
-  mutable uint64_t _accesses;
+  mutable uint64_t _accesses{0};
   const PosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
