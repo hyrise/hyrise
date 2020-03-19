@@ -17,6 +17,7 @@
 namespace {
 
 constexpr auto TABLE_SIZE = size_t{1'000};
+constexpr auto NUMBER_OF_CHUNKS = 1;
 // How much of the table size range should be used in the join columns.
 // The lower the selectivity, the higher the collision rate is and the more
 // values are equal in the join columns
@@ -79,22 +80,29 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
 }
 
 std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t> values) {
+  const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS);
+
   auto table_column_definitions = opossum::TableColumnDefinitions();
   table_column_definitions.emplace_back("a", DataType::Int, false);
   table_column_definitions.emplace_back("b", DataType::Int, false);
 
   auto ids_vector = generate_ids(table_size);
 
-  const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(ids_vector));
 
-  std::shared_ptr<Table> table;
-  table = std::make_shared<Table>(table_column_definitions, TableType::Data);
-  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values));
-  Segments segments;
-  segments.push_back(ids_value_segment);
-  segments.push_back(value_segment);
+  std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
-  table->append_chunk({segments});
+  for (auto chunk_index = 0; chunk_index < NUMBER_OF_CHUNKS; ++chunk_index) {
+    const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(pmr_vector<int32_t>(ids_vector.begin() + (chunk_index * chunk_size),
+                                                                                     ids_vector.begin() + ((chunk_index + 1) * chunk_size))));
+    const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(pmr_vector<int32_t>(values.begin() + (chunk_index * chunk_size),
+                                                                                 values.begin() + ((chunk_index + 1) * chunk_size))));
+    Segments segments;
+    segments.push_back(ids_value_segment);
+    segments.push_back(value_segment);
+
+    table->append_chunk({segments});
+  }
+
 
   return table;
 }
