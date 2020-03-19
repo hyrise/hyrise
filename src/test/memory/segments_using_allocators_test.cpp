@@ -39,7 +39,8 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 
       const auto convert_value = [](const auto int_value) {
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          return pmr_string{std::to_string(int_value)};
+          return pmr_string{std::string{"HereIsAReallyLongStringToGuaranteeThatWeNeedExternalMemory"} +
+                            std::to_string(int_value)};
         } else {
           return int_value;
         }
@@ -82,7 +83,13 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   const auto copied_segment_size = copied_segment->memory_usage(MemoryUsageCalculationMode::Full);
   const auto empty_segment_size = empty_encoded_segment->memory_usage(MemoryUsageCalculationMode::Full);
   EXPECT_GT(copied_segment_size, empty_segment_size);
-  const auto estimated_usage = copied_segment_size - empty_segment_size;
+  auto estimated_usage = copied_segment_size - empty_segment_size;
+
+  if (encoding_spec.encoding_type == EncodingType::FixedStringDictionary) {
+    // An empty FixedStringDictionary holds a single \0 char to make some things easier. We need to fix the calculation
+    // for this.
+    estimated_usage += 1;
+  }
 
   EXPECT_EQ(resource.allocated, estimated_usage);
 }
