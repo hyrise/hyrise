@@ -16,7 +16,7 @@ class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
     column_definitions.emplace_back("column_1", DataType::Int, false);
-    column_definitions.emplace_back("column_2", DataType::String, false);
+    column_definitions.emplace_back("column_2", DataType::String, true);
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
@@ -81,24 +81,28 @@ TEST_F(StorageTableTest, GetValue) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
   t->append({3, "!"});
-  ASSERT_EQ(t->get_value<int32_t>(ColumnID{0}, 0u), 4);
-  EXPECT_EQ(t->get_value<int32_t>(ColumnID{0}, 2u), 3);
-  ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 0u).compare("Hello,"));
-  ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 2u).compare("!"));
-  EXPECT_THROW(t->get_value<int32_t>(ColumnID{3}, 0u), std::exception);
+  t->append({3, NULL_VALUE});
+  ASSERT_EQ(*t->get_value<int32_t>(ColumnID{0}, 0u), 4);
+  EXPECT_EQ(*t->get_value<int32_t>(ColumnID{0}, 2u), 3);
+  EXPECT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 3u));
 
-  ASSERT_EQ(t->get_value<int32_t>("column_1", 0u), 4);
-  ASSERT_FALSE(t->get_value<pmr_string>("column_2", 2u).compare("!"));
-  EXPECT_THROW(t->get_value<int32_t>("column_3", 0u), std::exception);
+  ASSERT_EQ(*t->get_value<pmr_string>(ColumnID{1}, 0u), "Hello,");
+  ASSERT_EQ(*t->get_value<pmr_string>(ColumnID{1}, 1u), "world");
+  EXPECT_THROW(*t->get_value<int32_t>(ColumnID{1}, 0u), std::exception);
+  EXPECT_THROW(*t->get_value<int32_t>(ColumnID{3}, 0u), std::exception);
+
+  ASSERT_EQ(*t->get_value<int32_t>("column_1", 0u), 4);
+  ASSERT_EQ(*t->get_value<pmr_string>("column_2", 2u), "!");
+  EXPECT_THROW(*t->get_value<int32_t>("column_3", 0u), std::exception);
 }
 
 TEST_F(StorageTableTest, GetRow) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
-  t->append({3, "!"});
+  t->append({3, NULL_VALUE});
   ASSERT_EQ(t->get_row(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
   ASSERT_EQ(t->get_row(1u), std::vector<AllTypeVariant>({6, "world"}));
-  ASSERT_EQ(t->get_row(2u), std::vector<AllTypeVariant>({3, "!"}));
+  ASSERT_TRUE(variant_is_null(t->get_row(2u)[1]));
   EXPECT_ANY_THROW(t->get_row(4u));
 }
 
