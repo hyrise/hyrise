@@ -283,7 +283,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     for (const auto& column_id : _groupby_column_ids) {
       // Skip already sorted columns
       if (input_order_by) {
-        for (const auto ordered_by : *input_order_by) {
+        for (const auto &ordered_by : *input_order_by) {
           if (ordered_by.first == column_id) {
             skip_sorting = true;
             break;

@@ -191,7 +191,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         if (current_chunk_order) {
-          for (const auto ordered_by : *current_chunk_order) {
+          for (const auto &ordered_by : *current_chunk_order) {
             if (ordered_by.first == stored_column_id) {
               const auto columns_pruned_so_far = std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter);
               adapted_chunk_order = {ColumnID{static_cast<uint16_t>(stored_column_id - columns_pruned_so_far)},
