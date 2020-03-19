@@ -17,12 +17,29 @@
 namespace {
 
 constexpr auto TABLE_SIZE = size_t{1'000};
+// How much of the table size range should be used in the join columns.
+// The lower the selectivity, the higher the collision rate is and the more
+// values are equal in the join columns
+constexpr auto SELECTIVITY = 0.2;
 
 }
 
 namespace opossum {
 
 using namespace opossum::expression_functional;  //NOLINT
+
+pmr_vector<int32_t> generate_ids(const size_t table_size) {
+  auto values = pmr_vector<int32_t>(table_size);
+  const auto range = static_cast<int>((float)TABLE_SIZE * (float)SELECTIVITY);
+
+  // The result ids are always the same in each table because of the seed
+  unsigned int seed = 54321;
+  for (size_t row_index = 0; row_index < table_size; ++row_index) {
+    values[row_index] = rand_r(&seed) % range + 1;
+  }
+
+  return values;
+}
 
 // Generates a vector of zip codes with various numbers of representation
 pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
@@ -52,6 +69,7 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
+  // The result ages are always the same in each table because of the seed
   unsigned int seed = 12345;
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
     values[row_index] = rand_r(&seed) % 100 + 1;
@@ -65,8 +83,7 @@ std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t>
   table_column_definitions.emplace_back("a", DataType::Int, false);
   table_column_definitions.emplace_back("b", DataType::Int, false);
 
-  auto ids_vector = pmr_vector<int32_t>(table_size);
-  std::iota(ids_vector.begin(), ids_vector.end(), 1);
+  auto ids_vector = generate_ids(table_size);
 
   const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(ids_vector));
 
@@ -78,7 +95,6 @@ std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t>
   segments.push_back(value_segment);
 
   table->append_chunk({segments});
-  // zip_table->append_chunk({ids_value_segment});
 
   return table;
 }
