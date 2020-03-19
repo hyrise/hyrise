@@ -20,7 +20,8 @@ class MockCostEstimator : public AbstractCostEstimator {
  public:
   MockCosts mock_costs;
 
-  explicit MockCostEstimator(const MockCosts& mock_costs) : AbstractCostEstimator(nullptr), mock_costs(mock_costs) {}
+  explicit MockCostEstimator(const MockCosts& init_mock_costs)
+      : AbstractCostEstimator(nullptr), mock_costs(init_mock_costs) {}
 
   std::shared_ptr<AbstractCostEstimator> new_instance() const override { Fail("Shouldn't be called"); }
 

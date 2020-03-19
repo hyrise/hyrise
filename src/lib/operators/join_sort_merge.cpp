@@ -136,7 +136,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() = default;
-    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
+    TablePosition(size_t init_cluster, size_t init_index) : cluster{init_cluster}, index{init_index} {}
 
     size_t cluster;
     size_t index;

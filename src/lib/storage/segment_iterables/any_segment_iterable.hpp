@@ -62,7 +62,7 @@ class BaseAnySegmentIterableWrapper {
 template <typename ValueType, typename IterableT>
 class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType> {
  public:
-  explicit AnySegmentIterableWrapper(const IterableT& iterable) : iterable(iterable) {}
+  explicit AnySegmentIterableWrapper(const IterableT& init_iterable) : iterable(init_iterable) {}
 
   void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     iterable.with_iterators([&](auto begin, const auto end) {

@@ -44,24 +44,16 @@ int main(int argc, char* argv[]) {
 
   auto config = std::shared_ptr<opossum::BenchmarkConfig>{};
   auto scale_factor = int32_t{};
-  if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
-    // JSON config file was passed in
-    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 1);
-    config = std::make_shared<opossum::BenchmarkConfig>(
-        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
-  } else {
-    // Parse regular command line args
-    const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
-      return 0;
-    }
-    scale_factor = cli_parse_result["scale"].as<int32_t>();
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    config =
-        std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
+    return 0;
   }
+  scale_factor = cli_parse_result["scale"].as<int32_t>();
+
+  config = std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_cli_options(cli_parse_result));
 
   const auto valid_scale_factors = std::array{1, 1000, 3000, 10000, 30000, 100000};
 

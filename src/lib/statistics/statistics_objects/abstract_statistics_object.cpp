@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-AbstractStatisticsObject::AbstractStatisticsObject(const DataType data_type) : data_type(data_type) {}
+AbstractStatisticsObject::AbstractStatisticsObject(const DataType init_data_type) : data_type(init_data_type) {}
 
 std::shared_ptr<AbstractStatisticsObject> AbstractStatisticsObject::pruned(
     const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,

@@ -13,7 +13,7 @@ namespace opossum {
  */
 class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public BaseNonQueryNode {
  public:
-  CreateViewNode(const std::string& view_name, const std::shared_ptr<LQPView>& view, bool if_not_exists);
+  CreateViewNode(const std::string& init_view_name, const std::shared_ptr<LQPView>& init_view, bool init_if_not_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

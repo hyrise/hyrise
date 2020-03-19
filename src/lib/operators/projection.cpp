@@ -20,9 +20,9 @@
 
 namespace opossum {
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
-                       const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
-    : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
+Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
+    : AbstractReadOnlyOperator(OperatorType::Projection, input_operator), expressions(init_expressions) {}
 
 const std::string& Projection::name() const {
   static const auto name = std::string{"Projection"};
@@ -160,7 +160,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                 });
           } else {
             // End of dictionary segment shortcut - handle all other referenced segments and ReferenceSegments that
-            // reference more than a single chunk by materializing themm into a ValueSegment
+            // reference more than a single chunk by materializing them into a ValueSegment
             bool has_null = false;
             auto values = pmr_vector<ColumnDataType>(segment->size());
             auto null_values = pmr_vector<bool>(

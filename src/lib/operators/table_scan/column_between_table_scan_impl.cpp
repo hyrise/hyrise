@@ -20,12 +20,12 @@
 namespace opossum {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
-                                                       const ColumnID column_id, const AllTypeVariant& left_value,
-                                                       const AllTypeVariant& right_value,
+                                                       const ColumnID column_id, const AllTypeVariant& init_left_value,
+                                                       const AllTypeVariant& init_right_value,
                                                        PredicateCondition init_predicate_condition)
     : AbstractDereferencedColumnTableScanImpl(in_table, column_id, init_predicate_condition),
-      left_value{left_value},
-      right_value{right_value},
+      left_value{init_left_value},
+      right_value{init_right_value},
       _column_is_nullable{in_table->column_is_nullable(column_id)} {
   const auto column_data_type = in_table->column_data_type(column_id);
   Assert(column_data_type == data_type_from_all_type_variant(left_value), "Type of lower bound has to match column");
