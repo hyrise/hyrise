@@ -243,13 +243,6 @@ void Chunk::set_ordered_by(const std::vector<std::pair<ColumnID, OrderByMode>>& 
   _ordered_by.emplace(ordered_by);
 }
 
-const std::optional<std::vector<ColumnID>>& Chunk::value_clustered_by() const { return _value_clustered_by; }
-
-void Chunk::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
-  Assert(!is_mutable(), "Cannot set value_clustered_by on mutable chunks.");
-  _value_clustered_by.emplace(value_clustered_by);
-}
-
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
   if (_cleanup_commit_id == 0) {
     // Cleanup-Commit-ID is not yet set

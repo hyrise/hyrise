@@ -75,10 +75,8 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
   const auto output_table = join_operator->get_output();
 
   const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
-  for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
-    const auto actual_value_clustering = *(output_table->get_chunk(chunk_id)->value_clustered_by());
-    EXPECT_EQ(expected_value_clustering, actual_value_clustering);
-  }
+  const auto actual_value_clustering = *(output_table->value_clustered_by());
+  EXPECT_EQ(expected_value_clustering, actual_value_clustering);
 }
 
 TEST_F(OperatorsJoinSortMergeTest, MaintainSortedness) {
