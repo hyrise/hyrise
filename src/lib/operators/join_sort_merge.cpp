@@ -932,27 +932,26 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
+    const ColumnID first_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+    const ColumnID second_join_column =
+        static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
+                              _sort_merge_join._primary_predicate.column_ids.second);
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
       if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
         continue;
       }
 
-      auto write_output_chunk = [this, pos_list_id, &output_chunks] {
+      auto write_output_chunk = [this, pos_list_id, &output_chunks, first_join_column, second_join_column] {
         Segments segments;
         _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
         _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
         auto output_chunk = std::make_shared<Chunk>(std::move(segments));
         if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
             _secondary_join_predicates.empty()) {
-          const ColumnID first_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-          const ColumnID second_join_column =
-              static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
-                                    _sort_merge_join._primary_predicate.column_ids.second);
           output_chunk->finalize();
           // The join columns are sorted ascending (ensured by radix_cluster_sort)
-          output_chunk->set_ordered_by(std::make_pair(first_join_column, OrderByMode::Ascending));
-          output_chunk->set_ordered_by(std::make_pair(second_join_column, OrderByMode::Ascending));
-          output_chunk->set_value_clustered_by({first_join_column, second_join_column});
+          output_chunk->set_ordered_by({std::make_pair(first_join_column, OrderByMode::Ascending),
+                                        std::make_pair(second_join_column, OrderByMode::Ascending)});
         }
         output_chunks[pos_list_id] = output_chunk;
       };
@@ -977,7 +976,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                        [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
         output_chunks.end());
 
-    return _sort_merge_join._build_output_table(std::move(output_chunks));
+    auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
+    // Finalize all mutable chunks
+    const auto chunk_count = result_table->chunk_count();
+    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = result_table->get_chunk(chunk_id);
+      if (chunk->is_mutable()) {
+        chunk->finalize();
+      }
+    }
+    result_table->set_value_clustered_by({first_join_column, second_join_column});
+
+    return result_table;
   }
 };
 

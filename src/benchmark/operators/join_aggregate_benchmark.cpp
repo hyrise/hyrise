@@ -51,10 +51,10 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 }
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
-  unsigned int *seedp = 0;
   auto values = pmr_vector<int32_t>(table_size);
+  unsigned int seed = 12345;
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
-    values[row_index] = rand_r(seedp) % 100 + 1;
+    values[row_index] = rand_r(&seed) % 100 + 1;
   }
 
   return values;

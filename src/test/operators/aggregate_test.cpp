@@ -977,12 +977,7 @@ TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
 }
 
 TEST_F(AggregateSortedTest, AggregateOnPresortedValueClustered) {
-  const auto chunk_count = _table_sorted_value_clustered->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto chunk = _table_sorted_value_clustered->get_chunk(chunk_id);
-    chunk->set_ordered_by(std::make_pair(ColumnID{0}, OrderByMode::Ascending));
-    chunk->set_value_clustered_by({ColumnID{0}});
-  }
+  _table_sorted_value_clustered->set_value_clustered_by({ColumnID{0}});
 
   auto _table_wrapper_sorted_value_clustered = std::make_shared<TableWrapper>(_table_sorted_value_clustered);
   _table_wrapper_sorted_value_clustered->execute();

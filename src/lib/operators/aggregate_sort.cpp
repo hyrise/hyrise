@@ -266,9 +266,8 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
 
 std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     const std::shared_ptr<const Table>& input_table,
-    const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by) {
-  auto sorted_table =
-      std::make_shared<Table>(input_table->column_definitions(), input_table->type(), std::nullopt, UseMvcc::No);
+    const std::optional<std::vector<ColumnID>>& table_value_clustered_by) {
+  auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), input_table->type(), std::nullopt, UseMvcc::No);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -427,19 +426,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    * However, we did not benchmark it, so we cannot prove it.
    */
 
-  // Check if all chunks are clustered by the order by columns
-  // Since the aggregate_sort operates on table level and not on chunk level,
-  // we can only aggregate chunk-wise when we know that the entire table is clustered.
-  const auto first_chunk = input_table->get_chunk(ChunkID{0});
-  auto all_chunks_value_clustered_by = first_chunk->value_clustered_by();
-  if (all_chunks_value_clustered_by) {
-    for (auto chunk_id = ChunkID{1}; chunk_id < input_table->chunk_count(); chunk_id++) {
-      if (input_table->get_chunk(chunk_id)->value_clustered_by() != all_chunks_value_clustered_by) {
-        all_chunks_value_clustered_by = std::nullopt;
-        break;
-      }
-    }
-  }
+  auto table_value_clustered_by = input_table->value_clustered_by();
 
   std::shared_ptr<const Table> sorted_table = input_table;
   if (!_groupby_column_ids.empty()) {
@@ -452,11 +439,11 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (all_chunks_value_clustered_by && !all_chunks_value_clustered_by->empty() &&
-        std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(all_chunks_value_clustered_by->begin())) !=
+    if (table_value_clustered_by && !table_value_clustered_by->empty() &&
+        std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(table_value_clustered_by->begin())) !=
             _groupby_column_ids.end()) {
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
-      sorted_table = _sort_table_chunk_wise(input_table, all_chunks_value_clustered_by);
+      sorted_table = _sort_table_chunk_wise(input_table, table_value_clustered_by);
     } else {
       // sort input table in whole consecutively by the group by columns
       for (const auto& column_id : _groupby_column_ids) {

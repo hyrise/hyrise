@@ -205,6 +205,13 @@ class Table : private Noncopyable {
    */
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
+  /**
+   * If the table is value clustered in any way, the ColumnID of the segment by which it is clustered
+   * will be returned.
+   */
+  const std::optional<std::vector<ColumnID>>& value_clustered_by() const;
+  void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
+
  protected:
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
@@ -224,6 +231,7 @@ class Table : private Noncopyable {
 
   std::vector<TableConstraintDefinition> _constraint_definitions;
 
+  std::optional<std::vector<ColumnID>> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;

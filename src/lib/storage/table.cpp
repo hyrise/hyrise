@@ -331,6 +331,18 @@ void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, 
   }
 }
 
+const std::optional<std::vector<ColumnID>>& Table::value_clustered_by() const { return _value_clustered_by; }
+
+void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
+  // Ensure that all chunks are finalized because the table should not
+  // be altered afterwards. This could destroy the value clustering
+  const auto chunk_count = _chunks.size();
+  for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
+  }
+  _value_clustered_by.emplace(value_clustered_by);
+}
+
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
 
