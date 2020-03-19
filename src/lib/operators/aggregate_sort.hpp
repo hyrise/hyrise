@@ -118,7 +118,7 @@ class AggregateSort : public AbstractAggregateOperator {
  private:
   std::shared_ptr<Table> _sort_table_chunk_wise(
       const std::shared_ptr<const Table>& input_table,
-      const std::optional<std::vector<ColumnID>>& all_chunks_value_clustered_by);
+      const std::optional<std::vector<ColumnID>>& table_value_clustered_by);
 
   static Segments _get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id);
 };
