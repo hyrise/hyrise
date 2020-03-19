@@ -17,7 +17,7 @@
 namespace {
 
 constexpr auto TABLE_SIZE = size_t{1'000};
-constexpr auto NUMBER_OF_CHUNKS = 1;
+constexpr auto NUMBER_OF_CHUNKS_JOIN_AGGREGATE = size_t{1};
 // How much of the table size range should be used in the join columns.
 // The lower the selectivity, the higher the collision rate is and the more
 // values are equal in the join columns
@@ -80,7 +80,7 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
 }
 
 std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t> values) {
-  const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS);
+  const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
   auto table_column_definitions = opossum::TableColumnDefinitions();
   table_column_definitions.emplace_back("a", DataType::Int, false);
@@ -90,11 +90,11 @@ std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t>
 
   std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
-  for (auto chunk_index = 0; chunk_index < NUMBER_OF_CHUNKS; ++chunk_index) {
-    const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(pmr_vector<int32_t>(
-        ids_vector.begin() + (chunk_index * chunk_size), ids_vector.begin() + ((chunk_index + 1) * chunk_size))));
-    const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(pmr_vector<int32_t>(
-        values.begin() + (chunk_index * chunk_size), values.begin() + ((chunk_index + 1) * chunk_size))));
+  for (size_t chunk_index = 0; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
+    const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
+        ids_vector.begin() + (chunk_index * chunk_size), ids_vector.begin() + ((chunk_index + 1) * chunk_size)));
+    const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
+        values.begin() + (chunk_index * chunk_size), values.begin() + ((chunk_index + 1) * chunk_size)));
     Segments segments;
     segments.push_back(ids_value_segment);
     segments.push_back(value_segment);
@@ -151,12 +151,12 @@ void BM_Join_Aggregate(benchmark::State& state) {
 
   std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{2}};
 
-  auto join =
+  auto warmup_join =
       std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
-  join->execute();
+  warmup_join->execute();
 
-  auto warm_up = std::make_shared<AggType>(join, aggregates, groupby);
-  warm_up->execute();
+  auto warmup_aggregate_sort = std::make_shared<AggType>(warmup_join, aggregates, groupby);
+  warmup_aggregate_sort->execute();
 
   for (auto _ : state) {
     auto join =
