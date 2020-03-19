@@ -41,7 +41,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
 
   if (ordered_by) {
-    for (const auto &order_by : *ordered_by) {
+    for (const auto& order_by : *ordered_by) {
       if (order_by.first == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, order_by.second);
         sorted_segment_scanned = true;

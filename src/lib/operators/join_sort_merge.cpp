@@ -933,9 +933,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
     const ColumnID first_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-    const ColumnID second_join_column =
-        static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
-                              _sort_merge_join._primary_predicate.column_ids.second);
+    const ColumnID second_join_column = static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
+                                                              _sort_merge_join._primary_predicate.column_ids.second);
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
       if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
         continue;

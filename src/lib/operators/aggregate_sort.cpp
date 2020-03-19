@@ -267,7 +267,8 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
 std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     const std::shared_ptr<const Table>& input_table,
     const std::optional<std::vector<ColumnID>>& table_value_clustered_by) {
-  auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), input_table->type(), std::nullopt, UseMvcc::No);
+  auto sorted_table =
+      std::make_shared<Table>(input_table->column_definitions(), input_table->type(), std::nullopt, UseMvcc::No);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -283,7 +284,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     for (const auto& column_id : _groupby_column_ids) {
       // Skip already sorted columns
       if (input_order_by) {
-        for (const auto &ordered_by : *input_order_by) {
+        for (const auto& ordered_by : *input_order_by) {
           if (ordered_by.first == column_id) {
             skip_sorting = true;
             break;
