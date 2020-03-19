@@ -35,7 +35,7 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
   } else {
     const auto ordered_by = chunk->ordered_by();
     if (ordered_by) {
-      for (const auto order_by : *ordered_by) {
+      for (const auto &order_by : *ordered_by) {
         if (order_by.first == _column_id) {
           _scan_generic_ordered_segment(*segment, chunk_id, *matches, order_by.second);
           return matches;
