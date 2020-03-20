@@ -19,6 +19,7 @@
 #include <mach/vm_statistics.h>
 #include <sys/resource.h>
 #include <sys/sysctl.h>
+#include <time.h>
 
 #endif
 
@@ -117,8 +118,8 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
   system_cpu_time.kernel_time = cpu_times.at(2);
   system_cpu_time.idle_time = cpu_times.at(3);
 
-  const auto used = (system_cpu_time.user_time - _last_system_cpu_time.user_time) + 
-                    (system_cpu_time.user_nice_time - _last_system_cpu_time.user_nice_time) + 
+  const auto used = (system_cpu_time.user_time - _last_system_cpu_time.user_time) +
+                    (system_cpu_time.user_nice_time - _last_system_cpu_time.user_nice_time) +
                     (system_cpu_time.kernel_time - _last_system_cpu_time.kernel_time);
   const auto total = used + (system_cpu_time.idle_time - _last_system_cpu_time.idle_time);
 
@@ -150,9 +151,7 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 
   _last_system_cpu_ticks = system_cpu_ticks;
 
-  const auto cpus = _get_cpu_count();
-
-  return 100.0f * (1.0f - (static_cast<float>(idle) / static_cast<float>(total))) / cpus;
+  return 100.0f * (1.0f - (static_cast<float>(idle) / static_cast<float>(total)));
 
 #endif
 
@@ -168,7 +167,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
   process_cpu_time.kernel_time = time_sample.tms_stime;
   process_cpu_time.user_time = time_sample.tms_utime;
 
-  const auto used = (process_cpu_time.user_time - _last_process_cpu_time.user_time) + 
+  const auto used = (process_cpu_time.user_time - _last_process_cpu_time.user_time) +
                     (process_cpu_time.kernel_time - _last_process_cpu_time.kernel_time);
   const auto total = process_cpu_time.clock_time - _last_process_cpu_time.clock_time;
 
@@ -185,25 +184,12 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 #endif
 
 #ifdef __APPLE__
-  mach_timebase_info_data_t info;
-  mach_timebase_info(&info);
-
   ProcessCPUTime process_cpu_time;
-  process_cpu_time.clock_time = mach_absolute_time();
+  process_cpu_time.system_clock = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+  process_cpu_time.process_clock = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
 
-  struct rusage resource_usage;
-  if (getrusage(RUSAGE_SELF, &resource_usage)) {
-    Fail("Unable to access rusage");
-  }
-
-  process_cpu_time.system_time =
-      resource_usage.ru_stime.tv_sec * std::nano::den + resource_usage.ru_stime.tv_usec * std::micro::den;
-  process_cpu_time.user_time =
-      resource_usage.ru_utime.tv_sec * std::nano::den + resource_usage.ru_utime.tv_usec * std::micro::den;
-
-  const auto used = (process_cpu_time.user_time - _last_process_cpu_time.user_time) + 
-                    (process_cpu_time.system_time - _last_process_cpu_time.system_time);
-  const auto total = (process_cpu_time.clock_time - _last_process_cpu_time.clock_time) * info.numer / info.denom;
+  const auto used = (process_cpu_time.process_clock - _last_process_cpu_time.process_clock);
+  const auto total = (process_cpu_time.system_clock - _last_process_cpu_time.system_clock);
 
   const auto cpus = _get_cpu_count();
 

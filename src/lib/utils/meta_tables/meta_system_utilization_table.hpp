@@ -55,14 +55,13 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
 
 #ifdef __APPLE__
   struct SystemCPUTicks {
-    uint64_t last_total_ticks;
-    uint64_t last_idle_ticks;
+    uint64_t total_ticks;
+    uint64_t idle_ticks;
   } _last_system_cpu_ticks{};
 
   struct ProcessCPUTime {
-    uint64_t last_clock_time;
-    uint64_t last_system_time;
-    uint64_t last_user_time;
+    uint64_t system_clock;
+    uint64_t process_clock;
   } _last_process_cpu_time{};
 #endif
 
