@@ -33,7 +33,7 @@ namespace opossum {
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
-                                           const std::shared_ptr<Optimizer>& optimizer,
+                                           const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<Optimizer> &pruning_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                                            const CleanupTemporaries cleanup_temporaries)
@@ -44,6 +44,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
       _optimizer(optimizer),
+      _pruning_optimizer(pruning_optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
       _cleanup_temporaries(cleanup_temporaries) {
@@ -168,6 +169,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_cache);
         _metrics->query_plan_cache_hit = true;
+        _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
         return _optimized_logical_plan;
       }
     }
@@ -199,6 +201,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   _optimized_logical_plan = prepared_plan->instantiate(values);
+
+  _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
   return _optimized_logical_plan;
 }
 

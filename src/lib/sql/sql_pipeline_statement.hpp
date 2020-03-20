@@ -50,7 +50,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<Optimizer>& pruning_optimizer,
                        const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                        const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                        const CleanupTemporaries cleanup_temporaries);
@@ -111,6 +111,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<TransactionContext> _transaction_context;
 
   const std::shared_ptr<Optimizer> _optimizer;
+  const std::shared_ptr<Optimizer> _pruning_optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
