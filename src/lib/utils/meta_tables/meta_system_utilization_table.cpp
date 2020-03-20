@@ -38,7 +38,6 @@ MetaSystemUtilizationTable::MetaSystemUtilizationTable()
                                                      {"load_average_1_min", DataType::Float, false},
                                                      {"load_average_5_min", DataType::Float, false},
                                                      {"load_average_15_min", DataType::Float, false},
-                                                     {"system_memory_total", DataType::Long, false},
                                                      {"system_memory_free", DataType::Long, false},
                                                      {"process_virtual_memory", DataType::Long, false},
                                                      {"process_physical_memory", DataType::Long, false}}) {}
@@ -63,7 +62,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
   const auto process_memory_usage = _get_process_memory_usage();
 
   output_table->append({system_cpu_usage, process_cpu_usage, load_avg.load_1_min, load_avg.load_5_min,
-                        load_avg.load_15_min, system_memory_usage.total_ram, system_memory_usage.free_ram,
+                        load_avg.load_15_min, system_memory_usage.free_ram,
                         process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
 
   return output_table;

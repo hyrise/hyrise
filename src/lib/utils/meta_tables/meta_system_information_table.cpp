@@ -13,7 +13,7 @@ namespace opossum {
 
 MetaSystemInformationTable::MetaSystemInformationTable()
     : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
-                                                     {"ram", DataType::Long, false},
+                                                     {"system_memory_total_bytes", DataType::Long, false},
                                                      {"numa_cpu_count", DataType::Int, false}}) {}
 
 const std::string& MetaSystemInformationTable::name() const {
@@ -52,5 +52,24 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
 
   return output_table;
 }
+
+/*
+std::string MetaSystemInformationTable::_cpu_model() {
+#ifdef __linux__
+  std::ifstream cpuinfo_file;
+  cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
+
+  for (std::string cpuinfo_line; std::getline(self_status_file, self_status_line);) {
+    if (self_status_line.rfind("VmSize", 0) == 0) {
+      memory_usage.virtual_memory = _parse_line(self_status_line) * 1000;
+    } else if (self_status_line.rfind("VmRSS", 0) == 0) {
+      memory_usage.physical_memory = _parse_line(self_status_line) * 1000;
+    }
+  }
+
+  self_status_file.close();
+#endif
+}
+*/
 
 }  // namespace opossum
