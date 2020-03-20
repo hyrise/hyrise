@@ -106,11 +106,12 @@ bool TPCCNewOrder::_on_execute() {
   Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Insert row into ORDER
+  // TODO(anyone): add NULL support to O_CARRIER_ID - also adapt check_consistency in tpcc_benchmark.cpp
   const auto order_insert_pair = _sql_executor.execute(
       std::string{"INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
                   "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +
       std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " + std::to_string(c_id) +
-      ", " + std::to_string(o_entry_d) + ", NULL, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
+      ", " + std::to_string(o_entry_d) + ", -1, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
   Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Iterate over order lines
@@ -174,12 +175,13 @@ bool TPCCNewOrder::_on_execute() {
     // Add to ORDER_LINE
     // TODO(anyone): This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and
     //               allow for a single insert at the end
+    // TODO(anyone): Use actual NULL for OL_DELIVERY_D
     const auto order_line_insert_pair = _sql_executor.execute(
         std::string{"INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "
                     "OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES ("} +
         std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " +
         std::to_string(order_line_idx) + ", " + std::to_string(order_line.ol_i_id) + ", " +
-        std::to_string(order_line.ol_supply_w_id) + ", NULL, " + std::to_string(order_line.ol_quantity) + ", " +
+        std::to_string(order_line.ol_supply_w_id) + ", -1, " + std::to_string(order_line.ol_quantity) + ", " +
         std::to_string(ol_amount) + ", '" + std::string{s_dist} + "')");
     Assert(order_line_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
   }
