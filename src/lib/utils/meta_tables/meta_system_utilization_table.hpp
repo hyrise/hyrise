@@ -38,11 +38,39 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
     int64_t physical_memory;
   };
 
+#ifdef __linux__
+  struct SystemCPUTime {
+    uint64_t user_time;
+    uint64_t user_nice_time;
+    uint64_t kernel_time;
+    uint64_t idle_time;
+  } _last_system_cpu_time{};
+
+  struct ProcessCPUTime {
+    clock_t clock_time;
+    clock_t kernel_time;
+    clock_t user_time;
+  } _last_process_cpu_time{};
+#endif
+
+#ifdef __APPLE__
+  struct SystemCPUTicks {
+    uint64_t last_total_ticks;
+    uint64_t last_idle_ticks;
+  } _last_system_cpu_ticks{};
+
+  struct ProcessCPUTime {
+    uint64_t last_clock_time;
+    uint64_t last_system_time;
+    uint64_t last_user_time;
+  } _last_process_cpu_time{};
+#endif
+
   static LoadAvg _get_load_avg();
   float _get_system_cpu_usage();
   float _get_process_cpu_usage();
   static SystemMemoryUsage _get_system_memory_usage();
-  static std::vector<int64_t> _get_values(std::string input_string);
+  static std::vector<int64_t> _get_values(std::string &input_string);
   static ProcessMemoryUsage _get_process_memory_usage();
 };
 

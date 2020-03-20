@@ -46,7 +46,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
 
   int64_t ram;
 #ifdef __linux__
-  struct sysinfo memory_info{};
+  struct sysinfo memory_info {};
   sysinfo(&memory_info);
 
   ram = memory_info.totalram * memory_info.mem_unit;
@@ -58,7 +58,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
     Fail("Unable to call sysctl hw.memsize");
   }
 #endif
-  
+
   const auto cpu_model = _cpu_model();
 
   output_table->append({cpus, ram, numa_cpus, cpu_model});
