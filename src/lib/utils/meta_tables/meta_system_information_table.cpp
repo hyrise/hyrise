@@ -5,6 +5,13 @@
 
 #endif
 
+#ifdef __APPLE__
+
+#include <sys/sysctl.h>
+#include <sys/types.h>
+
+#endif
+
 #include <fstream>
 #include <iostream>
 
@@ -62,7 +69,7 @@ const pmr_string MetaSystemInformationTable::_cpu_model() const {
 #ifdef __linux__
   std::ifstream cpuinfo_file;
   cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
-  
+
   std::string cpuinfo_line;
   while (std::getline(cpuinfo_file, cpuinfo_line)) {
     if (cpuinfo_line.rfind("model name", 0) == 0) {
@@ -71,8 +78,17 @@ const pmr_string MetaSystemInformationTable::_cpu_model() const {
       return pmr_string{cpuinfo_line};
     }
   }
-
   return "No CPU Model";
+#endif
+
+#ifdef __APPLE__
+
+  size_t buffer_size = 256;
+  char buffer[256];
+  if (sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0) != 0) {
+    Fail("Unable to call sysctl machdep.cpu.brand_string");
+  }
+  return buffer;
 #endif
 }
 
