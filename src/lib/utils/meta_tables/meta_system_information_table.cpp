@@ -35,7 +35,7 @@ const std::string& MetaSystemInformationTable::name() const {
 std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  auto cpus = _get_cpu_count();
+  const auto cpus = _get_cpu_count();
 
   auto numa_cpus = cpus;
 #ifdef __linux__
@@ -58,6 +58,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
     Fail("Unable to call sysctl hw.memsize");
   }
 #endif
+  
   const auto cpu_model = _cpu_model();
 
   output_table->append({cpus, ram, numa_cpus, cpu_model});

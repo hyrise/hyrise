@@ -3,6 +3,8 @@
 #include <numa.h>
 #include <sys/sysinfo.h>
 #include <sys/times.h>
+#include <fstream>
+#include <sstream> 
 
 #endif
 
@@ -23,8 +25,6 @@
 #include <sys/types.h>
 
 #include <chrono>
-#include <fstream>
-#include <iostream>
 
 #include "meta_system_utilization_table.hpp"
 
@@ -112,32 +112,33 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
-
   std::string cpu_line;
   std::getline(stat_file, cpu_line);
-  uint64_t user_time;
-  uint64_t user_nice_time;
-  uint64_t kernel_time;
-  uint64_t idle_time;
-  std::sscanf(cpu_line.c_str(), "cpu %lu %lu %lu %lu", &user_time, &user_nice_time, &kernel_time, &idle_time);
   stat_file.close();
+    
+  const auto cpu_times = _get_values(cpu_line);
+  const uint64_t user_time = cpu_times.at(0);
+  const uint64_t user_nice_time = cpu_times.at(1);
+  const uint64_t kernel_time = cpu_times.at(2);
+  const uint64_t idle_time = cpu_times.at(3);
 
-  auto used = (user_time - last_user_time) + (user_nice_time - last_user_nice_time) + (kernel_time - last_kernel_time);
-  auto total = used + (idle_time - last_idle_time);
+  const auto used = (user_time - last_user_time) + (user_nice_time - last_user_nice_time) + (kernel_time - last_kernel_time);
+  const auto total = used + (idle_time - last_idle_time);
 
   last_user_time = user_time;
   last_user_nice_time = user_nice_time;
   last_kernel_time = kernel_time;
   last_idle_time = idle_time;
 
-  auto cpus = _get_cpu_count();
+  const auto cpus = _get_cpu_count();
 
   return static_cast<float>((100.0 * used) / (total * cpus));
 #endif
 
 #ifdef __APPLE__
 
-  static uint64_t last_total_ticks = 0u, last_idle_ticks = 0u;
+  static uint64_t last_total_ticks = 0u;
+  static uint64_t last_idle_ticks = 0u;
 
   host_cpu_load_info_data_t cpu_info;
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
@@ -150,15 +151,15 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
   for (int cpu_state = 0; cpu_state <= CPU_STATE_MAX; ++cpu_state) {
     total_ticks += cpu_info.cpu_ticks[cpu_state];
   }
-  auto idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
+  const auto idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
 
-  auto total = total_ticks - last_total_ticks;
-  auto idle = idle_ticks - last_idle_ticks;
+  const auto total = total_ticks - last_total_ticks;
+  const auto idle = idle_ticks - last_idle_ticks;
 
   last_total_ticks = total_ticks;
   last_idle_ticks = idle_ticks;
 
-  auto cpus = _get_cpu_count();
+  const auto cpus = _get_cpu_count();
 
   return 100.0f * (1.0f - (static_cast<float>(idle) / static_cast<float>(total))) / cpus;
 
@@ -170,15 +171,17 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 #ifdef __linux__
 
-  static clock_t last_clock_time = 0u, last_kernel_time = 0u, last_user_time = 0u;
+  static clock_t last_clock_time = 0u;
+  static clock_t last_kernel_time = 0u;
+  static clock_t last_user_time = 0u;
   struct tms timeSample;
 
-  auto clock_time = times(&timeSample);
-  auto kernel_time = timeSample.tms_stime;
-  auto user_time = timeSample.tms_utime;
+  const auto clock_time = times(&timeSample);
+  const auto kernel_time = timeSample.tms_stime;
+  const auto user_time = timeSample.tms_utime;
 
-  auto used = (user_time - last_user_time) + (kernel_time - last_kernel_time);
-  auto total = clock_time - last_clock_time;
+  const auto used = (user_time - last_user_time) + (kernel_time - last_kernel_time);
+  const auto total = clock_time - last_clock_time;
 
   last_user_time = user_time;
   last_kernel_time = kernel_time;
@@ -196,27 +199,29 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 
 #ifdef __APPLE__
 
-  static uint64_t last_clock_time = 0u, last_system_time = 0u, last_user_time = 0u;
+  static uint64_t last_clock_time = 0u;
+  static uint64_t last_system_time = 0u;
+  static uint64_t last_user_time = 0u;
 
   mach_timebase_info_data_t info;
   mach_timebase_info(&info);
 
-  uint64_t clock_time = mach_absolute_time();
+  const uint64_t clock_time = mach_absolute_time();
 
   struct rusage resource_usage;
   if (getrusage(RUSAGE_SELF, &resource_usage)) {
     Fail("Unable to access rusage");
   }
 
-  uint64_t system_time =
+  const uint64_t system_time =
       resource_usage.ru_stime.tv_sec * std::nano::den + resource_usage.ru_stime.tv_usec * std::micro::den;
-  uint64_t user_time =
+  const uint64_t user_time =
       resource_usage.ru_utime.tv_sec * std::nano::den + resource_usage.ru_utime.tv_usec * std::micro::den;
 
-  auto used = (user_time - last_user_time) + (system_time - last_system_time);
-  auto total = (clock_time - last_clock_time) * info.numer / info.denom;
+  const auto used = (user_time - last_user_time) + (system_time - last_system_time);
+  const auto total = (clock_time - last_clock_time) * info.numer / info.denom;
 
-  auto cpus = _get_cpu_count();
+  const auto cpus = _get_cpu_count();
 
   last_clock_time = clock_time;
   last_user_time = user_time;
@@ -232,7 +237,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
 
-  struct sysinfo memory_info{};
+  struct sysinfo memory_info;
   sysinfo(&memory_info);
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
@@ -271,7 +276,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     Fail("Unable to access host_page_size or host_statistics64");
   }
 
-  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
+  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
   memory_usage.total_ram = physical_memory;
   memory_usage.total_swap = swap_usage.xsu_total;
   memory_usage.free_swap = swap_usage.xsu_avail;
@@ -287,24 +292,21 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 }
 
 #ifdef __linux__
-int64_t MetaSystemUtilizationTable::_parse_line(std::string input_string) {
-  size_t index = 0;
-  size_t begin = 0;
-  size_t end = input_string.length() - 1;
+std::vector<int64_t> MetaSystemUtilizationTable::_get_values(std::string input_string) {
+  std::stringstream input_stream;
+  input_stream << input_string;
+  std::vector<int64_t> output_values;
 
-  for (; index < input_string.length(); ++index) {
-    if (isdigit(input_string[index])) {
-      begin = index;
-      break;
+  std::string token;
+  int64_t value;
+  while(!input_stream.eof()) {
+    input_stream >> token;
+    if(std::stringstream(token) >> value) {
+      output_values.push_back(value);
     }
   }
-  for (; index < input_string.length(); ++index) {
-    if (!isdigit(input_string[index])) {
-      end = index;
-      break;
-    }
-  }
-  return std::stol(input_string.substr(begin, end - begin));
+
+  return output_values;
 }
 #endif
 
@@ -318,9 +320,9 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   std::string self_status_line;
   while (std::getline(self_status_file, self_status_line)) {
     if (self_status_line.rfind("VmSize", 0) == 0) {
-      memory_usage.virtual_memory = _parse_line(self_status_line) * 1000;
+      memory_usage.virtual_memory = _get_values(self_status_line)[0] * 1000;
     } else if (self_status_line.rfind("VmRSS", 0) == 0) {
-      memory_usage.physical_memory = _parse_line(self_status_line) * 1000;
+      memory_usage.physical_memory = _get_values(self_status_line)[0] * 1000;
     }
   }
 
