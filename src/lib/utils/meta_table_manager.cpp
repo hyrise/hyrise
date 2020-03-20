@@ -32,6 +32,8 @@ MetaTableManager::MetaTableManager() {
   }
   std::sort(_table_names.begin(), _table_names.end());
 
+  // The meta_system_utilization table needs an initialization since cpu load is calculated relatively
+  // to the previous call.
   static_cast<MetaSystemUtilizationTable&>(*_meta_tables.at("system_utilization")).init();
 }
 
