@@ -205,7 +205,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
 
-  struct sysinfo memory_info{};
+  struct sysinfo memory_info {};
   sysinfo(&memory_info);
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
@@ -260,7 +260,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 }
 
 #ifdef __linux__
-std::vector<int64_t> MetaSystemUtilizationTable::_get_values(std::string &input_string) {
+std::vector<int64_t> MetaSystemUtilizationTable::_get_values(std::string& input_string) {
   std::stringstream input_stream;
   input_stream << input_string;
   std::vector<int64_t> output_values;

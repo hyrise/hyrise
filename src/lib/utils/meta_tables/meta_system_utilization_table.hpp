@@ -69,7 +69,7 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   float _get_system_cpu_usage();
   float _get_process_cpu_usage();
   static SystemMemoryUsage _get_system_memory_usage();
-  static std::vector<int64_t> _get_values(std::string &input_string);
+  static std::vector<int64_t> _get_values(std::string& input_string);
   static ProcessMemoryUsage _get_process_memory_usage();
 };
 
