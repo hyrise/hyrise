@@ -102,9 +102,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
     bool is_first_column = column_definitions.size() == 0;
 
-    auto data_type = data_type_from_type<T>();
-    // TODO(anyone): NULL values are still represented as -1, so the columns are marked as non-nullable.
-    column_definitions.emplace_back(name, data_type, false);
+    auto has_null_value = false;
 
     /**
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
@@ -115,6 +113,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
     pmr_vector<T> data;
     data.reserve(chunk_size);
+
+    pmr_vector<bool> null_values;
+    null_values.reserve(chunk_size);
 
     /**
      * The loop over all records that the final column of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
@@ -150,23 +151,34 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        */
       auto values = generator_function(indices);
       for (auto& value : values) {
-        data.push_back(*value);
+        if (value) {
+          data.emplace_back(std::move(*value));
+        } else {
+          data.emplace_back(T{});
+          has_null_value = true;
+        }
+        null_values.emplace_back(!value);
 
         // write output chunks if segment size has reached chunk_size
         if (row_index % chunk_size == chunk_size - 1) {
-          auto value_segment = std::make_shared<ValueSegment<T>>(std::move(data));
+          auto value_segment = !has_null_value
+                                   ? std::make_shared<ValueSegment<T>>(std::move(data))
+                                   : std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values));
 
           if (is_first_column) {
             segments_by_chunk.emplace_back();
-            segments_by_chunk.back().push_back(value_segment);
+            segments_by_chunk.back().emplace_back(value_segment);
           } else {
             ChunkID chunk_id{static_cast<uint32_t>(row_index / chunk_size)};
-            segments_by_chunk[chunk_id].push_back(value_segment);
+            segments_by_chunk[chunk_id].emplace_back(value_segment);
           }
 
           // reset data
-          data = decltype(data){};
+          data = {};
           data.reserve(chunk_size);
+
+          null_values = {};
+          null_values.reserve(chunk_size);
         }
         row_index++;
       }
@@ -174,22 +186,26 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
     // write partially filled last chunk
     if (row_index % chunk_size != 0) {
-      auto value_segment = std::make_shared<ValueSegment<T>>(std::move(data));
+      auto value_segment = !has_null_value ? std::make_shared<ValueSegment<T>>(std::move(data))
+                                           : std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values));
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
         segments_by_chunk.emplace_back();
-        segments_by_chunk.back().push_back(value_segment);
+        segments_by_chunk.back().emplace_back(value_segment);
       } else {
         ChunkID chunk_id{static_cast<uint32_t>(row_index / chunk_size)};
-        segments_by_chunk[chunk_id].push_back(value_segment);
+        segments_by_chunk[chunk_id].emplace_back(value_segment);
       }
     }
+
+    // add column definition
+    auto data_type = data_type_from_type<T>();
+    column_definitions.emplace_back(name, data_type, has_null_value);
   }
 
   /**
-   * This method simplifies the interface for columns
-   * where only a single element is added in the inner loop.
+   * This method simplifies the interface for columns where only a single element is added in the inner loop.
    *
    * @tparam T                  the type of the column
    * @param table               the column shall be added to this table as well as column metadata

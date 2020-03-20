@@ -106,12 +106,11 @@ bool TPCCNewOrder::_on_execute() {
   Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Insert row into ORDER
-  // TODO(anyone): add NULL support to O_CARRIER_ID - also adapt check_consistency in tpcc_benchmark.cpp
   const auto order_insert_pair = _sql_executor.execute(
       std::string{"INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
                   "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +
       std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " + std::to_string(c_id) +
-      ", " + std::to_string(o_entry_d) + ", -1, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
+      ", " + std::to_string(o_entry_d) + ", NULL, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
   Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Iterate over order lines

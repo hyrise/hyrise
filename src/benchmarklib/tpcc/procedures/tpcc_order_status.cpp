@@ -60,7 +60,7 @@ bool TPCCOrderStatus::_on_execute() {
   Assert(order_table && order_table->row_count() >= 1, "Did not find order");
   o_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
   o_entry_d = *order_table->get_value<int32_t>(ColumnID{1}, 0);
-  o_carrier_id = *order_table->get_value<int32_t>(ColumnID{2}, 0);
+  o_carrier_id = order_table->get_value<int32_t>(ColumnID{2}, 0);
 
   // Retrieve order lines
   const auto order_line_select_pair = _sql_executor.execute(

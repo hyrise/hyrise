@@ -345,13 +345,12 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
                        [&](std::vector<size_t> indices) { return customer_permutation[indices[2]] + 1; });
   _add_column<int32_t>(segments_by_chunk, column_definitions, "O_ENTRY_D", cardinalities,
                        [&](std::vector<size_t>) { return _current_date; });
-  // TODO(anybody) -1 should be null
 
   _add_column<int32_t>(segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities,
                        [&](std::vector<size_t> indices) {
                          return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT
-                                    ? _random_gen.random_number(1, 10)
-                                    : -1;
+                                    ? std::optional<int32_t>{_random_gen.random_number(1, 10)}
+                                    : std::nullopt;
                        });
   _add_column<int32_t>(
       segments_by_chunk, column_definitions, "O_OL_CNT", cardinalities,
