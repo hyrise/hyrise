@@ -5,6 +5,9 @@
 
 #endif
 
+#include <fstream>
+#include <iostream>
+
 #include "meta_system_information_table.hpp"
 
 #include "hyrise.hpp"
@@ -14,7 +17,8 @@ namespace opossum {
 MetaSystemInformationTable::MetaSystemInformationTable()
     : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
                                                      {"system_memory_total_bytes", DataType::Long, false},
-                                                     {"numa_cpu_count", DataType::Int, false}}) {}
+                                                     {"numa_cpu_count", DataType::Int, false},
+                                                     {"cpu_model", DataType::String, false}}) {}
 
 const std::string& MetaSystemInformationTable::name() const {
   static const auto name = std::string{"system_information"};
@@ -47,29 +51,29 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
     Fail("Unable to call sysctl hw.memsize");
   }
 #endif
+  const auto cpu_model = _cpu_model();
 
-  output_table->append({cpus, ram, numa_cpus});
+  output_table->append({cpus, ram, numa_cpus, cpu_model});
 
   return output_table;
 }
 
-/*
-std::string MetaSystemInformationTable::_cpu_model() {
+const pmr_string MetaSystemInformationTable::_cpu_model() const {
 #ifdef __linux__
   std::ifstream cpuinfo_file;
   cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
-
-  for (std::string cpuinfo_line; std::getline(self_status_file, self_status_line);) {
-    if (self_status_line.rfind("VmSize", 0) == 0) {
-      memory_usage.virtual_memory = _parse_line(self_status_line) * 1000;
-    } else if (self_status_line.rfind("VmRSS", 0) == 0) {
-      memory_usage.physical_memory = _parse_line(self_status_line) * 1000;
+  
+  std::string cpuinfo_line;
+  while (std::getline(cpuinfo_file, cpuinfo_line)) {
+    if (cpuinfo_line.rfind("model name", 0) == 0) {
+      cpuinfo_line.erase(0, cpuinfo_line.find(": ") + 2);
+      cpuinfo_file.close();
+      return pmr_string{cpuinfo_line};
     }
   }
 
-  self_status_file.close();
+  return "No CPU Model";
 #endif
 }
-*/
 
 }  // namespace opossum

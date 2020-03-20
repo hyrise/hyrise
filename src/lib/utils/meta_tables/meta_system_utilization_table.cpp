@@ -308,7 +308,8 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   self_status_file.open("/proc/self/status", std::ifstream::in);
 
   MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage;
-  for (std::string self_status_line; std::getline(self_status_file, self_status_line);) {
+  std::string self_status_line;
+  while (std::getline(self_status_file, self_status_line)) {
     if (self_status_line.rfind("VmSize", 0) == 0) {
       memory_usage.virtual_memory = _parse_line(self_status_line) * 1000;
     } else if (self_status_line.rfind("VmRSS", 0) == 0) {
