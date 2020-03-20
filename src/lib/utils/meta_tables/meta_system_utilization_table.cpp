@@ -105,14 +105,20 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 float MetaSystemUtilizationTable::_get_system_cpu_usage() {
 #ifdef __linux__
 
-  static uint64_t last_user_time = 0u, last_user_nice_time = 0u, last_kernel_time = 0u, last_idle_time = 0u;
+  static uint64_t last_user_time = 0u;
+  static uint64_t last_user_nice_time = 0u;
+  static uint64_t last_kernel_time = 0u;
+  static uint64_t last_idle_time = 0u;
 
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
 
   std::string cpu_line;
   std::getline(stat_file, cpu_line);
-  uint64_t user_time, user_nice_time, kernel_time, idle_time;
+  uint64_t user_time;
+  uint64_t user_nice_time;
+  uint64_t kernel_time;
+  uint64_t idle_time;
   std::sscanf(cpu_line.c_str(), "cpu %lu %lu %lu %lu", &user_time, &user_nice_time, &kernel_time, &idle_time);
   stat_file.close();
 
@@ -226,7 +232,7 @@ float MetaSystemUtilizationTable::_get_process_cpu_usage() {
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
 
-  struct sysinfo memory_info;
+  struct sysinfo memory_info{};
   sysinfo(&memory_info);
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
@@ -265,7 +271,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
     Fail("Unable to access host_page_size or host_statistics64");
   }
 
-  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
+  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
   memory_usage.total_ram = physical_memory;
   memory_usage.total_swap = swap_usage.xsu_total;
   memory_usage.free_swap = swap_usage.xsu_avail;
@@ -283,7 +289,8 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #ifdef __linux__
 int64_t MetaSystemUtilizationTable::_parse_line(std::string input_string) {
   size_t index = 0;
-  size_t begin = 0, end = input_string.length() - 1;
+  size_t begin = 0;
+  size_t end = input_string.length() - 1;
 
   for (; index < input_string.length(); ++index) {
     if (isdigit(input_string[index])) {
@@ -307,7 +314,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   std::ifstream self_status_file;
   self_status_file.open("/proc/self/status", std::ifstream::in);
 
-  MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage;
+  MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage{};
   std::string self_status_line;
   while (std::getline(self_status_file, self_status_line)) {
     if (self_status_line.rfind("VmSize", 0) == 0) {

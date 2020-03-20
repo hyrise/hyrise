@@ -38,12 +38,12 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
     int64_t physical_memory;
   };
 
-  LoadAvg _get_load_avg();
+  static LoadAvg _get_load_avg();
   float _get_system_cpu_usage();
   float _get_process_cpu_usage();
-  SystemMemoryUsage _get_system_memory_usage();
-  int64_t _parse_line(std::string input_string);
-  ProcessMemoryUsage _get_process_memory_usage();
+  static SystemMemoryUsage _get_system_memory_usage();
+  static int64_t _parse_line(std::string input_string);
+  static ProcessMemoryUsage _get_process_memory_usage();
 };
 
 }  // namespace opossum

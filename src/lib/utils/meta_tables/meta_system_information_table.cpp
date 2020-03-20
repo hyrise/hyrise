@@ -46,7 +46,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
 
   int64_t ram;
 #ifdef __linux__
-  struct sysinfo memory_info;
+  struct sysinfo memory_info{};
   sysinfo(&memory_info);
 
   ram = memory_info.totalram * memory_info.mem_unit;
@@ -65,7 +65,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
   return output_table;
 }
 
-const pmr_string MetaSystemInformationTable::_cpu_model() const {
+pmr_string MetaSystemInformationTable::_cpu_model() {
 #ifdef __linux__
   std::ifstream cpuinfo_file;
   cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
