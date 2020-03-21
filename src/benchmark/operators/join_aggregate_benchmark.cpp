@@ -1,5 +1,5 @@
 #include <memory>
-#include <numeric>
+#include <random>
 #include <vector>
 
 #include "../micro_benchmark_basic_fixture.hpp"
@@ -31,12 +31,15 @@ using namespace opossum::expression_functional;  //NOLINT
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
-  const auto range = static_cast<int>(TABLE_SIZE * SELECTIVITY);
 
-  // The result ids are always the same in each table because of the seed
-  unsigned int seed = 54321;
+  const auto max_value = static_cast<int>(TABLE_SIZE * SELECTIVITY) + 1;
+  // The result ids are always the same in each table because of the constant seed
+  const unsigned int seed = 54321;
+  std::minstd_rand0 generator(seed);  // NOLINT(cert-msc51-cpp)
+  std::uniform_int_distribution<int> dist(1, max_value);
+
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
-    values[row_index] = rand_r(&seed) % range + 1;
+    values[row_index] = dist(generator);
   }
 
   return values;
@@ -70,10 +73,13 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
-  // The result ages are always the same in each table because of the seed
+
+  // The result ages are always the same in each table because of the constant seed
   unsigned int seed = 12345;
+  std::minstd_rand0 generator(seed);  // NOLINT(cert-msc51-cpp)
+  std::uniform_int_distribution<int> dist(1, 100);
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
-    values[row_index] = rand_r(&seed) % 100 + 1;
+    values[row_index] = dist(generator);
   }
 
   return values;
