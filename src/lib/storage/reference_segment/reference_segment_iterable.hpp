@@ -36,7 +36,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto end_it = pos_list->end();
 
       // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some
-      // optimizations.  For example, we can use a single, non-virtual segment accessor instead of having
+      // optimizations. For example, we can use a single, non-virtual segment accessor instead of having
       // to keep multiple and using virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID.
       // Therefore, we skip this case.
 

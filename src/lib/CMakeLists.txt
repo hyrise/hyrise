@@ -410,7 +410,6 @@ set(
     statistics/table_statistics.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
-    storage/abstract_pos_list.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
@@ -476,11 +475,12 @@ set(
     storage/lz4_segment/lz4_segment_iterable.hpp
     storage/lz4_segment.cpp
     storage/lz4_segment.hpp
-    storage/matches_all_pos_list.hpp
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/pos_list.hpp
+    storage/pos_lists/abstract_pos_list.hpp
+    storage/pos_lists/matches_all_pos_list.hpp
+    storage/pos_lists/pos_list.hpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
     storage/reference_segment.cpp

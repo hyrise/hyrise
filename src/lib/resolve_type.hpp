@@ -16,7 +16,7 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
-#include "storage/matches_all_pos_list.hpp"
+#include "storage/pos_lists/matches_all_pos_list.hpp"
 
 namespace opossum {
 
@@ -211,17 +211,6 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");
-  }
-}
-
-template <typename Functor>
-void resolve_pos_list_type(const AbstractPosList& untyped_pos_list, const Functor& func) {
-  if (auto pos_list = dynamic_cast<const PosList*>(&untyped_pos_list)) {
-    func(*pos_list);
-  } else if (auto matches_all_pos_list = dynamic_cast<const MatchesAllPosList*>(&untyped_pos_list)) {
-    func(*matches_all_pos_list);
-  } else {
-    Fail("Unrecognized PosList type encountered");
   }
 }
 

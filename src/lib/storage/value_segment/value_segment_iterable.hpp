@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/abstract_pos_list.hpp"
+#include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/value_segment.hpp"
 

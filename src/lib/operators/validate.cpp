@@ -9,7 +9,7 @@
 #include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/matches_all_pos_list.hpp"
+#include "storage/pos_lists/matches_all_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
 

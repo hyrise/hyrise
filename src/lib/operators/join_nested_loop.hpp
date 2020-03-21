@@ -8,7 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {

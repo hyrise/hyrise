@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/pos_list.hpp"
 #include "types.hpp"
 #include "uninitialized_vector.hpp"
 

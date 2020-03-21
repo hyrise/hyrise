@@ -1,6 +1,6 @@
 #pragma once
 
-#include "./chunk.hpp"
+#include "storage/chunk.hpp"
 #include "abstract_pos_list.hpp"
 
 namespace opossum {
@@ -13,8 +13,6 @@ class MatchesAllPosList : public AbstractPosList {
         _common_chunk_size_on_creation(common_chunk->size()) {}
 
   MatchesAllPosList& operator=(MatchesAllPosList&& other) = default;
-
-  MatchesAllPosList() = delete;
 
   bool references_single_chunk() const final { return true; }
 
@@ -35,12 +33,11 @@ class MatchesAllPosList : public AbstractPosList {
   size_t memory_usage(const MemoryUsageCalculationMode) const final { return sizeof *this; }
 
   PosListIterator<const MatchesAllPosList*, RowID> begin() const {
-    return PosListIterator<const MatchesAllPosList*, RowID>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
+    return PosListIterator<const MatchesAllPosList*, RowID>(this, ChunkOffset{0});
   }
 
   PosListIterator<const MatchesAllPosList*, RowID> end() const {
-    return PosListIterator<const MatchesAllPosList*, RowID>(this, static_cast<ChunkOffset>(size()),
-                                                            static_cast<ChunkOffset>(size()));
+    return PosListIterator<const MatchesAllPosList*, RowID>(this, static_cast<ChunkOffset>(size()));
   }
 
   PosListIterator<const MatchesAllPosList*, RowID> cbegin() const { return begin(); }
@@ -48,8 +45,8 @@ class MatchesAllPosList : public AbstractPosList {
   PosListIterator<const MatchesAllPosList*, RowID> cend() const { return end(); }
 
  private:
-  std::shared_ptr<const Chunk> _common_chunk = nullptr;
-  ChunkID _common_chunk_id = INVALID_CHUNK_ID;
+  std::shared_ptr<const Chunk> _common_chunk;
+  ChunkID _common_chunk_id;
 
   // If tuples are added to the chunk _after_ we create the pos list, we do not want to automatically contain these
   // (MVCC correctness).  To do that, we store the size of the chunk when constructing an object. The end() methods

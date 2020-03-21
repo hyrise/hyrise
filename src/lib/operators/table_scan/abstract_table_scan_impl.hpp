@@ -6,7 +6,7 @@
 
 #include <array>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
 #include "types.hpp"

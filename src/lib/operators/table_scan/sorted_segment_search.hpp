@@ -9,7 +9,7 @@
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {

@@ -13,23 +13,21 @@ namespace opossum {
 
 class PosList;
 
-class AbstractPosList {
+class AbstractPosList : private Noncopyable {
  public:
   template <typename PosListType = const AbstractPosList*, typename DereferenceReturnType = RowID>
   class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
                                                         boost::random_access_traversal_tag, DereferenceReturnType> {
    public:
-    PosListIterator(PosListType pl_pointer, ChunkOffset pos, ChunkOffset max_size) {
-      _pl_pointer = pl_pointer;
-      _chunk_offset = pos;
-      _max_size = max_size;
+    PosListIterator(PosListType pos_list, ChunkOffset offset) {
+      _pos_list = pos_list;
+      _chunk_offset = offset;
+      _max_size = pos_list->size();
     }
 
     // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
     // we still want to use random access (for binary search, distance, ...)
     typedef std::random_access_iterator_tag iterator_category;
-
-    PosListIterator() = delete;
 
     void increment() { ++_chunk_offset; }
 
@@ -38,7 +36,7 @@ class AbstractPosList {
     void advance(std::ptrdiff_t n) { _chunk_offset += n; }
 
     bool equal(const PosListIterator& other) const {
-      DebugAssert(_pl_pointer == other._pl_pointer, "You trusted me and I failed you.");
+      DebugAssert(_pos_list == other._pos_list, "PosListIterator compared to iterator on different PosList instance");
       return other._chunk_offset == _chunk_offset;
     }
 
@@ -47,16 +45,15 @@ class AbstractPosList {
     }
 
     DereferenceReturnType dereference() const {
-      DebugAssert(_chunk_offset < _max_size, "You foool");
-      return (*_pl_pointer)[_chunk_offset];
+      DebugAssert(_chunk_offset < _max_size, "past-the-end PosListIterator dereferenced");
+      return (*_pos_list)[_chunk_offset];
     }
 
-    PosListType _pl_pointer;
+    PosListType _pos_list;
     ChunkOffset _chunk_offset;
     ChunkOffset _max_size;
   };
 
-  // public:
   virtual ~AbstractPosList() = default;
 
   AbstractPosList& operator=(AbstractPosList&& other) = default;
@@ -70,19 +67,10 @@ class AbstractPosList {
 
   virtual RowID operator[](size_t n) const = 0;
 
-  PosListIterator<> begin() const {
-    PerformanceWarning("AbstractPosList::begin() called - dereferencing this iterator will be slow.");
-    return PosListIterator<>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
-  }
-
-  PosListIterator<> end() const {
-    PerformanceWarning("AbstractPosList::end() called - dereferencing this iterator will be slow.");
-    return PosListIterator<>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
-  }
-
-  PosListIterator<> cbegin() const { return begin(); }
-
-  PosListIterator<> cend() const { return end(); }
+  PosListIterator<> begin() const;
+  PosListIterator<> end() const;
+  PosListIterator<> cbegin() const;
+  PosListIterator<> cend() const;
 
   // Capacity
   virtual bool empty() const = 0;
@@ -100,20 +88,7 @@ inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
     return false;
   }
 
-  auto lhsIt = lhs.cbegin();
-  auto lhsEnd = lhs.cend();
-  auto rhsIt = rhs.cbegin();
-
-  while (lhsIt != lhsEnd) {
-    if (!(*lhsIt == *rhsIt)) {
-      return false;
-    }
-
-    lhsIt++;
-    rhsIt++;
-  }
-
-  return true;
+  return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin());
 }
 
 }  // namespace opossum

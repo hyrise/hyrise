@@ -63,7 +63,7 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   void guarantee_single_chunk() { _references_single_chunk = true; }
 
   // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
-  bool references_single_chunk() const override {
+  bool references_single_chunk() const final {
     if (_references_single_chunk) {
       DebugAssert(
           [&]() {
@@ -79,7 +79,7 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   }
 
   // For chunks that share a common ChunkID, returns that ID.
-  ChunkID common_chunk_id() const override {
+  ChunkID common_chunk_id() const final {
     DebugAssert(references_single_chunk(),
                 "Can only retrieve the common_chunk_id if the PosList is guaranteed to reference a single chunk.");
     Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
@@ -110,8 +110,8 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::max_size;
   using Vector::reserve;
   using Vector::shrink_to_fit;
-  size_t size() const override { return Vector::size(); }
-  bool empty() const override { return Vector::empty(); }
+  size_t size() const final { return Vector::size(); }
+  bool empty() const final { return Vector::empty(); }
 
   // Modifiers
   using Vector::clear;
@@ -124,9 +124,7 @@ class PosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
-  Vector& as_vector() { return static_cast<Vector&>(*this); }
-
-  size_t memory_usage(const MemoryUsageCalculationMode mode) const override {
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const final {
     // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
     return size() * sizeof(Vector::value_type);
   }

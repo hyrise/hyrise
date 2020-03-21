@@ -153,7 +153,8 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
     }
   }
 
-  // Needed, because otherwise the 2 overloads above are ambiguous
+  // The two overloads of with_iterators are ambiguous if a shared_ptr<PosListType> is given.
+  // This will call the overload expecting shared_ptr<const PosListType>
   template <typename Functor, typename PosListClass>
   std::enable_if_t<!std::is_const_v<PosListClass>, void> with_iterators(
       const std::shared_ptr<PosListClass>& position_filter, const Functor& functor) const {

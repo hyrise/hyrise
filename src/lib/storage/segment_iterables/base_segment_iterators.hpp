@@ -2,7 +2,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/pos_list.hpp"
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
