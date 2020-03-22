@@ -479,6 +479,7 @@ set(
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
     storage/pos_lists/abstract_pos_list.hpp
+    storage/pos_lists/abstract_pos_list.cpp
     storage/pos_lists/matches_all_pos_list.hpp
     storage/pos_lists/pos_list.hpp
     storage/prepared_plan.cpp

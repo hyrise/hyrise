@@ -22,7 +22,7 @@ class AbstractPosList : private Noncopyable {
     PosListIterator(PosListType pos_list, ChunkOffset offset) {
       _pos_list = pos_list;
       _chunk_offset = offset;
-      _max_size = pos_list->size();
+      _max_size = static_cast<ChunkOffset>(pos_list->size());
     }
 
     // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
