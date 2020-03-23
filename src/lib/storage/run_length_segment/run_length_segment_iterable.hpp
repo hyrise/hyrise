@@ -27,21 +27,19 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     functor(begin, end);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
 
-    resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
-      using PosListIteratorType = decltype(pos_list->cbegin());
-      auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
-                                                            _segment.end_positions().get(), pos_list->cbegin(),
-                                                            pos_list->cbegin()};
-      auto end = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
-                                                          _segment.end_positions().get(), pos_list->cbegin(),
-                                                          pos_list->cend()};
+    using PosListIteratorType = decltype(position_filter->cbegin());
+    auto begin = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
+                                                          _segment.end_positions().get(), position_filter->cbegin(),
+                                                          position_filter->cbegin()};
+    auto end = PointAccessIterator<PosListIteratorType>{_segment.values().get(), _segment.null_values().get(),
+                                                        _segment.end_positions().get(), position_filter->cbegin(),
+                                                        position_filter->cend()};
 
-      functor(begin, end);
-    });
+    functor(begin, end);
   }
 
   size_t _on_size() const { return _segment.size(); }

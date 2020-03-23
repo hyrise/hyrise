@@ -30,26 +30,25 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
-    resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
-      using PosListIteratorType = std::decay_t<decltype(pos_list->cbegin())>;
 
-      if (_segment.is_nullable()) {
-        auto begin = PointAccessIterator<PosListIteratorType>{
-            _segment.values().cbegin(), _segment.null_values().cbegin(), pos_list->cbegin(), pos_list->cbegin()};
-        auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                            pos_list->cbegin(), pos_list->cend()};
-        functor(begin, end);
-      } else {
-        auto begin = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), pos_list->cbegin(),
-                                                                     pos_list->cbegin()};
-        auto end = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), pos_list->cbegin(),
-                                                                   pos_list->cend()};
-        functor(begin, end);
-      }
-    });
+    using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
+
+    if (_segment.is_nullable()) {
+      auto begin = PointAccessIterator<PosListIteratorType>{
+          _segment.values().cbegin(), _segment.null_values().cbegin(), position_filter->cbegin(), position_filter->cbegin()};
+      auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                          position_filter->cbegin(), position_filter->cend()};
+      functor(begin, end);
+    } else {
+      auto begin = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), position_filter->cbegin(),
+                                                                    position_filter->cbegin()};
+      auto end = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), position_filter->cbegin(),
+                                                                  position_filter->cend()};
+      functor(begin, end);
+    }
   }
 
   size_t _on_size() const { return _segment.size(); }

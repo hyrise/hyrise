@@ -33,22 +33,20 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     });
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(decompressor)>;
 
-      resolve_pos_list_type(position_filter, [&functor, &decompressor, *this](auto& pos_list) {
-        using PosListIteratorType = std::decay_t<decltype(pos_list->cbegin())>;
-        auto begin = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{
-            &_segment.block_minima(), &_segment.null_values(), std::move(decompressor), pos_list->cbegin(),
-            pos_list->cbegin()};
-        auto end =
-            PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{pos_list->cbegin(), pos_list->cend()};
-        functor(begin, end);
-      });
+      using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
+      auto begin = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), std::move(decompressor), position_filter->cbegin(),
+          position_filter->cbegin()};
+      auto end =
+          PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{position_filter->cbegin(), position_filter->cend()};
+      functor(begin, end);
     });
   }
 
