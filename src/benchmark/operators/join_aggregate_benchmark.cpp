@@ -33,13 +33,14 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
   const auto max_value = static_cast<int>(TABLE_SIZE * SELECTIVITY) + 1;
-  // The result ids are always the same in each table because of the constant seed
-  const unsigned int seed = 54321;
-  std::minstd_rand0 generator(seed);  // NOLINT(cert-msc51-cpp)
+  // Use const seed to always generate the same tables. This is important to
+  // compare benchmarks
+  unsigned int seed = 12345;
+  std::default_random_engine random_engine(seed);
   std::uniform_int_distribution<int> dist(1, max_value);
 
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
-    values[row_index] = dist(generator);
+    values[row_index] = dist(random_engine);
   }
 
   return values;
@@ -73,13 +74,15 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
+  // Use const seed to always generate the same tables. This is important to
+  // compare benchmarks
+  const unsigned int seed = 54321;
+  std::default_random_engine random_engine(seed);
 
   // The result ages are always the same in each table because of the constant seed
-  unsigned int seed = 12345;
-  std::minstd_rand0 generator(seed);  // NOLINT(cert-msc51-cpp)
   std::uniform_int_distribution<int> dist(1, 100);
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
-    values[row_index] = dist(generator);
+    values[row_index] = dist(random_engine);
   }
 
   return values;
