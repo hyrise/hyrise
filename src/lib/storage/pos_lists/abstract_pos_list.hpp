@@ -83,12 +83,7 @@ class AbstractPosList : private Noncopyable {
 
 inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
   PerformanceWarning("Using slow PosList comparison.");
-
-  if (lhs.size() != rhs.size()) {
-    return false;
-  }
-
-  return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin());
+  return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
 }  // namespace opossum
