@@ -107,10 +107,11 @@ const pmr_vector<bool>& ValueSegment<T>::null_values() const {
 }
 
 template <typename T>
-pmr_vector<bool>& ValueSegment<T>::null_values() {
+void ValueSegment<T>::set_null_value(const ChunkOffset chunk_offset) {
   DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
-  return *_null_values;
+  std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
+  (*_null_values)[chunk_offset] = true;
 }
 
 template <typename T>
@@ -125,6 +126,8 @@ void ValueSegment<T>::resize(const size_t size) {
   access_counter[SegmentAccessCounter::AccessType::Sequential] += _values.size();
   _values.resize(size);
   if (is_nullable()) {
+    std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
+    // TODO Benchmark
     _null_values->resize(size);
   }
 }

@@ -42,10 +42,11 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
       const auto nulls_begin_iter = source_value_segment->null_values().begin() + source_begin_offset;
       const auto nulls_end_iter = nulls_begin_iter + length;
 
-      Assert(
-          target_is_nullable || std::none_of(nulls_begin_iter, nulls_end_iter, [](const auto& null) { return null; }),
-          "Trying to insert NULL into non-NULL segment");
-      std::copy(nulls_begin_iter, nulls_end_iter, target_value_segment->null_values().begin() + target_begin_offset);
+      auto nulls_target_offset = target_begin_offset;
+      for (auto nulls_iter = nulls_begin_iter; nulls_iter != nulls_end_iter; ++nulls_iter) {
+        if (*nulls_iter) target_value_segment->set_null_value(nulls_target_offset);
+        ++nulls_target_offset;
+      }
     }
   } else {
     segment_with_iterators<T>(*source_base_segment, [&](const auto source_begin, const auto source_end) {
@@ -57,7 +58,9 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
         *target_iter = source_iter->value();
 
         if (target_is_nullable) {
-          target_value_segment->null_values()[target_begin_offset + index] = source_iter->is_null();
+          if (source_iter->is_null()) {
+            target_value_segment->set_null_value(target_begin_offset + index);
+          }
         } else {
           Assert(!source_iter->is_null(), "Cannot insert NULL into NOT NULL target");
         }
