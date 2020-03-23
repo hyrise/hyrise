@@ -72,10 +72,15 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
 }
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> JoinNode::constraints() const {
+
+  // Determine uniqueness of join column(s) for both sides
+ //  const auto join_expression = _join //TODO Continue here!
+
+
+
   switch(join_mode) {
   case JoinMode::Inner: {
-    // The Inner Join does not add any rows or null values in the output relation.
-    // Therefore, all input constraints remain valid.
+    // If both
 
     // TODO 1. Merge input constraints input_left() and input_right()
 

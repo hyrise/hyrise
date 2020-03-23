@@ -195,4 +195,21 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
+TEST_F(JoinNodeTest, ConstraintsInnerJoin) {
+
+  // Case 1 - Join columns of both, LEFT and RIGHT tables are not unique
+  // -> no forwarding at all
+
+  // Case 2 - Join columns of LEFT table are unique
+  // -> forward constraints of RIGHT table
+
+  // Case 3 - Join columns of RIGHT table are unique
+  // -> forward constraints of LEFT table
+
+  // Case 4 - Unique constraints on Join columns: Both LEFT & RIGHT table
+  // -> forward all input constraints
+
+}
+
+
 }  // namespace opossum
