@@ -39,10 +39,22 @@ SegmentEncodingSpec get_segment_encoding_from_encoding_name(const std::string en
   return encoding_spec;
 }
 
-size_t get_whole_system_memory_usage() {
+size_t get_all_segments_memory_usage() {
   auto result = size_t{0};
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    result += table->memory_usage(MemoryUsageCalculationMode::Sampled);
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      if (!table->get_chunk(chunk_id)) {
+        continue;
+      }
+
+      const auto& chunk = table->get_chunk(chunk_id);
+      const auto column_count = chunk->column_count();
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto segment = chunk->get_segment(column_id);
+        result += segment->memory_usage(MemoryUsageCalculationMode::Sampled);
+      }
+    }
   }
   return result;
 }
@@ -107,9 +119,14 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
     memory_usage_old += previous_segment_size;
 
     const auto encoded_segment = ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec);
+    if (base_segment == encoded_segment) {
+      // No encoding took place, segment was already encoded with the requesting encoding.
+      continue;
+    }
     const auto new_segment_size = encoded_segment->memory_usage(MemoryUsageCalculationMode::Sampled);
     memory_usage_new += new_segment_size;
 
+    _keep_alive_stash.emplace_back(base_segment);
     chunk->replace_segment(column_id, encoded_segment);
     achieved_memory_usage_reduction += previous_segment_size - new_segment_size;
     ++encoded_segment_count;
@@ -136,10 +153,11 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 }
 
 void CompressionPlugin::_optimize_compression() {
-  const auto current_system_memory_usage = get_whole_system_memory_usage();
-  const auto system_memory_usage_budget = std::stoll(_memory_budget_setting->get());
+  _keep_alive_stash.clear();
+  const auto initial_system_memory_usage = get_all_segments_memory_usage();
+  const auto memory_budget = std::stoll(_memory_budget_setting->get());
   const auto memory_usage_reduction =
-      static_cast<int64_t>(current_system_memory_usage) - static_cast<int64_t>(system_memory_usage_budget);
+      static_cast<int64_t>(initial_system_memory_usage) - static_cast<int64_t>(memory_budget);
   auto achieved_memory_usage_reduction = int64_t{0};
 
   for (const auto& column_config : _static_compression_config) {
@@ -169,15 +187,16 @@ void CompressionPlugin::_optimize_compression() {
     }
   }
 
-  if (static_cast<int64_t>(current_system_memory_usage - achieved_memory_usage_reduction) > system_memory_usage_budget) {
-    const auto current_system_memory_usage_megabytes = get_whole_system_memory_usage() / 1'000'000;
-    const auto memory_budget_megabytes = system_memory_usage_budget / 1'000'000;
-    std::stringstream stringstream;
-    stringstream << "The memory budget of " << memory_budget_megabytes << " MB is infeasible (currrent system size is ";
-    stringstream << current_system_memory_usage_megabytes << " MB).";
-    Hyrise::get().log_manager.add_message(description(), stringstream.str());
+  std::stringstream stringstream;
+  if (static_cast<int64_t>(initial_system_memory_usage - achieved_memory_usage_reduction) > memory_budget) {
+    stringstream << "Compression optimization finished: The memory budget is infeasible";
+  } else {
+    stringstream << "Compression optimization finished: memory budget is feasible";
   }
-  Hyrise::get().log_manager.add_message(description(), "Compression optimization done.");
+  stringstream << " (budget: " << (memory_budget / 1'000'000) << " MB, currrent size of table data: ";
+  stringstream << (static_cast<int64_t>(initial_system_memory_usage - achieved_memory_usage_reduction) / 1'000'000);
+  stringstream << " MB).";
+  Hyrise::get().log_manager.add_message(description(), stringstream.str());
 }
 
 void CompressionPlugin::stop() {

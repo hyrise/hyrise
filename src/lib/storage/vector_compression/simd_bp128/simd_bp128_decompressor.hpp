@@ -38,6 +38,8 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   ~SimdBp128Decompressor() = default;
 
   uint32_t get(const size_t i) final {
+    std::lock_guard<std::mutex> lock(_get_mutex);
+
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);
     }
@@ -156,6 +158,8 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
 
   alignas(16) std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info{};
   std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
+
+  std::mutex _get_mutex;
 };
 
 }  // namespace opossum
