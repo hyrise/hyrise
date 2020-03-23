@@ -129,9 +129,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // new row count.
       {
         const auto& mvcc_data = target_chunk->mvcc_data();
+        DebugAssert(mvcc_data, "Insert cannot operate on a table without MVCC data");
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
         for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
+          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid begin CID");
+          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid end CID");
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
       }
@@ -151,7 +154,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
           const auto value_segment =
               std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(target_chunk->get_segment(column_id));
-          Assert(value_segment, "Cannot insert into non-ValueColumns");
+          Assert(value_segment, "Cannot insert into non-ValueSegments");
 
           const auto new_size = old_size + num_rows_for_target_chunk;
 
