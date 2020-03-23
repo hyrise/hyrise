@@ -65,7 +65,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   auto encoded_segment = std::static_pointer_cast<BaseSegment>(original_segment);
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
-    encoded_segment = encode_and_compress_segment(original_segment, data_type, encoding_spec);
+    encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
   }
 
   auto resource = SimpleTrackingMemoryResource{};
@@ -76,7 +76,7 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   // retrieve the size of an empty segment for later subtraction.
   auto empty_encoded_segment = std::static_pointer_cast<BaseSegment>(empty_original_segment);
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
-    empty_encoded_segment = encode_and_compress_segment(empty_original_segment, data_type, encoding_spec);
+    empty_encoded_segment = ChunkEncoder::encode_segment(empty_original_segment, data_type, encoding_spec);
   }
 
   const auto copied_segment_size = copied_segment->memory_usage(MemoryUsageCalculationMode::Full);
