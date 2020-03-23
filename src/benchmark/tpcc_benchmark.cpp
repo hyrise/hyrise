@@ -237,7 +237,7 @@ void check_consistency(const size_t num_warehouses) {
     auto pipeline =
         SQLPipelineBuilder{
             "SELECT * FROM ORDER_LINE LEFT JOIN \"ORDER\" ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID "
-            "WHERE OL_DELIVERY_D = -1 AND O_CARRIER_ID IS NOT NULL"}
+            "WHERE OL_DELIVERY_D IS NULL AND O_CARRIER_ID IS NOT NULL"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == size_t{0},
@@ -293,7 +293,7 @@ void check_consistency(const size_t num_warehouses) {
                          FROM "ORDER", ORDER_LINE
                          WHERE
                           OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID
-                          AND OL_DELIVERY_D <> -1
+                          AND OL_DELIVERY_D IS NOT NULL
                           GROUP BY O_W_ID, O_D_ID, O_C_ID
                         ) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT)
                         ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID
@@ -340,7 +340,7 @@ void check_consistency(const size_t num_warehouses) {
                         ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID
                       LEFT JOIN ORDER_LINE
                         ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID
-                        AND OL_DELIVERY_D <> -1
+                        AND OL_DELIVERY_D IS NOT NULL
                       GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT
                     )"}.create_pipeline();
     // clang-format on

@@ -445,8 +445,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
   _add_order_line_column<int32_t>(segments_by_chunk, column_definitions, "OL_DELIVERY_D", cardinalities,
                                   order_line_counts, [&](std::vector<size_t> indices) {
                                     return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT
-                                               ? _current_date
-                                               : -1;
+                                               ? std::optional<int32_t>{_current_date}
+                                               : std::nullopt;
                                   });
   _add_order_line_column<int32_t>(segments_by_chunk, column_definitions, "OL_QUANTITY", cardinalities,
                                   order_line_counts, [&](std::vector<size_t>) { return 5; });
