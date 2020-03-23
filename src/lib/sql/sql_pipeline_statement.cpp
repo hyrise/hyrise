@@ -117,7 +117,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
 
     visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
-        if (node && (node->type != opossum::LQPNodeType::CreateView)) {
+        if (node && (node->type != opossum::LQPNodeType::Alias)) {
             for (auto& root_expression : node->node_expressions) {
                 visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
                     if (expression->type == ExpressionType::Value) {
