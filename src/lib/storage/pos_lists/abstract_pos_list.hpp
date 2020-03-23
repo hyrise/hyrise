@@ -25,8 +25,8 @@ class AbstractPosList : private Noncopyable {
       _max_size = static_cast<ChunkOffset>(pos_list->size());
     }
 
-    // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
-    // we still want to use random access (for binary search, distance, ...)
+    // Ugly hack.
+    // See https://github.com/hyrise/hyrise/issues/1531
     typedef std::random_access_iterator_tag iterator_category;
 
     void increment() { ++_chunk_offset; }
