@@ -117,10 +117,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
 
     visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
-        if (node && node->type != opossum::LQPNodeType::CreateView && node->type != opossum::LQPNodeType::Alias) {
+        if (node) {
             for (auto& root_expression : node->node_expressions) {
                 visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-                    if (expression->type == ExpressionType::Value) {
+                    if (expression->type == ExpressionType::Value || expression->type == ExpressionType::LQPColumn) {
                       if (expression->replaced_by) {
                         const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
                         std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;

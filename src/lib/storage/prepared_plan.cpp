@@ -78,7 +78,6 @@ std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {
     parameters_by_id.emplace(parameter_ids[parameter_idx], parameters[parameter_idx]);
-    std::cout << "Eingesetzter Parameter: " << *parameters[parameter_idx] << std::endl;
   }
 
   auto instantiated_lqp = lqp->deep_copy();
