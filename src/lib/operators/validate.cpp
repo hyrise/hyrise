@@ -150,7 +150,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
-    std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const PosList>();
+    std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const RowIDPosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
 
@@ -173,18 +173,18 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           // We can reuse the old PosList since it is entirely visible.
           pos_list_out = pos_list_in;
         } else {
-          PosList temp_pos_list;
+          RowIDPosList temp_pos_list;
           temp_pos_list.guarantee_single_chunk();
           for (auto row_id : *pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
           }
-          pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
+          pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));
         }
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
-        PosList temp_pos_list;
+        RowIDPosList temp_pos_list;
         for (auto row_id : *pos_list_in) {
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
@@ -193,7 +193,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
             temp_pos_list.emplace_back(row_id);
           }
         }
-        pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
+        pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
@@ -215,7 +215,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         pos_list_out = std::make_shared<MatchesAllPosList>(chunk_in, chunk_id);
       } else {
         const auto mvcc_data = chunk_in->mvcc_data();
-        PosList temp_pos_list;
+        RowIDPosList temp_pos_list;
         temp_pos_list.guarantee_single_chunk();
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
@@ -224,7 +224,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
             temp_pos_list.emplace_back(RowID{chunk_id, i});
           }
         }
-        pos_list_out = std::make_shared<const PosList>(std::move(temp_pos_list));
+        pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));
       }
 
       // Create actual ReferenceSegment objects.

@@ -3,7 +3,7 @@
 #include "operators/maintenance/create_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/pos_lists/matches_all_pos_list.hpp"
-#include "storage/pos_lists/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 
 namespace opossum {
 

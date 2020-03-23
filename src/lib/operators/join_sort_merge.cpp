@@ -109,8 +109,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
-  std::unique_ptr<PosList> _null_rows_left;
-  std::unique_ptr<PosList> _null_rows_right;
+  std::unique_ptr<RowIDPosList> _null_rows_left;
+  std::unique_ptr<RowIDPosList> _null_rows_right;
 
   const ColumnID _primary_left_column_id;
   const ColumnID _primary_right_column_id;
@@ -127,8 +127,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
+  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_left;
+  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_right;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -768,8 +768,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
-      _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-      _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+      _output_pos_lists_left[cluster_number] = std::make_shared<RowIDPosList>();
+      _output_pos_lists_right[cluster_number] = std::make_shared<RowIDPosList>();
 
       // Avoid empty jobs for inner equi joins
       if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
@@ -810,7 +810,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Adds the segments from an input table to the output table
   **/
   void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                            const std::shared_ptr<const PosList>& pos_list) {
+                            const std::shared_ptr<const RowIDPosList>& pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the segment data (in the form of a poslist)
@@ -858,7 +858,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Get the row ids that are referenced
-    auto new_pos_list = std::make_shared<PosList>();
+    auto new_pos_list = std::make_shared<RowIDPosList>();
     for (const auto row : *pos_list) {
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
@@ -893,8 +893,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _perform_join();
 
     if (include_null_left || include_null_right) {
-      auto null_output_left = std::make_shared<PosList>();
-      auto null_output_right = std::make_shared<PosList>();
+      auto null_output_left = std::make_shared<RowIDPosList>();
+      auto null_output_right = std::make_shared<RowIDPosList>();
 
       // Add the outer join rows which had a null value in their join column
       if (include_null_left) {

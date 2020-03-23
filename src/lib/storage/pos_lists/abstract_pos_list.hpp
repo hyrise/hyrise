@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class PosList;
+class RowIDPosList;
 
 class AbstractPosList : private Noncopyable {
  public:

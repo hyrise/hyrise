@@ -8,15 +8,15 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
               "No need to split a reference segment that references a single chunk");
 
   // The input_pos_list references multiple chunks and we actually need to split it. Because we are supposed to return
-  // shared_ptr<const PosList>, we first create regular PosLists, add the values to them, and then convert these.
+  // shared_ptr<const RowIDPosList>, we first create regular PosLists, add the values to them, and then convert these.
 
-  // Create PosLists and set them as `references_single_chunk`
+  // Create RowIDPosLists and set them as `references_single_chunk`
   auto pos_lists_by_chunk_id = PosListsByChunkID{number_of_chunks};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < number_of_chunks; ++chunk_id) {
     DebugAssert(chunk_id < number_of_chunks, "Inconsistent number_of_chunks passed");
     auto& mapping = pos_lists_by_chunk_id[chunk_id];
-    mapping.row_ids = std::make_shared<PosList>();
+    mapping.row_ids = std::make_shared<RowIDPosList>();
     mapping.row_ids->guarantee_single_chunk();
     mapping.row_ids->reserve(input_pos_list->size() / number_of_chunks);
     mapping.original_positions.reserve(input_pos_list->size() / number_of_chunks);

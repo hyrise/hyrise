@@ -114,8 +114,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   auto out_table = std::make_shared<Table>(left_input_table.column_definitions(), TableType::References);
 
-  std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
-  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
+  std::vector<std::shared_ptr<RowIDPosList>> pos_lists(reference_matrix_left.size());
+  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
 
   // Adds the row `row_idx` from `reference_matrix` to the pos_lists we're currently building
   const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
@@ -187,7 +187,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       emit_chunk();
 
       chunk_row_idx = 0;
-      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
+      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
     }
   }
 

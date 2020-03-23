@@ -84,15 +84,15 @@ class IterablesTest : public BaseTest {
     table_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
     table_strings = load_table("resources/test_data/tbl/string.tbl");
 
-    position_filter = std::make_shared<PosList>(
-        PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
+    position_filter = std::make_shared<RowIDPosList>(
+        RowIDPosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
     position_filter->guarantee_single_chunk();
   }
 
   std::shared_ptr<Table> table;
   std::shared_ptr<Table> table_with_null;
   std::shared_ptr<Table> table_strings;
-  std::shared_ptr<PosList> position_filter;
+  std::shared_ptr<RowIDPosList> position_filter;
 };
 
 class EncodedSegmentIterablesTest : public IterablesTest,
@@ -318,11 +318,11 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
 // Reference Segment Tests
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
-  auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
+  auto pos_list = RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
                           RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
@@ -337,11 +337,11 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
   auto pos_list =
-      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+      RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
@@ -356,11 +356,11 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased) {
   auto pos_list =
-      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+      RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::Yes>{*reference_segment};
 

@@ -35,7 +35,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
@@ -51,7 +51,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 }
 
 void ColumnBetweenTableScanImpl::_scan_generic_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
@@ -77,7 +77,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
 }
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
-    const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+    const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
@@ -140,7 +140,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
 }
 
 void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                      PosList& matches,
+                                                      RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
                                                       const OrderByMode order_by_mode) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {

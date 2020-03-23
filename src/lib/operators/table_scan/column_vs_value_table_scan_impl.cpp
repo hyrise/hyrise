@@ -31,7 +31,7 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
 std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
@@ -47,7 +47,7 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
 }
 
 void ColumnVsValueTableScanImpl::_scan_generic_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
@@ -72,7 +72,7 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(
 }
 
 void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
-    const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+    const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   /**
    * ValueID search_vid;              // left value id
@@ -141,7 +141,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
 }
 
 void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                      PosList& matches,
+                                                      RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
                                                       const OrderByMode order_by_mode) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
