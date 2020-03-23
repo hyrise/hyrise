@@ -142,7 +142,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.create_pipeline();
     const auto [_, verification_table] = pipeline.get_result_table();
-    EXPECT_EQ(*verification_table->get_value<int32_t>(ColumnID{0}, 0), iterations_per_thread);  
+    EXPECT_EQ(*verification_table->get_value<int32_t>(ColumnID{0}, 0), iterations_per_thread);
   }
 }
 
@@ -164,9 +164,9 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     const auto my_job_id = job_id++;
     for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
       // b is set to NULL by half of the jobs.
-      auto pipeline =
-          SQLPipelineBuilder{std::string{"INSERT INTO table_c (a, b) VALUES ("} + std::to_string(my_job_id) + ", " + (my_job_id % 2 ? "NULL" : "1") + ")"}
-              .create_pipeline();
+      auto pipeline = SQLPipelineBuilder{std::string{"INSERT INTO table_c (a, b) VALUES ("} +
+                                         std::to_string(my_job_id) + ", " + (my_job_id % 2 ? "NULL" : "1") + ")"}
+                          .create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       EXPECT_EQ(status, SQLPipelineStatus::Success);
     }
@@ -194,14 +194,15 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 
   // Check that NULL values in column b are correctly set
-  auto pipeline = SQLPipelineBuilder{"SELECT a, COUNT(a), COUNT(b) FROM table_c GROUP BY a ORDER BY a"}.create_pipeline();
+  auto pipeline =
+      SQLPipelineBuilder{"SELECT a, COUNT(a), COUNT(b) FROM table_c GROUP BY a ORDER BY a"}.create_pipeline();
   const auto [_, verification_table] = pipeline.get_result_table();
   ASSERT_EQ(verification_table->row_count(), num_threads);
 
   for (auto row = size_t{0}; row < num_threads; ++row) {
     EXPECT_EQ(*verification_table->get_value<int32_t>(ColumnID{0}, row), row);
     EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{1}, row), iterations_per_thread);
-    EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{2}, row), row % 2 ? 0 : iterations_per_thread);      
+    EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{2}, row), row % 2 ? 0 : iterations_per_thread);
   }
 }
 

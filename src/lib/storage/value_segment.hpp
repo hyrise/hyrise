@@ -85,7 +85,7 @@ class ValueSegment : public BaseValueSegment {
   std::optional<pmr_vector<bool>> _null_values;
 
   // Protects set_null_value. Does not need to be acquired for reads, as we expect modifications to vector<bool> to be
-  // atomic. 
+  // atomic.
   std::mutex _null_value_modification_mutex;
 };
 

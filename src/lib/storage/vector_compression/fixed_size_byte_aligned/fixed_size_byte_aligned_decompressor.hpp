@@ -20,7 +20,7 @@ class FixedSizeByteAlignedDecompressor : public BaseVectorDecompressor {
   FixedSizeByteAlignedDecompressor& operator=(FixedSizeByteAlignedDecompressor&& other) {
     DebugAssert(&_data == other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
     return *this;
-  };
+  }
 
   uint32_t get(size_t i) final { return _data[i]; }
   size_t size() const final { return _data.size(); }

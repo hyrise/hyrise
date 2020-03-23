@@ -920,7 +920,8 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   if (null_values.empty()) {
     output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values));
   } else {
-    output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
+    output_segment =
+        std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
   }
   _output_segments.push_back(output_segment);
 }

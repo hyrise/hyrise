@@ -34,7 +34,8 @@ ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_va
   DebugAssert(_values.size() == _null_values.size(), "The number of values and null_values should be equal");
 
   // We cannot check for the capacity being equal because of the implementation details of vector<bool>
-  DebugAssert(_values.capacity() >= _null_values.capacity(), "The capacity of values and null_values should be compatible");
+  DebugAssert(_values.capacity() >= _null_values.capacity(),
+              "The capacity of values and null_values should be compatible");
 }
 
 template <typename T>
