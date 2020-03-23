@@ -25,12 +25,8 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   };
 
   struct SystemMemoryUsage {
-    int64_t total_ram;
-    int64_t total_swap;
-    int64_t total_memory;
-    int64_t free_ram;
-    int64_t free_swap;
     int64_t free_memory;
+    int64_t available_memory;
   };
 
   struct ProcessMemoryUsage {
