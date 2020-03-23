@@ -20,7 +20,8 @@ class BaseValueSegment : public BaseSegment {
   virtual void append(const AllTypeVariant& val) = 0;
 
   /**
-   * @brief Returns null array. Cannot be written to, see value_segment.hpp for details.
+   * @brief Returns vector of NULL values (which is true for offsets where the segment's value is NULL).
+   *        Cannot be written to, see value_segment.hpp for details.
    *
    * Throws exception if is_nullable() returns false
    */

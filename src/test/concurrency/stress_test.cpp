@@ -158,7 +158,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
 
   const auto iterations_per_thread = 200;
 
-  // Define the work package - the job id is used so that each thread has its own logical row to work on
+  // Define the work package - each job writes a=job_id, b=(NULL or 1, depending on job_id)
   std::atomic_int job_id{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;

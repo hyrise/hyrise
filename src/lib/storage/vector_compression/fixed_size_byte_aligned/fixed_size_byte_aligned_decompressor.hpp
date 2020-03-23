@@ -14,11 +14,11 @@ class FixedSizeByteAlignedDecompressor : public BaseVectorDecompressor {
   FixedSizeByteAlignedDecompressor(FixedSizeByteAlignedDecompressor&&) = default;
 
   FixedSizeByteAlignedDecompressor& operator=(const FixedSizeByteAlignedDecompressor& other) {
-    DebugAssert(&_data == other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
     return *this;
   }
   FixedSizeByteAlignedDecompressor& operator=(FixedSizeByteAlignedDecompressor&& other) {
-    DebugAssert(&_data == other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
     return *this;
   }
 
