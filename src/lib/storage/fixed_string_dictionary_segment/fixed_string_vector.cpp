@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-FixedStringVector::FixedStringVector(const FixedStringVector& other, PolymorphicAllocator<char> allocator)
+FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator)
     : _string_length(other._string_length), _chars(other._chars, allocator), _size(other._size) {
   // We need to set `_chars` in the initializer list. Otherwise, it would be first created with the default allocator
   // and the assignment operator would not exchange the allocator.

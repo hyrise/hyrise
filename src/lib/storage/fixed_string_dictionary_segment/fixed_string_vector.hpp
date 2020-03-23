@@ -18,11 +18,11 @@ namespace opossum {
 class FixedStringVector {
  public:
   // Create a FixedStringVector of FixedStrings with given values
-  FixedStringVector(const FixedStringVector& other, PolymorphicAllocator<char> allocator = {});
+  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <typename Iter>
-  FixedStringVector(Iter first, Iter last, const size_t string_length, PolymorphicAllocator<char> allocator = {})
+  FixedStringVector(Iter first, Iter last, const size_t string_length, const PolymorphicAllocator<char>& allocator = {})
       : _string_length(string_length), _chars(allocator) {
     const auto value_count = std::distance(first, last);
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
