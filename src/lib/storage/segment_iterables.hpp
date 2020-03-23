@@ -144,21 +144,13 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor, typename PosListType>
-  void with_iterators(const std::shared_ptr<const PosListType>& position_filter, const Functor& functor) const {
+  void with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     if (!position_filter) {
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
       _self()._on_with_iterators(position_filter, functor);
     }
-  }
-
-  // The two overloads of with_iterators are ambiguous if a shared_ptr<PosListType> is given.
-  // This will call the overload expecting shared_ptr<const PosListType>
-  template <typename Functor, typename PosListClass>
-  std::enable_if_t<!std::is_const_v<PosListClass>, void> with_iterators(
-      const std::shared_ptr<PosListClass>& position_filter, const Functor& functor) const {
-    _self().with_iterators(static_cast<const std::shared_ptr<const PosListClass>&>(position_filter), functor);
   }
 
   using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”
