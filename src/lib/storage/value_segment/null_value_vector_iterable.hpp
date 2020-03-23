@@ -25,13 +25,11 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     functor(begin, end);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
-      auto begin = PointAccessIterator{_null_values, pos_list->cbegin(), pos_list->cbegin()};
-      auto end = PointAccessIterator{_null_values, pos_list->begin(), pos_list->cend()};
-      functor(begin, end);
-    });
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
+    auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
+    auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
+    functor(begin, end);
   }
 
  private:

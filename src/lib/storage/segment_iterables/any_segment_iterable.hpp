@@ -126,8 +126,8 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     _iterable_wrapper->with_iterators(functor_wrapper);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
   }
