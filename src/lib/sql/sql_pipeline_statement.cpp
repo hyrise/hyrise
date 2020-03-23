@@ -151,7 +151,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     return _optimized_logical_plan;
   }
 
-  const auto started_cache = std::chrono::high_resolution_clock::now();
+  const auto started_preoptimization_cache = std::chrono::high_resolution_clock::now();
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   const auto unoptimized_lqp = get_split_unoptimized_logical_plan(values);
@@ -166,10 +166,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
         _optimized_logical_plan = (*cached_plan)->instantiate(values);
-        const auto done_cache = std::chrono::high_resolution_clock::now();
-        _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_cache);
         _metrics->query_plan_cache_hit = true;
         _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
+        const auto done_cache = std::chrono::high_resolution_clock::now();
+        _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
         return _optimized_logical_plan;
       }
     }
@@ -182,14 +182,15 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto ulqp = unoptimized_lqp->deep_copy();
 
-  const auto done_cache = std::chrono::high_resolution_clock::now();
-  _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_cache);
+  const auto done_preoptimization_cache = std::chrono::high_resolution_clock::now();
   const auto started_optimize = std::chrono::high_resolution_clock::now();
 
   auto optimized_without_values = _optimizer->optimize(std::move(ulqp));
 
   const auto done_optimize = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
+
+  const auto started_postoptimization_cache = std::chrono::high_resolution_clock::now();
 
   std::vector<ParameterID> all_parameter_ids(values.size());
   std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
@@ -203,6 +204,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = prepared_plan->instantiate(values);
 
   _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
+
+  const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
+  _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_preoptimization_cache - started_preoptimization_cache + done_postoptimization_cache - started_postoptimization_cache);
+
   return _optimized_logical_plan;
 }
 
