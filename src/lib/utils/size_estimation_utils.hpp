@@ -65,7 +65,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // Since we want an ordered position list (this potentially increases the performance when accessing the segment), we
   // can directly use std::set to generate distinct sample positions. std::set is slightly faster than
   // std::unordered_set + sorting for small sample sizes.
-  std::default_random_engine generator{std::random_device{}()};
+  std::default_random_engine generator{17};
   std::uniform_int_distribution<size_t> distribution(0ul, samples_to_draw);
   std::set<size_t> sample_set;
   while (sample_set.size() < samples_to_draw) {
