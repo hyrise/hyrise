@@ -24,7 +24,11 @@ template <typename T>
 Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
                                                  const AllTypeVariant& variant_value,
                                                  const std::optional<AllTypeVariant>& variant_value2) const {
-  Fail("RangeFilters cannot be used to estimate cardinalities");
+  // Theoretically, one could come up with some type of estimation (everything outside the range is 0, everything inside
+  // is estimated assuming equi-distribution). For that, we would also need the cardinality of the underlying data.
+  // Currently, as RangeFilters are on a per-segment basis and estimate_cardinality is called for an entire column,
+  // there is no use for this.
+  Fail("Currently, RangeFilters cannot be used to estimate cardinalities");
 }
 
 template <typename T>
@@ -141,7 +145,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   * The code to determine the range boundaries requires calculating the distances between values. We cannot express the
   * distance between -DBL_MAX and DBL_MAX using any of the standard data types. For these cases, the RangeFilter 
   * effectively degrades to a MinMaxFilter (i.e., stores only a single range).
-  * While being rather unlikely for doubles, it's more likely to happen when Opossum includes tinyint etc.
+  * While being rather unlikely for doubles, it's more likely to happen when Hyrise includes tinyint etc.
   * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
   * Approach: take the min and max values and simply check if the distance between both might overflow.
   */
@@ -163,7 +167,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   // 3. Shorten the vector to containt the `max_ranges_count - 1` biggest gaps
   //    (3,2) (2,1)
   // 4. Restore the original order of the dictionary by sorting on the second field
-  //    (2,1) (3,2) (0,5)
+  //    (2,1) (3,2)
   // 5. Add the highest value in the dictionary (more correctly, its index). We will not need the distance for this
   //    entry, so it is initialized with T{}.
   //    (3,2) (2,1) (0,5)
@@ -286,7 +290,9 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
         return true;
       }
 
-      const auto range_comp = [](std::pair<T, T> range, T compare_value) { return range.second < compare_value; };
+      const auto range_comp = [](const std::pair<T, T> range, const T compare_value) {
+        return range.second < compare_value;
+      };
       // Get value range or next larger value range if searched value is in a gap.
       const auto start_lower = std::lower_bound(ranges.cbegin(), ranges.cend(), value, range_comp);
       const auto end_lower = std::lower_bound(ranges.cbegin(), ranges.cend(), value2, range_comp);

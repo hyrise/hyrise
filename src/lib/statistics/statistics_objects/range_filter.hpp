@@ -12,12 +12,23 @@ namespace opossum {
 static constexpr uint32_t DEFAULT_MAX_RANGES_COUNT = 10;
 
 /**
- * Filter that stores a certain number of value ranges. Each range represents a spread of values that is contained
+ * Filters are data structures that are primarily used for probabilistic membership queries. In Hyrise, they are
+ * typically created on a single segment. They can then be used to check whether a certain value exists in the segment.
+ * While histograms also support does_not_contain, their main purpose is not to answer membership queries, but to
+ * provide statistics estimations.
+ *
+ * The RangeFilter stores a certain number of value ranges. Each range represents a spread of values that is contained
  * within the bounds. Ranges are chosen so that the cumulative size of all gaps is maximal.
  * Example: [2, 3, 5, 8, 9, 11] with max_ranges_count=3 will be represented as [2, 3] [5, 5] [8, 11].
- * RangeFilters are typically created for a single chunk and can be used to check whether a certain value exists in the
- * segment.
-*/
+ * RangeFilters are typically created for a single segment and can be used to check whether a certain value exists in
+ * the segment.
+ *
+ * RangeFilters could be expressed as a type of histogram. This is not done for two reasons: First, we like to keep
+ * filters and histograms separate, as they serve different purposes. Having histograms both on a per-segment basis
+ * (for membership queries) and on a per-column basis (for cardinality estimations) could lead to confusion. Second,
+ * building such a histogram would be more expensive than build a RangeFilter, as we would have to look at each value
+ * instead of only looking at the distinct values (which is significantly cheaper for dictionary encoding).
+ */
 template <typename T>
 class RangeFilter : public AbstractStatisticsObject {
  public:

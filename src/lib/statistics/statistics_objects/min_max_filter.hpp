@@ -11,15 +11,20 @@
 namespace opossum {
 
 /**
- * Filter that stores a minimum and maximum value for a number of rows.
- * MinMaxFilters are typically created for a single chunk and can be used to check whether
- * a certain value exists in the segment.
-*/
+ * Filters are data structures that are primarily used for probabilistic membership queries. In Hyrise, they are
+ * typically created on a single segment. They can then be used to check whether a certain value exists in the segment.
+ * While histograms also support does_not_contain, their main purpose is not to answer membership queries, but to
+ * provide statistics estimations.
+ *
+ * The MinMaxFilter is a filter that stores the minimum and maximum value for the covered values.
+ *
+ * MinMaxFilters could be expressed as a single-bin histogram. This is not done for two reasons: First, we like to keep
+ * filters and histograms separate, as they serve different purposes. Having histograms both on a per-segment basis
+ * (for membership queries) and on a per-column basis (for cardinality estimations) could lead to confusion. Second,
+ * building such a histogram would be more expensive than build a MinMaxFilter, as we would have to look at each value
+ * instead of only looking at the distinct values (which is significantly cheaper for dictionary encoding).
+ */
 template <typename T>
-// TODO @Bouncner: Could you clarify the "Filter" terminology? What makes a filter a filter? Histograms can be used
-// for pruning, too.
-// TODO @Bouncner: Why do we have MinMaxFilter/RangeFilter if we could also create a histogram? Are these cheaper to
-// store or significantly cheaper to create?
 class MinMaxFilter : public AbstractStatisticsObject {
  public:
   explicit MinMaxFilter(T init_min, T init_max);
