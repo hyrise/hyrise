@@ -242,11 +242,13 @@ class SortedSegmentSearch {
       // decrease the effective sort range by excluding null values based on their ordering (first or last)
       if (_nullable) {
         if (_is_nulls_first) {
-          _begin = std::lower_bound(_begin, _end, false,
-                                [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+          _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
+            return segment_position.is_null();
+          });
         } else {
-          _end = std::lower_bound(_begin, _end, true,
-                              [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+          _end = std::lower_bound(_begin, _end, true, [](const auto& segment_position, const auto& _) {
+            return !segment_position.is_null();
+          });
         }
       }
       _set_begin_and_end_positions_for_between_scan();

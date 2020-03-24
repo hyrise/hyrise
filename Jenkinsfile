@@ -84,6 +84,7 @@ try {
           // For clang-tidy, ccache does not have an effect, so we use unity there.
           sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                        ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
           mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                  ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers &&    ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
           mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&            ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release && cd clang-release &&                                                  ${cmake}           ${release}        ${clang}          .. &\
@@ -171,6 +172,15 @@ try {
               sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
             } else {
               Utils.markStageSkippedForConditional("clangDebugTidy")
+            }
+          }
+        }, clangDebugDisablePrecompileHeaders: {
+          stage("clang-debug:disable-precompile-headers") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
+              sh "cd clang-debug-disable-precompile-headers && make hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
             }
           }
         }, clangDebugAddrUBSanitizers: {

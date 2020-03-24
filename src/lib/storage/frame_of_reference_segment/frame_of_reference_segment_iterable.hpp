@@ -2,9 +2,9 @@
 
 #include <type_traits>
 
-#include "storage/segment_iterables.hpp"
-
+#include "storage/base_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
+#include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
@@ -18,6 +18,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
       using OffsetValueDecompressorT = std::decay_t<decltype(offset_values.create_decompressor())>;
 
@@ -32,6 +33,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
       using OffsetValueDecompressorT = std::decay_t<decltype(offset_values.create_decompressor())>;
 

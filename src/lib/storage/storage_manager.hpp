@@ -16,7 +16,7 @@ namespace opossum {
 class Table;
 class AbstractLQPNode;
 
-// The StorageManager is a singleton that maintains all tables
+// The StorageManager is a class that maintains all tables
 // by mapping table names to table instances.
 class StorageManager : public Noncopyable {
  public:

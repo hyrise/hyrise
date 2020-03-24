@@ -7,7 +7,7 @@ namespace opossum {
 // A single float value as an AbstractStatisticsObject, to keep architectures consistent....
 class NullValueRatioStatistics : public AbstractStatisticsObject {
  public:
-  explicit NullValueRatioStatistics(const float ratio);
+  explicit NullValueRatioStatistics(const float init_ratio);
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,

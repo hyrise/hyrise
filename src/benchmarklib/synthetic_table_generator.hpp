@@ -59,15 +59,15 @@ struct ColumnDataDistribution {
 };
 
 struct ColumnSpecification {
-  ColumnSpecification(const ColumnDataDistribution& data_distribution, const DataType& data_type,
-                      const std::optional<SegmentEncodingSpec> segment_encoding_spec = std::nullopt,
-                      const std::optional<std::string> name = std::nullopt,
-                      const std::optional<float> null_ratio = std::nullopt)
-      : data_distribution(data_distribution),
-        data_type(data_type),
-        segment_encoding_spec(segment_encoding_spec),
-        name(name),
-        null_ratio(null_ratio) {}
+  ColumnSpecification(const ColumnDataDistribution& init_data_distribution, const DataType& init_data_type,
+                      const std::optional<SegmentEncodingSpec> init_segment_encoding_spec = std::nullopt,
+                      const std::optional<std::string> init_name = std::nullopt,
+                      const std::optional<float> init_null_ratio = std::nullopt)
+      : data_distribution(init_data_distribution),
+        data_type(init_data_type),
+        segment_encoding_spec(init_segment_encoding_spec),
+        name(init_name),
+        null_ratio(init_null_ratio) {}
 
   const ColumnDataDistribution data_distribution;
   const DataType data_type;
