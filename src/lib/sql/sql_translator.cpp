@@ -1461,6 +1461,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         AssertInput(expr.exprList && expr.exprList->size() == 1,
                     "Expected exactly one argument for this AggregateFunction");
 
+        auto aggregate_expression = std::shared_ptr<AggregateExpression>{};
+
         switch (aggregate_function) {
           case AggregateFunction::Min:
           case AggregateFunction::Max:
@@ -1489,12 +1491,25 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
               const auto column_expression =
                   std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
-              return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
+
+              aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
-              return std::make_shared<AggregateExpression>(
+              aggregate_expression = std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
             }
         }
+
+        // Check for aggregate expressions that occur both at the current node and in its inputs. Our current expression
+        // system cannot handle this case, see #1902 for details. This check here might have false positives, feel free
+        // to improve the check or tackle the underlying issue if this ever becomes an issue.
+        const auto input_expressions = _current_lqp->column_expressions();
+        AssertInput(std::none_of(input_expressions.cbegin(), input_expressions.cend(),
+                                 [&aggregate_expression](const auto input_expression) {
+                                   return *input_expression == *aggregate_expression;
+                                 }),
+                    "Hyrise cannot handle repeated aggregate expressions, see code #1902 for details.");
+
+        return aggregate_expression;
       }
 
       /**

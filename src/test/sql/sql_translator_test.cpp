@@ -461,6 +461,18 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, RepeatingAggregates) {
+  // See #1902. Optimally, these queries would produce correct results. Until then, at least make sure they don't
+  // produce any wrong ones.
+
+  EXPECT_THROW(compile_query("SELECT COUNT(*) FROM (SELECT COUNT(*) FROM t WHERE a <= 1234) t2"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2"), InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT AVG(a) FROM (SELECT a, AVG(a) FROM t GROUP BY a) t3"), InvalidInputException);
+}
+
 TEST_F(SQLTranslatorTest, SelectAggregate) {
   const auto actual_lqp = compile_query("SELECT COUNT(*) FROM int_float");
 
