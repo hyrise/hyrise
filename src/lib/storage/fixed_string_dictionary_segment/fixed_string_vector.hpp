@@ -66,6 +66,8 @@ class FixedStringVector {
   // Return the amount of allocated memory
   size_t capacity() const;
 
+  size_t string_length() const;
+
   // Request the vector capacity to be at least enough to contain n elements
   void reserve(const size_t n);
 

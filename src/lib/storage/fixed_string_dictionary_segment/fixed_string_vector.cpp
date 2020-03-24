@@ -79,6 +79,8 @@ size_t FixedStringVector::size() const { return _size; }
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }
 
+size_t FixedStringVector::string_length() const { return _string_length; }
+
 void FixedStringVector::erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end) {
   const auto count = std::distance(start, end);
 

@@ -125,11 +125,33 @@ class BinaryWriter {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is written if the type of the column is NOT a string
    *
-   * @param base_dictionary_segment The segment to export
+   * @param dictionary_segment The segment to export
    * @param ofstream The output stream for exporting
    */
   template <typename T>
   static void _write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream);
+
+  /**
+   * FixedStringDictionary Segments are dumped with the following layout:
+   *
+   * Description           | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column Type           | ColumnType                            |   1
+   * Width of attribute v. | AttributeVectorWidth                  |   1
+   * Size of dictionary v. | ValueID                               |   4
+   * FixedString length    | size_t                                |   ?
+   * Dictionary Values     | char[]                                |   dict. size * fixed string length
+   * Attribute v. values   | uintX                                 |   rows * width of attribute v.
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   *
+   * @param fixed_string_dictionary_segment The segment to export
+   * @param ofstream The output stream for exporting
+   */
+  template <typename T>
+  static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment, std::ofstream& ofstream);
 
   /**
    * RunLength Segments are dumped with the following layout:
