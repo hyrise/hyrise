@@ -234,7 +234,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
   memory_usage.free_memory = vm_statistics.free_count * page_size;
-  memory_usage.available_memory = (vm_statistice.inactive_count + vm_statistics.free_count) * page_size;
+  memory_usage.available_memory = (vm_statistics.inactive_count + vm_statistics.free_count) * page_size;
 
   return memory_usage;
 #endif
