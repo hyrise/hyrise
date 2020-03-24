@@ -44,7 +44,7 @@ You can start the container via
 docker run -it hyrise
 ```
 
-Inside of the container, you can then checkout Hyrise and run `./install_dependencies.sh` to download the required submodules.
+Inside the container, you can then checkout Hyrise and run `./install_dependencies.sh` to download the required submodules.
 
 ## Building and Tooling
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
