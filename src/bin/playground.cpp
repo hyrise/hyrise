@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
 
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
-  auto config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+  auto config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
   config->max_runs = -1;
   config->cache_binary_tables = false;
   config->sql_metrics = true;
