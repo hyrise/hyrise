@@ -65,9 +65,9 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // Since we want an ordered position list (this potentially increases the performance when accessing the segment), we
   // can directly use std::set to generate distinct sample positions. std::set is slightly faster than
   // std::unordered_set + sorting for small sample sizes.
-  // We use a static seed of 17 to avoid flunky values when the segment sizes are regularly requested. In case multiple
-  // randomized samples are desired (e.g., for more accurate results), MemoryUsageCalculationMode should be extended
-  // with to have a flaky and non-flaky sample mode.
+  // We use a static seed of 17 to avoid variable segment sizes of the same segment. In case multiple randomized
+  // samples are wanted (e.g., to obtain more accurate results), MemoryUsageCalculationMode should be extended
+  // with to have a "random seed" and a "static seed" sample mode.
   std::default_random_engine generator{17};
   std::uniform_int_distribution<size_t> distribution(0ul, samples_to_draw);
   std::set<size_t> sample_set;
