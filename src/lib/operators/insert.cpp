@@ -28,7 +28,6 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
   Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
   auto& target_values = target_value_segment->values();
-  const auto target_is_nullable = target_value_segment->is_nullable();
 
   /**
    * If the source Segment is a ValueSegment, take a fast path to copy the data.
@@ -57,12 +56,9 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
       for (auto index = ChunkOffset(0); index < length; index++) {
         *target_iter = source_iter->value();
 
-        if (target_is_nullable) {
-          if (source_iter->is_null()) {
-            target_value_segment->set_null_value(target_begin_offset + index);
-          }
-        } else {
-          Assert(!source_iter->is_null(), "Cannot insert NULL into NOT NULL target");
+        if (source_iter->is_null()) {
+          // ValueSegment not being NULLable will be handled over there
+          target_value_segment->set_null_value(target_begin_offset + index);
         }
 
         ++source_iter;

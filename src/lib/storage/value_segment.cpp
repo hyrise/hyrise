@@ -109,7 +109,7 @@ const pmr_vector<bool>& ValueSegment<T>::null_values() const {
 
 template <typename T>
 void ValueSegment<T>::set_null_value(const ChunkOffset chunk_offset) {
-  DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
+  Assert(is_nullable(), "This ValueSegment does not support null values.");
 
   std::lock_guard<std::mutex> lock{_null_value_modification_mutex};
   (*_null_values)[chunk_offset] = true;

@@ -917,7 +917,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
 
   auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
-  if (null_values.empty()) {
+  if (!NEEDS_NULL) {
     output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values));
   } else {
     output_segment =
