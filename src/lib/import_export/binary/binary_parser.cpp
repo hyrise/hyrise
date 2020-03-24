@@ -301,8 +301,16 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
-  pmr_vector<pmr_string> values(count);
-  file.read(reinterpret_cast<char*>(values.data()), values.size() * string_length);
+  std::vector<pmr_string> values(count);
+
+  for (uint32_t row = 0; row < count; row++) {
+    std::ostringstream value;
+    for (uint32_t c = 0; c < string_length; c++) {
+      value << _read_value<char>(file);
+    }
+    values[row] = pmr_string(value.str());
+  }
+
   return std::make_shared<FixedStringVector>(values.begin(), values.end(), string_length);
 }
 
