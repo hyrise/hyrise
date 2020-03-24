@@ -151,6 +151,13 @@ void SimpleClusteringAlgo::run() {
       // TODO
       // metrics.chunk_order_by_table = chunk_order_by_table;
 
+
+      // copy constraints, TPCHBenchmarkItemRunner complains otherwise
+      for (const auto &constraint : original_table->get_soft_unique_constraints()) {
+        mutable_sorted_table->add_soft_unique_constraint(constraint.columns, constraint.is_primary_key);
+      }
+
+
       // finalize all chunks, then perform encoding (currently fixed to Dictionary)
       for (auto chunk_id = ChunkID{0}; chunk_id < mutable_sorted_table->chunk_count(); ++chunk_id) {
         const auto chunk = mutable_sorted_table->get_chunk(chunk_id);
@@ -163,16 +170,12 @@ void SimpleClusteringAlgo::run() {
       storage_manager.add_table(table_name, mutable_sorted_table);
 
       std::cout << "final table size of " << table_name << " is: " << mutable_sorted_table->row_count() << std::endl;
-
     }
     // TODO
     // metrics.sort_duration = timer.lap();
     //std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
-
-
-
-
   }
+
 }
 
 } // namespace opossum

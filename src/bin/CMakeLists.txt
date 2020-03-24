@@ -14,8 +14,6 @@ add_executable(
     hyrisePlayground
 
     playground.cpp
-    clustering/benchmark_parsers.cpp
-    clustering/benchmark_parsers.hpp
 )
 
 target_link_libraries(
