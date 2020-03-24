@@ -16,8 +16,6 @@ class BinaryParserTest : public BaseTest {
   const std::string _reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_BinaryParserTest : public BinaryParserTest {}; /* #1367 */
-
 class BinaryParserMultiEncodingTest : public BinaryParserTest, public ::testing::WithParamInterface<EncodingType> {};
 
 auto import_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
@@ -277,7 +275,7 @@ TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(DISABLED_BinaryParserTest, FixedStringDictionarySingleChunk) {  // #1367
+TEST_F(BinaryParserTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -293,7 +291,7 @@ TEST_F(DISABLED_BinaryParserTest, FixedStringDictionarySingleChunk) {  // #1367
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(DISABLED_BinaryParserTest, FixedStringDictionaryMultipleChunks) {  // #1367
+TEST_F(BinaryParserTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 

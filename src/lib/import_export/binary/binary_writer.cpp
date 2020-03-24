@@ -205,7 +205,8 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
+                                  std::ofstream& ofstream) {
   Assert(fixed_string_dictionary_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
   Assert(is_fixed_size_byte_aligned(*fixed_string_dictionary_segment.compressed_vector_type()),
@@ -217,9 +218,10 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
   export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
 
   // Write the dictionary size and dictionary
-  export_value(ofstream, static_cast<ValueID::base_type>(fixed_string_dictionary_segment.fixed_string_dictionary()->size()));
+  export_value(ofstream,
+               static_cast<ValueID::base_type>(fixed_string_dictionary_segment.fixed_string_dictionary()->size()));
   const auto string_length = fixed_string_dictionary_segment.fixed_string_dictionary()->string_length();
-  export_value(ofstream, static_cast<size_t>(string_length));
+  export_value(ofstream, static_cast<uint32_t>(string_length));
   export_values(ofstream, *fixed_string_dictionary_segment.fixed_string_dictionary());
 
   // Write attribute vector

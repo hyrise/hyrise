@@ -73,7 +73,7 @@ pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   }
 }
 
-char* FixedStringVector::data() { return _chars.data(); }
+const char* FixedStringVector::data() const { return _chars.data(); }
 
 size_t FixedStringVector::size() const { return _size; }
 

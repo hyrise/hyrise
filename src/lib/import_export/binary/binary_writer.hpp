@@ -139,7 +139,7 @@ class BinaryWriter {
    * Column Type           | ColumnType                            |   1
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
-   * FixedString length    | size_t                                |   ?
+   * FixedString length    | uint32_t                              |   8
    * Dictionary Values     | char[]                                |   dict. size * fixed string length
    * Attribute v. values   | uintX                                 |   rows * width of attribute v.
    *
@@ -151,7 +151,8 @@ class BinaryWriter {
    * @param ofstream The output stream for exporting
    */
   template <typename T>
-  static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment, std::ofstream& ofstream);
+  static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
+                             std::ofstream& ofstream);
 
   /**
    * RunLength Segments are dumped with the following layout:

@@ -28,8 +28,6 @@ class BinaryWriterTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_BinaryWriterTest : public BinaryWriterTest {}; /* #1367 */
-
 class BinaryWriterMultiEncodingTest : public BinaryWriterTest, public ::testing::WithParamInterface<EncodingType> {};
 
 auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
@@ -60,7 +58,7 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 */
+TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -79,7 +77,7 @@ TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 *
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 

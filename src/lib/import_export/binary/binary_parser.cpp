@@ -133,6 +133,8 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
       return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
     case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
+    case EncodingType::FixedStringDictionary:
+      return _import_fixed_string_dictionary_segment(file, row_count);
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
@@ -173,6 +175,18 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
+}
+
+std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
+    std::ifstream& file, ChunkOffset row_count) {
+  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
+  const auto dictionary_size = _read_value<ValueID>(file);
+
+  const auto dictionary = _import_fixed_string_vector(file, dictionary_size);
+
+  auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
+
+  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(dictionary, attribute_vector);
 }
 
 template <typename T>
@@ -283,6 +297,13 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
+}
+
+std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
+  const auto string_length = _read_value<uint32_t>(file);
+  pmr_vector<pmr_string> values(count);
+  file.read(reinterpret_cast<char*>(values.data()), values.size() * string_length);
+  return std::make_shared<FixedStringVector>(values.begin(), values.end(), string_length);
 }
 
 }  // namespace opossum

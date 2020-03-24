@@ -73,6 +73,9 @@ class BinaryParser {
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 
+  static std::shared_ptr<FixedStringDictionarySegment<pmr_string>> _import_fixed_string_dictionary_segment(
+      std::ifstream& file, ChunkOffset row_count);
+
   template <typename T>
   static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
 
@@ -88,6 +91,8 @@ class BinaryParser {
 
   static std::unique_ptr<const BaseCompressedVector> _import_offset_value_vector(
       std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width);
+
+  static std::shared_ptr<FixedStringVector> _import_fixed_string_vector(std::ifstream& file, const size_t count);
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>
