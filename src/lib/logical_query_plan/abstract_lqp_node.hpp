@@ -160,6 +160,34 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   [[nodiscard]] virtual const std::shared_ptr<const ExpressionsConstraintDefinitions> constraints() const;
 
   /**
+   * TODO(Julian)
+   * @return
+   */
+  [[nodiscard]] bool unique(ExpressionUnorderedSet column_expressions) {
+    const auto constraints = this->constraints();
+    if(constraints->empty()) return false;
+
+    // Find constraints that are solely based on columns inside of column_expressions
+    auto constraints_applicable = std::vector<ExpressionsConstraintDefinition>{};
+    for(const auto& constraint : *constraints) {
+      if (std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(), [&](const auto constraint_column_expr) {
+        return column_expressions.contains(constraint_column_expr);
+      })) {
+        constraints_applicable.push_back(constraint);
+      }
+    }
+
+    // Final check
+
+    if(constraints_applicable.empty()) return false;µ
+    while(!constraints_applicable.empty()) {
+
+    }
+
+    return false;
+  }
+
+  /**
    * Perform a deep equality check
    */
   bool operator==(const AbstractLQPNode& rhs) const;
