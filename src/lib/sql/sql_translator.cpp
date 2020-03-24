@@ -1507,7 +1507,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                                  [&aggregate_expression](const auto input_expression) {
                                    return *input_expression == *aggregate_expression;
                                  }),
-                    "Hyrise cannot handle repeated aggregate expressions, see code #1902 for details.");
+                    "Hyrise cannot handle repeated aggregate expressions, see #1902 for details.");
 
         return aggregate_expression;
       }
