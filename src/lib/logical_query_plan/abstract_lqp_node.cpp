@@ -55,8 +55,8 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 namespace opossum {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
-                                 const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions)
-    : type(node_type), node_expressions(node_expressions) {}
+                                 const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions)
+    : type(node_type), node_expressions(init_node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
   Assert(
@@ -104,15 +104,15 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 }
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
-  DebugAssert(
-      right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union || type == LQPNodeType::Update,
-      "This node type does not accept a right input");
+  DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
+                  type == LQPNodeType::Update || type == LQPNodeType::ChangeMetaTable,
+              "This node type does not accept a right input");
   set_input(LQPInputSide::Right, right);
 }
 
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
   DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
-                  type == LQPNodeType::Union || type == LQPNodeType::Update,
+                  type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::ChangeMetaTable,
               "This node type does not accept a right input");
 
   // We need a reference to _inputs[input_idx], so not calling this->input(side)

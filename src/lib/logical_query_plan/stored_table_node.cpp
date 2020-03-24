@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name)
-    : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
+StoredTableNode::StoredTableNode(const std::string& init_table_name)
+    : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
 
 LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
