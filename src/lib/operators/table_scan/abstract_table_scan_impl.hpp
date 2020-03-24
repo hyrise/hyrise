@@ -5,7 +5,9 @@
 #endif
 
 #include <array>
+#include <atomic>
 
+#include "operators/operator_performance_data.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
@@ -24,6 +26,9 @@ class AbstractTableScanImpl {
   virtual std::string description() const = 0;
 
   virtual std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) const = 0;
+
+  mutable std::atomic<size_t> chunk_scans_skipped{0};
+  mutable std::atomic<size_t> chunk_scans_sorted{0};
 
  protected:
   /**

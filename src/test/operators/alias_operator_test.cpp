@@ -25,7 +25,7 @@ class AliasOperatorTest : public BaseTest {
 TEST_F(AliasOperatorTest, Name) {
   EXPECT_EQ(alias_operator->name(), "Alias");
   EXPECT_EQ(alias_operator->description(DescriptionMode::SingleLine), "Alias [z, x, y]");
-  EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias [z\nx\ny]");
+  EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias\n[z\nx\ny]");
 }
 
 TEST_F(AliasOperatorTest, OutputColumnNames) {

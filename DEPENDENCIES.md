@@ -39,6 +39,7 @@
 - join-order-benchmark (https://github.com/gregrahn/join-order-benchmark)
 - libpqxx (https://github.com/jtv/libpqxx)
 - lz4 (https://github.com/lz4/lz4)
+- magic_enum (https://github.com/Neargye/magic_enum)
 - nlohmann_json (https://github.com/nlohmann/json)
 - pgasus (https://github.com/kateyy/pgasus)
 - sql-parser (https://github.com/hyrise/sql-parser)

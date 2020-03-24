@@ -35,7 +35,7 @@ class TransactionContextTest : public BaseTest {
 /**
  * @brief Helper operator.
  *
- * It calls the functor between a context’s assignment of a commit ID and it final commit.
+ * It calls the functor between a context’s assignment of a commit ID and its final commit.
  */
 class CommitFuncOp : public AbstractReadWriteOperator {
  public:
