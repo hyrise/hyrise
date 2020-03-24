@@ -351,7 +351,6 @@ TEST_F(EncodedSegmentTest, DictionaryAccessCounters) {
             (SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}));
 
   EXPECT_EQ(0, dictionary_encoded_segment->access_counter[SegmentAccessCounter::AccessType::Dictionary]);
-  auto iterable = create_iterable_from_segment(*dictionary_encoded_segment);
   const auto dictionary = dictionary_encoded_segment->dictionary();
   // The iterator requests a reference to the dictionary of the DictionarySegment.
   // This increases the dictionary count by the size of the dictionary
