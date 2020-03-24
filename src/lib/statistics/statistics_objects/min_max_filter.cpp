@@ -20,7 +20,7 @@ template <typename T>
 Cardinality MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
                                                   const AllTypeVariant& variant_value,
                                                   const std::optional<AllTypeVariant>& variant_value2) const {
-  return 0;
+  Fail("MinMaxFilters cannot be used to estimate cardinalities");
 }
 
 template <typename T>
@@ -103,6 +103,8 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     return false;
   }
 
+  // We expect the caller (e.g., the ChunkPruningRule) to handle type-safe conversions. Boost will throw an exception
+  // if this was not done.
   const auto value = boost::get<T>(variant_value);
 
   // Operators work as follows: value_from_table <operator> value

@@ -11,19 +11,18 @@
 namespace opossum {
 
 /**
- *  Filter that stores a segment's minimum and maximum value
+ * Filter that stores a minimum and maximum value for a number of rows.
+ * MinMaxFilters are typically created for a single chunk and can be used to check whether
+ * a certain value exists in the segment.
 */
 template <typename T>
+// TODO @Bouncner: Could you clarify the "Filter" terminology? What makes a filter a filter? Histograms can be used
+// for pruning, too.
+// TODO @Bouncner: Why do we have MinMaxFilter/RangeFilter if we could also create a histogram? Are these cheaper to
+// store or significantly cheaper to create?
 class MinMaxFilter : public AbstractStatisticsObject {
  public:
   explicit MinMaxFilter(T init_min, T init_max);
-  ~MinMaxFilter() override = default;
-
-  // cppcoreguidelines-special-member-functions
-  MinMaxFilter(const MinMaxFilter& other) = default;
-  MinMaxFilter(MinMaxFilter&& other) = default;
-  MinMaxFilter& operator=(const MinMaxFilter& other) = default;
-  MinMaxFilter& operator=(MinMaxFilter&& other) = default;
 
   Cardinality estimate_cardinality(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
