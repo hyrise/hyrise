@@ -181,7 +181,6 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
     std::ifstream& file, ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-
   const auto dictionary = _import_fixed_string_vector(file, dictionary_size);
 
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);

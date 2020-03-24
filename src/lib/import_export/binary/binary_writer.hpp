@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
 #include "storage/reference_segment.hpp"
