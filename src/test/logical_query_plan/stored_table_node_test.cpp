@@ -201,22 +201,6 @@ TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(_stored_table_node->constraints()->empty());
 }
 
-TEST_F(StoredTableNodeTest, ConstraintsUniqueUtilityFunction) {
-  const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  EXPECT_FALSE(_stored_table_node->unique({lqp_column_(_a), lqp_column_(_b)}));
-  EXPECT_FALSE(_stored_table_node->unique({lqp_column_(_c)}));
-
-  const auto table_constraint_1 = TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id()}};
-  const auto table_constraint_2 = TableConstraintDefinition{{_c.original_column_id()}};
-  table->add_soft_unique_constraint(table_constraint_1);
-  table->add_soft_unique_constraint(table_constraint_2);
-
-  EXPECT_FALSE(_stored_table_node->unique({lqp_column_(_a)}));
-  EXPECT_FALSE(_stored_table_node->unique({lqp_column_(_b)}));
-  EXPECT_TRUE(_stored_table_node->unique({lqp_column_(_a), lqp_column_(_b)}));
-  EXPECT_TRUE(_stored_table_node->unique({lqp_column_(_c)}));
-}
-
 TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
   // No constraints => No functional dependencies
   EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());

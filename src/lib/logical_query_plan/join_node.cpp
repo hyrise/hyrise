@@ -73,21 +73,44 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
 
 const std::shared_ptr<const ExpressionsConstraintDefinitions> JoinNode::constraints() const {
 
-  // Determine uniqueness of join column(s) for both sides
- //  const auto join_expression = _join //TODO Continue here!
+  // The Semi-Join outputs input_left() without adding any rows or columns. But depending on the right table,
+  // tuples may be filtered out. As a consequence, we can forward the constraints.
+  if(join_mode == JoinMode::Semi) forward_constraints();
 
+  // No guarantees for multi predicate joins
+  if(join_predicates().size() > 1) return {};
 
+  // No guarantees for Non-Equi Joins
+  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
+  if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return {};
+
+  // Check for uniqueness of join key columns
+  bool left_operand_unique = left_input()->is_column_set_unique({join_predicate->left_operand()});
+  bool right_operand_unique = right_input()->is_column_set_unique({join_predicate->right_operand()});
 
   switch(join_mode) {
   case JoinMode::Inner: {
-    // If both
+      if(left_operand_unique && right_operand_unique) {
+        // Due to the one-to-one relationship, the constraints of both sides remain valid.
+        auto left_constraints = left_input()->constraints();
+        auto right_constraints = right_input()->constraints();
 
-    // TODO 1. Merge input constraints input_left() and input_right()
-
-    // TODO 2. Check for valid constraints and forward if applicable
-    // Remove primary key flags
-
-      return {};
+        auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+        for(auto it = left_constraints->begin(); it != left_constraints->end();) {
+          output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
+        }
+//        output_constraints->emplace(right_input()->constraints());
+        return output_constraints;
+      } else if(left_operand_unique) {
+        // Uniqueness on the left prevents duplication of records on the right
+        return right_input()->constraints();
+      } else if(right_operand_unique) {
+        // Uniqueness on the right prevents duplication of records on the left
+        return left_input()->constraints();
+      } else {
+        // Records of both input tables might get duplicated.
+        return {};
+      }
     }
     case JoinMode::Left: {
       // The Left (outer) Join adds null values for tuples not present in the right table.
@@ -113,9 +136,7 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> JoinNode::constrai
       return {};
     }
     case JoinMode::Semi: {
-      // The Semi-Join outputs input_left() without adding any rows or columns. But depending on the right table,
-      // tuples may be filtered out. As a consequence, we can forward the constraints.
-      return forward_constraints();
+      Fail("JoinMode::Semi should already be handled.");
     }
     case JoinMode::AntiNullAsTrue: {
       // ?

@@ -274,6 +274,26 @@ const std::shared_ptr<const ExpressionsConstraintDefinitions> AbstractLQPNode::f
   return input_constraints;
 }
 
+bool AbstractLQPNode::is_column_set_unique(ExpressionUnorderedSet column_expressions) const {
+  const auto constraints = this->constraints();
+  if(constraints->empty()) return false;
+
+  // Look for constraint that is solely based on the given column expressions
+  for(const auto& constraint : *constraints) {
+    if(constraint.column_expressions.size() == column_expressions.size() &&
+       std::all_of(column_expressions.cbegin(), column_expressions.cend(),
+                   [&](const auto column_expression) {
+                     return constraint.column_expressions.contains(column_expression);
+                   }))
+    {
+      // Found match
+      return true;
+    }
+  }
+  // No match found
+  return false;
+}
+
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
