@@ -130,7 +130,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
           const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
           assert(column_expression);
           //const auto column_id = column_expression->column_reference.original_column_id();
-          const auto column_id = node->find_column_id(column_expression);
+          const auto column_id = node->find_column_id(*expression);
           std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
 
           const std::string table_name = table_node->table_name;
