@@ -595,8 +595,8 @@ int Console::_export_table(const std::string& args) {
   auto get_table = std::make_shared<GetTable>(tablename);
   get_table->execute();
 
-  auto exporter = std::make_shared<Export>(get_table, filepath);
   try {
+    auto exporter = std::make_shared<Export>(get_table, filepath);
     exporter->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");

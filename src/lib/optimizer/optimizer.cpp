@@ -89,14 +89,20 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 
 namespace opossum {
 
+std::shared_ptr<Optimizer> Optimizer::create_pruning_optimizer() {
+  const auto optimizer = std::make_shared<Optimizer>();
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+  return optimizer;
+}
+
+
+
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
-
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
@@ -260,6 +266,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
         case LQPNodeType::Delete:
+        case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
         case LQPNodeType::Predicate:

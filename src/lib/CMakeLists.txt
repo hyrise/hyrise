@@ -78,6 +78,8 @@ set(
     expression/lqp_subquery_expression.hpp
     expression/placeholder_expression.cpp
     expression/placeholder_expression.hpp
+    expression/typed_placeholder_expression.cpp
+    expression/typed_placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
     expression/pqp_subquery_expression.cpp
@@ -125,6 +127,8 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/export_node.cpp
+    logical_query_plan/export_node.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp

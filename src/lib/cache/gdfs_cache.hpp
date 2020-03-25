@@ -12,7 +12,7 @@ namespace opossum {
 
 // Generic cache implementation using the GDFS policy.
 // Note: This implementation is not thread-safe.
-template <typename Key, typename Value, typename Hash, typename KeyEqual>
+template <typename Key, typename Value, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
 class GDFSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
  public:
   // Entries within the GDFS cache.

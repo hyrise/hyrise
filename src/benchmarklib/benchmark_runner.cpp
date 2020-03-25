@@ -28,8 +28,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
-  SQLPipelineBuilder::default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-  SQLPipelineBuilder::default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
@@ -323,6 +323,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
           for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
             auto sql_statement_metrics_json =
                 nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
+                               {"cache_duration", sql_statement_metrics->cache_duration.count()},
                                {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
                                {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
                                {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},

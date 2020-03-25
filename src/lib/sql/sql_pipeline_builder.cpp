@@ -1,13 +1,11 @@
 #include "sql_pipeline_builder.hpp"
+#include "hyrise.hpp"
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
 
-std::shared_ptr<SQLPhysicalPlanCache> SQLPipelineBuilder::default_pqp_cache{};
-std::shared_ptr<SQLLogicalPlanCache> SQLPipelineBuilder::default_lqp_cache{};
-
 SQLPipelineBuilder::SQLPipelineBuilder(const std::string& sql)
-    : _sql(sql), _pqp_cache(default_pqp_cache), _lqp_cache(default_lqp_cache) {}
+    : _sql(sql), _pqp_cache(Hyrise::get().default_pqp_cache), _lqp_cache(Hyrise::get().default_lqp_cache) {}
 
 SQLPipelineBuilder& SQLPipelineBuilder::with_mvcc(const UseMvcc use_mvcc) {
   _use_mvcc = use_mvcc;
@@ -47,8 +45,9 @@ SQLPipelineBuilder& SQLPipelineBuilder::dont_cleanup_temporaries() {
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
+  auto pruning_optimizer = _pruning_optimizer ? _pruning_optimizer : Optimizer::create_pruning_optimizer();
   auto pipeline =
-      SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache, _cleanup_temporaries);
+      SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, pruning_optimizer, _pqp_cache, _lqp_cache, _cleanup_temporaries);
   DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_per_statement().size(), _sql.c_str(),
                 reinterpret_cast<uintptr_t>(this));
   return pipeline;
@@ -57,8 +56,9 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
 SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
     std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
+  auto pruning_optimizer = _pruning_optimizer ? _pruning_optimizer : Optimizer::create_pruning_optimizer();
 
-  return {_sql,       std::move(parsed_sql), _use_mvcc, _transaction_context, optimizer, _pqp_cache,
+  return {_sql,       std::move(parsed_sql), _use_mvcc, _transaction_context, optimizer, pruning_optimizer, _pqp_cache,
           _lqp_cache, _cleanup_temporaries};
 }
 

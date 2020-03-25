@@ -35,13 +35,6 @@ class Optimizer;
  */
 class SQLPipelineBuilder final {
  public:
-  // Plan caches used if `with_{l/p}qp_cache()` are not used in this builder. Both default caches can be nullptr
-  // themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
-  // These default caches stem from the extended discussion in #1615 and are mainly for Plugins, whose only
-  // way of communicating with Hyrise are global variables.
-  static std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
-  static std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
-
   explicit SQLPipelineBuilder(const std::string& sql);
 
   SQLPipelineBuilder& with_mvcc(const UseMvcc use_mvcc);
@@ -74,6 +67,7 @@ class SQLPipelineBuilder final {
   UseMvcc _use_mvcc{UseMvcc::Yes};
   std::shared_ptr<TransactionContext> _transaction_context;
   std::shared_ptr<Optimizer> _optimizer;
+  std::shared_ptr<Optimizer> _pruning_optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
   CleanupTemporaries _cleanup_temporaries{true};
