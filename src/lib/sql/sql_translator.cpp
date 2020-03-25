@@ -303,7 +303,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 
   // Store resolved WithDescription / temporary view
   const auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
-  //   A WITH description masks a preceding WITH description if their aliases are identical
+  // A WITH description masks a preceding WITH description if their aliases are identical
   AssertInput(_with_descriptions.count(desc.alias) == 0, "Invalid redeclaration of WITH alias.");
   _with_descriptions.emplace(desc.alias, lqp_view);
 }
@@ -1499,11 +1499,19 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             }
         }
 
-        // Check for aggregate expressions that occur both at the current node and in its inputs. Our current expression
-        // system cannot handle this case, see #1902 for details. This check here might have false positives, feel free
-        // to improve the check or tackle the underlying issue if this ever becomes an issue.
-        const auto input_expressions = _current_lqp->column_expressions();
-        AssertInput(std::none_of(input_expressions.cbegin(), input_expressions.cend(),
+        // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
+        //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2
+        // Our current expression system cannot handle this case and would consider the two COUNT(a) to be identical,
+        // see #1902 for details. This check here might have false positives, feel free to improve the check or tackle
+        // the underlying issue if this ever becomes an issue.
+        auto table_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+        DebugAssert(_from_clause_result, "_from_clause_result should be set by now");
+        table_expressions.reserve(_from_clause_result->elements_in_order.size());
+        for (const auto& select_list_element : _from_clause_result->elements_in_order) {
+          table_expressions.emplace_back(select_list_element.expression);
+        }
+
+        AssertInput(std::none_of(table_expressions.cbegin(), table_expressions.cend(),
                                  [&aggregate_expression](const auto input_expression) {
                                    return *input_expression == *aggregate_expression;
                                  }),
