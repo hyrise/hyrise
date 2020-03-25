@@ -1108,6 +1108,8 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   }
 }
 
+// Not all Operators forward the sorted flag. Note that sortedness being forwarded by table scan is implementation defined.
+// Not all operators forward sortedness and end up with results that are unsorted
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
   // Verify that the order_by flag is not set when it's not present in left input.
   const auto scan_unsorted =

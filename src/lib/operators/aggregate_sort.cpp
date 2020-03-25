@@ -280,8 +280,8 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     // all sort operator on single-chunk table
     auto input_order_by = input_table->get_chunk(chunk_id)->ordered_by();
     auto output_order_by = input_order_by;
-    auto skip_sorting = false;
     for (const auto& column_id : _groupby_column_ids) {
+      auto skip_sorting = false;
       // Skip already sorted columns
       if (input_order_by) {
         for (const auto& ordered_by : *input_order_by) {
@@ -301,7 +301,6 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
         single_chunk_table = sort->get_output();
         output_order_by = {std::pair<ColumnID, OrderByMode>(std::make_pair(column_id, OrderByMode::Ascending))};
       }
-      skip_sorting = false;
     }
 
     // add sorted chunk to output table
@@ -432,7 +431,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   std::shared_ptr<const Table> sorted_table = input_table;
   if (!_groupby_column_ids.empty()) {
     /**
-     * Check if the value clustering matches the columns we are grouping by
+     * Table-wide sortedness is not tracked yet.
+     * Thus it is checked if the value clustering matches the columns we are grouping by
      * (these are the columns we would need to sort by to achieve value clustering).
      * If the input is already value clustered according to our needs, this means that values that would end up
      * in the same cluster are already in the same chunk.
@@ -440,7 +440,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (table_value_clustered_by && !table_value_clustered_by->empty() &&
+    if (table_value_clustered_by &&
         std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(table_value_clustered_by->begin())) !=
             _groupby_column_ids.end()) {
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)

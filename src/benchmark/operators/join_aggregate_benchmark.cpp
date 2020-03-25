@@ -164,15 +164,15 @@ void BM_Join_Aggregate(benchmark::State& state) {
       std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
   warmup_join->execute();
 
-  auto warmup_aggregate_sort = std::make_shared<AggType>(warmup_join, aggregates, groupby);
-  warmup_aggregate_sort->execute();
+  auto warmup_aggregate = std::make_shared<AggType>(warmup_join, aggregates, groupby);
+  warmup_aggregate->execute();
 
   for (auto _ : state) {
     auto join =
         std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
     join->execute();
-    auto aggregate_sort = std::make_shared<AggType>(join, aggregates, groupby);
-    aggregate_sort->execute();
+    auto aggregate = std::make_shared<AggType>(join, aggregates, groupby);
+    aggregate->execute();
   }
 }
 

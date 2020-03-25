@@ -79,7 +79,7 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
   EXPECT_EQ(expected_value_clustering, actual_value_clustering);
 }
 
-TEST_F(OperatorsJoinSortMergeTest, MaintainSortedness) {
+TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
   const auto test_table = std::make_shared<Table>(
       TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}},
       TableType::Data);

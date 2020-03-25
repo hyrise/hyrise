@@ -142,7 +142,10 @@ class Chunk : private Noncopyable {
 
   /**
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
-   * the ColumnID of the segment by which it is sorted will be returned.
+   * the ColumnIDs of the segments by which it is sorted will be returned.
+   * Chunks can be ordered by multiple segments. For example, in a table storing orders, both the order id and date of incoming
+   * orders are incrementing. This leads to chunks being ordered on multiple columns.
+   *
    * This is currently taken advantage of in, e.g., the ColumnVsValueScan. See #1519 for more details.
    */
   const std::optional<std::vector<std::pair<ColumnID, OrderByMode>>>& ordered_by() const;

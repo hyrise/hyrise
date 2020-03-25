@@ -1,3 +1,5 @@
+#include "predicate_reordering_rule.hpp"
+
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -11,7 +13,6 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "predicate_reordering_rule.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"

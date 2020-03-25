@@ -206,6 +206,11 @@ class Table : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
+   * A value clustered table has all its data value clustered on a specific column among its chunks, i.e. all values in that column,
+   * sharing a specific property are guaranteed to be in one chunk. For example, a table could be radix clustered for the last bit.
+   * This means that all values whose bit-representation ends with a '1' are in one chunk and all ending with a
+   * '0' are in the other. In an other example, a table could be value clustered for odd and even values.
+   *
    * If the table is value clustered in any way, the ColumnID of the segment by which it is clustered
    * will be returned.
    */
