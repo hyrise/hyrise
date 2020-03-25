@@ -222,7 +222,7 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
   Assert(!is_mutable(), "Cannot set ordered_by on mutable chunks.");
 
   if (!_ordered_by) {
-    _ordered_by.emplace({ordered_by});
+    set_ordered_by(std::vector<std::pair<ColumnID, OrderByMode>>{ordered_by});
   }
   for (auto order_by_it = _ordered_by->begin(); order_by_it != _ordered_by->end(); ++order_by_it) {
     if (order_by_it->first == ordered_by.first) {
@@ -240,7 +240,7 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
 }
 
 void Chunk::set_ordered_by(const std::vector<std::pair<ColumnID, OrderByMode>>& ordered_by) {
-  _ordered_by.emplace(ordered_by);
+  _ordered_by = ordered_by;
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {

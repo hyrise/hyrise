@@ -340,7 +340,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
   }
-  _value_clustered_by.emplace(value_clustered_by);
+  _value_clustered_by = std::optional<std::vector<ColumnID>>(value_clustered_by);
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
