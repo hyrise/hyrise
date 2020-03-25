@@ -124,7 +124,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     if (node) {
       const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
       if (table_node) {
-        const auto &table_statistics = table_node->table_statistics;
+        const std::string table_name = table_node->table_name;
+        const auto table = Hyrise::get().storage_manager.get_table(table_name);
+        const auto &table_statistics = table->table_statistics();
 
         for (auto &expression: table_node->column_expressions()) {
           const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
@@ -134,8 +136,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
           if (column_id) {
             std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
 
-            const std::string table_name = table_node->table_name;
-            const auto table = Hyrise::get().storage_manager.get_table(table_name);
             auto data_type = table->column_data_type(*column_id);
             resolve_data_type(data_type, [&] (auto type) {
               using ColumnDataType = typename decltype(type)::type;
