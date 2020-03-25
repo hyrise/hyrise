@@ -29,11 +29,11 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
       const auto& chunk = table->get_chunk(chunk_id);
       const auto& ordered_by = chunk->ordered_by();
       if (ordered_by) {
-        for (const auto& ordered_by_single : *ordered_by) {
+        for (const auto& [ordered_by_column_id, ordered_by_mode] : *ordered_by) {
           std::stringstream order_by_mode_stream;
-          order_by_mode_stream << ordered_by_single.second;
+          order_by_mode_stream << ordered_by_mode;
           output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id),
-                                static_cast<int32_t>(ordered_by_single.first), pmr_string{order_by_mode_stream.str()}});
+                                static_cast<int32_t>(ordered_by_column_id), pmr_string{order_by_mode_stream.str()}});
         }
       }
     }
