@@ -470,7 +470,8 @@ TEST_F(SQLTranslatorTest, RepeatingAggregates) {
 
   EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2"), InvalidInputException);
 
-  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) AS b FROM t GROUP BY a) t2"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) AS b FROM t GROUP BY a) t2"),
+               InvalidInputException);
 
   EXPECT_THROW(compile_query("SELECT AVG(a) FROM (SELECT a, AVG(a) FROM t GROUP BY a) t3"), InvalidInputException);
 }
