@@ -16,10 +16,10 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   using ValueType = T;
 
   explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
-      : _segment{segment}, _dictionary(*segment.dictionary()) {}
+      : _segment{segment}, _dictionary(*segment.dictionary()), _null_value_id(_segment.null_value_id()) {}
 
   explicit DictionarySegmentIterable(const FixedStringDictionarySegment<pmr_string>& segment)
-      : _segment{segment}, _dictionary(*segment.fixed_string_dictionary()) {}
+      : _segment{segment}, _dictionary(*segment.fixed_string_dictionary()), _null_value_id(_segment.null_value_id()) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -27,9 +27,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& attribute_vector) {
       using ZsDecompressorType = std::decay_t<decltype(attribute_vector.create_decompressor())>;
 
-      auto begin = Iterator<ZsDecompressorType>{&_dictionary, _segment.null_value_id(),
+      auto begin = Iterator<ZsDecompressorType>{&_dictionary, _null_value_id,
                                                                     attribute_vector.create_decompressor(), ChunkOffset{0u}};
-      auto end = Iterator<ZsDecompressorType>{&_dictionary, _segment.null_value_id(),
+      auto end = Iterator<ZsDecompressorType>{&_dictionary, _null_value_id,
                                                                       attribute_vector.create_decompressor(),
                                                                       static_cast<ChunkOffset>(_segment.size())};
 
@@ -44,10 +44,10 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using ZsDecompressorType = std::decay_t<decltype(attribute_vector.create_decompressor())>;
 
       auto begin = PointAccessIterator<ZsDecompressorType>{
-          &_dictionary, _segment.null_value_id(), attribute_vector.create_decompressor(), position_filter->cbegin(),
+          &_dictionary, _null_value_id, attribute_vector.create_decompressor(), position_filter->cbegin(),
           position_filter->cbegin()};
       auto end = PointAccessIterator<ZsDecompressorType>{
-          &_dictionary, _segment.null_value_id(), attribute_vector.create_decompressor(), position_filter->cbegin(),
+          &_dictionary, _null_value_id, attribute_vector.create_decompressor(), position_filter->cbegin(),
           position_filter->cend()};
       functor(begin, end);
     });
@@ -62,10 +62,10 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
-    Iterator(const Dictionary* dictionary, ValueID null_value_id, ZsDecompressorType attribute_decompressor,
+    Iterator(const Dictionary* dictionary, const ValueID null_value_id, ZsDecompressorType attribute_decompressor,
              ChunkOffset chunk_offset)
         : _dictionary{dictionary},
-          _null_value_id{null_value_id},
+          _null_value_id(null_value_id),
           _attribute_decompressor{std::move(attribute_decompressor)},
           _chunk_offset{chunk_offset} {}
 
@@ -118,14 +118,14 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
-    PointAccessIterator(const Dictionary* dictionary, ValueID null_value_id,
+    PointAccessIterator(const Dictionary* dictionary, const ValueID null_value_id,
                         ZsDecompressorType attribute_decompressor, PosList::const_iterator position_filter_begin,
                         PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _dictionary{dictionary},
-          _null_value_id{null_value_id},
+          _null_value_id(null_value_id),
           _attribute_decompressor{std::move(attribute_decompressor)} {}
 
    private:
@@ -155,6 +155,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
  private:
   const BaseDictionarySegment& _segment;
   const Dictionary& _dictionary;
+  const ValueID _null_value_id;
 };
 
 template <typename T>
