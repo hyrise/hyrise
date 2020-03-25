@@ -1,3 +1,7 @@
+-- The queries in this file are automatically executed by the SQLiteTestRunner as part of hyriseTest.
+-- Their result is then compared to that of SQLite.
+-- Tables are loaded from sqlite_testrunner.tables.
+
 -- Select entire table
 SELECT * FROM mixed;
 SELECT * FROM mixed_null;
