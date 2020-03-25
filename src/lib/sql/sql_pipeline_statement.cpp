@@ -25,6 +25,7 @@
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
+#include "resolve_type.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "sql/sql_pipeline_builder.hpp"
