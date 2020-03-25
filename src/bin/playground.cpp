@@ -17,6 +17,7 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "operators/get_table.hpp"
+#include "operators/table_scan.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
@@ -76,6 +77,81 @@ const nlohmann::json _compute_pruned_chunks_per_table() {
   return pruned_chunks_per_table;
 }
 
+bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node, std::map<std::string, std::vector<std::shared_ptr<const TableScan>>>& table_scans) {
+  // we want only scans that happen before joins, and on permanent columns
+  // to filter those out, we need to walk down the entire PQP recursively
+  // on the way back (i.e., up the PQP), use the return values to decide whether table scans above should be considered
+
+  bool left_input_ignores = false;
+  bool right_input_ignores = false;
+
+  if (pqp_node->input_left()) left_input_ignores = _extract_table_scans(pqp_node->input_left(), table_scans);
+  if (pqp_node->input_right()) right_input_ignores = _extract_table_scans(pqp_node->input_right(), table_scans);
+
+  // some input below could already be "illegal"
+  if (left_input_ignores || right_input_ignores) return true;
+
+  // this operator could be "illegal"
+  std::vector<std::string> forbidden_words = {"ColumnVsColumn", "SUBQUERY", "SUM", "AVG", "COUNT"};
+  const auto& description = pqp_node->description();
+  for (const auto& forbidden_word : forbidden_words) {
+    if (description.find(forbidden_word) != std::string::npos)
+      return true;
+  }
+
+  // this operator is interesting
+  // If it is a table scan, next find out the table it belongs to, and store it
+
+  if (pqp_node->type() == OperatorType::TableScan) {
+    auto op = pqp_node;
+    while (op->type() != OperatorType::GetTable) {
+      op = op->input_left();
+      Assert(op, "reached a node with no input, without reaching a GetTable");
+    }
+    auto get_table = std::dynamic_pointer_cast<const GetTable>(op);
+    Assert(get_table, "could not cast to GetTable");
+    const auto& table_name = get_table->table_name();
+
+    auto table_scan = std::dynamic_pointer_cast<const TableScan>(pqp_node);
+    Assert(table_scan, "could not cast to TableScan");
+    table_scans[table_name].push_back(table_scan);
+  }
+
+  // scans above might still be interesting
+  return false;
+}
+
+const nlohmann::json _compute_skipped_chunks_per_table() {
+  std::map<std::string, std::vector<size_t>> skipped_chunks_per_table;
+
+  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin(); iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
+    const auto& [query_string, physical_query_plan] = *iter;
+
+    std::map<std::string, std::vector<std::shared_ptr<const TableScan>>> table_scans;
+    _extract_table_scans(physical_query_plan, table_scans);
+
+    // Queries are cached just once (per parameter combination).
+    // Thus, we need to check how often the concrete queries were executed.
+    auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(Hyrise::get().default_pqp_cache->unsafe_cache());
+    const size_t frequency = gdfs_cache.frequency(query_string);
+    Assert(frequency > 0, "found a pqp for a query that was not cached");
+
+    for (const auto& table_name_table_scans : table_scans) {
+      const auto& table_name = table_name_table_scans.first;
+      for (const auto& table_scan : table_name_table_scans.second) {
+        Assert(dynamic_cast<TableScan::TableScanPerformanceData*>(table_scan->performance_data.get()), "performance data was not of type TableScanPerformanceData");
+        const auto& table_scan_performance_data = dynamic_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+
+        for (size_t run{0}; run < frequency; run++) {
+          skipped_chunks_per_table[table_name].push_back(table_scan_performance_data.chunk_scans_skipped);
+        }
+      }
+    }
+  }
+
+  return skipped_chunks_per_table;
+}
+
 void _append_additional_statistics(const std::string& result_file_path) {
       std::ifstream benchmark_result_file(result_file_path);
       auto benchmark_result_json = nlohmann::json::parse(benchmark_result_file);
@@ -84,11 +160,12 @@ void _append_additional_statistics(const std::string& result_file_path) {
       Assert(benchmark_count == 1, "expected " + result_file_path + " file containing exactly one benchmark, but it contains " + std::to_string(benchmark_count));
       const std::string query_name = benchmark_result_json["benchmarks"].at(0)["name"];
 
-      // store clustering config and chunk pruning stats
+      // store clustering config - TODO redundant to do that for each partial file, no huge overhead though
       const auto clustering_config_json = _read_clustering_config("clustering_config.json");
       benchmark_result_json["clustering_config"] = clustering_config_json;
 
       benchmark_result_json["pruning_stats"][query_name] = _compute_pruned_chunks_per_table();
+      benchmark_result_json["skipped_chunk_stats"][query_name] = _compute_skipped_chunks_per_table();
 
       // write results back
       std::ofstream final_result_file(result_file_path);
@@ -116,6 +193,7 @@ void _merge_result_files(const std::string& merge_result_file_name, const std::v
       const std::string query_name = benchmark["name"];
       merge_result_json["benchmarks"].push_back(benchmark);
       merge_result_json["pruning_stats"][query_name] = benchmark_result_json["pruning_stats"][query_name];
+      merge_result_json["skipped_chunk_stats"][query_name] = benchmark_result_json["skipped_chunk_stats"][query_name];
     }
   }
   // write results back
@@ -149,7 +227,7 @@ int main(int argc, char* argv[]) {
 
 
   // create benchmark config
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H Benchmark");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("Clustering Plugin Benchmark Runner");
 
   // clang-format off
   cli_options.add_options()
