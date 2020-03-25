@@ -131,19 +131,21 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
           assert(column_expression);
           //const auto column_id = column_expression->column_reference.original_column_id();
           const auto column_id = node->find_column_id(*expression);
-          std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
+          if (column_id) {
+            std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
 
-          const std::string table_name = table_node->table_name;
-          const auto table = Hyrise::get().storage_manager.get_table(table_name);
-          auto data_type = table->column_data_type(column_id);
-          resolve_data_type(data_type, [&] (auto type) {
-            using ColumnDataType = typename decltype(type)::type;
+            const std::string table_name = table_node->table_name;
+            const auto table = Hyrise::get().storage_manager.get_table(table_name);
+            auto data_type = table->column_data_type(*column_id);
+            resolve_data_type(data_type, [&] (auto type) {
+              using ColumnDataType = typename decltype(type)::type;
 
-            std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-            if (!statistics->histogram->is_uniformly_distributed(0.1)) {
-              contains_non_uniform_distribution = true;
-            }
-          });
+              std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+              if (!statistics->histogram->is_uniformly_distributed(0.1)) {
+                contains_non_uniform_distribution = true;
+              }
+            });
+          }
         }
       }
     }
