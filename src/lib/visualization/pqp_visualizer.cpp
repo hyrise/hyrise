@@ -140,7 +140,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   VizEdgeInfo info = _default_edge;
 
   const auto& performance_data = from->performance_data();
-  if (performance_data.executed) {
+  if (performance_data.executed && performance_data.has_output) {
     std::stringstream stream;
     stream << std::to_string(performance_data.output_row_count) + " row(s)/";
     stream << std::to_string(performance_data.output_chunk_count) + " chunk(s)";

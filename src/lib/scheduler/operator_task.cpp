@@ -12,8 +12,7 @@
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
-OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op,
-                           SchedulePriority priority, bool stealable)
+OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriority priority, bool stealable)
     : AbstractTask(priority, stealable), _op(std::move(op)) {}
 
 std::string OperatorTask::description() const {
@@ -98,7 +97,7 @@ void OperatorTask::_on_execute() {
   // root (i.e., the final result)
   for (const auto& weak_predecessor : predecessors()) {
     const auto predecessor = std::dynamic_pointer_cast<OperatorTask>(weak_predecessor.lock());
-    DebugAssert(predecessor, "predecessor of OperatorTask is not an OperatorTask itself");
+    DebugAssert(predecessor, "Predecessor of OperatorTask is not an OperatorTask itself");
     auto previous_operator_still_needed = false;
 
     for (const auto& successor : predecessor->successors()) {

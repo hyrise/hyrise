@@ -58,6 +58,7 @@ void AbstractOperator::execute() {
   _performance_data->walltime = performance_timer.lap();
   _performance_data->executed = true;
   if (_output) {
+    _performance_data->has_output = true;
     _performance_data->output_row_count = _output->row_count();
     _performance_data->output_chunk_count = _output->chunk_count();
   }

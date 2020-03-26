@@ -277,14 +277,33 @@ TEST_P(OperatorsTableScanTest, DoubleScan) {
   scan_2->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
+
+  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
+  // operator:
+  const auto& performance_data = scan_2->performance_data();
+  EXPECT_TRUE(performance_data.executed);
+  EXPECT_GT(performance_data.walltime.count(), 0);
+  EXPECT_TRUE(performance_data.has_output);
+  EXPECT_EQ(performance_data.output_row_count, 1);
+  EXPECT_EQ(performance_data.output_chunk_count, 1);
 }
 
 TEST_P(OperatorsTableScanTest, EmptyResultScan) {
   auto scan_1 = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThan, 90000);
   scan_1->execute();
 
-  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
+  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++) {
     EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
+  }
+
+  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
+  // operator:
+  const auto& performance_data = scan_1->performance_data();
+  EXPECT_TRUE(performance_data.executed);
+  EXPECT_GT(performance_data.walltime.count(), 0);
+  EXPECT_TRUE(performance_data.has_output);
+  EXPECT_EQ(performance_data.output_row_count, 0);
+  EXPECT_EQ(performance_data.output_chunk_count, 0);
 }
 
 TEST_P(OperatorsTableScanTest, SingleScan) {
