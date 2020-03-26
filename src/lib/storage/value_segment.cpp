@@ -119,7 +119,6 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
-  access_counter[SegmentAccessCounter::AccessType::Sequential] += _values.size();
   _values.resize(size);
   if (is_nullable()) {
     _null_values->resize(size);
