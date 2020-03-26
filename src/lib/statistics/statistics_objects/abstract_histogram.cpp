@@ -207,7 +207,7 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
 
   std::vector<HistogramCountType> counts(bin_count());
   for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
-    counts[bin_id] = bin_height(bin_id);
+    counts[bin_id] = bin_height(bin_id)/(bin_maximum(bin_id) - bin_minimum(bin_id) + 1);
     std::cout << "Bin Height: " << bin_height(bin_id) << " of Bin: " << bin_id << std::endl;
     std::cout << "Bin Min: " << bin_minimum(bin_id) << " of Bin: " << bin_id << std::endl;
     std::cout << "Bin Max: " << bin_maximum(bin_id) << " of Bin: " << bin_id << std::endl;
