@@ -57,8 +57,10 @@ void AbstractOperator::execute() {
 
   _performance_data->walltime = performance_timer.lap();
   _performance_data->executed = true;
-  _performance_data->output_row_count = _output->row_count();
-  _performance_data->output_chunk_count = _output->chunk_count();
+  if (_output) {
+    _performance_data->output_row_count = _output->row_count();
+    _performance_data->output_chunk_count = _output->chunk_count();
+  }
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
