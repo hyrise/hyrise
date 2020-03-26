@@ -165,6 +165,9 @@ uint64_t Table::row_count() const {
   if (_type == TableType::References) {
     // After being created, reference tables should never be changed again.
     DebugAssert(!_cached_row_count || row_count == *_cached_row_count, "Size of reference table has changed");
+
+    // row_count() is called by AbstractOperator after the operator has finished to fill the performance data. As such,
+    // no synchronization is necessary.
     _cached_row_count = row_count;
   }
 
