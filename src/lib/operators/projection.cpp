@@ -218,11 +218,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // information so that following operators (currently, the Validate operator) can use it for optimizations.
     const auto chunk = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
     chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
+    chunk->finalize();
 
-    // Set ordered_by flag
+    // Forward ordered_by flag
     const auto ordered_by = input_chunk->ordered_by();
     if (ordered_by) {
-      chunk->finalize();
       chunk->set_ordered_by(*ordered_by);
     }
 

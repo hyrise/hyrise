@@ -304,7 +304,8 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     }
 
     // add sorted chunk to output table
-    // Note: we do not care about MVCC at all at the moment
+    // Note: We do not forward MVCC information,
+    // meaning that tables have to be validated before this operator is executed
     sorted_table->append_chunk(_get_segments_of_chunk(single_chunk_table, ChunkID{0}));
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->finalize();
