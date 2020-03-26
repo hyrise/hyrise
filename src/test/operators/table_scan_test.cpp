@@ -403,21 +403,22 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
   tests[PredicateCondition::IsNull] = {};
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 100, 102, 104, 106};
 
-  for (const auto& test : tests) {
+  for (const auto& [predicate_condition, expected] : tests) {
+    // the first scans will match all values since the predicate condition evaluates to true for all
     auto scan1 = create_table_scan(_int_int_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
     scan1->execute();
 
     auto scan_partly1 = create_table_scan(_int_int_partly_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
     scan_partly1->execute();
 
-    auto scan2 = create_table_scan(scan1, ColumnID{0}, test.first, 4);
-    auto scan_partly2 = create_table_scan(scan_partly1, ColumnID{0}, test.first, 4);
+    auto scan2 = create_table_scan(scan1, ColumnID{0}, predicate_condition, 4);
+    auto scan_partly2 = create_table_scan(scan_partly1, ColumnID{0}, predicate_condition, 4);
 
     scan2->execute();
     scan_partly2->execute();
 
-    ASSERT_COLUMN_EQ(scan2->get_output(), ColumnID{1}, test.second);
-    ASSERT_COLUMN_EQ(scan_partly2->get_output(), ColumnID{1}, test.second);
+    ASSERT_COLUMN_EQ(scan2->get_output(), ColumnID{1}, expected);
+    ASSERT_COLUMN_EQ(scan_partly2->get_output(), ColumnID{1}, expected);
   }
 }
 
