@@ -4,11 +4,10 @@
 #include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {
-
-// In these tests, we make sure that segment encoders properly use the assigned memory resource
 
 // A simple polymorphic memory resource that tracks how much memory was allocated
 class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
@@ -64,6 +63,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 };
 
 TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
+  // Test that migrated segments properly use the assigned memory resource.
   auto encoded_segment = std::static_pointer_cast<BaseSegment>(original_segment);
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
     encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
@@ -92,6 +92,31 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   }
 
   EXPECT_EQ(resource.allocated, estimated_usage);
+}
+
+TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
+  // Test that SegmentAccessCounters are correctly copied when a segment is migrated
+  auto encoded_segment = std::static_pointer_cast<BaseSegment>(original_segment);
+  if (encoding_spec.encoding_type != EncodingType::Unencoded) {
+    encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
+  }
+  segment_iterate(*encoded_segment, [](const auto position) { (void)position.value(); });
+
+  resolve_data_type(data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    const auto accessor = create_segment_accessor<ColumnDataType>(encoded_segment);
+    accessor->access(ChunkOffset{150});
+    accessor->access(ChunkOffset{50});
+    accessor->access(ChunkOffset{250});
+  });
+
+  auto resource = SimpleTrackingMemoryResource{};
+  const auto allocator = PolymorphicAllocator<size_t>(&resource);
+  const auto copied_segment = encoded_segment->copy_using_allocator(allocator);
+
+  const auto& copied_counters = copied_segment->access_counter;
+  EXPECT_EQ(copied_counters[SegmentAccessCounter::AccessType::Sequential], 300);
+  EXPECT_EQ(copied_counters[SegmentAccessCounter::AccessType::Random], 3);
 }
 
 inline std::string segments_using_allocator_test_formatter(

@@ -13,8 +13,8 @@ namespace opossum {
 
 FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator)
     : _string_length(other._string_length), _chars(other._chars, allocator), _size(other._size) {
-  // We need to set `_chars` in the initializer list. Otherwise, it would be first created with the default allocator
-  // and the assignment operator would not exchange the allocator.
+  // For pmr_vectors, operator= does not change the allocator. As such, we need to set _chars in the initializer list.
+  // Otherwise, it would be created using the default allocator and ignore the passed-in allocator.
 }
 
 void FixedStringVector::push_back(const pmr_string& string) {
