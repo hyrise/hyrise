@@ -152,6 +152,9 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
   }
+
+  // We need to return for making the complier happy but this should not be reached
+  return nullptr;
 }
 
 template <typename T>
