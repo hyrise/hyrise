@@ -17,8 +17,8 @@ template <typename DerivedIndex>
 class MultiSegmentIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
-    dict_segment_str = BaseTest::create_dict_segment_by_type<pmr_string>(
+    dict_segment_int = create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
+    dict_segment_str = create_dict_segment_by_type<pmr_string>(
         DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str = std::make_shared<DerivedIndex>(

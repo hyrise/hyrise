@@ -88,8 +88,8 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_it = output_segments_by_chunk.begin();
         auto chunk_offset_out = 0u;
 
-        auto value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
-        auto value_segment_null_vector = pmr_concurrent_vector<bool>();
+        auto value_segment_value_vector = pmr_vector<ColumnDataType>();
+        auto value_segment_null_vector = pmr_vector<bool>();
 
         value_segment_value_vector.reserve(row_count_out);
         value_segment_null_vector.reserve(row_count_out);
@@ -132,8 +132,8 @@ class Sort::SortImplMaterializeOutput {
             auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                                 std::move(value_segment_null_vector));
             chunk_it->push_back(value_segment);
-            value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
-            value_segment_null_vector = pmr_concurrent_vector<bool>();
+            value_segment_value_vector = pmr_vector<ColumnDataType>();
+            value_segment_null_vector = pmr_vector<bool>();
             ++chunk_it;
           }
         }

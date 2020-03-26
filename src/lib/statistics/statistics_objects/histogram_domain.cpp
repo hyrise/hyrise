@@ -9,8 +9,9 @@ HistogramDomain<pmr_string>::HistogramDomain()
       // length were chosen so that the entire range of IntegralType is covered
       HistogramDomain<pmr_string>(' ', '~', 9) {}
 
-HistogramDomain<pmr_string>::HistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
-    : min_char(min_char), max_char(max_char), prefix_length(prefix_length) {
+HistogramDomain<pmr_string>::HistogramDomain(const char init_min_char, const char init_max_char,
+                                             const size_t init_prefix_length)
+    : min_char(init_min_char), max_char(init_max_char), prefix_length(init_prefix_length) {
   Assert(min_char <= max_char, "Invalid character range");
   Assert(prefix_length > 0, "String prefix too short");
 }

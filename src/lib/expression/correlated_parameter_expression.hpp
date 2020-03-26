@@ -18,7 +18,7 @@ namespace opossum {
 class CorrelatedParameterExpression : public AbstractExpression {
  public:
   struct ReferencedExpressionInfo {
-    ReferencedExpressionInfo(const DataType data_type, const std::string& column_name);
+    ReferencedExpressionInfo(const DataType init_data_type, const std::string& init_column_name);
 
     bool operator==(const ReferencedExpressionInfo& rhs) const;
 
@@ -26,8 +26,8 @@ class CorrelatedParameterExpression : public AbstractExpression {
     std::string column_name;
   };
 
-  CorrelatedParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression);
-  CorrelatedParameterExpression(const ParameterID parameter_id,
+  CorrelatedParameterExpression(const ParameterID init_parameter_id, const AbstractExpression& referenced_expression);
+  CorrelatedParameterExpression(const ParameterID init_parameter_id,
                                 const ReferencedExpressionInfo& referenced_expression_info);
 
   const std::optional<AllTypeVariant>& value() const;

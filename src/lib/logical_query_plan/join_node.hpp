@@ -20,16 +20,16 @@ namespace opossum {
 class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
  public:
   // Constructor for Cross Joins. join_mode has to be JoinMode::Cross
-  explicit JoinNode(const JoinMode join_mode);
+  explicit JoinNode(const JoinMode init_join_mode);
 
   // Utility constructor that just calls the multi predicated constructor
-  JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate);
+  JoinNode(const JoinMode init_join_mode, const std::shared_ptr<AbstractExpression>& join_predicate);
 
   // Constructor for multi predicated joins
-  JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates);
+  JoinNode(const JoinMode init_join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& init_join_predicates);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
@@ -40,9 +40,6 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
-
- private:
-  mutable std::vector<std::shared_ptr<AbstractExpression>> _column_expressions;
 };
 
 }  // namespace opossum

@@ -145,9 +145,9 @@ class AbstractVisualizer {
   class pqp_properties_writer
   {
   public:
-    pqp_properties_writer(const boost::dynamic_properties& dp,
-                                     const std::string& node_id)
-      : dp(&dp), node_id(&node_id) { }
+    pqp_properties_writer(const boost::dynamic_properties& init_dp,
+                                     const std::string& init_node_id)
+      : dp(&init_dp), node_id(&init_node_id) { }
 
     template<typename Descriptor>
     void operator()(std::ostream& out, Descriptor key) const

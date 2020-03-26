@@ -10,8 +10,8 @@ namespace opossum {
 AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
                                                      const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                                                      const std::vector<ColumnID>& groupby_column_ids,
-                                                     std::unique_ptr<OperatorPerformanceData> performance_data)
-    : AbstractReadOnlyOperator(OperatorType::Aggregate, in, nullptr, std::move(performance_data)),
+                                                     std::unique_ptr<OperatorPerformanceData> init_performance_data)
+    : AbstractReadOnlyOperator(OperatorType::Aggregate, in, nullptr, std::move(init_performance_data)),
       _aggregates{aggregates},
       _groupby_column_ids{groupby_column_ids} {
   /*

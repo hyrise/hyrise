@@ -17,10 +17,10 @@ std::shared_ptr<PQPColumnExpression> PQPColumnExpression::from_table(const Table
   return PQPColumnExpression::from_table(table, table.column_name(column_id));
 }
 
-PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
+PQPColumnExpression::PQPColumnExpression(const ColumnID init_column_id, const DataType data_type, const bool nullable,
                                          const std::string& column_name)
     : AbstractExpression(ExpressionType::PQPColumn, {}),
-      column_id(column_id),
+      column_id(init_column_id),
       _data_type(data_type),
       _nullable(nullable),
       _column_name(column_name) {}

@@ -14,11 +14,10 @@ namespace opossum {
 template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const FixedStringVector>& dictionary,
-    const std::shared_ptr<const BaseCompressedVector>& attribute_vector, const ValueID null_value_id)
+    const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
-      _null_value_id{null_value_id},
       _decompressor{_attribute_vector->create_base_decompressor()} {}
 
 template <typename T>
@@ -38,7 +37,7 @@ std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOff
   DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
 
   const auto value_id = _decompressor->get(chunk_offset);
-  if (value_id == _null_value_id) {
+  if (value_id == _dictionary->size()) {
     return std::nullopt;
   }
   return _dictionary->get_string_at(value_id);
@@ -57,12 +56,14 @@ ChunkOffset FixedStringDictionarySegment<T>::size() const {
 template <typename T>
 std::shared_ptr<BaseSegment> FixedStringDictionarySegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
-  auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
-  auto new_dictionary = FixedStringVector(*_dictionary);
-  auto new_dictionary_ptr = std::allocate_shared<FixedStringVector>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<FixedStringDictionarySegment<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
-                                                               _null_value_id);
+  auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary, alloc);
+  auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
+
+  auto copy = std::make_shared<FixedStringDictionarySegment<T>>(new_dictionary, std::move(new_attribute_vector));
+
+  copy->access_counter = access_counter;
+
+  return copy;
 }
 
 template <typename T>
@@ -121,7 +122,7 @@ std::shared_ptr<const BaseCompressedVector> FixedStringDictionarySegment<T>::att
 
 template <typename T>
 ValueID FixedStringDictionarySegment<T>::null_value_id() const {
-  return _null_value_id;
+  return ValueID{static_cast<ValueID::base_type>(_dictionary->size())};
 }
 
 template class FixedStringDictionarySegment<pmr_string>;
