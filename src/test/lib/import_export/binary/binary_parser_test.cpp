@@ -75,13 +75,9 @@ TEST_P(BinaryParserMultiEncodingTest, StringSegment) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  testing::internal::CaptureStdout();
-
   std::string reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto table = BinaryParser::parse(reference_filename);
-
-  std::cout << testing::internal::GetCapturedStdout() << std::endl;
 
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
@@ -345,7 +341,7 @@ TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(BinaryParserTest, InvalidColumnType) {
+TEST_F(BinaryParserTest, InvalidEncodingType) {
   auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_THROW(BinaryParser::parse(filename), std::exception);
 }

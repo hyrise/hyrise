@@ -134,7 +134,12 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
     case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
     case EncodingType::FixedStringDictionary:
-      return _import_fixed_string_dictionary_segment(file, row_count);
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FixedStringDictionary>,
+                                                hana::type_c<ColumnDataType>)) {
+        return _import_fixed_string_dictionary_segment(file, row_count);
+      } else {
+        Fail("Unsupported data type for FixedStringDictionary encoding");
+      }
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
@@ -146,9 +151,6 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
-    default:
-      // This case happens if the read column type is not a valid EncodingType.
-      Fail("Cannot import column: invalid column type");
   }
 }
 
@@ -181,8 +183,7 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
     std::ifstream& file, ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  const auto dictionary = _import_fixed_string_vector(file, dictionary_size);
-
+  auto dictionary = _import_fixed_string_vector(file, dictionary_size);
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<FixedStringDictionarySegment<pmr_string>>(dictionary, attribute_vector);
@@ -300,17 +301,9 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
-  std::vector<pmr_string> values(count);
-
-  for (uint32_t row = 0; row < count; row++) {
-    std::ostringstream value;
-    for (uint32_t c = 0; c < string_length; c++) {
-      value << _read_value<char>(file);
-    }
-    values[row] = pmr_string(value.str());
-  }
-
-  return std::make_shared<FixedStringVector>(values.begin(), values.end(), string_length);
+  pmr_vector<char> values(string_length * count);
+  file.read(values.data(), values.size());
+  return std::make_shared<FixedStringVector>(values, string_length);
 }
 
 }  // namespace opossum

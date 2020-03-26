@@ -63,7 +63,7 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
 }
 
 void export_values(std::ofstream& ofstream, const FixedStringVector& values) {
-  ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * values.string_length());
+  ofstream.write(values.data(), values.size() * values.string_length());
 }
 
 // specialized implementation for string values
@@ -136,10 +136,6 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 }
 
-void BinaryWriter::_write_segment(const BaseSegment& base_segment, std::ofstream& ofstream) {
-  Fail("Binary export for segment type is not supported yet.");
-}
-
 template <typename T>
 void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Unencoded);
@@ -183,10 +179,6 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, std
 
 template <typename T>
 void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream) {
-  Assert(dictionary_segment.compressed_vector_type(),
-         "Expected DictionarySegment to use vector compression for attribute vector");
-  Assert(is_fixed_size_byte_aligned(*dictionary_segment.compressed_vector_type()),
-         "Does only support fixed-size byte-aligned compressed attribute vectors.");
   export_value(ofstream, EncodingType::Dictionary);
 
   // Write attribute vector width
@@ -198,8 +190,6 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
   export_values(ofstream, *dictionary_segment.dictionary());
 
   // Write attribute vector
-  Assert(dictionary_segment.compressed_vector_type(),
-         "Expected DictionarySegment to use vector compression for attribute vector");
   _export_compressed_vector(ofstream, *dictionary_segment.compressed_vector_type(),
                             *dictionary_segment.attribute_vector());
 }
@@ -207,26 +197,20 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 template <typename T>
 void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
                                   std::ofstream& ofstream) {
-  Assert(fixed_string_dictionary_segment.compressed_vector_type(),
-         "Expected DictionarySegment to use vector compression for attribute vector");
-  Assert(is_fixed_size_byte_aligned(*fixed_string_dictionary_segment.compressed_vector_type()),
-         "Does only support fixed-size byte-aligned compressed attribute vectors.");
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
   // Write attribute vector width
   const auto attribute_vector_width = _compressed_vector_width<T>(fixed_string_dictionary_segment);
   export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
 
-  // Write the dictionary size and dictionary
-  export_value(ofstream,
-               static_cast<ValueID::base_type>(fixed_string_dictionary_segment.fixed_string_dictionary()->size()));
+  // Write the dictionary size, string length and dictionary
+  const auto dictionary_size = fixed_string_dictionary_segment.fixed_string_dictionary()->size();
   const auto string_length = fixed_string_dictionary_segment.fixed_string_dictionary()->string_length();
+  export_value(ofstream, static_cast<ValueID::base_type>(dictionary_size));
   export_value(ofstream, static_cast<uint32_t>(string_length));
   export_values(ofstream, *fixed_string_dictionary_segment.fixed_string_dictionary());
 
   // Write attribute vector
-  Assert(fixed_string_dictionary_segment.compressed_vector_type(),
-         "Expected DictionarySegment to use vector compression for attribute vector");
   _export_compressed_vector(ofstream, *fixed_string_dictionary_segment.compressed_vector_type(),
                             *fixed_string_dictionary_segment.attribute_vector());
 }
@@ -266,8 +250,6 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   export_values(ofstream, frame_of_reference_segment.null_values());
 
   // Write offset values
-  Assert(frame_of_reference_segment.compressed_vector_type(),
-         "Expected FrameOfReference to use vector compression for offset values");
   _export_compressed_vector(ofstream, *frame_of_reference_segment.compressed_vector_type(),
                             frame_of_reference_segment.offset_values());
 }
