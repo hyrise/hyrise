@@ -78,9 +78,9 @@ class GenericHistogramTest : public BaseTest {
 
 TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
   const auto equally_distributed_table = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
-  const auto table_statistics = TableStatistics::from_table(*table);
+  const auto table_statistics = TableStatistics::from_table(*equally_distributed_table);
 
-  for (const auto column_statistics : dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics)) {
+  for (const auto column_statistics : std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics)) {
     ASSERT_TRUE(column_statistics);
 
     const auto histogram = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics->histogram);
