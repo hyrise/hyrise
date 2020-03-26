@@ -77,17 +77,17 @@ class GenericHistogramTest : public BaseTest {
 };
 
 TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
-  const auto table = load_table("resources/test_data/tbl/int_equally_distributed.tbl");
+  const auto equally_distributed_table = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
   const auto table_statistics = TableStatistics::from_table(*table);
 
-  const auto column_statistics_a =
-      std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics.at(0));
-  ASSERT_TRUE(column_statistics_a);
+  for (const auto column_statistics : dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics)) {
+    ASSERT_TRUE(column_statistics);
 
-  const auto histogram_a = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_a->histogram);
-  ASSERT_TRUE(histogram_a);
+    const auto histogram = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics->histogram);
+    ASSERT_TRUE(histogram);
 
-  ASSERT_TRUE(histogram_a->is_uniformly_distributed(0.1));
+    ASSERT_TRUE(histogram->is_uniformly_distributed(0.1));
+  }
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
