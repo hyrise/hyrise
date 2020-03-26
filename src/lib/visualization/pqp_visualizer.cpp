@@ -164,6 +164,8 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
     info.pen_width = total.count();
+  } else {
+    info.pen_width = 1;
   }
 
   _duration_by_operator_name[op->name()] += performance_data.walltime;
