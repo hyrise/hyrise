@@ -71,7 +71,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
   return column_expressions;
 }
 
-const std::shared_ptr<const ExpressionsConstraintDefinitions> JoinNode::constraints() const {
+const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() const {
 
   // The Semi-Join outputs input_left() without adding any rows or columns. But depending on the right table,
   // tuples may be filtered out. As a consequence, we can forward the constraints.

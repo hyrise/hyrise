@@ -24,7 +24,7 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions()
   return left_input()->column_expressions();
 }
 
-const std::shared_ptr<const ExpressionsConstraintDefinitions> UnionNode::constraints() const {
+const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints() const {
   switch (union_mode) {
     case UnionMode::Positions:
       // UnionPositions merges two reference tables with the same original table(s). Any duplicate RowIDs are

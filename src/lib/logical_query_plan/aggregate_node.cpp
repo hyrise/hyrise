@@ -79,7 +79,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressio
   return column_expressions;
 }
 
-const std::shared_ptr<const ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
+const std::shared_ptr<ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
   auto aggregate_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
   // (1) Create a unique constraint covering the group-by column(s).

@@ -43,7 +43,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::column_express
   return *_column_expressions;
 }
 
-const std::shared_ptr<const ExpressionsConstraintDefinitions> StaticTableNode::constraints() const {
+const std::shared_ptr<ExpressionsConstraintDefinitions> StaticTableNode::constraints() const {
   auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
   for(const auto& table_constraint : table->get_soft_unique_constraints()) {

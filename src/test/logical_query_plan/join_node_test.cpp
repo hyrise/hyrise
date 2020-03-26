@@ -215,7 +215,7 @@ TEST_F(JoinNodeTest, ConstraintsInnerJoin) {
   // Constraints of RIGHT table should be forwarded
   const auto inner_join_constraints = _inner_join_node->constraints();
   EXPECT_EQ(inner_join_constraints->size(), 1);
-  EXPECT_TRUE(check_table_constraint_representation({unique_constraint_y}, inner_join_constraints));
+  check_table_constraint_representation({unique_constraint_y}, inner_join_constraints);
   EXPECT_TRUE(inner_join_constraints == _mock_node_b->constraints());
 
   // Case 3 - Join columns of RIGHT table are unique
