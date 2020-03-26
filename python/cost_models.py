@@ -40,7 +40,7 @@ def train_model(train_data, type):
     return model
 
 
-def generate_model_plot(model, test_data, method, data_type, encoding, out):
+def generate_model_plot(model, test_data, method, encoding, scan, out):
     ohe_data = preprocess_data(test_data)
     real_y = np.ravel(ohe_data[['RUNTIME_NS']])
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
@@ -57,14 +57,16 @@ def generate_model_plot(model, test_data, method, data_type, encoding, out):
 
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-    plt.title('{}_{}_{}; Score: {}'.format(data_type, encoding, method, model_scores['R2']))
+    plt.title('{}_{}_{}; Score: {}'.format(encoding, scan, method, model_scores['R2']))
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
-    output_path = '{}/Plots/{}_{}_{}'.format(out, method, data_type, encoding)
+    output_path = '{}/Plots/{}_{}_{}'.format(out, method, encoding, scan)
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
+
+    return model_scores
 
 
 def calculate_error(test_X, y_true, y_pred, model):
@@ -89,10 +91,15 @@ def calculate_error(test_X, y_true, y_pred, model):
     # relatively hard, whereas it treats large residuals comparably easy.
     LNQ = 1/len(y_true) * np.sum(np.exp(np.divide(y_pred, y_true)))
 
-    scores = {'MSE': mse, 'R2': R2, 'LNQ': LNQ}
-    print(scores)
+    scores = {'MSE': '%.3f' % mse, 'R2': '%.3f' % R2, 'LNQ': '%.3f' % LNQ}
 
     return scores
+
+
+def log(scores, out):
+    with open('{}/log.txt'.format(out), 'w') as file:
+        for entry in scores:
+            file.write(entry + ': ' + str(scores[entry]) +  '\n')
 
 
 # needed for prediction with one-hot-encoding in case trainings and test data don't have the same set of values in a
@@ -142,6 +149,7 @@ def import_data(args):
 
 def main(args):
     out = "CostModelOutput"
+    scores = {}
 
     if args.m:
         model_types = [args.m]
@@ -168,33 +176,37 @@ def main(args):
     for type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
-        generate_model_plot(gmodel, gtest_data, type, 'all', 'all', out)
+        generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
         filename = '{}/Models/{}_general_model.sav'.format(out, type)
         joblib.dump(gmodel, filename)
 
     # make separate models for different scan operators and combinations of encodings/compressions
     for encoding in train_data['ENCODING'].unique():
-        for data_type in train_data['DATA_TYPE'].unique():
+        for implementation_type in train_data['SCAN_IMPLEMENTATION'].unique():
 
             # if there is no given test data set, split the given trainings data into test and trainings data
             if not args.test:
-                model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['DATA_TYPE'] == data_type) &
-                                                                                    (train_data['ENCODING'] == encoding)])
+                model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['ENCODING'] == encoding) &
+                                                                                    (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
+
+
             else:
-                model_train_data = train_data.loc[(train_data['DATA_TYPE'] == data_type) & (train_data['ENCODING'] == encoding)]
-                model_test_data = test_data.loc[(test_data['DATA_TYPE'] == data_type) & (test_data['ENCODING'] == encoding)]
+                model_train_data = train_data.loc[(train_data['ENCODING'] == encoding) & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)]
+                model_test_data = test_data.loc[(test_data['ENCODING'] == encoding) & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
 
             # if there is training data for this combination, train a model
             if not model_train_data.empty:
                 for type in model_types:
-                    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE'])
+                    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_TYPE', 'DATA_TYPE'])
                     model = train_model(model_train_data, type)
 
-                    filename = '{}/Models/split_{}_{}_{}_model.sav'.format(out, type, data_type, encoding)
+                    model_name = '{}_{}_{}_model'.format(type, encoding, implementation_type)
+                    filename = '{}/Models/split_{}.sav'.format(out, model_name)
                     joblib.dump(model, filename)
 
                     if not model_test_data.empty:
-                        generate_model_plot(model, model_test_data, type, data_type, encoding, out)
+                        scores[model_name] = generate_model_plot(model, model_test_data, type, encoding, implementation_type, out)
+    log(scores, out)
 
 
 if __name__ == '__main__':
