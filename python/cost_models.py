@@ -16,7 +16,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 plt.style.use('ggplot')
 
-
 def preprocess_data(data):
     # one-hot encoding
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
@@ -91,7 +90,10 @@ def calculate_error(test_X, y_true, y_pred, model):
     # relatively hard, whereas it treats large residuals comparably easy.
     LNQ = 1/len(y_true) * np.sum(np.exp(np.divide(y_pred, y_true)))
 
-    scores = {'MSE': '%.3f' % mse, 'R2': '%.3f' % R2, 'LNQ': '%.3f' % LNQ}
+    # Percentage
+    perc = np.mean(100 * (np.divide(np.abs(y_true - y_pred), y_true)))
+
+    scores = {'MSE': '%.3f' % mse, 'R2': '%.3f' % R2, 'LNQ': '%.3f' % LNQ, 'Percentage': '%.3f' % perc}
 
     return scores
 
@@ -115,7 +117,7 @@ def add_dummy_types(train, test, cols):
     return [train, test]
 
 
-def parse_args(opt=None):
+def parseargs(opt=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
     # in case no test data is given, the trainings data will be split into trainings and test data
@@ -176,7 +178,7 @@ def main(args):
     for type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
-        generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
+        scores['{}_general_model'.format(type)] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
         filename = '{}/Models/{}_general_model.sav'.format(out, type)
         joblib.dump(gmodel, filename)
 
@@ -210,5 +212,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = parse_args()
+    args = parseargs()
     main(args)
