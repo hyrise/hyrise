@@ -306,5 +306,3 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
 }
 
 }  // namespace opossum
-
-#pragma clang diagnostic pop
