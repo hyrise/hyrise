@@ -76,6 +76,20 @@ class GenericHistogramTest : public BaseTest {
   }
 };
 
+TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
+  const auto table = load_table("resources/test_data/tbl/int_equally_distributed.tbl");
+  const auto table_statistics = TableStatistics::from_table(*table);
+
+  const auto column_statistics_a =
+      std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(table_statistics->column_statistics.at(0));
+  ASSERT_TRUE(column_statistics_a);
+
+  const auto histogram_a = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(column_statistics_a->histogram);
+  ASSERT_TRUE(histogram_a);
+
+  ASSERT_TRUE(histogram_a->is_uniformly_distributed(0.1));
+}
+
 TEST_F(GenericHistogramTest, EstimateCardinalityAndPruningBasicInt) {
   const auto histogram = GenericHistogram<int32_t>{{12, 12345}, {123, 123456}, {2, 5}, {2, 2}};
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Equals, 0), 0.f);
