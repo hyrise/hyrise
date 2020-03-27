@@ -15,14 +15,11 @@ class RowIDPosList;
 
 class AbstractPosList : private Noncopyable {
  public:
-  template <typename PosListType = const AbstractPosList*, typename DereferenceReturnType = RowID>
+  template <typename PosListType = AbstractPosList, typename DereferenceReturnType = RowID>
   class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
                                                         boost::random_access_traversal_tag, DereferenceReturnType> {
    public:
-    PosListIterator(PosListType pos_list, ChunkOffset offset) {
-      _pos_list = pos_list;
-      _chunk_offset = offset;
-    }
+    PosListIterator(const PosListType* pos_list, const ChunkOffset offset): _pos_list(pos_list), _chunk_offset(offset) {}
 
     // Ugly hack.
     // See https://github.com/hyrise/hyrise/issues/1531
@@ -48,7 +45,7 @@ class AbstractPosList : private Noncopyable {
       return (*_pos_list)[_chunk_offset];
     }
 
-    PosListType _pos_list;
+    const PosListType* _pos_list;
     ChunkOffset _chunk_offset;
   };
 

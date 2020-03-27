@@ -27,10 +27,10 @@ class MatchesAllPosList : public AbstractPosList {
   size_t size() const final;
   size_t memory_usage(const MemoryUsageCalculationMode) const final;
 
-  PosListIterator<const MatchesAllPosList*, RowID> begin() const;
-  PosListIterator<const MatchesAllPosList*, RowID> end() const;
-  PosListIterator<const MatchesAllPosList*, RowID> cbegin() const;
-  PosListIterator<const MatchesAllPosList*, RowID> cend() const;
+  PosListIterator<MatchesAllPosList, RowID> begin() const;
+  PosListIterator<MatchesAllPosList, RowID> end() const;
+  PosListIterator<MatchesAllPosList, RowID> cbegin() const;
+  PosListIterator<MatchesAllPosList, RowID> cend() const;
 
  private:
   std::shared_ptr<const Chunk> _common_chunk;
