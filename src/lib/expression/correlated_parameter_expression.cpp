@@ -10,16 +10,16 @@
 
 namespace opossum {
 
-CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
+CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID init_parameter_id,
                                                              const AbstractExpression& referenced_expression)
     : AbstractExpression(ExpressionType::CorrelatedParameter, {}),
-      parameter_id(parameter_id),
+      parameter_id(init_parameter_id),
       _referenced_expression_info(referenced_expression.data_type(), referenced_expression.as_column_name()) {}
 
-CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
+CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID init_parameter_id,
                                                              const ReferencedExpressionInfo& referenced_expression_info)
     : AbstractExpression(ExpressionType::CorrelatedParameter, {}),
-      parameter_id(parameter_id),
+      parameter_id(init_parameter_id),
       _referenced_expression_info(referenced_expression_info) {}
 
 std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() const {
@@ -75,9 +75,9 @@ bool CorrelatedParameterExpression::_on_is_nullable_on_lqp(const AbstractLQPNode
   return true;
 }
 
-CorrelatedParameterExpression::ReferencedExpressionInfo::ReferencedExpressionInfo(const DataType data_type,
-                                                                                  const std::string& column_name)
-    : data_type(data_type), column_name(column_name) {}
+CorrelatedParameterExpression::ReferencedExpressionInfo::ReferencedExpressionInfo(const DataType init_data_type,
+                                                                                  const std::string& init_column_name)
+    : data_type(init_data_type), column_name(init_column_name) {}
 
 bool CorrelatedParameterExpression::ReferencedExpressionInfo::operator==(const ReferencedExpressionInfo& rhs) const {
   return data_type == rhs.data_type && column_name == rhs.column_name;

@@ -62,7 +62,7 @@ class BaseAnySegmentIterableWrapper {
 template <typename ValueType, typename IterableT>
 class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType> {
  public:
-  explicit AnySegmentIterableWrapper(const IterableT& iterable) : iterable(iterable) {}
+  explicit AnySegmentIterableWrapper(const IterableT& init_iterable) : iterable(init_iterable) {}
 
   void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     iterable.with_iterators([&](auto begin, const auto end) {
@@ -126,8 +126,8 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     _iterable_wrapper->with_iterators(functor_wrapper);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
   }

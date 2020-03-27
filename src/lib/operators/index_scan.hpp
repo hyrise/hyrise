@@ -6,7 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/index/segment_index_type.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "types.hpp"
 #include "storage/single_chunk_pos_list.hpp"
 
@@ -41,7 +41,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   void _validate_input();
   std::shared_ptr<AbstractTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
-  std::shared_ptr<AbstractPosList> _scan_chunk(const ChunkID chunk_id);
+  SingleChunkPosList _scan_chunk(const ChunkID chunk_id);
 
  private:
   const SegmentIndexType _index_type;

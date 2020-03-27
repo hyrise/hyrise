@@ -41,6 +41,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Private / protected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
+- In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`
 
 ### Naming convention for gtest macros:
 

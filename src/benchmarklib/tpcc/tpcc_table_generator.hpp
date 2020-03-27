@@ -22,10 +22,10 @@ using TPCCTableGeneratorFunctions = std::unordered_map<std::string, std::functio
 class TPCCTableGenerator : public AbstractTableGenerator {
   // following TPC-C v5.11.0
  public:
-  TPCCTableGenerator(int num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
+  TPCCTableGenerator(size_t num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   // Convenience constructor for creating a TPCCTableGenerator without a benchmarking context
-  explicit TPCCTableGenerator(int num_warehouses, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+  explicit TPCCTableGenerator(size_t num_warehouses, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
   std::shared_ptr<Table> generate_item_table();
 
@@ -112,7 +112,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     auto loop_count =
         std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
-    pmr_concurrent_vector<T> data;
+    pmr_vector<T> data;
     data.reserve(chunk_size);
 
     /**

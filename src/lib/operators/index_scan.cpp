@@ -79,7 +79,11 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     const auto chunk = _in_table->get_chunk(chunk_id);
     if (!chunk) return;
 
+<<<<<<< HEAD
     const auto matches_out = _scan_chunk(chunk_id);
+=======
+    const auto matches_out = std::make_shared<RowIDPosList>(_scan_chunk(chunk_id));
+>>>>>>> bf664016991c9b282c5e07eeba48738805178866
     if (matches_out->empty()) return;
 
     Segments segments;
@@ -111,7 +115,9 @@ void IndexScan::_validate_input() {
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-std::shared_ptr<AbstractPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) {
+SingleChunkPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
+  const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
+
   auto range_begin = AbstractIndex::Iterator{};
   auto range_end = AbstractIndex::Iterator{};
 

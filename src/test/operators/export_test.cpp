@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -27,35 +26,14 @@ class OperatorsExportTest : public BaseTest {
     column_definitions.emplace_back("c", DataType::Float, false);
 
     table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
+    std::remove(test_filename.c_str());
+    std::remove(test_meta_filename.c_str());
   }
 
   void TearDown() override {
     std::remove(test_filename.c_str());
     std::remove(test_meta_filename.c_str());
-  }
-
-  bool file_exists(const std::string& name) {
-    std::ifstream file{name};
-    return file.good();
-  }
-
-  bool compare_files(const std::string& original_file, const std::string& created_file) {
-    std::ifstream original(original_file);
-    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
-
-    std::ifstream created(created_file);
-    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
-
-    std::istreambuf_iterator<char> iterator_original(original);
-    std::istreambuf_iterator<char> iterator_created(created);
-    std::istreambuf_iterator<char> end;
-
-    while (iterator_original != end && iterator_created != end) {
-      if (*iterator_original != *iterator_created) return false;
-      ++iterator_original;
-      ++iterator_created;
-    }
-    return ((iterator_original == end) && (iterator_created == end));
   }
 
   std::shared_ptr<Table> table;
@@ -123,15 +101,25 @@ TEST_F(OperatorsExportTest, NonsensePath) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "this/path/does/not/exist");
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "this/path/does/not/exist.tbl");
   EXPECT_THROW(exporter->execute(), std::exception);
 }
 
-TEST_F(OperatorsExportTest, EmptyPath) {
+TEST_F(OperatorsExportTest, EmptyPathWithoutFileType) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "");
+
+  EXPECT_THROW(std::make_shared<opossum::Export>(table_wrapper, ""), std::exception);
+}
+
+TEST_F(OperatorsExportTest, EmptyPathWithFileType) {
+  table->append({1, "hello", 3.5f});
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "", FileType::Csv);
+
   EXPECT_THROW(exporter->execute(), std::exception);
 }
 
@@ -139,21 +127,8 @@ TEST_F(OperatorsExportTest, UnknownFileExtension) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "not_existing_file.mp3");
-  EXPECT_THROW(exporter->execute(), std::exception);
-}
 
-TEST_F(OperatorsExportTest, ReturnsInput) {
-  auto table = load_table("resources/test_data/tbl/float.tbl");
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto exporter = std::make_shared<opossum::Export>(table_wrapper, test_filename + ".bin");
-  exporter->execute();
-
-  // need to load table again since it moved
-  table = load_table("resources/test_data/tbl/float.tbl");
-
-  EXPECT_TABLE_EQ_ORDERED(exporter->get_output(), table);
+  EXPECT_THROW(std::make_shared<opossum::Export>(table_wrapper, "not_existing_file.mp3"), std::exception);
 }
 
 }  // namespace opossum

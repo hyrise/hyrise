@@ -69,10 +69,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
     table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
 
     Segments segments;
-    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
-    segments.emplace_back(
-        std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
-    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_concurrent_vector<pmr_string>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<float>>(pmr_vector<float>{}, pmr_vector<bool>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_vector<pmr_string>{}));
     table_empty->append_chunk(segments);
 
     empty_a = PQPColumnExpression::from_table(*table_empty, "a");

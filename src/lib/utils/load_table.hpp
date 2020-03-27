@@ -11,7 +11,8 @@ namespace opossum {
 
 class Table;
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size = Chunk::DEFAULT_SIZE);
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size = Chunk::DEFAULT_SIZE,
+                                  bool finalize_last_chunk = true);
 
 /**
  * Creates an empty table based on the meta information in the first lines of the file without loading the data itself.

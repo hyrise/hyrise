@@ -16,7 +16,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
  public:
   using ValueType = bool;
 
-  explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
+  explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -25,23 +25,21 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     functor(begin, end);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
-    resolve_pos_list_type(position_filter, [*this, &functor](auto& pos_list) {
-      auto begin = PointAccessIterator{_null_values, pos_list->cbegin(), pos_list->cbegin()};
-      auto end = PointAccessIterator{_null_values, pos_list->begin(), pos_list->cend()};
-      functor(begin, end);
-    });
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
+    auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
+    auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
+    functor(begin, end);
   }
 
  private:
-  const pmr_concurrent_vector<bool>& _null_values;
+  const pmr_vector<bool>& _null_values;
 
  private:
   class Iterator : public BaseSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
     using ValueType = bool;
-    using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
+    using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
@@ -72,7 +70,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
    public:
     using PosListIteratorType = _PosListIteratorType;
     using ValueType = bool;
-    using NullValueVector = pmr_concurrent_vector<bool>;
+    using NullValueVector = pmr_vector<bool>;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values, const _PosListIteratorType position_filter_begin,

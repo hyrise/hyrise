@@ -4,7 +4,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
@@ -51,14 +51,14 @@ void MvccDeletePlugin::_logical_delete_loop() {
         }
 
         // Calculate metric 2 – Chunk Hotness
-        const CommitID highest_end_commit_id =
-            *std::max_element(std::begin(chunk->mvcc_data()->end_cids), std::end(chunk->mvcc_data()->end_cids),
-                              [](CommitID a, CommitID b) {
-                                // Return the highest end commit id that is actually set (meaning != MAX_COMMIT_ID).
-                                if (a == MvccData::MAX_COMMIT_ID) return true;
-                                if (b == MvccData::MAX_COMMIT_ID) return false;
-                                return a < b;
-                              });
+        CommitID highest_end_commit_id = CommitID{0};
+        const auto chunk_size = chunk->size();
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+          const auto commit_id = chunk->mvcc_data()->get_end_cid(chunk_offset);
+          if (commit_id != MvccData::MAX_COMMIT_ID && commit_id > highest_end_commit_id) {
+            highest_end_commit_id = commit_id;
+          }
+        }
 
         const bool criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
