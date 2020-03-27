@@ -258,8 +258,9 @@ void AggregateSort::_set_and_write_aggregate_value(
 
 Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id) {
   Segments segments{};
+  const auto chunk = input_table->get_chunk(chunk_id);
   for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
-    segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+    segments.emplace_back(chunk->get_segment(column_id));
   }
   return segments;
 }
@@ -272,8 +273,8 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
 
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto new_chunk = std::make_shared<Chunk>(_get_segments_of_chunk(input_table, chunk_id));
-    std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
+    auto chunk = std::make_shared<Chunk>(_get_segments_of_chunk(input_table, chunk_id));
+    std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {chunk};
     auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), input_table->type(),
                                                             std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
 
@@ -441,9 +442,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (table_value_clustered_by &&
-        std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(table_value_clustered_by->begin())) !=
-            _groupby_column_ids.end()) {
+    if (table_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+                                              *(table_value_clustered_by->begin())) != _groupby_column_ids.end()) {
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
       sorted_table = _sort_table_chunk_wise(input_table, table_value_clustered_by);
     } else {

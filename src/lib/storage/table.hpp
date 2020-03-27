@@ -206,14 +206,14 @@ class Table : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
-   * Tables may be clustered by one or more columns. Each value within such a column will occur in exaclty one chunk.
-   * E.g. all mean values are in one chunk, all odds in an other. This information can be used e.g. when executing
+   * Tables may be clustered by one or more columns. Each value within such a column will occur in exactly one chunk.
+   * E.g. all mean values are in one chunk, all odds in another. This information can be used e.g. when executing
    * GROUP BY on a clustered column, which can then look at individual chunks instead of the entire table.
    *
    * Note that value clustering does not imply values being ordered. At the same time, ordered data is not necessarily
-   * clustered as a value could still occur at the on of one chunk and in the beginning of the next
+   * clustered as a value could still occur at the on of one chunk and in the beginning of the next.
    *
-   * If the table is value clustered in any way, the ColumnID of the segment by which it is clustered
+   * If the table is value clustered in any way, the ColumnIDs of the segments by which it is clustered
    * will be returned.
    */
   const std::optional<std::vector<ColumnID>>& value_clustered_by() const;

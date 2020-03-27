@@ -208,10 +208,10 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
   const auto sort = std::make_shared<Sort>(table_wrapper_a, ColumnID{0});
   sort->execute();
 
-  const auto projection_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_a));
-  projection_a_sorted->execute();
+  const auto projection_b_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a));
+  projection_b_a_sorted->execute();
 
-  const auto result_table_sorted = projection_a_sorted->get_output();
+  const auto result_table_sorted = projection_b_a_sorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
