@@ -92,7 +92,9 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},
     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
     {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+    {EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
+    {EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
     {EncodingType::FrameOfReference},
-    {EncodingType::LZ4, VectorCompressionType::SimdBp128},
+    {EncodingType::LZ4},
     {EncodingType::RunLength}};
 }  // namespace opossum

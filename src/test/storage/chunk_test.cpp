@@ -25,8 +25,8 @@ class StorageChunkTest : public BaseTest {
     vs_str->append("world");
     vs_str->append("!");
 
-    ds_int = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
-    ds_str = encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
+    ds_int = ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
+    ds_str = ChunkEncoder::encode_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
     Segments empty_segments;
     empty_segments.push_back(std::make_shared<ValueSegment<int32_t>>());

@@ -40,7 +40,7 @@ TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vs_int->append(i);
 
   auto segment =
-      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+      ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test for AllTypeVariant as parameter
@@ -63,7 +63,7 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentInt) {
   vs_int->append(3);
 
   auto segment =
-      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+      ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test attribute_vector size
@@ -88,7 +88,7 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentString) {
   vs_str->append("Bill");
 
   auto segment =
-      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+      ChunkEncoder::encode_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
@@ -113,8 +113,8 @@ TEST_P(StorageDictionarySegmentTest, CompressSegmentDouble) {
   vs_double->append(0.9);
   vs_double->append(1.1);
 
-  auto segment = encode_and_compress_segment(vs_double, DataType::Double,
-                                             SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto segment = ChunkEncoder::encode_segment(vs_double, DataType::Double,
+                                              SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<double>>(segment);
 
   // Test attribute_vector size
@@ -141,7 +141,7 @@ TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   vs_int->append(3);
 
   auto segment =
-      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+      ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test attribute_vector size
@@ -164,7 +164,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   vs_int->append(1);
   vs_int->append(2);
 
-  auto segment = encode_and_compress_segment(
+  auto segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int,
       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
@@ -180,7 +180,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
     vs_int->append(i);
   }
 
-  segment = encode_and_compress_segment(
+  segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int,
       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
@@ -200,7 +200,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
    */
 
   const auto empty_memory_usage =
-      encode_and_compress_segment(
+      ChunkEncoder::encode_segment(
           vs_int, DataType::Int,
           SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})
           ->memory_usage(MemoryUsageCalculationMode::Sampled);
@@ -208,7 +208,7 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) 
   vs_int->append(0);
   vs_int->append(1);
   vs_int->append(2);
-  auto compressed_segment = encode_and_compress_segment(
+  auto compressed_segment = ChunkEncoder::encode_segment(
       vs_int, DataType::Int,
       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
