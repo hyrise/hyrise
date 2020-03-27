@@ -77,6 +77,27 @@ TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
+TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({opossum::NULL_VALUE});
+  table->append({"test"});
+  table->append({opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
 TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);

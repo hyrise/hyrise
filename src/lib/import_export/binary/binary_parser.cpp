@@ -153,8 +153,7 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
       return _import_lz4_segment<ColumnDataType>(file, row_count);
   }
 
-  // We need to return for making the complier happy but this should not be reached
-  return nullptr;
+  Fail("Invalid EncodingType");
 }
 
 template <typename T>
@@ -306,7 +305,7 @@ std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std
   const auto string_length = _read_value<uint32_t>(file);
   pmr_vector<char> values(string_length * count);
   file.read(values.data(), values.size());
-  return std::make_shared<FixedStringVector>(values, string_length);
+  return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
 
 }  // namespace opossum

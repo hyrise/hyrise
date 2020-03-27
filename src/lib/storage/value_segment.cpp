@@ -76,7 +76,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
+  Assert(!is_null, "ValueSegment is not nullable but value passed is null.");
 
   _values.push_back(boost::get<T>(val));
 }
