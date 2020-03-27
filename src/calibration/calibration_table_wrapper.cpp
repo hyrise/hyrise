@@ -28,6 +28,6 @@ namespace opossum {
   }
 
   const ColumnDataDistribution CalibrationTableWrapper::get_column_data_distribution(ColumnID id) const {
-    return _column_data_distribution_collection[id];
+    return _column_data_distribution_collection.at(id);
   }
 }

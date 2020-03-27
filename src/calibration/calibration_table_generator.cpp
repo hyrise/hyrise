@@ -24,17 +24,17 @@ namespace opossum {
       }
     }
 
-    _chunk_offsets.assign(config->chunk_offsets.begin(), config->chunk_offsets.end());
+    _chunk_sizes.assign(config->chunk_size.begin(), config->chunk_size.end());
     _row_counts.assign(config->row_counts.begin(), config->row_counts.end());
   }
 
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGenerator::generate() const {
     auto table_wrappers = std::vector<std::shared_ptr<const CalibrationTableWrapper>>();
-    table_wrappers.reserve(_chunk_offsets.size() * _row_counts.size());
+    table_wrappers.reserve(_chunk_sizes.size() * _row_counts.size());
 
     auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
-    for (int chunk_size : _chunk_offsets) {
+    for (int chunk_size : _chunk_sizes) {
       for (int row_count : _row_counts){
         const auto table = table_generator->generate_table(
                 _column_specs,
