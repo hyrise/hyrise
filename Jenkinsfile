@@ -56,7 +56,7 @@ try {
       try {
         stage("Setup") {
           checkout scm
-          sh "./install.sh"
+          sh "./install_dependencies.sh"
 
           cmake = 'cmake -DCI_BUILD=ON'
           ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
@@ -84,6 +84,7 @@ try {
           // For clang-tidy, ccache does not have an effect, so we use unity there.
           sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                        ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
           mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                  ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers &&    ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
           mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&            ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release && cd clang-release &&                                                  ${cmake}           ${release}        ${clang}          .. &\
@@ -161,7 +162,7 @@ try {
               // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
               sh "cd clang-debug-unity-odr && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             } else {
-              Utils.markStageSkippedForConditional("clangDebugUnity")
+              Utils.markStageSkippedForConditional("clangDebugUnityODR")
             }
           }
         }, clangDebugTidy: {
@@ -171,6 +172,15 @@ try {
               sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
             } else {
               Utils.markStageSkippedForConditional("clangDebugTidy")
+            }
+          }
+        }, clangDebugDisablePrecompileHeaders: {
+          stage("clang-debug:disable-precompile-headers") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              // Check if builds work even when precompile headers is turned off. Executing the binaries is unnecessary as the observed errors are missing includes.
+              sh "cd clang-debug-disable-precompile-headers && make hyriseTest hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugDisablePrecompileHeaders")
             }
           }
         }, clangDebugAddrUBSanitizers: {
@@ -293,13 +303,14 @@ try {
         try {
           checkout scm
 
-          // We do not use install.sh here as there is no way to run OS X in a Docker container
+          // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
+          sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
           sh "./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {

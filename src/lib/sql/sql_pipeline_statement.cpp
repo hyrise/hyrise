@@ -34,11 +34,11 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<Optimizer> &pruning_optimizer,
-                                           const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
-                                           const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
+                                           const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
+                                           const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache,
                                            const CleanupTemporaries cleanup_temporaries)
-    : pqp_cache(pqp_cache),
-      lqp_cache(lqp_cache),
+    : pqp_cache(init_pqp_cache),
+      lqp_cache(init_lqp_cache),
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
@@ -90,8 +90,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   SQLTranslator sql_translator{_use_mvcc};
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-  lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
+  auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
+  auto lqp_roots = translation_result.lqp_nodes;
+  _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
   _unoptimized_logical_plan = lqp_roots.front();
@@ -197,7 +198,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   auto prepared_plan = std::make_shared<PreparedPlan>(optimized_without_values, all_parameter_ids);
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache) {
+  if (lqp_cache && _translation_info.cacheable) {
     lqp_cache->set(unoptimized_lqp, prepared_plan);
   }
 
@@ -218,7 +219,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
   if (!_transaction_context && _use_mvcc == UseMvcc::Yes) {
-    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
   // Stores when the actual compilation started/ended
@@ -253,7 +254,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit) {
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 

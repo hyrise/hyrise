@@ -46,8 +46,11 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
 
-  Hyrise::get().topology.use_numa_topology();
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+  // DO NOT modify the Hyrise class here, as those changes will get overwritten by the base test. Instead, make those
+  // changes in SetUp()
 }
 
 void SQLiteTestRunner::SetUp() {
@@ -78,6 +81,14 @@ void SQLiteTestRunner::SetUp() {
 
   auto& table_cache = table_cache_iter->second;
 
+  // In case the previous SQL query was not executed successfully, we always reset all tables
+  // because we cannot be sure that the dirty flags have been properly set.
+  if (!_last_run_successful) {
+    for (auto& [_, table_cache_entry] : table_cache) {
+      table_cache_entry.dirty = true;
+    }
+  }
+
   /**
    * Reset dirty tables in SQLite
    */
@@ -100,9 +111,9 @@ void SQLiteTestRunner::SetUp() {
   /**
    * Populate the StorageManager with mint Tables with the correct encoding from the cache
    */
-  for (auto const& [table_name, table_cache_entry] : table_cache) {
+  for (auto& [table_name, table_cache_entry] : table_cache) {
     /*
-      Opossum:
+      Hyrise:
         We start off with cached tables (SetUpTestCase) and add them to the resetted
         storage manager before each test here. In case tables have been modified, they are
         removed from the cache and we thus need to reload them from the initial tbl file.
@@ -116,12 +127,12 @@ void SQLiteTestRunner::SetUp() {
         // Do not call ChunkEncoder when in Unencoded mode since the ChunkEncoder will also generate
         // pruning statistics and we want to run this test without them as well, so we hijack the Unencoded
         // mode for this.
-        // TODO(anybody) Extract pruning statistics generation from ChunkEncoder, possibly as part of # 1153
+        // TODO(anybody) Extract pruning statistics generation from ChunkEncoder
         ChunkEncoder::encode_all_chunks(reloaded_table, table_cache_entry.chunk_encoding_spec);
       }
 
       Hyrise::get().storage_manager.add_table(table_name, reloaded_table);
-      table_cache.emplace(table_name, TableCacheEntry{reloaded_table, table_cache_entry.filename});
+      table_cache_entry.table = reloaded_table;
 
     } else {
       Hyrise::get().storage_manager.add_table(table_name, table_cache_entry.table);
@@ -149,6 +160,8 @@ std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
+  _last_run_successful = false;
+
   const auto [query_pair, encoding_type] = GetParam();
   const auto& [line, sql] = query_pair;
 
@@ -187,6 +200,10 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Mark Tables modified by the query as dirty
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     for (const auto& table_name : lqp_find_modified_tables(plan)) {
+      if (!_table_cache_per_encoding.at(encoding_type).contains(table_name)) {
+        // Table was not cached, for example because it was created as part of the query
+        continue;
+      }
       // mark table cache entry as dirty, when table has been modified
       _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
     }
@@ -198,6 +215,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       _sqlite->main_connection.execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
     }
   }
+
+  _last_run_successful = true;
 }
 
 }  // namespace opossum

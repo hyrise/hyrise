@@ -1,3 +1,7 @@
+-- The queries in this file are automatically executed by the SQLiteTestRunner as part of hyriseTest.
+-- Their result is then compared to that of SQLite.
+-- Tables are loaded from sqlite_testrunner.tables.
+
 -- Select entire table
 SELECT * FROM mixed;
 SELECT * FROM mixed_null;
@@ -200,6 +204,7 @@ SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 2
 
 -- JOIN multiple tables
 SELECT * FROM mixed_null AS t1 INNER JOIN id_int_int_int_100 AS t2 ON t1.b = t2.a INNER JOIN mixed AS t3 ON t1.b = t3.b;
+SELECT * FROM id_int_int_int_100 t1 LEFT JOIN id_int_int_int_100 t2 ON t1.a != t2.a AND t1.b != t2.b
 
 -- Make sure that name-to-id-resolving works fine.
 SELECT t1.a, t1.b, t2.b, t3.a FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a;
@@ -256,6 +261,9 @@ SELECT COUNT(*) FROM mixed;
 SELECT COUNT(*) + 1 FROM mixed;
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
+SELECT a, COUNT(*) FROM mixed GROUP BY a ORDER BY a desc;
+SELECT a, COUNT(*) FROM mixed GROUP BY a ORDER BY COUNT(*) desc;
+SELECT a, COUNT(*) FROM mixed GROUP BY a ORDER BY 100 - COUNT(*) desc;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
 SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a;
 SELECT COUNT(*) FROM id_int_int_int_50, id_int_int_int_100;
@@ -265,7 +273,9 @@ SELECT COUNT(*) FROM mixed, id_int_int_int_100;
 -- COUNT(expr)
 SELECT COUNT(1) FROM mixed;
 SELECT COUNT(b + 1) FROM mixed;
+SELECT COUNT(b) + 1 FROM mixed;
 SELECT COUNT(1 + 2) FROM mixed;
+SELECT COUNT(b + c) FROM mixed;
 SELECT a, COUNT(1) FROM mixed GROUP BY a;
 SELECT b + 1, COUNT(c + 1) FROM mixed GROUP BY b+1;
 
@@ -277,6 +287,7 @@ sELEcT Sum(b + b) AS sum_b_b from mixed;
 
 -- Aggregates with NULL
 SELECT a, MAX(b) FROM mixed_null GROUP BY a;
+SELECT a, MAX(b) FROM mixed_null GROUP BY a ORDER BY MAX(b) DESC;
 SELECT a, MIN(b) FROM mixed_null GROUP BY a;
 SELECT a, SUM(b) FROM mixed_null GROUP BY a;
 SELECT a, AVG(b) FROM mixed_null GROUP BY a;
@@ -285,6 +296,7 @@ SELECT a, COUNT(*) FROM mixed_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
 SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;
+SELECT a, b FROM (SELECT a, COUNT(a) AS b FROM mixed GROUP BY a) t
 
 -- HAVING
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) >= 10 AND MAX(b) < 40;
@@ -340,6 +352,11 @@ CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int
 CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
 CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
 CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM id_int_int_int_100 WHERE a > 10; SELECT a1, a2 FROM alias_view;
+CREATE VIEW someview AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a; SELECT * FROM someview;
+
+-- TABLES
+DROP TABLE IF EXISTS t; CREATE TABLE t (a INT); INSERT INTO t (a) VALUES (1); CREATE TABLE IF NOT EXISTS t (b INT); SELECT * FROM t;
+DROP TABLE IF EXISTS sometable; CREATE TABLE sometable AS SELECT * FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a; SELECT * FROM sometable;
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;

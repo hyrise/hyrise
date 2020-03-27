@@ -31,8 +31,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_concurrent_vector<T> result(values.size());
+pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
+  pmr_vector<T> result(values.size());
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
@@ -137,7 +137,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             }
           }
 
-          std::vector<bool> null_values;
+          pmr_vector<bool> null_values;
 
           /**
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
@@ -172,7 +172,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
           if (column_specifications[column_index].null_ratio) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
-                create_typed_segment_values<ColumnDataType>(values), null_values);
+                create_typed_segment_values<ColumnDataType>(values), std::move(null_values));
           } else {
             value_segment =
                 std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
@@ -201,9 +201,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     // get added chunk, mark it as immutable and add statistics
     const auto& added_chunk = table->last_chunk();
     added_chunk->finalize();
-    if (!added_chunk->pruning_statistics()) {
-      generate_chunk_pruning_statistics(added_chunk);
-    }
+    generate_chunk_pruning_statistics(added_chunk);
   }
 
   Hyrise::get().scheduler()->wait_for_all_tasks();

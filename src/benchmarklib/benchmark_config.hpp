@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "encoding_config.hpp"
+#include "storage/chunk.hpp"
 
 namespace opossum {
 
@@ -15,7 +16,6 @@ enum class BenchmarkMode { Ordered, Shuffled };
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
-// View BenchmarkConfig::description to see format of the JSON-version
 class BenchmarkConfig {
  public:
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const ChunkOffset chunk_size,
@@ -28,7 +28,7 @@ class BenchmarkConfig {
   static BenchmarkConfig get_default_config();
 
   BenchmarkMode benchmark_mode = BenchmarkMode::Ordered;
-  ChunkOffset chunk_size = 100'000;
+  ChunkOffset chunk_size = Chunk::DEFAULT_SIZE;
   EncodingConfig encoding_config = EncodingConfig{};
   bool indexes = false;
   int64_t max_runs = -1;
@@ -40,10 +40,8 @@ class BenchmarkConfig {
   uint32_t clients = 1;
   bool enable_visualization = false;
   bool verify = false;
-  bool cache_binary_tables = false;
+  bool cache_binary_tables = false;  // Defaults to false for internal use, but the CLI sets it to true by default
   bool sql_metrics = false;
-
-  static const char* description;
 
  private:
   BenchmarkConfig() = default;
