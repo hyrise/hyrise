@@ -3,7 +3,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "lqp_generator.hpp"
 
-#include "calibration_table_wrapper.hpp"
+#include "storage/table.hpp"
+#include <synthetic_table_generator.hpp>
+#include <synthetic_table_generator.cpp>
 
 using namespace opossum::expression_functional;
 
