@@ -21,9 +21,7 @@ std::string ProjectionNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_expressions() const {
-  return node_expressions;
-}
+std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::column_expressions() const { return node_expressions; }
 
 bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");

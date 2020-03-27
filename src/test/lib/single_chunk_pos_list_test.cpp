@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -26,16 +26,16 @@ namespace opossum {
         auto singleChunkPosList = std::make_shared<SingleChunkPosList>(chunkID);
         auto& offsets = singleChunkPosList->get_offsets();
 
-        auto posList = std::make_shared<PosList>();
-        posList->reserve(chunk->size());
+        auto rowIDPosList = std::make_shared<RowIDPosList>();
+        rowIDPosList->reserve(chunk->size());
 
         offsets.reserve(chunk->size());
         for (auto i = ChunkOffset{0}; i < chunk->size(); i++) {
             offsets.push_back(i);
-            posList->push_back(RowID{chunkID,i});
+            rowIDPosList->push_back(RowID{chunkID,i});
         }
 
-        EXPECT_TRUE(*singleChunkPosList == *posList);
+        EXPECT_TRUE(*singleChunkPosList == *rowIDPosList);
 
     }
 }  // namespace opossum

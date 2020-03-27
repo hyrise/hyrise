@@ -24,7 +24,7 @@ class StorageLZ4SegmentTest : public BaseTest {
 
 template <typename T>
 std::shared_ptr<LZ4Segment<T>> compress(std::shared_ptr<ValueSegment<T>> segment, DataType data_type) {
-  auto encoded_segment = encode_and_compress_segment(segment, data_type, SegmentEncodingSpec{EncodingType::LZ4});
+  auto encoded_segment = ChunkEncoder::encode_segment(segment, data_type, SegmentEncodingSpec{EncodingType::LZ4});
   return std::dynamic_pointer_cast<LZ4Segment<T>>(encoded_segment);
 }
 
@@ -251,7 +251,7 @@ TEST_F(StorageLZ4SegmentTest, CompressMultiBlockStringSegment) {
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
   const auto block_size = LZ4Encoder::_block_size;
-  const auto num_rows = Chunk::DEFAULT_SIZE / 20;
+  const auto num_rows = 100'000 / 20;
 
   for (auto index = size_t{0u}; index < num_rows; ++index) {
     vs_str->append(AllTypeVariant{pmr_string{"this is element " + std::to_string(index)}});
@@ -298,7 +298,7 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryStringSegment) {
 
 TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
   const auto block_size = LZ4Encoder::_block_size;
-  const auto num_rows = Chunk::DEFAULT_SIZE / 4;
+  const auto num_rows = 100'000 / 4;
 
   for (auto index = size_t{0u}; index < num_rows; ++index) {
     vs_int->append(static_cast<int>(index * 2));

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_pos_list.hpp"
+#include "pos_lists/abstract_pos_list.hpp"
 
 namespace opossum {
 
@@ -39,11 +39,11 @@ class SingleChunkPosList final : public AbstractPosList {
   }
 
   PosListIterator<const SingleChunkPosList*, RowID> begin() const {
-    return PosListIterator<const SingleChunkPosList*, RowID>(this, ChunkOffset{0}, static_cast<ChunkOffset>(size()));
+    return PosListIterator<const SingleChunkPosList*, RowID>(this, ChunkOffset{0});
   }
 
   PosListIterator<const SingleChunkPosList*, RowID> end() const {
-    return PosListIterator<const SingleChunkPosList*, RowID>(this, static_cast<ChunkOffset>(size()), static_cast<ChunkOffset>(size()));
+    return PosListIterator<const SingleChunkPosList*, RowID>(this, static_cast<ChunkOffset>(size()));
   }
 
   PosListIterator<const SingleChunkPosList*, RowID> cbegin() const {

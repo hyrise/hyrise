@@ -10,15 +10,15 @@ namespace opossum {
 
 class ImportNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _import_node = ImportNode::make("tablename", "filename", FileType::Csv); }
+  void SetUp() override { _import_node = ImportNode::make("table_name", "file_name", FileType::Csv); }
 
   std::shared_ptr<ImportNode> _import_node;
 };
 
-TEST_F(ImportNodeTest, Description) { EXPECT_EQ(_import_node->description(), "[Import] Name: 'tablename'"); }
+TEST_F(ImportNodeTest, Description) { EXPECT_EQ(_import_node->description(), "[Import] Name: 'table_name'"); }
 
 TEST_F(ImportNodeTest, HashingAndEqualityCheck) {
-  const auto another_import_node = ImportNode::make("tablename", "filename", FileType::Csv);
+  const auto another_import_node = ImportNode::make("table_name", "file_name", FileType::Csv);
   EXPECT_EQ(*_import_node, *another_import_node);
 
   EXPECT_EQ(_import_node->hash(), another_import_node->hash());

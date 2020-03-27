@@ -1,13 +1,11 @@
 #include "sql_pipeline_builder.hpp"
+#include "hyrise.hpp"
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
 
-std::shared_ptr<SQLPhysicalPlanCache> SQLPipelineBuilder::default_pqp_cache{};
-std::shared_ptr<SQLLogicalPlanCache> SQLPipelineBuilder::default_lqp_cache{};
-
 SQLPipelineBuilder::SQLPipelineBuilder(const std::string& sql)
-    : _sql(sql), _pqp_cache(default_pqp_cache), _lqp_cache(default_lqp_cache) {}
+    : _sql(sql), _pqp_cache(Hyrise::get().default_pqp_cache), _lqp_cache(Hyrise::get().default_lqp_cache) {}
 
 SQLPipelineBuilder& SQLPipelineBuilder::with_mvcc(const UseMvcc use_mvcc) {
   _use_mvcc = use_mvcc;

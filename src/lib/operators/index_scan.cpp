@@ -111,7 +111,7 @@ void IndexScan::_validate_input() {
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-std::shared_ptr<AbstractPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) {
+std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto range_begin = AbstractIndex::Iterator{};
   auto range_end = AbstractIndex::Iterator{};
 

@@ -2,7 +2,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
@@ -43,9 +43,7 @@ class BaseSegmentIterator
  public:
   // boost will not use the random_access_iterator_tag if reference_type is not a c++ reference (which it isn't here)
   // we still want to use random access (for binary search, distance, ...)
-  /* typedef std::random_access_iterator_tag iterator_category; */
-  // this makes some tests segfault. We think it's due to some bad distance_to implementation, but we're not sure.
-  // It doesn't give a noticable performance boost, so leaving it out might also be fine?
+  typedef std::random_access_iterator_tag iterator_category;
 };
 
 /**

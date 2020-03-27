@@ -18,7 +18,6 @@
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
-#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 
@@ -39,13 +38,19 @@ using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatisti
  */
 class Chunk : private Noncopyable {
  public:
-  // The last chunk offset is reserved for NULL as used in ReferenceSegments.
+  // This is the architecture-defined limit on the size of a single chunk. The last chunk offset is reserved for NULL
+  // as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
+  // For a new chunk, this is the size of the pre-allocated ValueSegments. This is only relevant for chunks that
+  // contain data. Chunks that contain reference segments do not use the table's target_chunk_size at all.
+  //
   // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
-  // feel free to re-evaluate this. This is only relevant for chunks that contain data. Chunks that contain reference
-  // segments do not use the table's max_chunk_size at all.
-  static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
+  // feel free to re-evaluate this. 2^16 is a good size because it means that on a unique column, dictionary
+  // requires up to 16 bits for the value ids. A chunk size of 100'000 would put us just slightly over that 16 bits,
+  // meaning that FixedSizeByteAligned vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
+  // account for NULL being encoded as a separate value id.
+  static constexpr ChunkOffset DEFAULT_SIZE = 65'535;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
@@ -79,17 +84,6 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
 
   bool has_mvcc_data() const;
-
-  /**
-   * The locking pointer locks the MVCC data non-exclusively
-   * and unlocks them on destruction
-   *
-   * For improved performance, it is best to call this function
-   * once and retain the reference as long as needed.
-   *
-   * @return a locking ptr to the MVCC data
-   */
-  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
 

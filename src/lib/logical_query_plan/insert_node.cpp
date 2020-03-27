@@ -10,7 +10,8 @@
 
 namespace opossum {
 
-InsertNode::InsertNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Insert), table_name(table_name) {}
+InsertNode::InsertNode(const std::string& init_table_name)
+    : AbstractLQPNode(LQPNodeType::Insert), table_name(init_table_name) {}
 
 std::string InsertNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;
@@ -22,7 +23,7 @@ std::string InsertNode::description(const DescriptionMode mode) const {
 
 bool InsertNode::is_column_nullable(const ColumnID column_id) const { Fail("Insert returns no columns"); }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& InsertNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> InsertNode::column_expressions() const {
   static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
   return empty_vector;
 }

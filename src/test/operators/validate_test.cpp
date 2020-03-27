@@ -60,11 +60,11 @@ class OperatorsValidateTest : public BaseTest {
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
-    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+    auto mvcc_data = chunk->mvcc_data();
 
     for (auto i = 0u; i < chunk->size(); ++i) {
-      mvcc_data->begin_cids[i] = 0u;
-      mvcc_data->end_cids[i] = MvccData::MAX_COMMIT_ID;
+      mvcc_data->set_begin_cid(i, 0u);
+      mvcc_data->set_end_cid(i, MvccData::MAX_COMMIT_ID);
     }
   }
 }
@@ -72,7 +72,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
 void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID end_cid) {
   auto chunk = table.get_chunk(row.chunk_id);
 
-  chunk->get_scoped_mvcc_data_lock()->end_cids[row.chunk_offset] = end_cid;
+  chunk->mvcc_data()->set_end_cid(row.chunk_offset, end_cid);
   chunk->increase_invalid_row_count(1);
 }
 
@@ -139,7 +139,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto snapshot_cid = CommitID{1};
-  auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, 0}}));
+  auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, 0}}));
   Segments segments = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
   auto chunk = std::make_shared<Chunk>(segments);
 
@@ -211,8 +211,8 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
-  // Create a PosList referencing more than one chunk
-  auto pos_list = std::make_shared<PosList>();
+  // Create a RowIDPosList referencing more than one chunk
+  auto pos_list = std::make_shared<RowIDPosList>();
   for (ChunkID chunk_id{0}; chunk_id < _test_table->chunk_count(); ++chunk_id) {
     const auto chunk_size = _test_table->get_chunk(chunk_id)->size();
     for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {

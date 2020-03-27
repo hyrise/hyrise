@@ -38,7 +38,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     // Add three chunks and fill them with values from 0-599
     auto begin_value = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
-      std::vector<int> values(CHUNK_SIZE);
+      pmr_vector<int32_t> values(CHUNK_SIZE);
       std::iota(values.begin(), values.end(), begin_value);
 
       const auto value_segment = std::make_shared<ValueSegment<int>>(std::move(values));
@@ -109,7 +109,9 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto validate = std::make_shared<Validate>(gt);
     validate->set_transaction_context(transaction_context);
 
-    const auto aggregate_definition = std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}};
+    const auto sum = sum_(pqp_column_(ColumnID{0}, DataType::Int, false, "number"));
+    const auto aggregate_definition =
+        std::vector<std::shared_ptr<AggregateExpression>>{std::static_pointer_cast<AggregateExpression>(sum)};
     const auto group_by = std::vector<ColumnID>{};
     const auto aggregate = std::make_shared<AggregateHash>(validate, aggregate_definition, group_by);
 

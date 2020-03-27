@@ -18,6 +18,9 @@ namespace opossum {
 class BaseVectorDecompressor {
  public:
   virtual ~BaseVectorDecompressor() = default;
+  BaseVectorDecompressor() = default;
+  BaseVectorDecompressor(const BaseVectorDecompressor&) = default;
+  BaseVectorDecompressor(BaseVectorDecompressor&&) = default;
 
   virtual uint32_t get(size_t i) = 0;
   virtual size_t size() const = 0;
