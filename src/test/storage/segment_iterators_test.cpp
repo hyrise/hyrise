@@ -83,7 +83,8 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{4}});
   position_filter->guarantee_single_chunk();
 
-  const auto position_filter_multi_chunk = std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
+  const auto position_filter_multi_chunk =
+      std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{2}});
@@ -134,7 +135,8 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   position_filter->guarantee_single_chunk();
 
-  const auto position_filter_multi_chunk = std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
+  const auto position_filter_multi_chunk =
+      std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
@@ -178,7 +180,8 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   position_filter->guarantee_single_chunk();
 
-  const auto position_filter_multi_chunk = std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
+  const auto position_filter_multi_chunk =
+      std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
