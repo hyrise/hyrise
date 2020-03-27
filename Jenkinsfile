@@ -56,7 +56,7 @@ try {
       try {
         stage("Setup") {
           checkout scm
-          sh "./install.sh"
+          sh "./install_dependencies.sh"
 
           cmake = 'cmake -DCI_BUILD=ON'
           ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
@@ -303,7 +303,7 @@ try {
         try {
           checkout scm
 
-          // We do not use install.sh here as there is no way to run OS X in a Docker container
+          // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
