@@ -43,6 +43,12 @@ struct ColumnDataDistribution {
     return c;
   }
 
+  bool operator==(ColumnDataDistribution& rhs) const {
+    return distribution_type == rhs.distribution_type && num_different_values == rhs.num_different_values &&
+           pareto_scale == rhs.pareto_scale && skew_location == rhs.skew_location && skew_scale == rhs.skew_scale &&
+           skew_shape == rhs.skew_shape && min_value == rhs.min_value && max_value == rhs.max_value;
+  }
+
   DataDistributionType distribution_type = DataDistributionType::Uniform;
 
   int num_different_values = 1'000;

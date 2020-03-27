@@ -69,7 +69,7 @@ class SQLPipelineBuilder final {
   std::shared_ptr<Optimizer> _optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
-  CleanupTemporaries _cleanup_temporaries{false};
+  CleanupTemporaries _cleanup_temporaries{true};
 };
 
 }  // namespace opossum

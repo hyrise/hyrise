@@ -5,10 +5,18 @@
 
 #include "calibration_table_wrapper.hpp"
 
-using namespace opossum::expression_functional;
+using opossum::expression_functional::between_inclusive_;
+using opossum::expression_functional::like_;
+using opossum::expression_functional::is_null_;
+using opossum::expression_functional::is_not_null_;
+using opossum::expression_functional::equals_;
+using opossum::expression_functional::not_in_;
+using opossum::expression_functional::greater_than_;
+using opossum::expression_functional::less_than_;
 
 namespace opossum {
-    void LQPGenerator::generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper>& table) {
+    void LQPGenerator::generate(OperatorType operator_type,
+            const std::shared_ptr<const CalibrationTableWrapper>& table) {
       switch (operator_type) {
         case OperatorType::TableScan:
             _generate_table_scans(table);
@@ -26,7 +34,6 @@ namespace opossum {
       const int selectivity_resolution = 10;
       const int reference_scan_resolution = 10;
 
-      // TODO remove the need of referencing columns by string
       const auto stored_table_node = StoredTableNode::make(table->get_name());
 
       const int column_count = table->get_table()->column_count();
@@ -34,7 +41,6 @@ namespace opossum {
       const auto column_data_types = table->get_table()->column_data_types();
 
       for (ColumnID column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-
         // Column specific values
         const auto column = stored_table_node->get_column(column_names.at(column_id));
         const auto distribution = table->get_column_data_distribution(column_id);
@@ -60,54 +66,60 @@ namespace opossum {
                       { return PredicateNode::make(greater_than_(column, lower_bound), base); };
 
               // Baseline
-              _generated_lpqs.emplace_back(get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
+              _generated_lpqs.emplace_back(
+                      get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
 
               // Add reference scans
               if (_enable_reference_scans){
                 // generate reference scans that are executed before the actual predicate
                 // that reduce the overall selectivity stepwise
-                const double reference_scan_step_size = (distribution.max_value - step_cursor) / reference_scan_resolution;
+                const double reference_scan_step_size =
+                        (distribution.max_value - step_cursor) / reference_scan_resolution;
                 for (int step = 0; step < reference_scan_resolution; step++) {
                   const ColumnDataType upper_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(
                           static_cast<int>(step * reference_scan_step_size));
                   _generated_lpqs.emplace_back(
-                          get_predicate_node_based_on(PredicateNode::make(less_than_(column, upper_bound), stored_table_node))
-                          );
+                          get_predicate_node_based_on(
+                                  PredicateNode::make(less_than_(column, upper_bound), stored_table_node)));
                   if (_enable_between_predicates && std::is_same<ColumnDataType, std::string>::value) {
                     _generated_lpqs.emplace_back(PredicateNode::make(
                             between_inclusive_(column, lower_bound, upper_bound), stored_table_node));
                   }
                 }
                 // add reference scan with full pos list
-                _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_not_null_(column), stored_table_node)));
+                _generated_lpqs.emplace_back(
+                        get_predicate_node_based_on(PredicateNode::make(is_not_null_(column), stored_table_node)));
                 // add reference scan with empty pos list
-                _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(is_null_(column), stored_table_node)));
-
+                _generated_lpqs.emplace_back(
+                        get_predicate_node_based_on(PredicateNode::make(is_null_(column), stored_table_node)));
               }
 
               // LIKE and IN predicates for strings
               if (_enable_like_predicates && std::is_same<ColumnDataType, std::string>::value) {
                 for (int step = 0; step < 10; step++) {
                   auto const upper_bound = (SyntheticTableGenerator::generate_value<pmr_string>(step));
-                  _generated_lpqs.emplace_back(PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
+                  _generated_lpqs.emplace_back(
+                          PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
                 }
 
                 // IN
-                _generated_lpqs.emplace_back(PredicateNode::make(not_in_(column, "not_there"), stored_table_node));
+                _generated_lpqs.emplace_back(
+                        PredicateNode::make(not_in_(column, "not_there"), stored_table_node));
 
                 // 100% selectivity
-                _generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%"), stored_table_node));
+                _generated_lpqs.emplace_back(
+                        PredicateNode::make(like_(column, "%"), stored_table_node));
                 // 0% selectivity
-                _generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%not_there%"), stored_table_node));
+                _generated_lpqs.emplace_back(
+                        PredicateNode::make(like_(column, "%not_there%"), stored_table_node));
               }
-
           });
         }
       }
     }
 
-    //TODO extract to new namespace
-    std::vector<LQPGenerator::ColumnPair> LQPGenerator::_get_column_pairs(const std::shared_ptr<const CalibrationTableWrapper>& table) const {
+    std::vector<LQPGenerator::ColumnPair>
+            LQPGenerator::_get_column_pairs(const std::shared_ptr<const CalibrationTableWrapper>& table) const {
       /*
        * ColumnVsColumn Scans occur when the value of a predicate is a column.
        * In this case every value from one column has to be compared to every value of the other
@@ -120,18 +132,17 @@ namespace opossum {
 
       auto singles = std::vector<TableColumnDefinition>();
 
-      // TODO Try to avoid copying in loop
       for (const TableColumnDefinition& column : column_definitions) {
         bool matched = false;
         auto single_iterator = singles.begin();
-	      while (single_iterator < singles.end()) {
-	        if (column.data_type == single_iterator->data_type) {
+        while (single_iterator < singles.end()) {
+          if (column.data_type == single_iterator->data_type) {
             matched = true;
             column_comparison_pairs.emplace_back(ColumnPair(single_iterator->name, column.name));
             singles.erase(single_iterator);
             break;
           }
-	        single_iterator++;
+          single_iterator++;
         }
         if (!matched) {
           singles.emplace_back(column);
@@ -140,9 +151,8 @@ namespace opossum {
       return column_comparison_pairs;
     }
 
-    void LQPGenerator::_generate_column_vs_column_scans (
+    void LQPGenerator::_generate_column_vs_column_scans(
             const std::shared_ptr<const CalibrationTableWrapper> &table) {
-
       const auto stored_table_node = StoredTableNode::make(table->get_name());
       const auto column_vs_column_scan_pairs = _get_column_pairs(table);
 
@@ -150,21 +160,18 @@ namespace opossum {
         _generated_lpqs.emplace_back(PredicateNode::make(
                 greater_than_(
                         stored_table_node->get_column(pair.first),
-                        stored_table_node->get_column(pair.second)
-                ), stored_table_node));
+                        stored_table_node->get_column(pair.second)), stored_table_node));
       }
     }
 
     void LQPGenerator::_generate_joins(const std::shared_ptr<const CalibrationTableWrapper> &table) {
-
       const auto stored_table_node = StoredTableNode::make(table->get_name());
       const auto column_vs_column_scan_pairs = _get_column_pairs(table);
 
       for (const ColumnPair &pair : column_vs_column_scan_pairs) {
         _generated_lpqs.emplace_back(std::make_shared<JoinNode>(JoinMode::Inner, equals_(
                         stored_table_node->get_column(pair.first),
-                        stored_table_node->get_column(pair.second)
-                )));
+                        stored_table_node->get_column(pair.second))));
       }
     }
 
@@ -175,4 +182,4 @@ namespace opossum {
     const std::vector<std::shared_ptr<AbstractLQPNode> > & LQPGenerator::get_lqps() {
       return _generated_lpqs;
     }
-}
+}  // namespace opossum
