@@ -2,8 +2,8 @@
 add_executable(
     hyriseCalibration
 
-        calibration_benchmark_runner.cpp
-        calibration_benchmark_runner.hpp
+    calibration_benchmark_runner.cpp
+    calibration_benchmark_runner.hpp
     calibration.cpp
     calibration_table_wrapper.cpp
     calibration_table_wrapper.hpp
@@ -11,12 +11,12 @@ add_executable(
     csv_writer.hpp
     lqp_generator.cpp
     lqp_generator.hpp
-        operator_feature_export.cpp
-        operator_feature_export.hpp
-        table_feature_export.cpp
-        table_feature_export.hpp
-        calibration_table_generator.cpp
-        calibration_table_generator.hpp
+    operator_feature_export.cpp
+    operator_feature_export.hpp
+    table_feature_export.cpp
+    table_feature_export.hpp
+    calibration_table_generator.cpp
+    calibration_table_generator.hpp
 )
 
 target_link_libraries(
