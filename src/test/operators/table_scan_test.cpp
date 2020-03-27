@@ -251,6 +251,21 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ASSERT_EQ(expected.size(), 0u);
   }
 
+  void scan_and_check_order_by(const std::shared_ptr<TableWrapper> table_wrapper) const {
+    const auto scan_sorted = create_table_scan(table_wrapper,
+                                               ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+    scan_sorted->execute();
+    const auto result_table_sorted = scan_sorted->get_output();
+
+    for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+      const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
+      ASSERT_TRUE(ordered_by);
+      const auto order_by_vector =
+          std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
+      EXPECT_EQ(ordered_by, order_by_vector);
+    }
+  }
+
  protected:
   EncodingType _encoding_type;
   std::shared_ptr<TableWrapper> _int_int_compressed;
@@ -1109,36 +1124,40 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   }
 }
 
-// Not all operators forward the sorted flag.
-// Note that sortedness being forwarded by table scan is implementation defined.
-// Not all operators forward sortedness and end up with results that are unsorted.
+/**
+ * Tests for ordered_by flag forwarding by sort operators
+ *
+ * Not all operators forward the sorted flag.
+ * Note that sortedness being forwarded by table scan is implementation defined.
+ * Not all operators forward sortedness and end up with results that are unsorted.
+ */
+TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
+    // Verify that the order_by flag is not set when it's not present in left input.
+    const auto scan_unsorted =
+        create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+    scan_unsorted->execute();
+
+    const auto result_table_unsorted = scan_unsorted->get_output();
+
+    for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+      const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
+      EXPECT_FALSE(ordered_by);
+    }
+}
+
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
-  // Verify that the order_by flag is not set when it's not present in left input.
-  const auto scan_unsorted =
-      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-  scan_unsorted->execute();
-
-  const auto result_table_unsorted = scan_unsorted->get_output();
-
-  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
-    EXPECT_FALSE(ordered_by);
-  }
-
   // Verify that the order_by flag is set when it's present in left input.
-  const auto scan_sorted =
-      create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-  scan_sorted->execute();
+  scan_and_check_order_by(get_int_sorted_op());
+}
 
-  const auto result_table_sorted = scan_sorted->get_output();
+TEST_P(OperatorsTableScanTest, ForwardOrderByFlagReferencing) {
+  // Verify that the order_by flag is set when it's present in left input (referencing table).
+  const auto table = get_int_sorted_op()->table;
 
-  for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
-    ASSERT_TRUE(ordered_by);
-    const auto order_by_vector =
-        std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
-    EXPECT_EQ(ordered_by, order_by_vector);
-  }
+  auto referencing_table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  referencing_table_wrapper->execute();
+
+  scan_and_check_order_by(referencing_table_wrapper);
 }
 
 }  // namespace opossum
