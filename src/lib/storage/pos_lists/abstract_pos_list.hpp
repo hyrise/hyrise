@@ -22,7 +22,6 @@ class AbstractPosList : private Noncopyable {
     PosListIterator(PosListType pos_list, ChunkOffset offset) {
       _pos_list = pos_list;
       _chunk_offset = offset;
-      _max_size = static_cast<ChunkOffset>(pos_list->size());
     }
 
     // Ugly hack.
@@ -45,13 +44,12 @@ class AbstractPosList : private Noncopyable {
     }
 
     DereferenceReturnType dereference() const {
-      DebugAssert(_chunk_offset < _max_size, "past-the-end PosListIterator dereferenced");
+      DebugAssert(_chunk_offset < _pos_list->size(), "past-the-end PosListIterator dereferenced");
       return (*_pos_list)[_chunk_offset];
     }
 
     PosListType _pos_list;
     ChunkOffset _chunk_offset;
-    ChunkOffset _max_size;
   };
 
   virtual ~AbstractPosList() = default;
