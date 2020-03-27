@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <iostream>
 
 #include <all_type_variant.hpp>
@@ -12,7 +11,7 @@ class Table;
 
 namespace opossum {
 
-struct TableGeneratorConfig{
+struct TableGeneratorConfig {
   std::set<DataType> data_types;
   std::set<EncodingType> encoding_types;
   std::vector<ColumnDataDistribution> column_data_distributions;

@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-    class OperatorFeatureExportTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class OperatorFeatureExportTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
 }  // namespace opossum
