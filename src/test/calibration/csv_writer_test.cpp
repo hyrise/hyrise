@@ -165,7 +165,7 @@ namespace opossum {
     TEST_F(CSVWriterTest, PanicIfCreateNewFileWithDifferentHeaders){
       const auto csv_writer = default_writer();
       const auto new_headers = std::vector<std::string>({"COLUMN_1", "COLUMN_2", "COLUMN_3", "COLUMN_4"});
-      EXPECT_ANY_THROW(CSVWriter(_file_path, new_headers, ',', FALSE));
+      EXPECT_ANY_THROW(CSVWriter(_file_path, new_headers, ',', false));
     }
 
     TEST_F(CSVWriterTest, PanicIfDelimiterInValue){
