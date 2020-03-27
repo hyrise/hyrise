@@ -210,6 +210,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
+    case LQPNodeType::ChangeMetaTable:
     case LQPNodeType::DummyTable: {
       auto empty_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>();
       output_table_statistics = std::make_shared<TableStatistics>(std::move(empty_column_statistics), Cardinality{0});

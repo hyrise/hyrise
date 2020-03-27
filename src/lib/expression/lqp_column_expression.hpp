@@ -10,7 +10,7 @@ namespace opossum {
 
 class LQPColumnExpression : public AbstractExpression {
  public:
-  explicit LQPColumnExpression(const LQPColumnReference& column_reference);
+  explicit LQPColumnExpression(const LQPColumnReference& init_column_reference);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string description(const DescriptionMode mode) const override;

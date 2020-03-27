@@ -10,16 +10,14 @@ size_t SimdBp128Vector::on_size() const { return _size; }
 size_t SimdBp128Vector::on_data_size() const { return sizeof(uint128_t) * _data.size(); }
 
 std::unique_ptr<BaseVectorDecompressor> SimdBp128Vector::on_create_base_decompressor() const {
-  return std::unique_ptr<BaseVectorDecompressor>{on_create_decompressor()};
-}
-
-std::unique_ptr<SimdBp128Decompressor> SimdBp128Vector::on_create_decompressor() const {
   return std::make_unique<SimdBp128Decompressor>(*this);
 }
 
-SimdBp128Iterator SimdBp128Vector::on_begin() const { return SimdBp128Iterator{&_data, _size, 0u}; }
+SimdBp128Decompressor SimdBp128Vector::on_create_decompressor() const { return SimdBp128Decompressor(*this); }
 
-SimdBp128Iterator SimdBp128Vector::on_end() const { return SimdBp128Iterator{&_data, _size, _size}; }
+SimdBp128Iterator SimdBp128Vector::on_begin() const { return SimdBp128Iterator{on_create_decompressor(), 0u}; }
+
+SimdBp128Iterator SimdBp128Vector::on_end() const { return SimdBp128Iterator{on_create_decompressor(), _size}; }
 
 std::unique_ptr<const BaseCompressedVector> SimdBp128Vector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {

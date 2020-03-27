@@ -35,7 +35,7 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
     _max = static_cast<uint32_t>((1ul << _bit_size) - 1u);
   }
 
-  pmr_vector<uint32_t> generate_sequence(size_t count) {
+  pmr_vector<uint32_t> generate_sequence(const size_t count) {
     auto sequence = pmr_vector<uint32_t>(count);
     auto value = _min;
     for (auto& elem : sequence) {
@@ -80,6 +80,46 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
   for (; compressed_seq_it != compressed_seq_end; seq_it++, compressed_seq_it++) {
     EXPECT_EQ(*seq_it, *compressed_seq_it);
   }
+}
+
+// Test that the iterator's advance() method works as expected. Creating a sufficiently large vector to ensure that
+// accesses span multiple bounds. Note, as of February 2020, an issue with proxy iterators being only InputOperators
+// leads to the problem that STL functionality (e.g., std::advance) does not use the iterator's advance() method to
+// move n steps but rather calls increment()/decrement() n times (see issue #1531).
+// Tests that advancing the iterators with step sizes >1 works for SIMD-BP128 vectors. Supplements CompressedVectorTest
+// in that different bit sizes are tested.
+TEST_P(SimdBp128Test, DecompressSequenceUsingAdvance) {
+  const auto sequence = generate_sequence(SimdBp128Packing::meta_block_size * 2 + 17);
+  const auto compressed_sequence_base = compress(sequence);
+  auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
+  EXPECT_NE(compressed_sequence, nullptr);
+
+  auto seq_it = sequence.cbegin();
+  auto compressed_seq_it = compressed_sequence->cbegin();
+  EXPECT_EQ(*seq_it, *compressed_seq_it);
+
+  seq_it += 1;
+  compressed_seq_it += 1;
+  EXPECT_EQ(*seq_it, *compressed_seq_it);
+
+  seq_it += 5;
+  compressed_seq_it += 5;
+  EXPECT_EQ(*seq_it, *compressed_seq_it);
+
+  seq_it += SimdBp128Packing::meta_block_size * 2;
+  compressed_seq_it += SimdBp128Packing::meta_block_size * 2;
+  EXPECT_EQ(*seq_it, *compressed_seq_it);
+
+  auto seq_it_backwards = sequence.cend() - 1;  // last element
+  auto compressed_seq_it_backwards = compressed_sequence->cend() - 1;
+  EXPECT_EQ(*seq_it_backwards, *compressed_seq_it_backwards);
+  seq_it -= 17;
+  compressed_seq_it -= 17;
+  EXPECT_EQ(*seq_it, *compressed_seq_it);
+
+  seq_it -= SimdBp128Packing::meta_block_size + 17;
+  compressed_seq_it -= SimdBp128Packing::meta_block_size + 17;
+  EXPECT_EQ(*seq_it, *compressed_seq_it);
 }
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingDecompressor) {

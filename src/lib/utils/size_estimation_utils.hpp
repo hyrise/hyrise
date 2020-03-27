@@ -43,7 +43,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   const auto base_size = sizeof(V);
 
   // Early out
-  if (string_vector.empty()) return base_size;
+  if (string_vector.empty()) return base_size + (string_vector.capacity() * sizeof(StringType));
 
   constexpr auto sampling_factor = 0.005f;
   constexpr auto min_rows = size_t{10};
@@ -65,7 +65,10 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // Since we want an ordered position list (this potentially increases the performance when accessing the segment), we
   // can directly use std::set to generate distinct sample positions. std::set is slightly faster than
   // std::unordered_set + sorting for small sample sizes.
-  std::default_random_engine generator{std::random_device{}()};
+  // We use a static seed of 17 to avoid variable segment sizes of the same segment. In case multiple randomized
+  // samples are wanted (e.g., to obtain more accurate results), MemoryUsageCalculationMode should be extended
+  // with to have a "random seed" and a "static seed" sample mode.
+  std::default_random_engine generator{17};
   std::uniform_int_distribution<size_t> distribution(0ul, samples_to_draw);
   std::set<size_t> sample_set;
   while (sample_set.size() < samples_to_draw) {
@@ -83,7 +86,8 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
 
   const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
   return base_size +
-         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)));
+         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)) +
+                             (string_vector.capacity() - string_vector.size()) * sizeof(StringType));
 }
 
 }  // namespace opossum
