@@ -29,7 +29,7 @@ TEST_F(MatchesAllPosListTest, AddAfterMatchedAllTest) {
   // after the posList was created. These later added rows should not be contained in the PosList
 
   auto table_name = "test_table";
-  auto table = load_table("resources/test_data/tbl/float_int.tbl", 10, false);
+  auto table = load_table("resources/test_data/tbl/float_int.tbl", 10, FinalizeLastChunk::Yes);
   EXPECT_EQ(table->chunk_count(), 1);
   auto table_to_add_name = "test_table_to_add";
   auto table_to_add = load_table("resources/test_data/tbl/float_int.tbl", 10);
