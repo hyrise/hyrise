@@ -9,7 +9,7 @@ namespace opossum {
     for (DataType data_type : config->data_types){
       for (EncodingType encoding_type : config->encoding_types){
         if (encoding_supports_data_type(encoding_type, data_type)){
-          for (ColumnDataDistribution column_data_distribution : config->column_data_distribution){
+          for (ColumnDataDistribution column_data_distribution : config->column_data_distributions){
               std::stringstream column_name_stringstream;
               column_name_stringstream << data_type << "_"
                               << encoding_type << "_"
@@ -24,7 +24,7 @@ namespace opossum {
       }
     }
 
-    _chunk_sizes.assign(config->chunk_size.begin(), config->chunk_size.end());
+    _chunk_sizes.assign(config->chunk_sizes.begin(), config->chunk_sizes.end());
     _row_counts.assign(config->row_counts.begin(), config->row_counts.end());
   }
 

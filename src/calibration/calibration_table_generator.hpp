@@ -15,8 +15,8 @@ namespace opossum {
 struct TableGeneratorConfig{
   std::set<DataType> data_types;
   std::set<EncodingType> encoding_types;
-  std::vector<ColumnDataDistribution> column_data_distribution;
-  std::set<int> chunk_size;
+  std::vector<ColumnDataDistribution> column_data_distributions;
+  std::set<int> chunk_sizes;
   std::set<int> row_counts;
 };
 
