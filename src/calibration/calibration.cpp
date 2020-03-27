@@ -26,7 +26,7 @@ int main() {
           {DataType::Double, DataType::Float, DataType::Int, DataType::Long, DataType::String, DataType::Null},
           {EncodingType::Dictionary},
           {ColumnDataDistribution::make_uniform_config(0.0, 1000.0)},
-          {100000}, //TODO rename to chunk_size
+          {100000},
           {1500, 3000, 6000, 10000, 20000, 30000, 60175, 25, 15000, 2000, 8000, 5, 100}
   });
   auto table_generator = CalibrationTableGenerator(table_config);
