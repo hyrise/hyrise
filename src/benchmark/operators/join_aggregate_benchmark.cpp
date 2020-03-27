@@ -145,7 +145,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   return std::make_shared<TableWrapper>(ages_table);
 }
 
-template <typename AggType, typename JoinType>
+template <typename AggregateType, typename JoinType>
 void BM_Join_Aggregate(benchmark::State& state) {
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
   table_wrapper_left->execute();
@@ -164,14 +164,14 @@ void BM_Join_Aggregate(benchmark::State& state) {
       std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
   warmup_join->execute();
 
-  auto warmup_aggregate = std::make_shared<AggType>(warmup_join, aggregates, groupby);
+  auto warmup_aggregate = std::make_shared<AggregateType>(warmup_join, aggregates, groupby);
   warmup_aggregate->execute();
 
   for (auto _ : state) {
     auto join =
         std::make_shared<JoinType>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, operator_join_predicate);
     join->execute();
-    auto aggregate = std::make_shared<AggType>(join, aggregates, groupby);
+    auto aggregate = std::make_shared<AggregateType>(join, aggregates, groupby);
     aggregate->execute();
   }
 }

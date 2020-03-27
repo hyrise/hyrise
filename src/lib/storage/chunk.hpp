@@ -144,9 +144,9 @@ class Chunk : private Noncopyable {
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
    * the ColumnIDs of the segments by which it is sorted will be returned.
    *
-   * In a chunk, multiple segments may be ordered independently. For example, in a table storing orderd,
-   * both the order id and date of incoming orders have incrementig values. In this case, ordered_by
-   * has two entries. However, for cases where the data is first ordererd by one column, then by another
+   * In a chunk, multiple segments may be ordered independently. For example, in a table storing ordered,
+   * both the order id and date of incoming orders have incrementing values. In this case, ordered_by
+   * has two entries. However, for cases where the data is first orderered by one column, then by another
    * (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
    *
    * This is currently taken advantage of in, e.g., the ColumnVsValueScan. See #1519 for more details.
