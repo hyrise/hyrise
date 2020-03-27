@@ -210,6 +210,23 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
 
+  // TODO for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+  //      const auto& expression = expressions[column_id];
+  //
+  //      if (expression->type == ExpressionType::PQPColumn) {
+  //       forward information
+  //      }
+
+  // Collect information about which input table columns correspond to the expression (output) columns.
+  auto column_id_to_expression = std::unordered_map<ColumnID, ColumnID>{};
+  for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
+    const auto& expression = expressions[expression_id];
+    if (const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression)) {
+      const auto& original_id = pqp_column_expression->column_id;
+      column_id_to_expression[original_id] = expression_id;
+    }
+  }
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -220,10 +237,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
     chunk->finalize();
 
-    // Forward ordered_by flag
+    // Forward ordered_by flags, mapping column ids
     const auto ordered_by = input_chunk->ordered_by();
     if (ordered_by) {
-      chunk->set_ordered_by(*ordered_by);
+      std::vector<std::pair<ColumnID, OrderByMode>> transformed;
+      for (auto& [column_id, mode]: *ordered_by) {
+        if (!column_id_to_expression.count(column_id)) continue;  // column is not present
+        const auto new_column_id = column_id_to_expression[column_id];
+        transformed.push_back(std::make_pair(new_column_id, mode));
+      }
+      chunk->set_ordered_by(transformed);
     }
 
     output_chunks[chunk_id] = chunk;

@@ -205,6 +205,7 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
   }
 
   // Verify that the order_by flag is set when it's present in left input.
+  // sorting on column a (ColumnID 0)
   const auto sort = std::make_shared<Sort>(table_wrapper_a, ColumnID{0});
   sort->execute();
 
@@ -216,9 +217,10 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
     ASSERT_TRUE(ordered_by);
-    const auto order_by_vector =
-        std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
-    EXPECT_EQ(ordered_by, order_by_vector);
+    // Expect sort to be column a, now with ColumnID 1
+    const auto expected_order_by =
+        std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{1}, OrderByMode::Ascending)};
+    EXPECT_EQ(ordered_by, expected_order_by);
   }
 }
 
