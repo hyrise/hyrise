@@ -37,6 +37,29 @@ namespace opossum {
       if (replace_file){
         _create_file_with_headers();
       }
+
+      // Check existing file header is equal to new header in memory (important if replace_file = false)
+      DebugAssert(([&]() -> bool{
+                  std::ifstream check_file;
+                  check_file.open(_file_path);
+                  std::string first_line;
+
+                  auto correct_header = false;
+
+                  getline(check_file, first_line); {
+                std::vector<std::string> to_test_headers;
+                boost::split(to_test_headers, first_line, [delimiter](char c){return c == delimiter;});
+
+                if(to_test_headers == _headers){
+                  correct_header = true;
+                }
+              }
+                  check_file.close();
+                  return correct_header;
+              })(),
+              "\nCSV Writer ERROR: Provided headers for file '" + _file_path + "' does not match with existing headers. \n" +
+              "Please validate headers for this CSVFile."
+      );
     };
 
     void CSVWriter::write_row() {
@@ -51,32 +74,8 @@ namespace opossum {
         }
         return true;
       })(_current_row, _headers),
-      "CSV Writer ERROR: Tried to write row to file '" + _file_path + "' with missing values for one or more columns. \n" +
+      "\nCSV Writer ERROR: Tried to write row to file '" + _file_path + "' with missing values for one or more columns. \n" +
            "Please validate header and value insertion. You might forgot a column or "
-      );
-
-      // Check if file header is equal to header in memory
-      DebugAssert(
-              ([&](const std::string& file_path, std::vector<std::string> headers, const char delimiter) -> bool{
-                  std::ifstream check_file;
-
-                  check_file.open(file_path);
-                  std::string first_line;
-                  auto correct_header = false;
-
-                  getline(check_file, first_line); {
-                    std::vector<std::string> to_test_headers;
-                    boost::split(to_test_headers, first_line, [delimiter](char c){return c == delimiter;});
-
-                    if(to_test_headers == headers){
-                      correct_header = true;
-                    }
-                  }
-                  check_file.close();
-                  return correct_header;
-              })(_file_path, _headers, _delimiter),
-              "CSV Writer ERROR: Tried to write row to file '" + _file_path + "' with missing values for one or more columns. \n" +
-              "Please validate header and value insertion."
       );
 
       // construct row as string
