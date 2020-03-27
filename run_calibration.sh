@@ -14,4 +14,4 @@ mkdir $BASE_PATH/$MEASUREMENT_FOLDER
 $PYTHON ./python/cost_models.py -train $BASE_PATH/$MEASUREMENT_FOLDER
 
 # provide a specific dataset to test (e.g. benchmarks)
-# $PYTHON ./python/cost_models.py -train $BASE_PATH/$MEASUREMENT_FOLDER --test $PATH_TO_MEASUREMENT
+# $PYTHON ./python/cost_models.py -train $BASE_PATH/$MEASUREMENT_FOLDER --test $PATH_TO_MEASUREMENT --out $PATH_TO_OUTPUT_FOLDER
