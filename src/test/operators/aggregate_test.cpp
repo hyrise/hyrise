@@ -939,8 +939,7 @@ TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
             aggregate_by_column_id, table->column_data_type(aggregate_by_column_id),
             table->column_is_nullable(aggregate_by_column_id), table->column_name(aggregate_by_column_id)))};
         std::vector<ColumnID> groupby_column_ids = {group_by_column_id};
-        const auto ordered_aggregate =
-            std::make_shared<AggregateSort>(sort, aggregate_expressions, groupby_column_ids);
+        const auto ordered_aggregate = std::make_shared<AggregateSort>(sort, aggregate_expressions, groupby_column_ids);
         const auto unordered_aggregate = std::make_shared<AggregateHash>(this->_table_wrapper_multi_columns,
                                                                          aggregate_expressions, groupby_column_ids);
         ordered_aggregate->execute();
@@ -968,7 +967,7 @@ TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
   const auto chunk_count = aggregate->get_output()->chunk_count();
 
   // Chunks are ordered by groupby_column_ids. Default OrderByMode is Ascending
-  const auto expected_ordered_by = std::make_pair<ColumnID, OrderByMode>(ColumnID{2}, OrderByMode::Ascending);
+  const auto expected_ordered_by = std::make_pair(ColumnID{2}, OrderByMode::Ascending);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = aggregate->get_output()->get_chunk(chunk_id);

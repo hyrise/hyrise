@@ -441,9 +441,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (table_value_clustered_by &&
-        std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *(table_value_clustered_by->begin())) !=
-            _groupby_column_ids.end()) {
+    if (table_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+                                              *(table_value_clustered_by->begin())) != _groupby_column_ids.end()) {
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
       sorted_table = _sort_table_chunk_wise(input_table, table_value_clustered_by);
     } else {

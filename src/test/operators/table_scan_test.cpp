@@ -252,8 +252,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   void scan_and_check_order_by(const std::shared_ptr<TableWrapper> table_wrapper) const {
-    const auto scan_sorted = create_table_scan(table_wrapper,
-                                               ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+    const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
     scan_sorted->execute();
     const auto result_table_sorted = scan_sorted->get_output();
 
@@ -1132,17 +1131,17 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
  * Not all operators forward sortedness and end up with results that are unsorted.
  */
 TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
-    // Verify that the order_by flag is not set when it's not present in left input.
-    const auto scan_unsorted =
-        create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-    scan_unsorted->execute();
+  // Verify that the order_by flag is not set when it's not present in left input.
+  const auto scan_unsorted =
+      create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  scan_unsorted->execute();
 
-    const auto result_table_unsorted = scan_unsorted->get_output();
+  const auto result_table_unsorted = scan_unsorted->get_output();
 
-    for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-      const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
-      EXPECT_FALSE(ordered_by);
-    }
+  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
+    EXPECT_FALSE(ordered_by);
+  }
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
