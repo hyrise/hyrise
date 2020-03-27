@@ -9,7 +9,7 @@ class SingleChunkPosList final : public AbstractPosList {
 
   SingleChunkPosList() = delete;
 
-  SingleChunkPosList(ChunkID chunkID) : _chunk_id(chunkID) {};
+  SingleChunkPosList(ChunkID chunkID) : _chunk_id(chunkID) {}
 
   virtual bool empty() const override final {
     return _offsets.empty();
@@ -20,7 +20,7 @@ class SingleChunkPosList final : public AbstractPosList {
   
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const override final {
     return sizeof(this) + size() * sizeof(ChunkOffset);
-  };
+  }
 
   virtual bool references_single_chunk() const override final {
     return true;
