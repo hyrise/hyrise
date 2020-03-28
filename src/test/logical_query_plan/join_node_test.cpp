@@ -197,46 +197,42 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
 }
 
 TEST_F(JoinNodeTest, ConstraintsInnerJoin) {
-  // Prepare
+  // Prepare constraint definitions
   const auto unique_constraint_a = TableConstraintDefinition{{_t_a_a.original_column_id()}};
   const auto unique_constraint_x = TableConstraintDefinition{{_t_b_x.original_column_id()}};
   const auto unique_constraint_y = TableConstraintDefinition{{_t_b_y.original_column_id()}};
   const auto unique_constraint_b_c = TableConstraintDefinition{{_t_a_b.original_column_id(), _t_a_c.original_column_id()}};
 
   // Case 1 - Join columns of both, LEFT and RIGHT tables are not unique
-  // -> no forwarding at all
   EXPECT_TRUE(_mock_node_a->constraints()->empty() && _mock_node_b->constraints()->empty());
   EXPECT_TRUE(_inner_join_node->constraints()->empty());
 
-  // Case 2 - Join column of LEFT table (_t_a_a) is unique whereas join column of RIGHT table (_t_b_x) is not
+  // Case 2 - Join column of LEFT table (a) is unique whereas join column of RIGHT table (y) is not
   _mock_node_a->set_table_constraints({unique_constraint_a, unique_constraint_b_c});
-  _mock_node_b->set_table_constraints({unique_constraint_y});
+  _mock_node_b->set_table_constraints({unique_constraint_x});
 
-  // Constraints of RIGHT table should be forwarded
-  const auto inner_join_constraints = _inner_join_node->constraints();
+  // Expect unique constraints of RIGHT table (x) to be forwarded
+  auto inner_join_constraints = _inner_join_node->constraints();
   EXPECT_EQ(inner_join_constraints->size(), 1);
-  check_table_constraint_representation({unique_constraint_y}, inner_join_constraints);
-  EXPECT_TRUE(inner_join_constraints == _mock_node_b->constraints());
+  EXPECT_TRUE(*inner_join_constraints == *_mock_node_b->constraints());
 
-  // Case 3 - Join columns of RIGHT table are unique
-  // -> forward constraints of LEFT table
+  // Case 3 - Join column of LEFT table (a) is not(!) unique whereas join column of RIGHT table (y) is
+  _mock_node_a->set_table_constraints({unique_constraint_b_c});
+  _mock_node_b->set_table_constraints({unique_constraint_x, unique_constraint_y});
 
-  // Case 4 - Unique constraints on Join columns: Both LEFT & RIGHT table
-  // -> forward all input constraints
-//  _mock_node_a->set_table_constraints({unique_constraint_a, unique_constraint_b_c});
-//  _mock_node_b->set_table_constraints({unique_constraint_x, unique_constraint_y});
+  // Expect unique onstraints of LEFT table (b_c) to be forwarded
+  inner_join_constraints = _inner_join_node->constraints();
+  EXPECT_EQ(inner_join_constraints->size(), 1);
+  EXPECT_TRUE(*inner_join_constraints == *_mock_node_a->constraints());
 
+  // Case 4 - Join column of both, LEFT (a) and RIGHT (y) table are unique
+  _mock_node_a->set_table_constraints({unique_constraint_a, unique_constraint_b_c});
+  _mock_node_b->set_table_constraints({unique_constraint_x, unique_constraint_y});
 
-  // ---
-//  // Basic checks
-//  const auto lqp_constraints_mock_node_a = _mock_node_a->constraints();
-//  EXPECT_EQ(lqp_constraints_mock_node_a->size(), 2);
-//  EXPECT_TRUE(_mock_node_b->constraints()->empty());
-//
-//  // In-depth verification
-//  const auto lqp_constraints_inner_join = _inner_join_node->constraints();
-//  check_table_constraint_representation(, lqp_constraints_inner_join);
-
+  // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
+  inner_join_constraints = _inner_join_node->constraints();
+  EXPECT_EQ(inner_join_constraints->size(), 4);
+  check_table_constraint_representation({unique_constraint_a, unique_constraint_b_c, unique_constraint_x, unique_constraint_y}, inner_join_constraints);
 }
 
 

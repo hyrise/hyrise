@@ -163,7 +163,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  [[nodiscard]] bool is_column_set_unique(ExpressionUnorderedSet column_expressions) const;
+  [[nodiscard]] bool has_unique_constraint(ExpressionUnorderedSet column_expressions) const;
 
   /**
    * Perform a deep equality check

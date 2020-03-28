@@ -72,21 +72,22 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() const {
+  auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
   // The Semi-Join outputs input_left() without adding any rows or columns. But depending on the right table,
   // tuples may be filtered out. As a consequence, we can forward the constraints.
-  if(join_mode == JoinMode::Semi) forward_constraints();
+  if(join_mode == JoinMode::Semi) return forward_constraints();
 
   // No guarantees for multi predicate joins
-  if(join_predicates().size() > 1) return {};
+  if(join_predicates().size() > 1) return std::make_shared<ExpressionsConstraintDefinitions>();
 
   // No guarantees for Non-Equi Joins
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return {};
 
   // Check for uniqueness of join key columns
-  bool left_operand_unique = left_input()->is_column_set_unique({join_predicate->left_operand()});
-  bool right_operand_unique = right_input()->is_column_set_unique({join_predicate->right_operand()});
+  bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
+  bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
 
   switch(join_mode) {
   case JoinMode::Inner: {
@@ -95,21 +96,25 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
         auto left_constraints = left_input()->constraints();
         auto right_constraints = right_input()->constraints();
 
-        auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
         for(auto it = left_constraints->begin(); it != left_constraints->end();) {
           output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
         }
-//        output_constraints->emplace(right_input()->constraints());
+        for(auto it = right_constraints->begin(); it != right_constraints->end();) {
+          output_constraints->emplace(std::move(right_constraints->extract(it++).value()));
+        }
         return output_constraints;
+
       } else if(left_operand_unique) {
         // Uniqueness on the left prevents duplication of records on the right
         return right_input()->constraints();
+
       } else if(right_operand_unique) {
         // Uniqueness on the right prevents duplication of records on the left
         return left_input()->constraints();
+
       } else {
-        // Records of both input tables might get duplicated.
-        return {};
+        // No constraints to return.
+        return output_constraints;
       }
     }
     case JoinMode::Left: {
@@ -117,34 +122,34 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
       // Therefore, input constraints of the right table have to be discarded.
 
       // TODO Forward input constraints input_left() if applicable
-      return {};
+      return output_constraints;
     }
     case JoinMode::Right: {
       // The Right (outer) Join adds null values for tuples not present in the right table.
       // Therefore, input constraints of the left table have to be discarded.
 
       // TODO Forward input constraints input_right() if applicable
-      return {};
+      return output_constraints;
     }
     case JoinMode::FullOuter: {
       // The Full Outer Join might produce null values in all output columns.
       // Therefore, we have to discard all input constraints
-      return {};
+      return output_constraints;
     }
     case JoinMode::Cross: {
       // No uniqueness guarantee possible
-      return {};
+      return output_constraints;
     }
     case JoinMode::Semi: {
       Fail("JoinMode::Semi should already be handled.");
     }
     case JoinMode::AntiNullAsTrue: {
       // ?
-      return {};
+      return output_constraints;
     }
     case JoinMode::AntiNullAsFalse: {
       // ?
-      return {};
+      return output_constraints;
     }
   }
   Fail("Unhandled JoinMode");
