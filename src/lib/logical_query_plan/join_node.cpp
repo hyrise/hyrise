@@ -77,9 +77,8 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
 
   auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  // Currently, no guarantees for multi predicate joins
+  // Currently, no guarantees for multi predicate joins and Non-Equi/Theta-Joins
   if(join_predicates().size() > 1) return output_constraints;
-  // Also, no guarantees for Non-Equi Joins
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return output_constraints;
 
