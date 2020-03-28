@@ -167,11 +167,42 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
     using SegmentType = std::decay_t<decltype(segment)>;
 
     if constexpr (!std::is_same_v<pmr_string, ColumnDataType>) {
-      auto sum = ColumnDataType{0};
-      auto accessed_offsets = std::vector<ChunkOffset>{};
-      const auto functor = SumUpWithIterator<ColumnDataType>{sum, accessed_offsets};
+      // Test summing up all values in the segment or all values referenced by the PosList
+      {
+        auto sum = ColumnDataType{0};
+        auto accessed_offsets = std::vector<ChunkOffset>{};
+        const auto functor = SumUpWithIterator<ColumnDataType>{sum, accessed_offsets};
 
+        const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+        if (with_position_filter) {
+          if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+            iterable.with_iterators(position_filter, functor);
+          }
+        } else {
+          iterable.with_iterators(functor);
+        }
+
+        EXPECT_EQ(sum, expected_sum(nullable, with_position_filter));
+        EXPECT_EQ(accessed_offsets, expected_offsets(with_position_filter));
+      }
+    }
+
+    // Next, test that begin and end iterators are compatible (i.e., that iterating from both ends allows us to meet in
+    // the middle)
+    {
       const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+      const auto functor = [&](auto begin, auto end) {
+        if (with_position_filter) {
+          begin += position_filter->size() - 1;
+        } else {
+          begin += base_segment->size() - 1;
+        }
+        --end;
+
+        EXPECT_EQ(begin->value(), end->value());
+        EXPECT_EQ(begin->chunk_offset(), end->chunk_offset());
+      };
+
       if (with_position_filter) {
         if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
           iterable.with_iterators(position_filter, functor);
@@ -179,9 +210,6 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
       } else {
         iterable.with_iterators(functor);
       }
-
-      EXPECT_EQ(sum, expected_sum(nullable, with_position_filter));
-      EXPECT_EQ(accessed_offsets, expected_offsets(with_position_filter));
     }
   });
 }
