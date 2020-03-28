@@ -47,11 +47,10 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
     Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
   }
 
-  auto& pipeline_statements = SQLPipelineBuilder{query}.create_pipeline().get_sql_pipeline_statements();
+  auto pipeline_statements = SQLPipelineBuilder{query}.create_pipeline().get_sql_pipeline_statements();
 
   // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
   // See note at: https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  std::cout << pipeline_statements.size() << std::endl;
   AssertInput(pipeline_statements.size() == 1u, "Only a single statement allowed in prepared statement");
 
   const auto& translation_info = pipeline_statements[0]->get_sql_translation_info();
@@ -75,9 +74,9 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
         std::make_shared<ValueExpression>(statement_details.parameters[parameter_idx]);
   }
 
-  const auto lqp = prepared_plan->instantiate(parameter_expressions);
+  auto lqp = prepared_plan->instantiate(parameter_expressions);
   const auto optimizer = Optimizer::create_default_optimizer();
-  optimizer->optimize(lqp);
+  lqp = optimizer->optimize(std::move(lqp));
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 

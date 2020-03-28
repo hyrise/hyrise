@@ -34,7 +34,7 @@ TEST_F(QueryHandlerTest, BindParameters) {
   const auto specification = PreparedStatementDetails{"test_statement", "", {123}};
 
   const auto result = QueryHandler::bind_prepared_plan(specification);
-  EXPECT_EQ(result->type(), OperatorType::TableScan);
+  EXPECT_EQ(result->type(), OperatorType::Validate);
 }
 
 TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
