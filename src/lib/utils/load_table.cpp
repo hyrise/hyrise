@@ -51,7 +51,8 @@ std::shared_ptr<Table> create_table_from_header(const std::string& file_name, si
   return create_table_from_header(infile, chunk_size);
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size, FinalizeLastChunk finalize_last_chunk) {
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size,
+                                  FinalizeLastChunk finalize_last_chunk) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
 

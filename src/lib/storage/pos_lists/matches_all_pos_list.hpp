@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/chunk.hpp"
 #include "abstract_pos_list.hpp"
+#include "storage/chunk.hpp"
 
 namespace opossum {
 
@@ -14,35 +14,23 @@ class MatchesAllPosList : public AbstractPosList {
 
   MatchesAllPosList& operator=(MatchesAllPosList&& other) = default;
 
-  bool references_single_chunk() const final { return true; }
+  bool references_single_chunk() const final;
+  ChunkID common_chunk_id() const final;
 
-  ChunkID common_chunk_id() const final {
-    DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "common_chunk_id called on invalid chunk id");
-    return _common_chunk_id;
-  }
-
+  // implemented here to assure compiler optimization without LTO (PosListIterator uses this a lot)
   RowID operator[](size_t n) const final {
     DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "operator[] called on invalid chunk id");
     return RowID{_common_chunk_id, static_cast<ChunkOffset>(n)};
   }
 
-  bool empty() const final { return size() == 0; }
+  bool empty() const final;
+  size_t size() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode) const final;
 
-  size_t size() const final { return _common_chunk_size_on_creation; }
-
-  size_t memory_usage(const MemoryUsageCalculationMode) const final { return sizeof *this; }
-
-  PosListIterator<const MatchesAllPosList*, RowID> begin() const {
-    return PosListIterator<const MatchesAllPosList*, RowID>(this, ChunkOffset{0});
-  }
-
-  PosListIterator<const MatchesAllPosList*, RowID> end() const {
-    return PosListIterator<const MatchesAllPosList*, RowID>(this, static_cast<ChunkOffset>(size()));
-  }
-
-  PosListIterator<const MatchesAllPosList*, RowID> cbegin() const { return begin(); }
-
-  PosListIterator<const MatchesAllPosList*, RowID> cend() const { return end(); }
+  PosListIterator<MatchesAllPosList, RowID> begin() const;
+  PosListIterator<MatchesAllPosList, RowID> end() const;
+  PosListIterator<MatchesAllPosList, RowID> cbegin() const;
+  PosListIterator<MatchesAllPosList, RowID> cend() const;
 
  private:
   std::shared_ptr<const Chunk> _common_chunk;

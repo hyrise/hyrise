@@ -37,7 +37,8 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   /* (1 ) */ explicit RowIDPosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
   /* (2 ) */ RowIDPosList(size_type count, const RowID& value, const allocator_type& alloc = allocator_type())
       : Vector(count, value, alloc) {}
-  /* (3 ) */ explicit RowIDPosList(size_type count, const allocator_type& alloc = allocator_type()) : Vector(count, alloc) {}
+  /* (3 ) */ explicit RowIDPosList(size_type count, const allocator_type& alloc = allocator_type())
+      : Vector(count, alloc) {}
   /* (4 ) */ template <class InputIt>
   RowIDPosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
@@ -60,32 +61,13 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   // values. Note that this is not about NULL values being referenced, but about NULL value contained in the RowIDPosList
   // itself.
 
-  void guarantee_single_chunk() { _references_single_chunk = true; }
+  void guarantee_single_chunk();
 
   // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
-  bool references_single_chunk() const final {
-    if (_references_single_chunk) {
-      DebugAssert(
-          [&]() {
-            if (size() == 0) return true;
-            const auto& common_chunk_id = (*this)[0].chunk_id;
-            return std::all_of(cbegin(), cend(), [&](const auto& row_id) {
-              return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
-            });
-          }(),
-          "RowIDPosList was marked as referencing a single chunk, but references more");
-    }
-    return _references_single_chunk;
-  }
+  bool references_single_chunk() const final;
 
   // For chunks that share a common ChunkID, returns that ID.
-  ChunkID common_chunk_id() const final {
-    DebugAssert(references_single_chunk(),
-                "Can only retrieve the common_chunk_id if the RowIDPosList is guaranteed to reference a single chunk.");
-    Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
-    Assert((*this)[0].chunk_id != INVALID_CHUNK_ID, "RowIDPosList that references_single_chunk must not contain NULL");
-    return (*this)[0].chunk_id;
-  }
+  ChunkID common_chunk_id() const final;
 
   using Vector::assign;
   using Vector::get_allocator;
@@ -124,10 +106,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::resize;
   using Vector::swap;
 
-  size_t memory_usage(const MemoryUsageCalculationMode mode) const final {
-    // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
-    return size() * sizeof(Vector::value_type);
-  }
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
  private:
   bool _references_single_chunk = false;
