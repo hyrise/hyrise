@@ -1,5 +1,4 @@
 #include <string>
-#include "../../calibration/csv_writer.cpp"
 #include "../../calibration/csv_writer.hpp"
 #include "base_test.hpp"
 

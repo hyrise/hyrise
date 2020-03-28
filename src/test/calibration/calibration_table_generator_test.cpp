@@ -1,8 +1,6 @@
 #include "base_test.hpp"
 
-#include <synthetic_table_generator.cpp>
 #include <synthetic_table_generator.hpp>
-#include "../../calibration/calibration_table_generator.cpp"
 #include "../../calibration/calibration_table_generator.hpp"
 #include "storage/table.hpp"
 

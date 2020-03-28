@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-    class LQPGeneratorTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class LQPGeneratorTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
 }  // namespace opossum

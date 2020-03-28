@@ -1,4 +1,3 @@
-#include "../../calibration/calibration_table_wrapper.cpp"
 #include "../../calibration/calibration_table_wrapper.hpp"
 #include "base_test.hpp"
 #include "storage/table.hpp"
