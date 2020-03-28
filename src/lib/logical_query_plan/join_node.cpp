@@ -84,7 +84,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
   if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return output_constraints;
 
   if(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
-    // TODO Comment why Outer Joins do not need special handling (Null values do not break constraints)
+    // TODO(Julian) Comment why Outer Joins do not need special handling (Null values do not break constraints)
 
     // Check for uniqueness of join key columns
     bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
