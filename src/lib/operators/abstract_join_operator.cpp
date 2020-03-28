@@ -53,7 +53,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     }
 
     // Fallback - use column ID
-    return (from_left ? "Left"s : "Right"s) + " Column #"s + std::to_string(column_id);
+    return "Column #"s + std::to_string(column_id);
   };
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
