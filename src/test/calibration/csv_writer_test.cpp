@@ -1,5 +1,6 @@
 #include <string>
 #include <utility>
+#include <fstream>
 
 #include "../../calibration/csv_writer.hpp"
 #include "base_test.hpp"
