@@ -1,6 +1,7 @@
 #include "query_handler.hpp"
 
 #include "expression/value_expression.hpp"
+#include "optimizer/optimizer.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 
@@ -46,17 +47,18 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
     Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
   }
 
-  auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
-  auto sql_translator = SQLTranslator{UseMvcc::Yes};
-  auto translation_result = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
-  auto prepared_plans = translation_result.lqp_nodes;
+  auto& pipeline_statements = SQLPipelineBuilder{query}.create_pipeline().get_sql_pipeline_statements();
 
   // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
   // See note at: https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  AssertInput(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
+  std::cout << pipeline_statements.size() << std::endl;
+  AssertInput(pipeline_statements.size() == 1u, "Only a single statement allowed in prepared statement");
 
-  auto parameter_ids_of_value_placeholders = translation_result.translation_info.parameter_ids_of_value_placeholders;
-  const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_plans[0], parameter_ids_of_value_placeholders);
+  const auto& translation_info = pipeline_statements[0]->get_sql_translation_info();
+  const auto& lqp = pipeline_statements[0]->get_unoptimized_logical_plan();
+
+  auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
+  const auto prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids_of_value_placeholders);
 
   Hyrise::get().storage_manager.add_prepared_plan(statement_name, prepared_plan);
 }
@@ -74,7 +76,12 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
   }
 
   const auto lqp = prepared_plan->instantiate(parameter_expressions);
-  return LQPTranslator{}.translate_node(lqp);
+  const auto optimizer = Optimizer::create_default_optimizer();
+  optimizer->optimize(lqp);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  return pqp;
 }
 
 std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(

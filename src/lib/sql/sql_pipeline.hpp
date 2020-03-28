@@ -47,6 +47,10 @@ class SQLPipeline : public Noncopyable {
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
 
+  // Returns the individual SQLPipelineStatements. Accessing these should only be necessary if you plan to execute only
+  // part of the pipeline.
+  const std::vector<std::shared_ptr<SQLPipelineStatement>>& get_sql_pipeline_statements();
+
   // Returns the unoptimized LQP root for each statement.
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
 

@@ -119,6 +119,10 @@ const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_pars
   return _parsed_sql_statements;
 }
 
+const std::vector<std::shared_ptr<SQLPipelineStatement>>& SQLPipeline::get_sql_pipeline_statements() {
+  return _sql_pipeline_statements;
+}
+
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
   if (!_unoptimized_logical_plans.empty()) {
     return _unoptimized_logical_plans;

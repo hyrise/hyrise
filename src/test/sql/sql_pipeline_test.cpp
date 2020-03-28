@@ -119,6 +119,20 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
   EXPECT_THROW(auto sql_pipeline = SQLPipelineBuilder{_multi_statement_invalid}.create_pipeline(), std::exception);
 }
 
+TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  try {
+    auto sql_pipeline = SQLPipelineBuilder{_invalid_sql}.create_pipeline();
+    // Fail if the previous command did not throw an exception
+    FAIL();
+  } catch (const std::exception& e) {
+    const auto error_msg = std::string(e.what());
+    // Check that the ^ was actually inserted in the error message
+    EXPECT_TRUE(error_msg.find('^') != std::string::npos);
+  }
+}
+
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
@@ -622,9 +636,6 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   const auto sql_pipeline_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
   EXPECT_FALSE(sql_pipeline_0.pqp_cache);
   EXPECT_FALSE(sql_pipeline_0.lqp_cache);
-  const auto sql_pipeline_statement_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
-  EXPECT_FALSE(sql_pipeline_statement_0.pqp_cache);
-  EXPECT_FALSE(sql_pipeline_statement_0.lqp_cache);
 
   // Default caches
   Hyrise::get().default_pqp_cache = default_pqp_cache;
@@ -632,9 +643,6 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   const auto sql_pipeline_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
   EXPECT_EQ(sql_pipeline_1.pqp_cache, default_pqp_cache);
   EXPECT_EQ(sql_pipeline_1.lqp_cache, default_lqp_cache);
-  const auto sql_pipeline_statement_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
-  EXPECT_EQ(sql_pipeline_statement_1.pqp_cache, default_pqp_cache);
-  EXPECT_EQ(sql_pipeline_statement_1.lqp_cache, default_lqp_cache);
 
   // Local caches
   const auto sql_pipeline_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
@@ -643,24 +651,12 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
                                   .create_pipeline();
   EXPECT_EQ(sql_pipeline_2.pqp_cache, local_pqp_cache);
   EXPECT_EQ(sql_pipeline_2.lqp_cache, local_lqp_cache);
-  const auto sql_pipeline_statement_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
-                                            .with_pqp_cache(local_pqp_cache)
-                                            .with_lqp_cache(local_lqp_cache)
-                                            .create_pipeline_statement();
-  EXPECT_EQ(sql_pipeline_statement_2.pqp_cache, local_pqp_cache);
-  EXPECT_EQ(sql_pipeline_statement_2.lqp_cache, local_lqp_cache);
 
   // No caches
   const auto sql_pipeline_3 =
       SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
   EXPECT_FALSE(sql_pipeline_3.pqp_cache);
   EXPECT_FALSE(sql_pipeline_3.lqp_cache);
-  const auto sql_pipeline_statement_3 = SQLPipelineBuilder{"SELECT * FROM table_a"}
-                                            .with_pqp_cache(nullptr)
-                                            .with_lqp_cache(nullptr)
-                                            .create_pipeline_statement();
-  EXPECT_FALSE(sql_pipeline_statement_3.pqp_cache);
-  EXPECT_FALSE(sql_pipeline_statement_3.lqp_cache);
 }
 
 }  // namespace opossum
