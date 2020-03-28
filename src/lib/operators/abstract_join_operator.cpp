@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "constant_mappings.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
