@@ -77,8 +77,10 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
 
   auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  // Currently, no guarantees for multi predicate joins and Non-Equi/Theta-Joins
-  if(join_predicates().size() > 1) return output_constraints;
+  // No guarantees for Cross Joins and multi predicate joins
+  const auto predicates = join_predicates();
+  if(predicates.empty() || predicates.size() > 1) return output_constraints;
+  // Also, no guarantees for Non-Equi/Theta-Joins
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return output_constraints;
 
@@ -114,8 +116,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
         return output_constraints;
       }
     } else if(join_mode == JoinMode::Cross){
-      // Cross Joins break unique constraints
-      return output_constraints;
+      Fail("JoinMode::Cross should already be handled.");
     } else if(join_mode == JoinMode::Semi) {
       Fail("JoinMode::Semi should already be handled.");
     } else if(join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
