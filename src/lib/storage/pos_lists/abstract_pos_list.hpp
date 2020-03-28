@@ -15,18 +15,14 @@ class RowIDPosList;
 
 class AbstractPosList : private Noncopyable {
  public:
-  template <typename PosListType = const AbstractPosList*, typename DereferenceReturnType = RowID>
+  template <typename PosListType = AbstractPosList, typename DereferenceReturnType = RowID>
   class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
                                                         boost::random_access_traversal_tag, DereferenceReturnType> {
    public:
-    PosListIterator(PosListType pos_list, ChunkOffset offset) {
-      _pos_list = pos_list;
-      _chunk_offset = offset;
-      _max_size = static_cast<ChunkOffset>(pos_list->size());
-    }
+    PosListIterator(const PosListType* pos_list, const ChunkOffset offset): _pos_list(pos_list), _chunk_offset(offset) {}
 
-    // Ugly hack.
-    // See https://github.com/hyrise/hyrise/issues/1531
+    // Without this hack, binary search, distance, etc. cannot use random accesses and will run in linear time instead.
+    // For an explanation, see https://github.com/hyrise/hyrise/issues/1531
     typedef std::random_access_iterator_tag iterator_category;
 
     void increment() { ++_chunk_offset; }
@@ -45,13 +41,12 @@ class AbstractPosList : private Noncopyable {
     }
 
     DereferenceReturnType dereference() const {
-      DebugAssert(_chunk_offset < _max_size, "past-the-end PosListIterator dereferenced");
+      DebugAssert(_chunk_offset < _pos_list->size(), "past-the-end PosListIterator dereferenced");
       return (*_pos_list)[_chunk_offset];
     }
 
-    PosListType _pos_list;
+    const PosListType* _pos_list;
     ChunkOffset _chunk_offset;
-    ChunkOffset _max_size;
   };
 
   virtual ~AbstractPosList() = default;

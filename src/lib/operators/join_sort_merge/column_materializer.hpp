@@ -174,10 +174,9 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment,
-                                                                          const ChunkID chunk_id,
-                                                                          std::unique_ptr<RowIDPosList>& null_rows_output,
-                                                                          Subsample<T>& subsample) {
+  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(
+      const DictionarySegment<T>& segment, const ChunkID chunk_id, std::unique_ptr<RowIDPosList>& null_rows_output,
+      Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 

@@ -44,8 +44,8 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       auto begin = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{
           &_segment.block_minima(), &_segment.null_values(), std::move(decompressor), position_filter->cbegin(),
           position_filter->cbegin()};
-      auto end =
-          PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{position_filter->cbegin(), position_filter->cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT, PosListIteratorType>{position_filter->cbegin(),
+                                                                                    position_filter->cend()};
       functor(begin, end);
     });
   }

@@ -319,7 +319,7 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto pos_list = RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
-                          RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
+                               RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
 
   const auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));

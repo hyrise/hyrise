@@ -20,8 +20,9 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
   static void SetUpTestCase() {
     int_values = {1, 2, 2, 2, 5, 2, 2, 8, 2, 2};
 
-    auto row_ids = RowIDPosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{8}}, {ChunkID{0}, ChunkOffset{7}},
-                           {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{5}}};
+    auto row_ids =
+        RowIDPosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{8}}, {ChunkID{0}, ChunkOffset{7}},
+                     {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{5}}};
     position_filter = std::make_shared<RowIDPosList>(std::move(row_ids));
     position_filter->guarantee_single_chunk();
   }
