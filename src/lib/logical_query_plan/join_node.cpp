@@ -72,26 +72,24 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() const {
-  auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
-
-  // The Semi-Join outputs input_left() without adding any rows or columns. But depending on the right table,
-  // tuples may be filtered out. As a consequence, we can forward the constraints.
+  // The Semi-Join acts as a mere filter for input_left(). Therefore, existing constraints remain valid and can be forwarded.
   if(join_mode == JoinMode::Semi) return forward_constraints();
 
-  // No guarantees for multi predicate joins
-  if(join_predicates().size() > 1) return std::make_shared<ExpressionsConstraintDefinitions>();
+  auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  // No guarantees for Non-Equi Joins
+  // Currently, no guarantees for multi predicate joins
+  if(join_predicates().size() > 1) return output_constraints;
+  // Also, no guarantees for Non-Equi Joins
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
-  if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return {};
+  if(!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return output_constraints;
 
-  // Check for uniqueness of join key columns
-  bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
-  bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
+  if(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
+    // TODO Comment why Outer Joins do not need special handling (Null values do not break constraints)
 
-  switch(join_mode) {
-  case JoinMode::Inner: {
-      if(left_operand_unique && right_operand_unique) {
+    // Check for uniqueness of join key columns
+    bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
+    bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
+    if(left_operand_unique && right_operand_unique) {
         // Due to the one-to-one relationship, the constraints of both sides remain valid.
         auto left_constraints = left_input()->constraints();
         auto right_constraints = right_input()->constraints();
@@ -116,43 +114,17 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
         // No constraints to return.
         return output_constraints;
       }
-    }
-    case JoinMode::Left: {
-      // The Left (outer) Join adds null values for tuples not present in the right table.
-      // Therefore, input constraints of the right table have to be discarded.
-
-      // TODO Forward input constraints input_left() if applicable
+    } else if(join_mode == JoinMode::Cross){
+      // Cross Joins break unique constraints
       return output_constraints;
-    }
-    case JoinMode::Right: {
-      // The Right (outer) Join adds null values for tuples not present in the right table.
-      // Therefore, input constraints of the left table have to be discarded.
-
-      // TODO Forward input constraints input_right() if applicable
-      return output_constraints;
-    }
-    case JoinMode::FullOuter: {
-      // The Full Outer Join might produce null values in all output columns.
-      // Therefore, we have to discard all input constraints
-      return output_constraints;
-    }
-    case JoinMode::Cross: {
-      // No uniqueness guarantee possible
-      return output_constraints;
-    }
-    case JoinMode::Semi: {
+    } else if(join_mode == JoinMode::Semi) {
       Fail("JoinMode::Semi should already be handled.");
-    }
-    case JoinMode::AntiNullAsTrue: {
-      // ?
+    } else if(join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+      // TODO ?
       return output_constraints;
+    } else {
+      Fail("Unhandled JoinMode");
     }
-    case JoinMode::AntiNullAsFalse: {
-      // ?
-      return output_constraints;
-    }
-  }
-  Fail("Unhandled JoinMode");
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
