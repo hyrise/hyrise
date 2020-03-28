@@ -27,9 +27,9 @@ class JoinNodeTest : public BaseTest {
     _t_b_x = {_mock_node_b, ColumnID{0}};
     _t_b_y = {_mock_node_b, ColumnID{1}};
 
-    _join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    _join_node->set_left_input(_mock_node_a);
-    _join_node->set_right_input(_mock_node_b);
+    _cross_join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
+    _cross_join_node->set_left_input(_mock_node_a);
+    _cross_join_node->set_right_input(_mock_node_b);
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -41,7 +41,7 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<JoinNode> _inner_join_node;
   std::shared_ptr<JoinNode> _semi_join_node;
   std::shared_ptr<JoinNode> _anti_join_node;
-  std::shared_ptr<JoinNode> _join_node;
+  std::shared_ptr<JoinNode> _cross_join_node;
   LQPColumnReference _t_a_a;
   LQPColumnReference _t_a_b;
   LQPColumnReference _t_a_c;
@@ -49,7 +49,7 @@ class JoinNodeTest : public BaseTest {
   LQPColumnReference _t_b_y;
 };
 
-TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Join] Mode: Cross"); }
+TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross"); }
 
 TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner [a = y]"); }
 
@@ -60,16 +60,16 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) {
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_join_node->column_expressions().size(), 5u);
-  EXPECT_EQ(*_join_node->column_expressions().at(0), *lqp_column_(_t_a_a));
-  EXPECT_EQ(*_join_node->column_expressions().at(1), *lqp_column_(_t_a_b));
-  EXPECT_EQ(*_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
-  EXPECT_EQ(*_join_node->column_expressions().at(3), *lqp_column_(_t_b_x));
-  EXPECT_EQ(*_join_node->column_expressions().at(4), *lqp_column_(_t_b_y));
+  ASSERT_EQ(_cross_join_node->column_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(0), *lqp_column_(_t_a_a));
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(1), *lqp_column_(_t_a_b));
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(3), *lqp_column_(_t_b_x));
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(4), *lqp_column_(_t_b_y));
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
-  EXPECT_EQ(*_join_node, *_join_node);
+  EXPECT_EQ(*_cross_join_node, *_cross_join_node);
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
   EXPECT_EQ(*_anti_join_node, *_anti_join_node);
@@ -91,7 +91,7 @@ TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
 }
 
 TEST_F(JoinNodeTest, Copy) {
-  EXPECT_EQ(*_join_node, *_join_node->deep_copy());
+  EXPECT_EQ(*_cross_join_node, *_cross_join_node->deep_copy());
   EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
@@ -114,7 +114,7 @@ TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
 TEST_F(JoinNodeTest, NodeExpressions) {
   ASSERT_EQ(_inner_join_node->node_expressions.size(), 1u);
   EXPECT_EQ(*_inner_join_node->node_expressions.at(0u), *equals_(_t_a_a, _t_b_y));
-  ASSERT_EQ(_join_node->node_expressions.size(), 0u);
+  ASSERT_EQ(_cross_join_node->node_expressions.size(), 0u);
 }
 
 TEST_F(JoinNodeTest, IsColumnNullableWithoutOuterJoin) {
