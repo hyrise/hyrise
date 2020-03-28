@@ -30,7 +30,7 @@ void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
-  DebugAssert(_performance_data->walltime.count() == 0, "Operator has already been executed");
+  DebugAssert(!_performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -56,6 +56,12 @@ void AbstractOperator::execute() {
   _on_cleanup();
 
   _performance_data->walltime = performance_timer.lap();
+  _performance_data->executed = true;
+  if (_output) {
+    _performance_data->has_output = true;
+    _performance_data->output_row_count = _output->row_count();
+    _performance_data->output_chunk_count = _output->chunk_count();
+  }
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,

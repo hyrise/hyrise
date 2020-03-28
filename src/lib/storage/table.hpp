@@ -227,5 +227,9 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;
+
+  // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
+  // chunks more than once.
+  mutable std::optional<uint64_t> _cached_row_count;
 };
 }  // namespace opossum
