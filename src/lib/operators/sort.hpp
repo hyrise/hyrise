@@ -18,7 +18,8 @@ namespace opossum {
  * Defines in which order a certain column should be sorted.
  */
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID& init_column, const OrderByMode init_order_by_mode = OrderByMode::Ascending)
+  explicit SortColumnDefinition(const ColumnID& init_column,
+                                const OrderByMode init_order_by_mode = OrderByMode::Ascending)
       : column(init_column), order_by_mode(init_order_by_mode) {}
 
   const ColumnID column;

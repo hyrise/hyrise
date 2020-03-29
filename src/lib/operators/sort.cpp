@@ -4,13 +4,12 @@
 
 namespace {
 
-using namespace opossum; // NOLINT
+using namespace opossum;  // NOLINT
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Table>& unsorted_table,
-                            const PosList& pos_list,
-                            const size_t output_chunk_size) {
+                                                const PosList& pos_list, const size_t output_chunk_size) {
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
@@ -95,7 +94,7 @@ std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Tabl
   return output;
 }
 
-}
+}  // namespace
 
 namespace opossum {
 
@@ -104,8 +103,8 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size) {
-        DebugAssert(_sort_definitions.size() >= 1, "Expected at least one sort criterion");
-      }
+  DebugAssert(_sort_definitions.size() >= 1, "Expected at least one sort criterion");
+}
 
 const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
 
@@ -146,8 +145,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column,
-                                                           sort_definition.order_by_mode);
+      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.order_by_mode);
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
 
       if (is_last_sorting_run) {
@@ -165,8 +163,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);
     chunk->finalize();
-    chunk->set_ordered_by(
-        std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
+    chunk->set_ordered_by(std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
   }
   return sorted_table;
 }
@@ -178,9 +175,7 @@ class Sort::SortImpl {
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending)
-      : _table_in(table_in),
-        _column_id(column_id),
-        _order_by_mode(order_by_mode) {
+      : _table_in(table_in), _column_id(column_id), _order_by_mode(order_by_mode) {
     const auto row_count = _table_in->row_count();
     _row_id_value_vector.reserve(row_count);
     _null_value_rows.reserve(row_count);
@@ -189,8 +184,7 @@ class Sort::SortImpl {
   // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
-  PosList sort(
-      const std::optional<PosList>& previously_sorted_pos_list) {
+  PosList sort(const std::optional<PosList>& previously_sorted_pos_list) {
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
 

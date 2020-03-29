@@ -15,8 +15,7 @@
 
 namespace opossum {
 
-static std::shared_ptr<Table> generate_custom_table(const size_t row_count,
-                                                    const DataType data_type = DataType::Int,
+static std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataType data_type = DataType::Int,
                                                     const float null_ratio = 0.0f) {
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
@@ -25,32 +24,31 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count,
   const int largest_value = 10'000;
   const std::vector<DataType> column_data_types = {num_columns, data_type};
 
-  std::vector<ColumnSpecification> column_specifications = std::vector(
-      num_columns, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, largest_value), data_type,
-                                       {EncodingType::Unencoded}, std::nullopt, null_ratio));
+  std::vector<ColumnSpecification> column_specifications =
+      std::vector(num_columns, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, largest_value),
+                                                   data_type, {EncodingType::Unencoded}, std::nullopt, null_ratio));
 
   return table_generator->generate_table(column_specifications, row_count);
 }
 
-static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000,
-                    const DataType data_type = DataType::Int, const float null_ratio = 0.0f,
-                    const bool multi_column_sort = true, const bool use_reference_segment = false) {
+static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, const DataType data_type = DataType::Int,
+                    const float null_ratio = 0.0f, const bool multi_column_sort = true,
+                    const bool use_reference_segment = false) {
   micro_benchmark_clear_cache();
 
   const auto input_table = generate_custom_table(row_count, data_type, null_ratio);
   std::shared_ptr<AbstractOperator> input_operator = std::make_shared<TableWrapper>(input_table);
   input_operator->execute();
   if (use_reference_segment) {
-    input_operator =
-        std::make_shared<Limit>(input_operator, expression_functional::to_expression(std::numeric_limits<int64_t>::max()));
+    input_operator = std::make_shared<Limit>(input_operator,
+                                             expression_functional::to_expression(std::numeric_limits<int64_t>::max()));
     input_operator->execute();
   }
-
 
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   if (multi_column_sort) {
     sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
-                                           SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
+                                                          SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
   } else {
     sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}};
   }
