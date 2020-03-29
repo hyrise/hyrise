@@ -109,21 +109,20 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     ChunkOffset _chunk_offset;
   };
 
-  template <typename ZsDecompressorType, typename DictionaryIteratorType, typename _PosListIteratorType>
+  template <typename ZsDecompressorType, typename DictionaryIteratorType, typename PosListIteratorType>
   class PointAccessIterator : public BasePointAccessSegmentIterator<
-                                  PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, _PosListIteratorType>,
-                                  SegmentPosition<T>, _PosListIteratorType> {
+                                  PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, PosListIteratorType>,
+                                  SegmentPosition<T>, PosListIteratorType> {
    public:
-    using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
-                        ZsDecompressorType attribute_decompressor, _PosListIteratorType position_filter_begin,
-                        _PosListIteratorType position_filter_it)
+                        ZsDecompressorType attribute_decompressor, PosListIteratorType position_filter_begin,
+                        PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<
-              PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, _PosListIteratorType>, SegmentPosition<T>,
-              _PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
+              PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, PosListIteratorType>, SegmentPosition<T>,
+              PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
           _dictionary_begin_it{std::move(dictionary_begin_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{std::move(attribute_decompressor)} {}

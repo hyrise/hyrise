@@ -480,11 +480,11 @@ set(
     storage/mvcc_data.hpp
     storage/pos_lists/abstract_pos_list.hpp
     storage/pos_lists/abstract_pos_list.cpp
-    storage/pos_lists/matches_all_pos_list.hpp
-    storage/pos_lists/matches_all_pos_list.cpp
+    storage/pos_lists/entire_chunk_pos_list.hpp
+    storage/pos_lists/entire_chunk_pos_list.cpp
     storage/pos_lists/rowid_pos_list.hpp
-    storage/single_chunk_pos_list.hpp
     storage/pos_lists/rowid_pos_list.cpp
+    storage/pos_lists/single_chunk_pos_list.hpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
     storage/reference_segment.cpp

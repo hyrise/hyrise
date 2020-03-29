@@ -32,12 +32,12 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
 
     using PosListIteratorType = decltype(position_filter->cbegin());
-    auto begin = PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(),
-                                                          _segment.end_positions(), position_filter->cbegin(),
-                                                          position_filter->cbegin()};
-    auto end = PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(),
-                                                        _segment.end_positions(), position_filter->cbegin(),
-                                                        position_filter->cend()};
+    auto begin =
+        PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(), _segment.end_positions(),
+                                                 position_filter->cbegin(), position_filter->cbegin()};
+    auto end =
+        PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(), _segment.end_positions(),
+                                                 position_filter->cbegin(), position_filter->cend()};
     functor(begin, end);
   }
 
@@ -84,9 +84,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
   static EndPositionIterator search_end_positions_for_chunk_offset(
-      const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
-      const ChunkOffset old_chunk_offset, const ChunkOffset new_chunk_offset,
-      const size_t previous_end_position_index, const size_t linear_search_threshold) {
+      const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions, const ChunkOffset old_chunk_offset,
+      const ChunkOffset new_chunk_offset, const size_t previous_end_position_index,
+      const size_t linear_search_threshold) {
     const int64_t step_size = static_cast<int64_t>(new_chunk_offset) - old_chunk_offset;
 
     /**
@@ -105,9 +105,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       return std::lower_bound(end_positions->cbegin(), end_positions->cbegin() + previous_end_position_index,
                               new_chunk_offset);
     } else if (step_size < static_cast<int64_t>(linear_search_threshold)) {
-      const auto less_than_current = [&](const ChunkOffset offset) {
-        return offset < new_chunk_offset;
-      };
+      const auto less_than_current = [&](const ChunkOffset offset) { return offset < new_chunk_offset; };
       return std::find_if_not(end_positions->cbegin() + previous_end_position_index, end_positions->cend(),
                               less_than_current);
     } else {
@@ -147,9 +145,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     void decrement() {
-      DebugAssert(_chunk_offset > 0, "An iterator pointing at the begin of a segment cannot be decremented, see "
-                                     "https://eel.is/c++draft/iterator.concept.bidir (iterator can be decremented if "
-                                     "a dereferencable iterator value precedes it).");
+      DebugAssert(_chunk_offset > 0,
+                  "An iterator pointing at the begin of a segment cannot be decremented, see "
+                  "https://eel.is/c++draft/iterator.concept.bidir (iterator can be decremented if "
+                  "a dereferencable iterator value precedes it).");
       --_chunk_offset;
       if (_end_positions_it != _end_positions_begin_it && _chunk_offset <= *(_end_positions_it - 1)) {
         // Decrease to previous end position if iterators does not point at the beginning and the chunk offset is
@@ -161,9 +160,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     void advance(std::ptrdiff_t n) {
       const auto previous_chunk_offset = _chunk_offset;
       _chunk_offset += n;
-      _end_positions_it = search_end_positions_for_chunk_offset(_end_positions,
-          previous_chunk_offset, _chunk_offset, std::distance(_end_positions->cbegin(), _end_positions_it),
-          _linear_search_threshold);
+      _end_positions_it = search_end_positions_for_chunk_offset(
+          _end_positions, previous_chunk_offset, _chunk_offset,
+          std::distance(_end_positions->cbegin(), _end_positions_it), _linear_search_threshold);
     }
 
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
@@ -205,21 +204,21 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    *   - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
    *   - a binary search in the range [0, previous_end_position] else
    */
-  template <typename _PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>,
-                                                                    SegmentPosition<T>, _PosListIteratorType> {
+  template <typename PosListIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                    SegmentPosition<T>, PosListIteratorType> {
    public:
-    using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
 
     explicit PointAccessIterator(const std::shared_ptr<const pmr_vector<T>>& values,
                                  const std::shared_ptr<const pmr_vector<bool>>& null_values,
                                  const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
-                                 const _PosListIteratorType position_filter_begin,
-                                 _PosListIteratorType&& position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, _PosListIteratorType>{std::move(position_filter_begin),
-                                                                                  std::move(position_filter_it)},
+                                 const PosListIteratorType position_filter_begin,
+                                 PosListIteratorType&& position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
+                                         PosListIteratorType>{std::move(position_filter_begin),
+                                                              std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
@@ -234,8 +233,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       const auto& chunk_offsets = this->chunk_offsets();
       const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
 
-      const auto end_positions_it = search_end_positions_for_chunk_offset(_end_positions,
-          _prev_chunk_offset, current_chunk_offset, _prev_index, _linear_search_threshold);
+      const auto end_positions_it = search_end_positions_for_chunk_offset(
+          _end_positions, _prev_chunk_offset, current_chunk_offset, _prev_index, _linear_search_threshold);
       const auto target_distance_from_begin = std::distance(_end_positions->cbegin(), end_positions_it);
 
       _prev_chunk_offset = current_chunk_offset;

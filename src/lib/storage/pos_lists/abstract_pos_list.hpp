@@ -19,11 +19,8 @@ class AbstractPosList : private Noncopyable {
   class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
                                                         boost::random_access_traversal_tag, DereferenceReturnType> {
    public:
-    PosListIterator(const PosListType* pos_list, const ChunkOffset offset): _pos_list(pos_list), _chunk_offset(offset) {}
-
-    // Without this hack, binary search, distance, etc. cannot use random accesses and will run in linear time instead.
-    // For an explanation, see https://github.com/hyrise/hyrise/issues/1531
-    typedef std::random_access_iterator_tag iterator_category;
+    PosListIterator(const PosListType* pos_list, const ChunkOffset offset)
+        : _pos_list(pos_list), _chunk_offset(offset) {}
 
     void increment() { ++_chunk_offset; }
 

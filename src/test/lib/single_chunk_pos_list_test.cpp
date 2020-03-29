@@ -1,11 +1,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/single_chunk_pos_list.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "gtest/gtest.h"
-#include "storage/single_chunk_pos_list.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/maintenance/create_table.hpp"
 

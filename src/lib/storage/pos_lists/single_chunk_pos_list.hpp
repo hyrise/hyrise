@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pos_lists/abstract_pos_list.hpp"
+#include "abstract_pos_list.hpp"
 
 namespace opossum {
 
@@ -17,7 +17,7 @@ class SingleChunkPosList final : public AbstractPosList {
   virtual size_t size() const override final {
     return _offsets.size();
   }
-  
+
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const override final {
     return sizeof(this) + size() * sizeof(ChunkOffset);
   }
@@ -38,19 +38,19 @@ class SingleChunkPosList final : public AbstractPosList {
       return _offsets;
   }
 
-  PosListIterator<const SingleChunkPosList*, RowID> begin() const {
-    return PosListIterator<const SingleChunkPosList*, RowID>(this, ChunkOffset{0});
+  PosListIterator<const SingleChunkPosList, RowID> begin() const {
+    return PosListIterator<const SingleChunkPosList, RowID>(this, ChunkOffset{0});
   }
 
-  PosListIterator<const SingleChunkPosList*, RowID> end() const {
-    return PosListIterator<const SingleChunkPosList*, RowID>(this, static_cast<ChunkOffset>(size()));
+  PosListIterator<const SingleChunkPosList, RowID> end() const {
+    return PosListIterator<const SingleChunkPosList, RowID>(this, static_cast<ChunkOffset>(size()));
   }
 
-  PosListIterator<const SingleChunkPosList*, RowID> cbegin() const {
+  PosListIterator<const SingleChunkPosList, RowID> cbegin() const {
     return begin();
   }
 
-  PosListIterator<const SingleChunkPosList*, RowID> cend() const {
+  PosListIterator<const SingleChunkPosList, RowID> cend() const {
     return end();
   }
 

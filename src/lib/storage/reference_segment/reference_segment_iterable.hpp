@@ -130,11 +130,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = AbstractPosList::PosListIterator<>;
+    using PosListIteratorType = AbstractPosList::PosListIterator<>;
 
    public:
-    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor, const PosListIterator& begin_pos_list_it,
-                                 const PosListIterator& pos_list_it)
+    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor,
+                                 const PosListIteratorType& begin_pos_list_it, const PosListIteratorType& pos_list_it)
         : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
 
    private:
@@ -151,7 +151,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::ptrdiff_t distance_to(const SingleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     SegmentPosition<T> dereference() const {
-      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
@@ -167,8 +167,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
    private:
-    PosListIterator _begin_pos_list_it;
-    PosListIterator _pos_list_it;
+    PosListIteratorType _begin_pos_list_it;
+    PosListIteratorType _pos_list_it;
     std::shared_ptr<Accessor> _accessor;
   };
 
@@ -179,7 +179,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = PosListIteratorType;
 
    public:
     explicit MultipleChunkIterator(
@@ -207,7 +206,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
-      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
@@ -238,8 +237,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::shared_ptr<const Table> _referenced_table;
     ColumnID _referenced_column_id;
 
-    PosListIterator _begin_pos_list_it;
-    PosListIterator _pos_list_it;
+    PosListIteratorType _begin_pos_list_it;
+    PosListIteratorType _pos_list_it;
 
     // PointAccessIterators share vector with one Accessor per Chunk
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;

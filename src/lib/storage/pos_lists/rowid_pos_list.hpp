@@ -55,11 +55,11 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   RowIDPosList& operator=(RowIDPosList&& other) = default;
 
-  // If we know that all entries in the RowIDPosList share a single ChunkID, we can optimize the indirection by retrieving
-  // the respective chunk once and using only the ChunkOffsets to access values. As the consumer will likely call
-  // table->get_chunk(common_chunk_id), we require that the common chunk id is valid, i.e., the RowIDPosList contains no NULL
-  // values. Note that this is not about NULL values being referenced, but about NULL value contained in the RowIDPosList
-  // itself.
+  // If we know that all entries in the RowIDPosList share a single ChunkID, we can optimize the indirection by
+  // retrieving the respective chunk once and using only the ChunkOffsets to access values. As the consumer will likely
+  // call table->get_chunk(common_chunk_id), we require that the common chunk id is valid, i.e., the RowIDPosList
+  // contains no NULL values. Note that this is not about NULL values being referenced, but about NULL value contained
+  // in the RowIDPosList itself.
 
   void guarantee_single_chunk();
 
