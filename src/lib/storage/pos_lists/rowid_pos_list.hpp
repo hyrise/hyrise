@@ -9,6 +9,7 @@
 
 namespace opossum {
 
+// TODO update
 // For a long time, PosList was just a pmr_vector<RowID>. With this class, we want to add functionality to that vector,
 // more specifically, flags that give us some guarantees about its contents. If we know, e.g., that all entries point
 // into the same chunk, we can simplify things in split_pos_list_by_chunk_id.
