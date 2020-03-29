@@ -240,9 +240,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
-// TODO
-// Currently disabled, when MatchesAll gives better performance we should consider removing the rule
-/* TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
+TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(greater_than_(a, 60),
@@ -257,6 +255,6 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
-} */
+}
 
 }  // namespace opossum
