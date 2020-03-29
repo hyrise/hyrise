@@ -103,7 +103,7 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size) {
-  DebugAssert(_sort_definitions.size() >= 1, "Expected at least one sort criterion");
+  DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
 }
 
 const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
