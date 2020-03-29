@@ -7,6 +7,10 @@ namespace opossum {
 
 class EntireChunkPosList : public AbstractPosList {
  public:
+  // The EntireChunkPosList will match the first common_chunk_size elements in the chunk.
+  // If you create an EntireChunkPosList for a mutable chunk, make sure to determine that size
+  // _before_ doing the checks that all elements should match. This way, you prevent the race
+  // condition of an element being added in between doing the checks and getting the size.
   explicit EntireChunkPosList(const ChunkID common_chunk_id, const ChunkOffset common_chunk_size) :
         _common_chunk_id(common_chunk_id),
         _common_chunk_size(common_chunk_size) {}
