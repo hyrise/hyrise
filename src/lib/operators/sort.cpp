@@ -1,29 +1,16 @@
 #include "sort.hpp"
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
-#include "storage/reference_segment.hpp"
-#include "storage/segment_accessor.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/value_segment.hpp"
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
-      _column_id(column_id),
-      _order_by_mode(order_by_mode),
+      _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size) {}
 
-ColumnID Sort::column_id() const { return _column_id; }
-
-OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
+const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
 
 const std::string& Sort::name() const {
   static const auto name = std::string{"Sort"};
@@ -33,19 +20,76 @@ const std::string& Sort::name() const {
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
+  return std::make_shared<Sort>(copied_input_left, _sort_definitions, _output_chunk_size);
 }
 
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->column_data_type(_column_id), input_table_left(), _column_id, _order_by_mode,
-      _output_chunk_size);
-  return _impl->_on_execute();
+  _sort_definition_data_types.resize(_sort_definitions.size());
+  std::transform(
+      _sort_definitions.begin(), _sort_definitions.end(), _sort_definition_data_types.begin(),
+      [this](const auto sort_definition) { return input_table_left()->column_data_type(sort_definition.column); });
+
+  _validate_sort_definitions();
+
+  std::shared_ptr<const Table> output = input_table_left();
+  std::shared_ptr<Table> output_mutable;
+  std::shared_ptr<PosList> sorted_pos_list = std::shared_ptr<PosList>(nullptr);
+
+  for (auto column_id = _sort_definitions.size(); column_id-- != 0;) {
+    const bool is_last_sorting_run = (column_id == 0);
+
+    auto sort_definition = _sort_definitions[column_id];
+    const auto data_type = _sort_definition_data_types[column_id];
+
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      auto sort_single_col_impl = SortImpl<ColumnDataType>(input_table_left(), sort_definition.column,
+                                                           sort_definition.order_by_mode, _output_chunk_size);
+      const auto row_id_value_vector = sort_single_col_impl.sort_one_column(sorted_pos_list);
+
+      if (is_last_sorting_run) {
+        auto materialization = std::make_shared<SortImplMaterializeOutput<ColumnDataType>>(
+            input_table_left(), row_id_value_vector, _output_chunk_size);
+
+        output_mutable = materialization->execute();
+      } else {
+        sorted_pos_list = std::make_shared<PosList>();
+
+        for (auto& row_id_value : *row_id_value_vector) {
+          sorted_pos_list->emplace_back(row_id_value.first);
+        }
+      }
+    });
+  }
+
+  auto final_sort_definition = _sort_definitions[0];
+  // Set the ordered_by attribute of the output's chunks to the column the chunk was sorted by last (because this
+  // is the column that the chunk is ordered by in any case; whereas it is not necessarily sorted by the other
+  // columns -- on their own -- as well).
+  const auto chunk_count = output_mutable->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    output_mutable->get_chunk(chunk_id)->set_ordered_by(
+        std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
+  }
+  output = output_mutable;
+
+  return output;
 }
 
-void Sort::_on_cleanup() { _impl.reset(); }
+/**
+ * Asserts that all column definitions are valid.
+ */
+void Sort::_validate_sort_definitions() const {
+  const auto input_table = input_table_left();
+  for (const auto& column_sort_definition : _sort_definitions) {
+    Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
+    Assert(column_sort_definition.column < input_table->column_count(),
+           "Sort: Column ID is greater than table's column count");
+  }
+}
 
 // This class fulfills only the materialization task for a sorted row_id_value_vector.
 template <typename SortColumnType>
@@ -160,9 +204,8 @@ class Sort::SortImplMaterializeOutput {
   const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
-// we need to use the impl pattern because the scan operator of the sort depends on the type of the column
 template <typename SortColumnType>
-class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
+class Sort::SortImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
@@ -177,10 +220,10 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
- protected:
-  std::shared_ptr<const Table> _on_execute() override {
+  std::shared_ptr<std::vector<RowIDValuePair>> sort_one_column(
+      const std::shared_ptr<PosList>& previously_sorted_values = nullptr) {
     // 1. Prepare Sort: Creating rowid-value-Structure
-    _materialize_sort_column();
+    _materialize_sort_column(previously_sorted_values);
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
@@ -200,41 +243,74 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
       }
     }
 
-    // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
-    // full and create the next one. Each chunk is filled row by row.
-    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
-                                                                                       _output_chunk_size);
-    auto output = materialization->execute();
-
-    const auto chunk_count = output->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      output->get_chunk(chunk_id)->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
-    }
-
-    return output;
+    return _row_id_value_vector;
   }
 
+ protected:
   // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column() {
+  void _materialize_sort_column(const std::shared_ptr<PosList>& previously_sorted_value) {
     auto& row_id_value_vector = *_row_id_value_vector;
     row_id_value_vector.reserve(_table_in->row_count());
 
     auto& null_value_rows = *_null_value_rows;
 
-    const auto chunk_count = _table_in->chunk_count();
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = _table_in->get_chunk(chunk_id);
-      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+    // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
+    // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
+    // the last run.
+    if (previously_sorted_value) {
+      _materialize_column_from_pos_list(previously_sorted_value);
+    } else {
+      const auto chunk_count = _table_in->chunk_count();
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = _table_in->get_chunk(chunk_id);
+        Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
 
-      auto base_segment = chunk->get_segment(_column_id);
+        auto base_segment = chunk->get_segment(_column_id);
 
-      segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
-        if (position.is_null()) {
-          null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
+        segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+          if (position.is_null()) {
+            null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
+          } else {
+            row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
+          }
+        });
+      }
+    }
+  }
+
+  // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
+  void _materialize_column_from_pos_list(const std::shared_ptr<PosList>& pos_list) {
+    auto segment_ptr_and_accessor_by_chunk_id =
+        std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
+                                              std::shared_ptr<AbstractSegmentAccessor<SortColumnType>>>>();
+    segment_ptr_and_accessor_by_chunk_id.reserve(_table_in->chunk_count());
+
+    for (RowID row_id : *pos_list) {
+      const auto [chunk_id, chunk_offset] = row_id;
+
+      auto& [base_segment, accessor] = segment_ptr_and_accessor_by_chunk_id[chunk_id];
+
+      if (!base_segment) {
+        base_segment = _table_in->get_chunk(chunk_id)->get_segment(_column_id);
+        accessor = create_segment_accessor<SortColumnType>(base_segment);
+      }
+
+      // If the input segment is not a ReferenceSegment, we can take a fast(er) path
+      if (accessor) {
+        const auto typed_value = accessor->access(chunk_offset);
+        if (!typed_value) {
+          (*_null_value_rows).emplace_back(row_id, SortColumnType{});
         } else {
-          row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
+          (*_row_id_value_vector).emplace_back(row_id, typed_value.value());
         }
-      });
+      } else {
+        const auto value = (*base_segment)[chunk_offset];
+        if (variant_is_null(value)) {
+          (*_null_value_rows).emplace_back(row_id, SortColumnType{});
+        } else {
+          (*_row_id_value_vector).emplace_back(row_id, boost::get<SortColumnType>(value));
+        }
+      }
     }
   }
 
