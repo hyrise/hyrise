@@ -23,9 +23,6 @@ def import_train_data(input_data):
     # remove the rows with ExpressionEvaluator queries from the test data since we don't have any in the test data
     joined_data = joined_data.loc[(joined_data['SCAN_IMPLEMENTATION'] != 'ExpressionEvaluator')]
 
-    # try intervention
-    joined_data = joined_data.loc[(joined_data['INPUT_ROWS'] != 10000)]
-
 # explicitly add selectivity
     joined_data['SELECTIVITY'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS'])
     joined_data['SELECTIVITY'].fillna(0, inplace=True)

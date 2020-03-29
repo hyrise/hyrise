@@ -80,7 +80,7 @@ namespace opossum {
 
       csv_writer.write_row();
 
-      auto new_csv_writer = CSVWriter(_file_path, _headers, ',', FALSE);
+      auto new_csv_writer = CSVWriter(_file_path, _headers, ',', false);
 
       csv_writer.set_value("INPUT_ROWS", 30);
       csv_writer.set_value("OUTPUT_ROWS", 20);
@@ -120,7 +120,7 @@ namespace opossum {
       auto const scan_type = std::vector<std::string>({"ReferenceScan", "ReferenceScan", "ColumnScan", "ReferenceScan", "ColumnScan", "ColumnScan", "ColumnScan", "ReferenceScan"});
 
       for (const auto delimiter : delimiters){
-        auto csv_writer = CSVWriter(_file_path, _headers, delimiter, TRUE);
+        auto csv_writer = CSVWriter(_file_path, _headers, delimiter, true);
 
         unsigned long num_entries = input_rows.size();
         for (unsigned long row_index = 0; row_index<num_entries; ++row_index){
@@ -153,7 +153,7 @@ namespace opossum {
       const auto csv_writer = default_writer(); // create an file with headers
 
       const auto new_headers = std::vector<std::string>({"COLUMN_1", "COLUMN_2", "COLUMN_3", "COLUMN_4"});
-      const auto new_csv_writer = CSVWriter(_file_path, new_headers, ',', TRUE);
+      const auto new_csv_writer = CSVWriter(_file_path, new_headers, ',', true);
 
       std::string line;
       std::ifstream f (_file_path);
@@ -165,17 +165,17 @@ namespace opossum {
     TEST_F(CSVWriterTest, PanicIfCreateNewFileWithDifferentHeaders){
       const auto csv_writer = default_writer();
       const auto new_headers = std::vector<std::string>({"COLUMN_1", "COLUMN_2", "COLUMN_3", "COLUMN_4"});
-      EXPECT_ANY_THROW(CSVWriter(_file_path, new_headers, ',', FALSE));
+      EXPECT_ANY_THROW(CSVWriter(_file_path, new_headers, ',', false));
     }
 
     TEST_F(CSVWriterTest, PanicIfDelimiterInValue){
-      auto csv_writer = CSVWriter(_file_path, _headers, ',', TRUE);
+      auto csv_writer = CSVWriter(_file_path, _headers, ',', true);
       EXPECT_ANY_THROW(csv_writer.set_value("INPUT_ROWS", "434,123"));
       EXPECT_ANY_THROW(csv_writer.set_value("OUTPUT_ROWS", "39213213,"));
       EXPECT_ANY_THROW(csv_writer.set_value("RUNTIME_NS", ",434123"));
       EXPECT_ANY_THROW(csv_writer.set_value("SCAN_TYPE", "Column,Scan"));
 
-      auto csv_writer_different_delimiter = CSVWriter(_file_path, _headers, ';', TRUE);
+      auto csv_writer_different_delimiter = CSVWriter(_file_path, _headers, ';', true);
       EXPECT_ANY_THROW(csv_writer_different_delimiter.set_value("INPUT_ROWS", "434;123"));
       EXPECT_ANY_THROW(csv_writer_different_delimiter.set_value("OUTPUT_ROWS", "39;213213;"));
       EXPECT_ANY_THROW(csv_writer_different_delimiter.set_value("RUNTIME_NS", ",43;4123"));
