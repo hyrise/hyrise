@@ -17,9 +17,9 @@ class EntireChunkPosList : public AbstractPosList {
   ChunkID common_chunk_id() const final;
 
   // implemented here to assure compiler optimization without LTO (PosListIterator uses this a lot)
-  RowID operator[](size_t n) const final {
+  RowID operator[](const size_t index) const final {
     DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "operator[] called on invalid chunk id");
-    return RowID{_common_chunk_id, static_cast<ChunkOffset>(n)};
+    return RowID{_common_chunk_id, static_cast<ChunkOffset>(index)};
   }
 
   bool empty() const final;
