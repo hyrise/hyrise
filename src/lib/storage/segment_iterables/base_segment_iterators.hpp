@@ -63,7 +63,6 @@ struct ChunkOffsetMapping {
 template <typename Derived, typename Value, typename PosListIteratorType>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-
   explicit BasePointAccessSegmentIterator(PosListIteratorType position_filter_begin,
                                           PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
@@ -72,8 +71,7 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   const ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
-    return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin),
-            _position_filter_it->chunk_offset};
+    return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
   }
 
  private:

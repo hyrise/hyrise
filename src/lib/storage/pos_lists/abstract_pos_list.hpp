@@ -19,7 +19,8 @@ class AbstractPosList : private Noncopyable {
   class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
                                                         boost::random_access_traversal_tag, DereferenceReturnType> {
    public:
-    PosListIterator(const PosListType* pos_list, const ChunkOffset offset): _pos_list(pos_list), _chunk_offset(offset) {}
+    PosListIterator(const PosListType* pos_list, const ChunkOffset offset)
+        : _pos_list(pos_list), _chunk_offset(offset) {}
 
     void increment() { ++_chunk_offset; }
 

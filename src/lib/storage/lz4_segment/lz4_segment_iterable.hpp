@@ -152,7 +152,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
                         PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
                                          PosListIteratorType>{std::move(position_filter_begin),
-                                                               std::move(position_filter_it)},
+                                                              std::move(position_filter_it)},
           _data_it{std::move(data_it)},
           _null_value_it{std::move(null_value_it)} {}
 

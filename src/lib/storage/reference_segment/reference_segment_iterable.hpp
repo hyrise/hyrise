@@ -133,8 +133,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using PosListIteratorType = AbstractPosList::PosListIterator<>;
 
    public:
-    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor, const PosListIteratorType& begin_pos_list_it,
-                                 const PosListIteratorType& pos_list_it)
+    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor,
+                                 const PosListIteratorType& begin_pos_list_it, const PosListIteratorType& pos_list_it)
         : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
 
    private:

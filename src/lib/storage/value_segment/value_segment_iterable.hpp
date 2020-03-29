@@ -157,7 +157,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                         PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>,
                                          PosListIteratorType>{std::move(position_filter_begin),
-                                                               std::move(position_filter_it)},
+                                                              std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)} {}
 
    private:
@@ -187,7 +187,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                  PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
                                          PosListIteratorType>{std::move(position_filter_begin),
-                                                               std::move(position_filter_it)},
+                                                              std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
           _null_values_begin_it{std::move(null_values_begin_it)} {}
 
