@@ -219,9 +219,9 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         temp_pos_list.guarantee_single_chunk();
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-        for (auto i = 0u; i < chunk_size; i++) {
-          if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
-            temp_pos_list.emplace_back(RowID{chunk_id, i});
+        for (auto chunk_offset = 0u; chunk_offset < chunk_size; chunk_offset++) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
+            temp_pos_list.emplace_back(RowID{chunk_id, chunk_offset});
           }
         }
         pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));

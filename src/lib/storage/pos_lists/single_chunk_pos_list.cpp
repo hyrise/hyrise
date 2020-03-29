@@ -7,7 +7,7 @@ bool SingleChunkPosList::empty() const { return _offsets.empty(); }
 size_t SingleChunkPosList::size() const { return _offsets.size(); }
 
 size_t SingleChunkPosList::memory_usage(const MemoryUsageCalculationMode) const {
-  return sizeof(this) + size() * sizeof(ChunkOffset);
+  return sizeof(*this) + size() * sizeof(ChunkOffset);
 }
 
 bool SingleChunkPosList::references_single_chunk() const { return true; }
