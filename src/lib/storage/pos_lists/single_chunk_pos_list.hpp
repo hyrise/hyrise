@@ -5,58 +5,31 @@
 namespace opossum {
 
 class SingleChunkPosList final : public AbstractPosList {
-  public:
-
+ public:
   SingleChunkPosList() = delete;
-
   SingleChunkPosList(ChunkID chunkID) : _chunk_id(chunkID) {}
 
-  virtual bool empty() const override final {
-    return _offsets.empty();
-  }
-  virtual size_t size() const override final {
-    return _offsets.size();
-  }
+  bool empty() const final;
+  size_t size() const final;
 
-  virtual size_t memory_usage(const MemoryUsageCalculationMode) const override final {
-    return sizeof(this) + size() * sizeof(ChunkOffset);
-  }
+  size_t memory_usage(const MemoryUsageCalculationMode) const final;
+  bool references_single_chunk() const final;
+  ChunkID common_chunk_id() const final;
 
-  virtual bool references_single_chunk() const override final {
-    return true;
-  }
-
-  virtual ChunkID common_chunk_id() const override final {
-    return _chunk_id;
-  }
-
-  virtual RowID operator[](size_t n) const override final {
+  RowID operator[](size_t n) const final {
     return RowID{_chunk_id, _offsets[n]};
   }
 
-  std::vector<ChunkOffset>& get_offsets() {
-      return _offsets;
-  }
+  std::vector<ChunkOffset>& get_offsets();
 
-  PosListIterator<const SingleChunkPosList, RowID> begin() const {
-    return PosListIterator<const SingleChunkPosList, RowID>(this, ChunkOffset{0});
-  }
+  PosListIterator<SingleChunkPosList, RowID> begin() const;
+  PosListIterator<SingleChunkPosList, RowID> end() const;
+  PosListIterator<SingleChunkPosList, RowID> cbegin() const;
+  PosListIterator<SingleChunkPosList, RowID> cend() const;
 
-  PosListIterator<const SingleChunkPosList, RowID> end() const {
-    return PosListIterator<const SingleChunkPosList, RowID>(this, static_cast<ChunkOffset>(size()));
-  }
-
-  PosListIterator<const SingleChunkPosList, RowID> cbegin() const {
-    return begin();
-  }
-
-  PosListIterator<const SingleChunkPosList, RowID> cend() const {
-    return end();
-  }
-
-  private:
-    std::vector<ChunkOffset> _offsets;
-    ChunkID _chunk_id = INVALID_CHUNK_ID;
+ private:
+  std::vector<ChunkOffset> _offsets;
+  ChunkID _chunk_id = INVALID_CHUNK_ID;
 };
 
 }
