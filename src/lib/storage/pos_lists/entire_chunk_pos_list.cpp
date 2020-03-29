@@ -11,7 +11,7 @@ ChunkID EntireChunkPosList::common_chunk_id() const {
 
 bool EntireChunkPosList::empty() const { return size() == 0; }
 
-size_t EntireChunkPosList::size() const { return _common_chunk_size_on_creation; }
+size_t EntireChunkPosList::size() const { return _common_chunk_size; }
 
 size_t EntireChunkPosList::memory_usage(const MemoryUsageCalculationMode) const { return sizeof *this; }
 

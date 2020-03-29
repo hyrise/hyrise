@@ -7,10 +7,9 @@ namespace opossum {
 
 class EntireChunkPosList : public AbstractPosList {
  public:
-  explicit EntireChunkPosList(std::shared_ptr<const Chunk> common_chunk, const ChunkID common_chunk_id)
-      : _common_chunk(common_chunk),
+  explicit EntireChunkPosList(const ChunkID common_chunk_id, const ChunkOffset common_chunk_size) :
         _common_chunk_id(common_chunk_id),
-        _common_chunk_size_on_creation(common_chunk->size()) {}
+        _common_chunk_size(common_chunk_size) {}
 
   EntireChunkPosList& operator=(EntireChunkPosList&& other) = default;
 
@@ -33,13 +32,12 @@ class EntireChunkPosList : public AbstractPosList {
   PosListIterator<EntireChunkPosList, RowID> cend() const;
 
  private:
-  std::shared_ptr<const Chunk> _common_chunk;
   ChunkID _common_chunk_id;
 
   // If tuples are added to the chunk _after_ we create the pos list, we do not want to automatically contain these
   // (MVCC correctness).  To do that, we store the size of the chunk when constructing an object. The end() methods
   // can then use this to give a correct end iterator, even if new values were added to the chunk in between.
-  ChunkOffset _common_chunk_size_on_creation;
+  ChunkOffset _common_chunk_size;
 };
 
 }  // namespace opossum

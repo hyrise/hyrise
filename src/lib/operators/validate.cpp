@@ -212,7 +212,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
       if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
-        pos_list_out = std::make_shared<EntireChunkPosList>(chunk_in, chunk_id);
+        pos_list_out = std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size());
       } else {
         const auto mvcc_data = chunk_in->mvcc_data();
         RowIDPosList temp_pos_list;
