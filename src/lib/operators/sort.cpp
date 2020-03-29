@@ -4,6 +4,8 @@
 
 namespace {
 
+using namespace opossum; // NOLINT
+
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Table>& unsorted_table,
