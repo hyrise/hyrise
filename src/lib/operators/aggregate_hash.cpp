@@ -140,9 +140,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
 
-  // Looking up the result in the hash map is way more expensive than dereferencing the iterator. To reduce the compile
-  // time, we erase the iterators here.
-  segment_iterate<ColumnDataType, EraseTypes::Always>(base_segment, [&](const auto& position) {
+  segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
     auto& result =
         get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});

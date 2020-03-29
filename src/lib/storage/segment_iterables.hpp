@@ -61,10 +61,9 @@ template <typename Derived>
 class SegmentIterable {
  public:
   /**
-   * @tparam erase_pos_list_type is ignored - see PointAccessibleSegmentIterable for documentation
-   * @param  functor is a generic lambda accepting two iterators as parameters
+   * @param functor is a generic lambda accepting two iterators as parameters
    */
-  template <typename Functor, ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild>
+  template <typename Functor>
   void with_iterators(const Functor& functor) const {
     _self()._on_with_iterators(functor);
   }
@@ -155,18 +154,22 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
 
-      resolve_pos_list_type<erase_pos_list_type>(position_filter,
-                            [&functor, this](auto& resolved_position_filter) { _self()._on_with_iterators(resolved_position_filter, functor); });
+      if constexpr (HYRISE_DEBUG || erase_pos_list_type == ErasePosListType::Always) {
+        _self()._on_with_iterators(position_filter, functor);
+      } else {
+        resolve_pos_list_type<erase_pos_list_type>(position_filter,
+                              [&functor, this](auto& resolved_position_filter) { _self()._on_with_iterators(resolved_position_filter, functor); });
+      }
     }
   }
 
   using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”
 
-  template <typename Functor>
+  template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
   void for_each(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     DebugAssert(!position_filter || position_filter->references_single_chunk(),
                 "Expected PosList to reference single chunk");
-    with_iterators(position_filter, [&functor](auto it, auto end) {
+    with_iterators<erase_pos_list_type>(position_filter, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);
       }
