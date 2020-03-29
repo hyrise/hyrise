@@ -113,7 +113,6 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    operators/set_operator_test.cpp
     optimizer/dp_ccp_test.cpp
     optimizer/greedy_operator_ordering_test.cpp
     optimizer/enumerate_ccp_test.cpp

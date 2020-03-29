@@ -439,11 +439,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   Fail("Invalid enum value");
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   FailInput("Hyrise does not yet support set operations");
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   FailInput("Hyrise does not yet support set operations");
