@@ -25,8 +25,8 @@ class EntireChunkPosListTest : public BaseTest {
 };
 
 TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
-  // This checks if the matchesAllChunk-Flag in the PosList correctly handles rows, that are added to the table
-  // after the posList was created. These later added rows should not be contained in the PosList
+  // This checks if the EntireChunkPosList correctly handles rows that are added to the table
+  // after the PosList was created. These later added rows should not be contained in the PosList
 
   auto table_name = "test_table";
   auto table = load_table("resources/test_data/tbl/float_int.tbl", 10, FinalizeLastChunk::No);
@@ -39,9 +39,9 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
 
   auto get_table = std::make_shared<GetTable>(table_name);
   get_table->execute();
-  const auto chunkID = ChunkID{0};
-  const auto entireChunkPosList =
-      std::make_shared<const EntireChunkPosList>(get_table->get_output()->get_chunk(chunkID), chunkID);
+  const auto chunk_id = ChunkID{0};
+  const auto entire_chunk_pos_list =
+      std::make_shared<const EntireChunkPosList>(get_table->get_output()->get_chunk(chunk_id), chunk_id);
 
   const auto insert_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto get_table_to_add = std::make_shared<GetTable>(table_to_add_name);
@@ -56,7 +56,7 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 6);
   // Newly added rows are not in the position list
-  EXPECT_EQ(entireChunkPosList->size(), 3);
+  EXPECT_EQ(entire_chunk_pos_list->size(), 3);
 
   // TODO(XPERIANER): Maybe add a better check than just size, cause the returned iterators should also handle
   // this case, which we right now don't check.
