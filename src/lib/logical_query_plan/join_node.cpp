@@ -72,8 +72,11 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
 }
 
 const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() const {
-  // The Semi-Join acts as a mere filter for input_left(). Therefore, existing constraints remain valid and can be forwarded.
-  if(join_mode == JoinMode::Semi) return forward_constraints();
+  // Semi- and Anti-Joins act as mere filters for input_left().
+  // Therefore, existing constraints are forwarded as they remain valid.
+  if(join_mode == JoinMode::Semi | join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+    return forward_constraints();
+  }
 
   auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
@@ -90,41 +93,37 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() 
     // Check for uniqueness of join key columns
     bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
     bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
-    if(left_operand_unique && right_operand_unique) {
-        // Due to the one-to-one relationship, the constraints of both sides remain valid.
-        auto left_constraints = left_input()->constraints();
-        auto right_constraints = right_input()->constraints();
+    if (left_operand_unique && right_operand_unique) {
+      // Due to the one-to-one relationship, the constraints of both sides remain valid.
+      auto left_constraints = left_input()->constraints();
+      auto right_constraints = right_input()->constraints();
 
-        for(auto it = left_constraints->begin(); it != left_constraints->end();) {
-          output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
-        }
-        for(auto it = right_constraints->begin(); it != right_constraints->end();) {
-          output_constraints->emplace(std::move(right_constraints->extract(it++).value()));
-        }
-        return output_constraints;
-
-      } else if(left_operand_unique) {
-        // Uniqueness on the left prevents duplication of records on the right
-        return right_input()->constraints();
-
-      } else if(right_operand_unique) {
-        // Uniqueness on the right prevents duplication of records on the left
-        return left_input()->constraints();
-
-      } else {
-        // No constraints to return.
-        return output_constraints;
+      for (auto it = left_constraints->begin(); it != left_constraints->end();) {
+        output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
       }
-    } else if(join_mode == JoinMode::Cross){
-      Fail("JoinMode::Cross should already be handled.");
-    } else if(join_mode == JoinMode::Semi) {
-      Fail("JoinMode::Semi should already be handled.");
-    } else if(join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
-      // TODO ?
+      for (auto it = right_constraints->begin(); it != right_constraints->end();) {
+        output_constraints->emplace(std::move(right_constraints->extract(it++).value()));
+      }
       return output_constraints;
-    } else {
-      Fail("Unhandled JoinMode");
+
     }
+    else if (left_operand_unique) {
+      // Uniqueness on the left prevents duplication of records on the right
+      return right_input()->constraints();
+
+    }
+    else if (right_operand_unique) {
+      // Uniqueness on the right prevents duplication of records on the left
+      return left_input()->constraints();
+
+    }
+    else {
+      // No constraints to return.
+      return output_constraints;
+    }
+  } else {
+      Fail("Unhandled JoinMode");
+  }
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
