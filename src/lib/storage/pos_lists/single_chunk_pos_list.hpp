@@ -7,7 +7,7 @@ namespace opossum {
 class SingleChunkPosList final : public AbstractPosList {
  public:
   SingleChunkPosList() = delete;
-  SingleChunkPosList(ChunkID chunkID) : _chunk_id(chunkID) {}
+  explicit SingleChunkPosList(ChunkID chunkID) : _chunk_id(chunkID) {}
 
   bool empty() const final;
   size_t size() const final;
@@ -16,9 +16,7 @@ class SingleChunkPosList final : public AbstractPosList {
   bool references_single_chunk() const final;
   ChunkID common_chunk_id() const final;
 
-  RowID operator[](size_t n) const final {
-    return RowID{_chunk_id, _offsets[n]};
-  }
+  RowID operator[](size_t n) const final { return RowID{_chunk_id, _offsets[n]}; }
 
   std::vector<ChunkOffset>& get_offsets();
 
@@ -32,4 +30,4 @@ class SingleChunkPosList final : public AbstractPosList {
   ChunkID _chunk_id = INVALID_CHUNK_ID;
 };
 
-}
+}  // namespace opossum
