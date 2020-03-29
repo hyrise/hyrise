@@ -2618,11 +2618,10 @@ TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
       "SELECT a FROM int_float2;");
 
   // clang-format off
-  const auto left_projection = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
-  const auto right_projection = ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2);
-
-  const auto expected_lqp = ExceptNode::make(SetOperationMode::Positions, left_projection, right_projection);
-
+  const auto expected_lqp = 
+  ExceptNode::make(SetOperationMode::Positions, 
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float), 
+      ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2635,13 +2634,10 @@ TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
       "SELECT a FROM int_float2;");
 
   // clang-format off
-  const auto left_projection = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
-  const auto right_projection = ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2);
-
-  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates.emplace_back(equals_(int_float_a, int_float2_a));
-
-  const auto expected_lqp = IntersectNode::make(SetOperationMode::Positions, left_projection, right_projection);
+  const auto expected_lqp = 
+  IntersectNode::make(SetOperationMode::Positions, 
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float), 
+      ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2656,24 +2652,36 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
       "SELECT c FROM int_int_int;");
 
   // clang-format off
-  const auto a_projection = ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int);
-  const auto b_projection = ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int);
-  const auto c_projection = ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int);
-
-  auto join_predicates_a_b = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates_a_b.emplace_back(equals_(int_int_int_a, int_int_int_b));
-
-  auto join_predicates_b_c = std::vector<std::shared_ptr<AbstractExpression>>{};
-  join_predicates_b_c.emplace_back(equals_(int_int_int_b, int_int_int_c));
-
-  const auto except_lqp = ExceptNode::make(SetOperationMode::Positions, b_projection, c_projection);
-
-  const auto expected_lqp = IntersectNode::make(SetOperationMode::Positions, a_projection, except_lqp);
-
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Positions, 
+    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int), 
+      ExceptNode::make(SetOperationMode::Positions, 
+        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int), 
+          ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
+
+/* TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
+  const auto actual_lqp = compile_query(
+      "(SELECT a FROM int_int_int "
+      "INTERSECT "
+      "SELECT b FROM int_int_int) "
+      "EXCEPT "
+      "SELECT c FROM int_int_int;");
+
+  // clang-format off
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Positions, 
+    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int), 
+      ExceptNode::make(SetOperationMode::Positions, 
+        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int), 
+          ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+} */
 
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
   {

@@ -441,12 +441,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Currently all SetOperations are not supported by Hyrise");
+  FailInput("Hyrise does not yet support set operations");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  FailInput("Currently all SetOperations are not supported by Hyrise");
+  FailInput("Hyrise does not yet support set operations");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(

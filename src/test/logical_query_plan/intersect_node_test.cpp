@@ -31,9 +31,7 @@ class IntersectNodeTest : public BaseTest {
   LQPColumnReference _b;
   LQPColumnReference _c;
 };
-TEST_F(IntersectNodeTest, Description) {
-  EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: SetOperationPositions");
-}
+TEST_F(IntersectNodeTest, Description) { EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: Positions"); }
 
 TEST_F(IntersectNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_intersect_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));

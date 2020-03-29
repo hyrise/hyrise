@@ -2,9 +2,9 @@
 
 #include "base_test.hpp"
 
+#include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/except_node.hpp"
 
 namespace opossum {
 
@@ -32,9 +32,7 @@ class ExceptNodeTest : public BaseTest {
   LQPColumnReference _c;
 };
 
-TEST_F(ExceptNodeTest, Description) {
-  EXPECT_EQ(_except_node->description(), "[ExceptNode] Mode: SetOperationPositions");
-}
+TEST_F(ExceptNodeTest, Description) { EXPECT_EQ(_except_node->description(), "[ExceptNode] Mode: Positions"); }
 
 TEST_F(ExceptNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_except_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
