@@ -224,8 +224,8 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
 
   if (auto rowid_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
     func(rowid_pos_list);
-  } else if (auto pos_list = std::dynamic_pointer_cast<const SingleChunkPosList>(untyped_pos_list)) {
-    func(pos_list);
+  } else if (auto single_chunk_pos_list = std::dynamic_pointer_cast<const SingleChunkPosList>(untyped_pos_list)) {
+    func(single_chunk_pos_list);
   } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
     func(entire_chunk_pos_list);
   } else {

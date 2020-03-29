@@ -74,7 +74,6 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   // Element access
   RowID operator[](const size_t index) const final { return Vector::operator[](index); }
-
   RowID& operator[](const size_t index) { return Vector::operator[](index); }
 
   using Vector::back;
