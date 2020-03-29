@@ -25,8 +25,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     functor(begin, end);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
     auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
     functor(begin, end);
@@ -64,17 +64,19 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     NullValueIterator _null_value_it;
   };
 
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
+  template <typename PosListIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                    IsNullSegmentPosition, PosListIteratorType> {
    public:
     using ValueType = bool;
     using NullValueVector = pmr_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values,
-                                 const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
-                                                                                     std::move(position_filter_it)},
+    explicit PointAccessIterator(const NullValueVector& null_values, const PosListIteratorType position_filter_begin,
+                                 PosListIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,
+                                         PosListIteratorType>{std::move(position_filter_begin),
+                                                              std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:

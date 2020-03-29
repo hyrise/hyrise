@@ -2,7 +2,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
@@ -38,7 +38,8 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value> {};
+class BaseSegmentIterator
+    : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -59,19 +60,18 @@ struct ChunkOffsetMapping {
  * are returned.
  */
 
-template <typename Derived, typename Value>
+template <typename Derived, typename Value, typename PosListIteratorType>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessSegmentIterator(PosList::const_iterator position_filter_begin,
-                                          PosList::const_iterator position_filter_it)
+  explicit BasePointAccessSegmentIterator(PosListIteratorType position_filter_begin,
+                                          PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
   const ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
-    return {static_cast<ChunkOffset>(std::distance(_position_filter_begin, _position_filter_it)),
-            _position_filter_it->chunk_offset};
+    return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
   }
 
  private:
@@ -92,8 +92,8 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   }
 
  private:
-  PosList::const_iterator _position_filter_begin;
-  PosList::const_iterator _position_filter_it;
+  PosListIteratorType _position_filter_begin;
+  PosListIteratorType _position_filter_it;
 };
 
 }  // namespace opossum
