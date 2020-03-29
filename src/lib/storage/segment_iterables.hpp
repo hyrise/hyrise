@@ -61,21 +61,22 @@ template <typename Derived>
 class SegmentIterable {
  public:
   /**
-   * @param f is a generic lambda accepting two iterators as parameters
+   * @tparam erase_pos_list_type is ignored - see PointAccessibleSegmentIterable for documentation
+   * @param  functor is a generic lambda accepting two iterators as parameters
    */
-  template <typename Functor>
-  void with_iterators(const Functor& f) const {
-    _self()._on_with_iterators(f);
+  template <typename Functor, ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild>
+  void with_iterators(const Functor& functor) const {
+    _self()._on_with_iterators(functor);
   }
 
   /**
-   * @param f is a generic lambda accepting a segment value (i.e. use const auto&)
+   * @param functor is a generic lambda accepting a segment value (i.e. use const auto&)
    */
   template <typename Functor>
-  void for_each(const Functor& f) const {
-    with_iterators([&f](auto it, auto end) {
+  void for_each(const Functor& functor) const {
+    with_iterators([&functor](auto it, auto end) {
       for (; it != end; ++it) {
-        f(*it);
+        functor(*it);
       }
     });
   }
@@ -143,14 +144,18 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
  public:
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
-  template <typename Functor>
+  /**
+   * @tparam ErasePosListType can be set to ErasePosListType::Always - see the implementation of resolve_pos_list_type
+   * @param  functor is a generic lambda accepting two iterators as parameters
+   */
+  template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
   void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     if (!position_filter) {
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
 
-      resolve_pos_list_type(position_filter,
+      resolve_pos_list_type<erase_pos_list_type>(position_filter,
                             [&functor, this](auto& pos_list) { _self()._on_with_iterators(pos_list, functor); });
     }
   }

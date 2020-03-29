@@ -214,19 +214,28 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
   }
 }
 
-template <typename Functor>
-void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& func) {
-  if (!untyped_pos_list) {
-    func(untyped_pos_list);
-    return;
-  }
+// Used as a template parameter that is passed whenever we conditionally erase the type of the position list. This is
+// done to reduce the compile time at the cost of the runtime performance. We do not re-use EraseTypes here, as it
+// might confuse readers who could think that erase all types within the functor.
+enum class ErasePosListType { OnlyInDebugBuild, Always };
 
-  if (auto rowid_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
-    func(rowid_pos_list);
-  } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
-    func(entire_chunk_pos_list);
+template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
+void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& func) {
+  if constexpr (HYRISE_DEBUG || erase_pos_list_type == ErasePosListType::Always) {
+    func(untyped_pos_list);
   } else {
-    Fail("Unrecognized PosList type encountered");
+    if (!untyped_pos_list) {
+      func(untyped_pos_list);
+      return;
+    }
+
+    if (auto rowid_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
+      func(rowid_pos_list);
+    } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
+      func(entire_chunk_pos_list);
+    } else {
+      Fail("Unrecognized PosList type encountered");
+    }
   }
 }
 
