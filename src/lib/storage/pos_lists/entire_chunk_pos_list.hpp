@@ -16,8 +16,6 @@ class EntireChunkPosList : public AbstractPosList {
     DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "Cannot create EntireChunkPosList for INVALID_CHUNK_ID");
   }
 
-  EntireChunkPosList& operator=(EntireChunkPosList&& other) = default;
-
   bool references_single_chunk() const final;
   ChunkID common_chunk_id() const final;
 

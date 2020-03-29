@@ -140,7 +140,9 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
 
-  segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
+  // Looking up the result in the hash map is way more expensive than dereferencing the iterator. To reduce the compile
+  // time, we erase the iterators here.
+  segment_iterate<ColumnDataType, EraseTypes::Always>(base_segment, [&](const auto& position) {
     auto& result =
         get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
@@ -287,16 +289,17 @@ void AggregateHash::_aggregate() {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto base_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
-                const auto int_to_uint = [](const int32_t value) {
-                  // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
-                  // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
-                  // negative itself) to get a positive number.
-                  const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
-                  DebugAssert(shifted_value >= 0, "Type conversion failed");
-                  return static_cast<uint64_t>(shifted_value);
-                };
 
+              const auto int_to_uint = [](const int32_t value) {
+                // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
+                // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
+                // negative itself) to get a positive number.
+                const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
+                DebugAssert(shifted_value >= 0, "Type conversion failed");
+                return static_cast<uint64_t>(shifted_value);
+              };
+
+              segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   if (position.is_null()) {
                     keys_per_chunk[chunk_id][chunk_offset] = 0;
