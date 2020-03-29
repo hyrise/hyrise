@@ -18,8 +18,8 @@ namespace opossum {
  * Defines in which order a certain column should be sorted.
  */
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID& column, const OrderByMode order_by_mode = OrderByMode::Ascending)
-      : column(column), order_by_mode(order_by_mode) {}
+  explicit SortColumnDefinition(const ColumnID& init_column, const OrderByMode init_order_by_mode = OrderByMode::Ascending)
+      : column(init_column), order_by_mode(init_order_by_mode) {}
 
   const ColumnID column;
   const OrderByMode order_by_mode;
@@ -52,10 +52,7 @@ class Sort : public AbstractReadOnlyOperator {
   template <typename SortColumnType>
   class SortImplMaterializeOutput;
 
-  void _validate_sort_definitions() const;
-
   const std::vector<SortColumnDefinition> _sort_definitions;
-  std::vector<DataType> _sort_definition_data_types;
 
   const size_t _output_chunk_size;
 };

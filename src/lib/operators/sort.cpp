@@ -8,7 +8,9 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _sort_definitions(sort_definitions),
-      _output_chunk_size(output_chunk_size) {}
+      _output_chunk_size(output_chunk_size) {
+        DebugAssert(_sort_definitions.size() >= 1, "Expected at least one sort criterion");
+      }
 
 const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
 
@@ -26,40 +28,45 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  _sort_definition_data_types.resize(_sort_definitions.size());
-  std::transform(
-      _sort_definitions.begin(), _sort_definitions.end(), _sort_definition_data_types.begin(),
-      [this](const auto sort_definition) { return input_table_left()->column_data_type(sort_definition.column); });
+  const auto& input_table = input_table_left();
+  for (const auto& column_sort_definition : _sort_definitions) {
+    Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
+    Assert(column_sort_definition.column < input_table->column_count(),
+           "Sort: Column ID is greater than table's column count");
+  }
 
-  _validate_sort_definitions();
+  // Starting after the first (least significant) sort operation, this variable holds the table 
+  std::shared_ptr<Table> sorted_table;
 
-  std::shared_ptr<const Table> output = input_table_left();
-  std::shared_ptr<Table> output_mutable;
-  std::shared_ptr<PosList> sorted_pos_list = std::shared_ptr<PosList>(nullptr);
+  // Starting after the first (least significant) sort operation, this holds the order of the table as it has been
+  // determined so far. This is not a completely proper PosList on the input table as it might point to
+  // ReferenceSegments.
+  auto previously_sorted_pos_list = std::shared_ptr<PosList>{};
 
-  for (auto column_id = _sort_definitions.size(); column_id-- != 0;) {
-    const bool is_last_sorting_run = (column_id == 0);
+  for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
+    const bool is_last_sorting_run = (sort_step == 0);
 
-    auto sort_definition = _sort_definitions[column_id];
-    const auto data_type = _sort_definition_data_types[column_id];
+    const auto& sort_definition = _sort_definitions[sort_step];
+    const auto data_type = input_table->column_data_type(sort_definition.column);
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto sort_single_col_impl = SortImpl<ColumnDataType>(input_table_left(), sort_definition.column,
+      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column,
                                                            sort_definition.order_by_mode, _output_chunk_size);
-      const auto row_id_value_vector = sort_single_col_impl.sort_one_column(sorted_pos_list);
+      const auto row_id_value_vector = sort_impl.sort(previously_sorted_pos_list);
 
       if (is_last_sorting_run) {
         auto materialization = std::make_shared<SortImplMaterializeOutput<ColumnDataType>>(
-            input_table_left(), row_id_value_vector, _output_chunk_size);
+            input_table, row_id_value_vector, _output_chunk_size);
 
-        output_mutable = materialization->execute();
+        sorted_table = materialization->execute();
       } else {
-        sorted_pos_list = std::make_shared<PosList>();
+        previously_sorted_pos_list = std::make_shared<PosList>();
+        previously_sorted_pos_list->reserve(row_id_value_vector->size());
 
         for (auto& row_id_value : *row_id_value_vector) {
-          sorted_pos_list->emplace_back(row_id_value.first);
+          previously_sorted_pos_list->emplace_back(row_id_value.first);
         }
       }
     });
@@ -69,26 +76,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // Set the ordered_by attribute of the output's chunks to the column the chunk was sorted by last (because this
   // is the column that the chunk is ordered by in any case; whereas it is not necessarily sorted by the other
   // columns -- on their own -- as well).
-  const auto chunk_count = output_mutable->chunk_count();
+  const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    output_mutable->get_chunk(chunk_id)->set_ordered_by(
+    const auto& chunk = sorted_table->get_chunk(chunk_id);
+    chunk->finalize();
+    chunk->set_ordered_by(
         std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
   }
-  output = output_mutable;
-
-  return output;
-}
-
-/**
- * Asserts that all column definitions are valid.
- */
-void Sort::_validate_sort_definitions() const {
-  const auto input_table = input_table_left();
-  for (const auto& column_sort_definition : _sort_definitions) {
-    Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
-    Assert(column_sort_definition.column < input_table->column_count(),
-           "Sort: Column ID is greater than table's column count");
-  }
+  return sorted_table;
 }
 
 // This class fulfills only the materialization task for a sorted row_id_value_vector.
@@ -146,22 +141,21 @@ class Sort::SortImplMaterializeOutput {
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
 
-          auto& segment_ptr_and_typed_ptr_pair = segment_ptr_and_accessor_by_chunk_id[chunk_id];
-          auto& base_segment = segment_ptr_and_typed_ptr_pair.first;
-          auto& accessor = segment_ptr_and_typed_ptr_pair.second;
+          auto& [base_segment, accessor] = segment_ptr_and_accessor_by_chunk_id[chunk_id];
 
           if (!base_segment) {
             base_segment = _table_in->get_chunk(chunk_id)->get_segment(column_id);
             accessor = create_segment_accessor<ColumnDataType>(base_segment);
           }
 
-          // If the input segment is not a ReferenceSegment, we can take a fast(er) path
+          // If the input segment is not a ReferenceSegment, we can take a fast(er) path.
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
             const auto is_null = !typed_value;
             value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             value_segment_null_vector.push_back(is_null);
           } else {
+            Fail("Did not expect accessor to be null");
             const auto value = (*base_segment)[chunk_offset];
             const auto is_null = variant_is_null(value);
             value_segment_value_vector.push_back(is_null ? ColumnDataType{} : boost::get<ColumnDataType>(value));
@@ -220,16 +214,16 @@ class Sort::SortImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
-  std::shared_ptr<std::vector<RowIDValuePair>> sort_one_column(
-      const std::shared_ptr<PosList>& previously_sorted_values = nullptr) {
+  std::shared_ptr<std::vector<RowIDValuePair>> sort(
+      const std::shared_ptr<PosList>& previously_sorted_pos_list = nullptr) {
     // 1. Prepare Sort: Creating rowid-value-Structure
-    _materialize_sort_column(previously_sorted_values);
+    _materialize_sort_column(previously_sorted_pos_list);
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
-      _sort_with_operator<std::less<>>();
+      _sort_with_comparator<std::less<>>();
     } else {
-      _sort_with_operator<std::greater<>>();
+      _sort_with_comparator<std::greater<>>();
     }
 
     // 2b. Insert null rows if necessary
@@ -248,7 +242,7 @@ class Sort::SortImpl {
 
  protected:
   // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(const std::shared_ptr<PosList>& previously_sorted_value) {
+  void _materialize_sort_column(const std::shared_ptr<PosList>& previously_sorted_pos_list) {
     auto& row_id_value_vector = *_row_id_value_vector;
     row_id_value_vector.reserve(_table_in->row_count());
 
@@ -257,8 +251,8 @@ class Sort::SortImpl {
     // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
     // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
     // the last run.
-    if (previously_sorted_value) {
-      _materialize_column_from_pos_list(previously_sorted_value);
+    if (previously_sorted_pos_list) {
+      _materialize_column_from_pos_list(previously_sorted_pos_list);
     } else {
       const auto chunk_count = _table_in->chunk_count();
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -299,23 +293,24 @@ class Sort::SortImpl {
       if (accessor) {
         const auto typed_value = accessor->access(chunk_offset);
         if (!typed_value) {
-          (*_null_value_rows).emplace_back(row_id, SortColumnType{});
+          _null_value_rows->emplace_back(row_id, SortColumnType{});
         } else {
-          (*_row_id_value_vector).emplace_back(row_id, typed_value.value());
+          _row_id_value_vector->emplace_back(row_id, typed_value.value());
         }
       } else {
+        Fail("Did not expect accessor to be null");
         const auto value = (*base_segment)[chunk_offset];
         if (variant_is_null(value)) {
-          (*_null_value_rows).emplace_back(row_id, SortColumnType{});
+          _null_value_rows->emplace_back(row_id, SortColumnType{});
         } else {
-          (*_row_id_value_vector).emplace_back(row_id, boost::get<SortColumnType>(value));
+          _row_id_value_vector->emplace_back(row_id, boost::get<SortColumnType>(value));
         }
       }
     }
   }
 
   template <typename Comparator>
-  void _sort_with_operator() {
+  void _sort_with_comparator() {
     Comparator comparator;
     std::stable_sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
                      [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
