@@ -221,7 +221,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   auto column_id_to_expression = std::unordered_map<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
     const auto& expression = expressions[expression_id];
-    if (const auto pqp_column_expression = std::static_pointer_cast<PQPColumnExpression>(expression)) {
+    if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       const auto& original_id = pqp_column_expression->column_id;
       column_id_to_expression[original_id] = expression_id;
     }
