@@ -205,20 +205,19 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    *   - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
    *   - a binary search in the range [0, previous_end_position] else
    */
-  template <typename _PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<_PosListIteratorType>,
-                                                                    SegmentPosition<T>, _PosListIteratorType> {
+  template <typename PosListIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                    SegmentPosition<T>, PosListIteratorType> {
    public:
-    using PosListIteratorType = _PosListIteratorType;
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
 
     explicit PointAccessIterator(const std::shared_ptr<const pmr_vector<T>>& values,
                                  const std::shared_ptr<const pmr_vector<bool>>& null_values,
                                  const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions,
-                                 const _PosListIteratorType position_filter_begin,
-                                 _PosListIteratorType&& position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, _PosListIteratorType>{std::move(position_filter_begin),
+                                 const PosListIteratorType position_filter_begin,
+                                 PosListIteratorType&& position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>, PosListIteratorType>{std::move(position_filter_begin),
                                                                                   std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},

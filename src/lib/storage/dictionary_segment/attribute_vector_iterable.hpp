@@ -89,17 +89,16 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     ChunkOffset _chunk_offset;
   };
 
-  template <typename ZsDecompressorType, typename _PosListIteratorType>
+  template <typename ZsDecompressorType, typename PosListIteratorType>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, _PosListIteratorType>,
-                                              SegmentPosition<ValueID>, _PosListIteratorType> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType>,
+                                              SegmentPosition<ValueID>, PosListIteratorType> {
    public:
-    using PosListIteratorType = _PosListIteratorType;
     using ValueType = ValueID;
     PointAccessIterator(const ValueID null_value_id, ZsDecompressorType&& attribute_decompressor,
-                        const _PosListIteratorType&& position_filter_begin, _PosListIteratorType&& position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, _PosListIteratorType>,
-                                         SegmentPosition<ValueID>, _PosListIteratorType>{std::move(
+                        const PosListIteratorType&& position_filter_begin, PosListIteratorType&& position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, PosListIteratorType>,
+                                         SegmentPosition<ValueID>, PosListIteratorType>{std::move(
                                                                                              position_filter_begin),
                                                                                          std::move(position_filter_it)},
           _null_value_id{null_value_id},
