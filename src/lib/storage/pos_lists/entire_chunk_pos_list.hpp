@@ -5,14 +5,14 @@
 
 namespace opossum {
 
-class MatchesAllPosList : public AbstractPosList {
+class EntireChunkPosList : public AbstractPosList {
  public:
-  explicit MatchesAllPosList(std::shared_ptr<const Chunk> common_chunk, const ChunkID common_chunk_id)
+  explicit EntireChunkPosList(std::shared_ptr<const Chunk> common_chunk, const ChunkID common_chunk_id)
       : _common_chunk(common_chunk),
         _common_chunk_id(common_chunk_id),
         _common_chunk_size_on_creation(common_chunk->size()) {}
 
-  MatchesAllPosList& operator=(MatchesAllPosList&& other) = default;
+  EntireChunkPosList& operator=(EntireChunkPosList&& other) = default;
 
   bool references_single_chunk() const final;
   ChunkID common_chunk_id() const final;
@@ -27,10 +27,10 @@ class MatchesAllPosList : public AbstractPosList {
   size_t size() const final;
   size_t memory_usage(const MemoryUsageCalculationMode) const final;
 
-  PosListIterator<MatchesAllPosList, RowID> begin() const;
-  PosListIterator<MatchesAllPosList, RowID> end() const;
-  PosListIterator<MatchesAllPosList, RowID> cbegin() const;
-  PosListIterator<MatchesAllPosList, RowID> cend() const;
+  PosListIterator<EntireChunkPosList, RowID> begin() const;
+  PosListIterator<EntireChunkPosList, RowID> end() const;
+  PosListIterator<EntireChunkPosList, RowID> cbegin() const;
+  PosListIterator<EntireChunkPosList, RowID> cend() const;
 
  private:
   std::shared_ptr<const Chunk> _common_chunk;
