@@ -21,7 +21,6 @@ class EntireChunkPosList : public AbstractPosList {
 
   // Implemented in hpp for performance reasons (to allow inlining)
   RowID operator[](const size_t index) const final {
-    DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "operator[] called on invalid chunk id");
     return RowID{_common_chunk_id, static_cast<ChunkOffset>(index)};
   }
 

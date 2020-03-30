@@ -76,7 +76,9 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
                       const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     if (position_filter) {
       if constexpr (is_point_accessible_segment_iterable_v<UnerasedIterable>) {
-        // Since the iterator type is erased, there is no reason to resolve the PosList
+        // Since we are in AnySegmentIterable, where we erase the segment types as far as possible, there is no reason
+        // to resolve the PosList. This further reduces the compile time at the cost of run time performance (which we
+        // have already sacrificed when we chose the AnySegmentIterable in the first place).
         iterable.template with_iterators<ErasePosListType::Always>(position_filter, [&](auto begin, const auto end) {
           const auto any_segment_iterator_begin = AnySegmentIterator<ValueType>(begin);
           const auto any_segment_iterator_end = AnySegmentIterator<ValueType>(end);
