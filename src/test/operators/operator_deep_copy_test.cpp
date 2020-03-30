@@ -135,7 +135,9 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 1);
 
   // build and execute sort
-  auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
+  auto sort = std::make_shared<Sort>(
+      _table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}},
+      2u);
   sort->execute();
   EXPECT_TABLE_EQ_UNORDERED(sort->get_output(), expected_result);
 
