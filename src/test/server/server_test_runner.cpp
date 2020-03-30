@@ -8,9 +8,9 @@
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "sql/sql_plan_cache.hpp"
-
 #include "server/server.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -42,6 +42,9 @@ class ServerTestRunner : public BaseTest {
     // Give the server time to shut down gracefully before force-closing the socket it's working on
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
+
+    _server.reset();
+    _server_thread.reset();
 
     std::remove(_export_filename.c_str());
   }
@@ -230,6 +233,34 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   transaction.exec("INSERT INTO table_a VALUES (1, 1.0);");
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), expected_num_rows);
+}
+
+TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
+  // Test that open sessions are allowed to finish before the server is destroyed. This is more relevant for tests
+  // than for the actual execution. In "real-life", i.e., during our experiments, we usually simply kill the server.
+  // In tests however, the server finishing while sessions might not be completely finished could lead to issues
+  // like #1977.
+
+  pqxx::connection connection{_connection_string};
+  pqxx::nontransaction transaction{connection};
+
+  for (auto i = 0; i < (HYRISE_DEBUG ? 6 : 8); ++i) {
+    transaction.exec("INSERT INTO table_a SELECT * FROM table_a;");
+  }
+
+  // These should run for a while, one should finish earlier
+  std::thread([&transaction] {
+    transaction.exec("SELECT * FROM table_a t1, table_a t2");
+  }).detach();
+
+  std::thread([&transaction] {
+    transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123");
+  }).detach();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // No assertions here. If the server would destroy resources early, we would expect to see errors in asan/tsan and
+  // segfaults in regular execution.
 }
 
 TEST_F(ServerTestRunner, TestPreparedStatement) {

@@ -32,14 +32,17 @@ void Server::_accept_new_session() {
 void Server::_start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error) {
   Assert(!error, error.message());
 
-  std::thread session_thread([new_session] {
+  std::thread session_thread([new_session, &num_running_sessions=this->_num_running_sessions] {
     const std::string thread_name = "server_p_" + std::to_string(new_session->socket()->remote_endpoint().port());
 #ifdef __APPLE__
     pthread_setname_np(thread_name.c_str());
 #elif __linux__
     pthread_setname_np(pthread_self(), thread_name.c_str());
 #endif
+
+    ++num_running_sessions;
     new_session->run();
+    --num_running_sessions;
   });
 
   session_thread.detach();
@@ -50,6 +53,9 @@ boost::asio::ip::address Server::server_address() const { return _acceptor.local
 
 uint16_t Server::server_port() const { return _acceptor.local_endpoint().port(); }
 
-void Server::shutdown() { _io_service.stop(); }
+void Server::shutdown() {
+  while (_num_running_sessions > 0) {}
+  _io_service.stop();
+}
 
 }  // namespace opossum
