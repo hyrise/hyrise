@@ -645,7 +645,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   if (_aggregates.empty()) {
     auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, DistinctAggregateType>>(
         _contexts_per_column[0]);
-    auto pos_list = PosList();
+    auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
       pos_list.push_back(result.row_id);
@@ -809,7 +809,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
   Fail("Invalid aggregate");
 }
 
-void AggregateHash::_write_groupby_output(PosList& pos_list) {
+void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
   auto input_table = input_table_left();
 
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
@@ -907,7 +907,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (column_index == 0) {
-    auto pos_list = PosList(context->results.size());
+    auto pos_list = RowIDPosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
     for (auto& result : context->results) {
       pos_list[chunk_offset] = (result.row_id);
