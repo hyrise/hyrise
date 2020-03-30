@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include "storage/segment_iterables/base_segment_iterators.hpp"
+#include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
