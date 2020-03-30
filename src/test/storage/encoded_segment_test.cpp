@@ -630,12 +630,12 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
 
   EXPECT_EQ(for_segment->block_minima().size(), 1);  // single block
   EXPECT_EQ(for_segment->offset_values().size(), row_count);
-  EXPECT_EQ(for_segment->null_values().size(), row_count);
+  EXPECT_EQ(for_segment->null_values()->size(), row_count);
 
-  EXPECT_EQ(for_segment->null_values()[0], false);
-  EXPECT_EQ(for_segment->null_values()[1], true);
-  EXPECT_EQ(for_segment->null_values()[7], true);
-  EXPECT_EQ(for_segment->null_values()[16], false);
+  EXPECT_EQ((*for_segment->null_values())[0], false);
+  EXPECT_EQ((*for_segment->null_values())[1], true);
+  EXPECT_EQ((*for_segment->null_values())[7], true);
+  EXPECT_EQ((*for_segment->null_values())[16], false);
 
   // Block minium should be the smallest value: 0
   EXPECT_EQ(for_segment->block_minima().front(), minimum);
