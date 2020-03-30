@@ -134,7 +134,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
   // been determined so far. This is not a completely proper PosList on the input table as it might point to
   // ReferenceSegments.
-  auto previously_sorted_pos_list = std::optional<PosList>{};
+  auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
 
   for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
     const bool is_last_sorting_step = (sort_step == 0);
@@ -183,7 +183,7 @@ class Sort::SortImpl {
   // Sorts table_in, potentially taking the pre-existing order of previously_sorted_pos_list into account.
   // Returns a PosList, which can either be used as an input to the next call of sort or for materializing the
   // output table.
-  PosList sort(const std::optional<PosList>& previously_sorted_pos_list) {
+  RowIDPosList sort(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
     // 1. Prepare Sort: Creating RowID-value-Structure
     _materialize_sort_column(previously_sorted_pos_list);
 
@@ -209,7 +209,7 @@ class Sort::SortImpl {
       }
     }
 
-    PosList pos_list{};
+    RowIDPosList pos_list{};
     pos_list.reserve(_row_id_value_vector.size());
     for (const auto& [row_id, _] : _row_id_value_vector) {
       pos_list.emplace_back(row_id);
@@ -219,7 +219,7 @@ class Sort::SortImpl {
 
  protected:
   // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column(const std::optional<PosList>& previously_sorted_pos_list) {
+  void _materialize_sort_column(const std::optional<RowIDPosList>& previously_sorted_pos_list) {
     // If there was no PosList passed, this is the first sorting run and we simply fill our values and nulls data
     // structures from our input table. Otherwise we will materialize according to the PosList which is the result of
     // the last run.
@@ -245,7 +245,7 @@ class Sort::SortImpl {
   }
 
   // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
-  void _materialize_column_from_pos_list(const PosList& pos_list) {
+  void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
     const auto input_chunk_count = _table_in->chunk_count();
     auto accessor_by_chunk_id =
         std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
