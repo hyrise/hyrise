@@ -287,17 +287,16 @@ void AggregateHash::_aggregate() {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               const auto base_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-
-              const auto int_to_uint = [](const int32_t value) {
-                // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
-                // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
-                // negative itself) to get a positive number.
-                const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
-                DebugAssert(shifted_value >= 0, "Type conversion failed");
-                return static_cast<uint64_t>(shifted_value);
-              };
-
               segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+                const auto int_to_uint = [](const int32_t value) {
+                  // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
+                  // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
+                  // negative itself) to get a positive number.
+                  const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
+                  DebugAssert(shifted_value >= 0, "Type conversion failed");
+                  return static_cast<uint64_t>(shifted_value);
+                };
+
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   if (position.is_null()) {
                     keys_per_chunk[chunk_id][chunk_offset] = 0;
@@ -646,7 +645,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   if (_aggregates.empty()) {
     auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, DistinctAggregateType>>(
         _contexts_per_column[0]);
-    auto pos_list = RowIDPosList();
+    auto pos_list = PosList();
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
       pos_list.push_back(result.row_id);
@@ -810,7 +809,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
   Fail("Invalid aggregate");
 }
 
-void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
+void AggregateHash::_write_groupby_output(PosList& pos_list) {
   auto input_table = input_table_left();
 
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
@@ -908,7 +907,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (column_index == 0) {
-    auto pos_list = RowIDPosList(context->results.size());
+    auto pos_list = PosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
     for (auto& result : context->results) {
       pos_list[chunk_offset] = (result.row_id);
