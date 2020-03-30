@@ -42,6 +42,9 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
 
     ++num_running_sessions;
     new_session->run();
+
+    // Call session's destructor before releasing num_running_sessions so that we finish before the server is shut down
+    new_session.reset();
     --num_running_sessions;
   });
 
