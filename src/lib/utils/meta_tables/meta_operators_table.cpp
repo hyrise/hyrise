@@ -5,8 +5,8 @@
 namespace opossum {
 
 MetaOperatorsTable::MetaOperatorsTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"query_hash", DataType::String, false},
-                                               {"operator", DataType::String, false}}) {}
+    : AbstractMetaTable(
+          TableColumnDefinitions{{"query_hash", DataType::String, false}, {"operator", DataType::String, false}}) {}
 
 const std::string& MetaOperatorsTable::name() const {
   static const auto name = std::string{"cached_operators"};
@@ -16,7 +16,8 @@ const std::string& MetaOperatorsTable::name() const {
 std::shared_ptr<Table> MetaOperatorsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin(); iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
+  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin();
+       iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
     const auto& [query_string, physical_query_plan] = *iter;
     std::stringstream query_hex_hash;
     query_hex_hash << std::hex << std::hash<std::string>{}(query_string);
@@ -28,8 +29,10 @@ std::shared_ptr<Table> MetaOperatorsTable::_on_generate() const {
   return output_table;
 }
 
-void MetaOperatorsTable::_process_pqp(const std::shared_ptr<const AbstractOperator>& op, const std::string& query_hex_hash,
-                                        std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes, const std::shared_ptr<Table>& output_table) const {
+void MetaOperatorsTable::_process_pqp(const std::shared_ptr<const AbstractOperator>& op,
+                                      const std::string& query_hex_hash,
+                                      std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes,
+                                      const std::shared_ptr<Table>& output_table) const {
   output_table->append({pmr_string{query_hex_hash}, pmr_string{op->name()}});
 
   visited_pqp_nodes.insert(op);

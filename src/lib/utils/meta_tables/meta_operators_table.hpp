@@ -20,8 +20,8 @@ class MetaOperatorsTable : public AbstractMetaTable {
   std::shared_ptr<Table> _on_generate() const final;
 
   void _process_pqp(const std::shared_ptr<const AbstractOperator>& op, const std::string& query_hex_hash,
-                                        std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes, const std::shared_ptr<Table>& output_table) const;
-
+                    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes,
+                    const std::shared_ptr<Table>& output_table) const;
 };
 
 }  // namespace opossum
