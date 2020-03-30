@@ -15,6 +15,7 @@ const std::string& MetaOperatorsTable::name() const {
 
 std::shared_ptr<Table> MetaOperatorsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  if (!Hyrise::get().default_pqp_cache) return output_table;
 
   for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin();
        iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
