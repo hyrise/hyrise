@@ -19,7 +19,7 @@ class ExpressionEvaluatorTableScanImpl : public AbstractTableScanImpl {
                                    const std::shared_ptr<AbstractExpression>& expression);
 
   std::string description() const override;
-  std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) const override;
+  std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) const override;
 
  private:
   std::shared_ptr<const Table> _in_table;

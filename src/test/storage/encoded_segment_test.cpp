@@ -75,12 +75,12 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  std::shared_ptr<PosList> create_sequential_position_filter() {
+  std::shared_ptr<RowIDPosList> create_sequential_position_filter() {
     return create_sequential_position_filter(row_count());
   }
 
-  static std::shared_ptr<PosList> create_sequential_position_filter(size_t row_count) {
-    auto list = std::make_shared<PosList>();
+  static std::shared_ptr<RowIDPosList> create_sequential_position_filter(size_t row_count) {
+    auto list = std::make_shared<RowIDPosList>();
     list->guarantee_single_chunk();
 
     std::default_random_engine engine{};
@@ -95,11 +95,11 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<PosList> create_random_access_position_filter() {
+  std::shared_ptr<RowIDPosList> create_random_access_position_filter() {
     return create_random_access_position_filter(row_count());
   }
 
-  static std::shared_ptr<PosList> create_random_access_position_filter(size_t row_count) {
+  static std::shared_ptr<RowIDPosList> create_random_access_position_filter(size_t row_count) {
     auto list = create_sequential_position_filter(row_count);
 
     auto random_device = std::random_device{};

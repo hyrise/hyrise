@@ -400,8 +400,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     /**
      * 2. Probe phase
      */
-    std::vector<PosList> build_side_pos_lists;
-    std::vector<PosList> probe_side_pos_lists;
+    std::vector<RowIDPosList> build_side_pos_lists;
+    std::vector<RowIDPosList> probe_side_pos_lists;
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);
@@ -476,7 +476,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * They do two things:
      *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
      *          PosLists Chunk by Chunk
-     *      - Avoid creating the std::vector<const PosList*> for each Partition over and over again.
+     *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
      *
      * They hold one entry per column in the table, not per BaseSegment in a single chunk
      */
@@ -507,8 +507,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     for (size_t partition_id = 0, output_chunk_id{0}; partition_id < build_side_pos_lists.size(); ++partition_id) {
       // moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // build_pos_lists and probe_side_pos_lists will not be used again.
-      auto build_side_pos_list = std::make_shared<PosList>(std::move(build_side_pos_lists[partition_id]));
-      auto probe_side_pos_list = std::make_shared<PosList>(std::move(probe_side_pos_lists[partition_id]));
+      auto build_side_pos_list = std::make_shared<RowIDPosList>(std::move(build_side_pos_lists[partition_id]));
+      auto probe_side_pos_list = std::make_shared<RowIDPosList>(std::move(probe_side_pos_lists[partition_id]));
 
       if (build_side_pos_list->empty() && probe_side_pos_list->empty()) {
         continue;
