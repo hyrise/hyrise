@@ -115,6 +115,8 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Timo      Djürken
 -   Fabian    Dumke
+-   Leonard   Geier
+-   Richard   Ebeling
 -   Fabian    Engel
 -   Moritz    Eyssen
 -   Martin    Fischer
@@ -139,6 +141,7 @@ Contact: firstname.lastname@hpi.de
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
+-   Dominik   Meier
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
