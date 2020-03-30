@@ -10,7 +10,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
 #include "sql/sql_plan_cache.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -241,17 +240,24 @@ TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
   // In tests however, the server finishing while sessions might not be completely finished could lead to issues
   // like #1977.
 
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
-
+  pqxx::connection insert_connection{_connection_string};
+  pqxx::nontransaction insert_transaction{insert_connection};
   for (auto i = 0; i < (HYRISE_DEBUG ? 6 : 8); ++i) {
-    transaction.exec("INSERT INTO table_a SELECT * FROM table_a;");
+    insert_transaction.exec("INSERT INTO table_a SELECT * FROM table_a;");
   }
 
   // These should run for a while, one should finish earlier
-  std::thread([&transaction] { transaction.exec("SELECT * FROM table_a t1, table_a t2"); }).detach();
+  std::thread([&] {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    transaction.exec("SELECT * FROM table_a t1, table_a t2");
+  }).detach();
 
-  std::thread([&transaction] { transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123"); }).detach();
+  std::thread([&] {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123");
+  }).detach();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
