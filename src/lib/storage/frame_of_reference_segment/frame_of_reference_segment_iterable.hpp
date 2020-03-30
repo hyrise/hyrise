@@ -40,13 +40,13 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       using OffsetValueDecompressor = std::decay_t<decltype(offset_values.create_decompressor())>;
       using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
-      auto begin = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{&_segment.block_minima(), &_segment.null_values(),
-                                                                offset_values.create_decompressor(),
-                                                                position_filter->cbegin(), position_filter->cbegin()};
+      auto begin = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), offset_values.create_decompressor(),
+          position_filter->cbegin(), position_filter->cbegin()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{&_segment.block_minima(), &_segment.null_values(),
-                                                              offset_values.create_decompressor(),
-                                                              position_filter->cbegin(), position_filter->cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), offset_values.create_decompressor(),
+          position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
     });
@@ -109,21 +109,19 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
                                               SegmentPosition<T>, PosListIteratorType> {
-
    public:
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
 
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        OffsetValueDecompressor offset_value_decompressor,
-                        PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
+                        OffsetValueDecompressor offset_value_decompressor, PosListIteratorType position_filter_begin,
+                        PosListIteratorType position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
                                          SegmentPosition<T>, PosListIteratorType>{std::move(position_filter_begin),
-                                                             std::move(position_filter_it)},
+                                                                                  std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{std::move(offset_value_decompressor)} {}
-
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
