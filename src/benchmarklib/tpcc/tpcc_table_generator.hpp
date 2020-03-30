@@ -161,10 +161,11 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
         // write output chunks if segment size has reached chunk_size
         if (row_index % chunk_size == chunk_size - 1) {
-          auto value_segment = !has_null_value
-                                   ? std::make_shared<ValueSegment<T>>(std::move(data))
-                                   : std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values));
+          auto value_segment = has_null_value
+                                   ? std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values))
+                                   : std::make_shared<ValueSegment<T>>(std::move(data));
 
+          // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
           if (is_first_column) {
             segments_by_chunk.emplace_back();
             segments_by_chunk.back().emplace_back(value_segment);
@@ -186,10 +187,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
     // write partially filled last chunk
     if (row_index % chunk_size != 0) {
-      auto value_segment = !has_null_value ? std::make_shared<ValueSegment<T>>(std::move(data))
-                                           : std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values));
+      auto value_segment = has_null_value ? std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values))
+                                          : std::make_shared<ValueSegment<T>>(std::move(data));
 
-      // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
         segments_by_chunk.emplace_back();
         segments_by_chunk.back().emplace_back(value_segment);

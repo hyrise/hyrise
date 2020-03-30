@@ -65,8 +65,8 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
   // Wait for completion or timeout (should not occur)
   for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
+    // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
@@ -129,8 +129,8 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
 
   // Wait for completion or timeout (should not occur)
   for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
+    // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
@@ -184,8 +184,8 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
 
   // Wait for completion or timeout (should not occur)
   for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
+    // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
