@@ -18,7 +18,7 @@ set(
     calibration/calibration_table_generator_test.cpp
     calibration/calibration_table_wrapper_test.cpp
     calibration/csv_writer_test.cpp
-    calibration/lqp_generator_test.cpp
+        calibration/calibration_lqp_generator_test.cpp
     calibration/operator_feature_export_test.cpp
     calibration/table_feature_export_test.cpp
     concurrency/commit_context_test.cpp

@@ -9,8 +9,8 @@ add_executable(
     calibration_table_wrapper.hpp
     csv_writer.cpp
     csv_writer.hpp
-    lqp_generator.cpp
-    lqp_generator.hpp
+        calibration_lqp_generator.cpp
+        calibration_lqp_generator.hpp
     operator_feature_export.cpp
     operator_feature_export.hpp
     table_feature_export.cpp

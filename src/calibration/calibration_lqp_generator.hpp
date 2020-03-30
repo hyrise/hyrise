@@ -9,9 +9,9 @@
 #include "calibration_table_wrapper.hpp"
 
 namespace opossum {
-class LQPGenerator {
+class CalibrationLQPGenerator {
  public:
-    LQPGenerator();
+    CalibrationLQPGenerator();
     void generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper> &table);
     const std::vector<std::shared_ptr<AbstractLQPNode>> &get_lqps();
 
@@ -20,7 +20,7 @@ class LQPGenerator {
     void _generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper> &table);
     void _generate_joins(const std::shared_ptr<const CalibrationTableWrapper> &sharedPtr);
     void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper> &table);
-    [[nodiscard]] std::vector<LQPGenerator::ColumnPair> _get_column_pairs(
+    [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
             const std::shared_ptr<const CalibrationTableWrapper> &table) const;
 
     std::vector<std::shared_ptr<AbstractLQPNode>> _generated_lpqs;

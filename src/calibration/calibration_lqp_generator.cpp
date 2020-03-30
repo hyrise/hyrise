@@ -1,11 +1,10 @@
 #include <expression/expression_functional.hpp>
 #include <logical_query_plan/join_node.hpp>
 #include "logical_query_plan/predicate_node.hpp"
-#include "lqp_generator.hpp"
+#include "calibration_lqp_generator.hpp"
 
 #include "storage/table.hpp"
 #include <synthetic_table_generator.hpp>
-#include <synthetic_table_generator.cpp>
 
 using opossum::expression_functional::between_inclusive_;
 using opossum::expression_functional::like_;
@@ -17,8 +16,8 @@ using opossum::expression_functional::greater_than_;
 using opossum::expression_functional::less_than_;
 
 namespace opossum {
-    void LQPGenerator::generate(OperatorType operator_type,
-            const std::shared_ptr<const CalibrationTableWrapper>& table) {
+    void CalibrationLQPGenerator::generate(OperatorType operator_type,
+                                           const std::shared_ptr<const CalibrationTableWrapper>& table) {
       switch (operator_type) {
         case OperatorType::TableScan:
             _generate_table_scans(table);
@@ -32,7 +31,7 @@ namespace opossum {
       throw std::runtime_error("Not implemented yet: Only TableScans and JoinHashes are currently supported");
     }
 
-    void LQPGenerator::_generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper>& table) {
+    void CalibrationLQPGenerator::_generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper>& table) {
       const int selectivity_resolution = 10;
       const int reference_scan_resolution = 10;
 
@@ -120,8 +119,8 @@ namespace opossum {
       }
     }
 
-    std::vector<LQPGenerator::ColumnPair>
-            LQPGenerator::_get_column_pairs(const std::shared_ptr<const CalibrationTableWrapper>& table) const {
+    std::vector<CalibrationLQPGenerator::ColumnPair>
+            CalibrationLQPGenerator::_get_column_pairs(const std::shared_ptr<const CalibrationTableWrapper>& table) const {
       /*
        * ColumnVsColumn Scans occur when the value of a predicate is a column.
        * In this case every value from one column has to be compared to every value of the other
@@ -153,7 +152,7 @@ namespace opossum {
       return column_comparison_pairs;
     }
 
-    void LQPGenerator::_generate_column_vs_column_scans(
+    void CalibrationLQPGenerator::_generate_column_vs_column_scans(
             const std::shared_ptr<const CalibrationTableWrapper> &table) {
       const auto stored_table_node = StoredTableNode::make(table->get_name());
       const auto column_vs_column_scan_pairs = _get_column_pairs(table);
@@ -166,7 +165,7 @@ namespace opossum {
       }
     }
 
-    void LQPGenerator::_generate_joins(const std::shared_ptr<const CalibrationTableWrapper> &table) {
+    void CalibrationLQPGenerator::_generate_joins(const std::shared_ptr<const CalibrationTableWrapper> &table) {
       const auto stored_table_node = StoredTableNode::make(table->get_name());
       const auto column_vs_column_scan_pairs = _get_column_pairs(table);
 
@@ -177,11 +176,11 @@ namespace opossum {
       }
     }
 
-    LQPGenerator::LQPGenerator() {
+    CalibrationLQPGenerator::CalibrationLQPGenerator() {
       _generated_lpqs = std::vector<std::shared_ptr<AbstractLQPNode>>();
     }
 
-    const std::vector<std::shared_ptr<AbstractLQPNode> > & LQPGenerator::get_lqps() {
+    const std::vector<std::shared_ptr<AbstractLQPNode> > & CalibrationLQPGenerator::get_lqps() {
       return _generated_lpqs;
     }
 }  // namespace opossum
