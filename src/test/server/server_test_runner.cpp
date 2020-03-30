@@ -249,13 +249,9 @@ TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
   }
 
   // These should run for a while, one should finish earlier
-  std::thread([&transaction] {
-    transaction.exec("SELECT * FROM table_a t1, table_a t2");
-  }).detach();
+  std::thread([&transaction] { transaction.exec("SELECT * FROM table_a t1, table_a t2"); }).detach();
 
-  std::thread([&transaction] {
-    transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123");
-  }).detach();
+  std::thread([&transaction] { transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123"); }).detach();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
