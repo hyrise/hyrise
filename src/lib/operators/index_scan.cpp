@@ -116,7 +116,7 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
   auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
-  auto singleChunkPosList = std::make_shared<SingleChunkPosList>(chunk_id);
+  std::vector<ChunkOffset> chunk_offsets;
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
   Assert(index, "Index of specified type not found for segment (vector).");
@@ -133,7 +133,6 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
       range_end = index->lower_bound(_right_values);
 
       const auto matches_size = std::distance(range_begin, range_end);
-      auto& chunk_offsets = singleChunkPosList->get_offsets();
       chunk_offsets.resize(matches_size);
 
       for (auto matches_position = 0; matches_position < matches_size; ++matches_position, ++range_begin) {
@@ -190,7 +189,6 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
 
   DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
 
-  auto& chunk_offsets = singleChunkPosList->get_offsets();
   const auto previous_matches_size = chunk_offsets.size();
   const auto matches_size = previous_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
   chunk_offsets.resize(matches_size);
@@ -199,8 +197,7 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
     chunk_offsets[matches_position] = *range_begin;
   }
 
-  // TODO: Maybe it is more easy to make the singleChunkPosList here, and previously only edit a chunk_offset vector
-  return singleChunkPosList;
+  return std::make_shared<SingleChunkPosList>(chunk_id, std::move(chunk_offsets));
 }
 
 }  // namespace opossum

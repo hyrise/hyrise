@@ -7,6 +7,8 @@ namespace opossum {
 class SingleChunkPosList final : public AbstractPosList {
  public:
   explicit SingleChunkPosList(ChunkID chunkID) : _chunk_id(chunkID) {}
+  explicit SingleChunkPosList(ChunkID chunkID, std::vector<ChunkOffset>&& chunk_offsets)
+    : _chunk_id(chunkID), _offsets(std::move(chunk_offsets)) {}
 
   bool empty() const final;
   size_t size() const final;
@@ -25,8 +27,8 @@ class SingleChunkPosList final : public AbstractPosList {
   PosListIterator<SingleChunkPosList, RowID> cend() const;
 
  private:
-  std::vector<ChunkOffset> _offsets;
   ChunkID _chunk_id = INVALID_CHUNK_ID;
+  std::vector<ChunkOffset> _offsets;
 };
 
 }  // namespace opossum
