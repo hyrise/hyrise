@@ -80,7 +80,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
+  Assert(!is_null, "ValueSegment is not nullable but value passed is null.");
 
   _values.push_back(boost::get<T>(val));
 }
@@ -124,7 +124,6 @@ template <typename T>
 void ValueSegment<T>::resize(const size_t size) {
   DebugAssert(size > _values.size() && size <= _values.capacity(),
               "ValueSegments should not be shrunk or resized beyond their original capacity");
-  access_counter[SegmentAccessCounter::AccessType::Sequential] += _values.size();
   _values.resize(size);
   if (is_nullable()) {
     std::lock_guard<std::mutex> lock{_null_value_modification_mutex};

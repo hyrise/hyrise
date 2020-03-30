@@ -72,8 +72,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
   }
 
-  std::shared_ptr<PosList> create_sequential_position_filter() {
-    auto list = std::make_shared<PosList>();
+  std::shared_ptr<RowIDPosList> create_sequential_position_filter() {
+    auto list = std::make_shared<RowIDPosList>();
     list->guarantee_single_chunk();
 
     std::default_random_engine engine{};
@@ -88,7 +88,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<PosList> create_random_access_position_filter() {
+  std::shared_ptr<RowIDPosList> create_random_access_position_filter() {
     auto list = create_sequential_position_filter();
 
     auto random_device = std::random_device{};

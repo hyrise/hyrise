@@ -122,8 +122,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   }
 
-  _probe_pos_list = std::make_shared<PosList>();
-  _index_pos_list = std::make_shared<PosList>();
+  _probe_pos_list = std::make_shared<RowIDPosList>();
+  _index_pos_list = std::make_shared<RowIDPosList>();
 
   auto pos_list_size_to_reserve =
       std::max(uint64_t{100}, std::min(_probe_input_table->row_count(), _index_input_table->row_count()));
@@ -308,9 +308,10 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
     ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractIndex>& index, const std::shared_ptr<const PosList>& reference_segment_pos_list) {
+    const std::shared_ptr<AbstractIndex>& index,
+    const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
-    PosList index_scan_pos_list;
+    RowIDPosList index_scan_pos_list;
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
     for (const auto& [index_begin, index_end] : index_ranges) {
@@ -320,12 +321,12 @@ void JoinIndex::_reference_join_two_segments_using_index(
                      });
     }
 
-    PosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
+    RowIDPosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
     std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
     std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
     std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
 
-    PosList index_table_matches{};
+    RowIDPosList index_table_matches{};
     std::set_intersection(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end(), index_scan_pos_list.begin(),
                           index_scan_pos_list.end(), std::back_inserter(index_table_matches));
     _append_matches_dereferenced(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
@@ -420,7 +421,7 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
 }
 
 void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
-                                             const PosList& index_table_matches) {
+                                             const RowIDPosList& index_table_matches) {
   for (const auto& index_side_row_id : index_table_matches) {
     _probe_pos_list->emplace_back(RowID{probe_chunk_id, probe_chunk_offset});
     _index_pos_list->emplace_back(index_side_row_id);
@@ -483,7 +484,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
 }
 
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                                       const std::shared_ptr<PosList>& pos_list) {
+                                       const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   const auto column_count = input_table->column_count();
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
@@ -491,7 +492,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
-        auto new_pos_list = std::make_shared<PosList>();
+        auto new_pos_list = std::make_shared<RowIDPosList>();
 
         ChunkID current_chunk_id{0};
 

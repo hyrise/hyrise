@@ -154,8 +154,8 @@ TEST_F(StorageTableTest, AppendsMutableChunkIfLastChunkImmutableOnAppend) {
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
-  std::shared_ptr<BaseSegment> vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
-  std::shared_ptr<BaseSegment> vs_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
+  auto vs_int = std::make_shared<ValueSegment<int>>();
+  auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
   t->append_chunk({vs_int, vs_str});
   EXPECT_EQ(t->chunk_count(), 1u);
@@ -166,8 +166,10 @@ TEST_F(StorageTableTest, EmplaceChunkAndAppend) {
 
   t->append({4, "Hello,"});
   EXPECT_EQ(t->chunk_count(), 1u);
-  std::shared_ptr<BaseSegment> vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
-  std::shared_ptr<BaseSegment> vs_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
+
+  auto vs_int = std::make_shared<ValueSegment<int>>();
+  auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+
   t->append_chunk(Segments{{vs_int, vs_str}});
   EXPECT_EQ(t->chunk_count(), 2u);
 }
@@ -176,15 +178,22 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
   t->append({4, "Hello,"});
-  std::shared_ptr<BaseSegment> vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
-  std::shared_ptr<BaseSegment> vs_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
-  t->append_chunk({vs_int, vs_str});
-  EXPECT_EQ(t->chunk_count(), 2u);
 
-  std::shared_ptr<BaseSegment> vs_int2 = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
-  std::shared_ptr<BaseSegment> vs_str2 = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
-  t->append_chunk({vs_int, vs_str});
-  EXPECT_EQ(t->chunk_count(), 3u);
+  {
+    auto vs_int = std::make_shared<ValueSegment<int>>();
+    auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+
+    t->append_chunk({vs_int, vs_str});
+    EXPECT_EQ(t->chunk_count(), 2u);
+  }
+
+  {
+    auto vs_int = std::make_shared<ValueSegment<int>>();
+    auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+
+    t->append_chunk({vs_int, vs_str});
+    EXPECT_EQ(t->chunk_count(), 3u);
+  }
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {

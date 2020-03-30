@@ -977,7 +977,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
 
-  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
+  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
@@ -1017,7 +1017,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
   return segment;
 }
 
-PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
+RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
   /**
    * Only Expressions returning a Bool can be evaluated to a PosList of matches.
    *
@@ -1028,7 +1028,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
    * All other Expression types have dedicated, hopefully fast, implementations.
    */
 
-  auto result_pos_list = PosList{};
+  auto result_pos_list = RowIDPosList{};
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
