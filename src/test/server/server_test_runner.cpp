@@ -42,9 +42,6 @@ class ServerTestRunner : public BaseTest {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
 
-    _server.reset();
-    _server_thread.reset();
-
     std::remove(_export_filename.c_str());
   }
 
