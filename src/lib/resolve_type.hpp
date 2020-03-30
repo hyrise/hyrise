@@ -216,7 +216,7 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of the position list. This is
 // done to reduce the compile time at the cost of the runtime performance. We do not re-use EraseTypes here, as it
-// might confuse readers who could think that erase all types within the functor.
+// might confuse readers who could think that the setting erases all types within the functor.
 enum class ErasePosListType { OnlyInDebugBuild, Always };
 
 template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
@@ -224,10 +224,11 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
   if constexpr (HYRISE_DEBUG || erase_pos_list_type == ErasePosListType::Always) {
     functor(untyped_pos_list);
   } else {
-    if (auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list); !untyped_pos_list || row_id_pos_list) {
+    if (auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list);
+        !untyped_pos_list || row_id_pos_list) {
       // We also use this branch for nullptr instead of calling the functor with the untyped_pos_list. This way, we
-      // avoid an initialization of functor with AbstractPosList. The first thing the functor has to do is to check
-      // for nullptr anyway, and for that check it does not matter "which" nullptr we pass in.
+      // avoid initializing the functor with AbstractPosList. The first thing the functor has to do is to check for
+      // ullptr anyway, and for that check it does not matter "which" nullptr we pass in.
       functor(row_id_pos_list);
     } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
       functor(entire_chunk_pos_list);

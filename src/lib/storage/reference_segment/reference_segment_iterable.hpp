@@ -43,7 +43,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       // PosList has no NULL values. However, once we have a `has_null_values` flag in a smarter PosList, we should
       // use it here.
 
-      auto referenced_segment = referenced_table->get_chunk(position_filter->common_chunk_id())->get_segment(referenced_column_id);
+      auto referenced_segment =
+          referenced_table->get_chunk(position_filter->common_chunk_id())->get_segment(referenced_column_id);
 
       bool functor_was_called = false;
 

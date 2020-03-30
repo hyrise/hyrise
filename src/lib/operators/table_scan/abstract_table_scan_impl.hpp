@@ -50,7 +50,8 @@ class AbstractTableScanImpl {
     // For a description of the SIMD code, have a look at the comments in that method.
     // To reduce compile time, SIMD scanning is not used for for ColumnVsColumnScans. Also, string comparisons are more
     // expensive than the scan itself, so we disable SIMD for these, too.
-    if constexpr (std::is_same_v<RightIterator, std::false_type> && !std::is_same_v<std::decay_t<decltype(left_it->value())>, pmr_string>) {
+    if constexpr (std::is_same_v<RightIterator, std::false_type> &&
+                  !std::is_same_v<std::decay_t<decltype(left_it->value())>, pmr_string>) {
       _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
     }
 
