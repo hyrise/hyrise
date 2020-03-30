@@ -40,6 +40,10 @@ int main(int argc, char* argv[]) {
   // Set scheduler so that the server can execute the tasks on separate threads.
   opossum::Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
 
+  // Set caches
+  opossum::Hyrise::get().default_pqp_cache = std::make_shared<opossum::SQLPhysicalPlanCache>();
+  opossum::Hyrise::get().default_lqp_cache = std::make_shared<opossum::SQLLogicalPlanCache>();
+
   auto server = opossum::Server{address, port, static_cast<opossum::SendExecutionInfo>(execution_info)};
   server.run();
 
