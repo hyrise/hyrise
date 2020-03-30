@@ -79,11 +79,13 @@ pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   }
 }
 
-char* FixedStringVector::data() { return _chars.data(); }
+const char* FixedStringVector::data() const { return _chars.data(); }
 
 size_t FixedStringVector::size() const { return _size; }
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }
+
+size_t FixedStringVector::string_length() const { return _string_length; }
 
 void FixedStringVector::erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end) {
   const auto count = std::distance(start, end);
