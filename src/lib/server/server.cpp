@@ -32,8 +32,8 @@ void Server::_accept_new_session() {
 void Server::_start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error) {
   Assert(!error, error.message());
 
-  std::thread session_thread([new_session, &num_running_sessions = this->_num_running_sessions] {
-    const std::string thread_name = "server_p_" + std::to_string(new_session->socket()->remote_endpoint().port());
+  std::thread session_thread([session=new_session, &num_running_sessions = this->_num_running_sessions] () mutable {
+    const std::string thread_name = "server_p_" + std::to_string(session->socket()->remote_endpoint().port());
 #ifdef __APPLE__
     pthread_setname_np(thread_name.c_str());
 #elif __linux__
@@ -41,7 +41,13 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
 #endif
 
     ++num_running_sessions;
-    new_session->run();
+
+    session->run();
+
+    // Destroy the session before reducing the number of running sessions. This makes sure that the server has not shut
+    // down yet. In case session.use_count is not yet zero, this makes sure that the destructor is not called in
+    // the detached thread.
+    session.reset();
     --num_running_sessions;
   });
 
