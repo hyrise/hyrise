@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-    class CalibrationBenchmarkRunnerTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class CalibrationBenchmarkRunnerTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
 }  // namespace opossum

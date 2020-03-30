@@ -3,12 +3,12 @@
 
 import pandas as pd
 
-
-def import_train_data(input_data):
-    table_scan_data = pd.read_csv(input_data[0])
-    table_data = pd.read_csv(input_data[1])
-    columns_data = pd.read_csv(input_data[2])
-    chunk_meta = pd.read_csv(input_data[3])
+def import_train_data(path):
+    path = path[0]
+    table_scan_data = pd.read_csv('{}/TableScan.csv'.format(path))
+    table_data = pd.read_csv('{}/table_meta.csv'.format(path))
+    columns_data = pd.read_csv('{}/column_meta.csv'.format(path))
+    chunk_meta = pd.read_csv('{}/segment_meta.csv'.format(path))
 
     joined_data = table_scan_data.merge(table_data, on=["TABLE_NAME"], how="left")
     joined_data = joined_data.merge(columns_data, on=["TABLE_NAME", "COLUMN_NAME"], how="left")

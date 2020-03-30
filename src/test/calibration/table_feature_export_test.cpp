@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-    class TableFeatureExportTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class TableFeatureExportTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
 }  // namespace opossum

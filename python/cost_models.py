@@ -156,6 +156,7 @@ def main(args):
     if args.m:
         model_types = [args.m]
     else:
+        # We have achieved the best results with this model
         model_types = ['boost']
 
     if args.test:
@@ -185,16 +186,19 @@ def main(args):
     # make separate models for different scan operators and combinations of encodings/compressions
     for encoding in train_data['ENCODING'].unique():
         for implementation_type in train_data['SCAN_IMPLEMENTATION'].unique():
+            try:
+                # if there is no given test data set, split the given trainings data into test and trainings data
+                if not args.test:
+                        model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['ENCODING'] == encoding) &
+                                                                                            (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
 
-            # if there is no given test data set, split the given trainings data into test and trainings data
-            if not args.test:
-                model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['ENCODING'] == encoding) &
-                                                                                    (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
+                else:
+                    model_train_data = train_data.loc[(train_data['ENCODING'] == encoding) & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)]
+                    model_test_data = test_data.loc[(test_data['ENCODING'] == encoding) & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
 
-
-            else:
-                model_train_data = train_data.loc[(train_data['ENCODING'] == encoding) & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)]
-                model_test_data = test_data.loc[(test_data['ENCODING'] == encoding) & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
+            except ValueError:
+                print('Not enough data of the combination {}, {} to split into trainings and test data'.format(encoding, implementation_type))
+                break
 
             # if there is training data for this combination, train a model
             if not model_train_data.empty:
