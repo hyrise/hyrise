@@ -87,6 +87,10 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    * indices[2] = customer_size = 3000
    * So in total we have to generate 1*10*3000 = 30 000 customers.
    *
+   * Note that this is not a general purpose function. The implementation of _add_column checks whether NULL values
+   * were actually passed and sets the column's nullable flag accordingly. As such, if this method is used with an
+   * generator that returns optionals but no nullopts, the column will not be nullable. For TPC-C, this is fine.
+   *
    * @tparam T                  the type of the column
    * @param table               the column shall be added to this table as well as column metadata
    * @param name                the name of the column
