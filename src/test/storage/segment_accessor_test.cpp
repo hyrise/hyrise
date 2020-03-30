@@ -34,7 +34,7 @@ class SegmentAccessorTest : public BaseTest {
                                   TableType::Data);
     tbl->append_chunk({vc_int, dc_str});
 
-    pos_list = std::make_shared<PosList>(PosList{{
+    pos_list = std::make_shared<RowIDPosList>(RowIDPosList{{
         RowID{ChunkID{0}, ChunkOffset{1}},
         RowID{ChunkID{0}, ChunkOffset{2}},
         RowID{ChunkID{0}, ChunkOffset{0}},
@@ -55,7 +55,7 @@ class SegmentAccessorTest : public BaseTest {
 
   std::shared_ptr<Table> tbl;
   std::shared_ptr<Chunk> chunk;
-  std::shared_ptr<PosList> pos_list;
+  std::shared_ptr<RowIDPosList> pos_list;
 };
 
 TEST_F(SegmentAccessorTest, TestValueSegmentInt) {

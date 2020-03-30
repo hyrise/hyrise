@@ -11,9 +11,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import re
 import sys
+import seaborn as sns
+import matplotlib.colors as mplcolors
+from matplotlib.colors import LinearSegmentedColormap
 
-if(len(sys.argv) != 1):
-    exit("Call without arguments in a folder containing *-PQP.svg files")
+if(not len(sys.argv) in [1,2]):
+    exit("Call in a folder containing *-PQP.svg files, pass `paper` as an argument to change legend and hatching")
+paper_mode = len(sys.argv) == 2 and sys.argv[1] == 'paper'
 
 benchmarks = []
 
@@ -58,7 +62,6 @@ for file in sorted(glob.glob('*-PQP.svg')):
 df = pd.DataFrame(all_operator_breakdowns).transpose()
 df = df.reindex(sorted(df.columns, reverse=True), axis=1)
 
-
 df = df.fillna(0)
 
 # Calculate share of total execution time (i.e., longer running benchmark items are weighted more)
@@ -72,19 +75,53 @@ df.iloc[:,0:] = df.iloc[:,0:].apply(lambda x: x / x.sum(), axis=1)
 # row for that
 df.loc["Relative"] = df.head(-1).sum() / df.head(-1).count()
 
+# Print the dataframe for easy access to the raw numbers
 print(df)
 
 # Drop all operators that do not exceed 1% in any query
 df = df[df > .01].dropna(axis = 'columns', how = 'all')
 
+# Setup colorscheme - using cubehelix, which provides a color mapping that gracefully degrades to grayscale
+colors = sns.cubehelix_palette(n_colors=len(df), rot=2, reverse=True, light=.9, dark=.1, hue=1)
+cmap = LinearSegmentedColormap.from_list("my_colormap", colors)
+
 # Plot it
-ax = df.plot.bar(stacked=True, figsize=(2 + len(df) / 4, 4))
+ax = df.plot.bar(stacked=True, figsize=(2 + len(df) / 4, 4), colormap=cmap)
+
+if paper_mode:
+    # Add hatches in paper mode, where graphs may be printed in grayscale
+    # Not used in screen mode, as colors are sufficient there and hatching is ugly
+    patterns = ('', '/////', '', '\\\\\\\\\\', '', '/\\/\\/\\/\\/\\', '', '/////', '', '\\\\\\\\\\', '', '/\\/\\/\\/\\/\\')
+    hatches = [p for p in patterns for i in range(len(df))]
+    for bar, hatch in zip(ax.patches, hatches):
+        # Calculate color so that the hatches are visible but not pushy
+        hsv = mplcolors.rgb_to_hsv(bar.get_facecolor()[:3])
+        hatch_color_hsv = hsv
+        hatch_color_hsv[2] = hsv[2] + .2 if hsv[2] < .5 else hsv[2] - .2
+        bar.set_edgecolor(mplcolors.hsv_to_rgb(hatch_color_hsv))
+
+        bar.set_hatch(hatch)
+        bar.set_linewidth(0)
+
+# Set labels
 ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
 ax.set_ylabel('Share of run time\n(Hiding ops <1%)')
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
-lgd = ax.legend(reversed(handles), reversed(labels), loc='center left', ncol=1, bbox_to_anchor=(1.0, 0.5))
 
+if paper_mode:
+    # Plot the legend under the graph (good for papers)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width, box.height * 0.8])
+    legend = ax.legend(reversed(handles), reversed(labels), loc='lower center', ncol=3, bbox_to_anchor=(0.5, -.45))
+
+    print("Plotting in 'paper' mode (legend below graph, hatching) - remove 'paper' argument to change")
+else:
+    # Plot the legend to the right of the graph (good for screens)
+    legend = ax.legend(reversed(handles), reversed(labels), loc='center left', ncol=1, bbox_to_anchor=(1.0, 0.5))
+    print("Plotting in 'screen' mode (legend on right, no hatching) - use 'paper' argument to change")
+
+# Layout and save
 plt.tight_layout()
-plt.savefig('operator_breakdown.pdf', bbox_extra_artists=(lgd,), bbox_inches='tight')
+plt.savefig('operator_breakdown.pdf', bbox_extra_artists=(legend,), bbox_inches='tight')

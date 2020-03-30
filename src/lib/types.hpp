@@ -216,8 +216,6 @@ enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
-enum class CleanupTemporaries : bool { Yes = true, No = false };
-
 enum class MemoryUsageCalculationMode { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };

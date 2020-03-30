@@ -28,8 +28,6 @@ class BinaryWriterTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_BinaryWriterTest : public BinaryWriterTest {}; /* #1367 */
-
 class BinaryWriterMultiEncodingTest : public BinaryWriterTest, public ::testing::WithParamInterface<EncodingType> {};
 
 auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
@@ -60,7 +58,7 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 */
+TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -79,7 +77,28 @@ TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 *
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({opossum::NULL_VALUE});
+  table->append({"test"});
+  table->append({opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
