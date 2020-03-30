@@ -3,7 +3,7 @@
 #include "operators/get_table.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/pos_lists/single_chunk_pos_list.hpp"
 
 namespace opossum {
