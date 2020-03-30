@@ -116,7 +116,6 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
   auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
-  // Create SingleChunkPosList
   auto singleChunkPosList = std::make_shared<SingleChunkPosList>(chunk_id);
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
@@ -137,9 +136,8 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
       auto& chunk_offsets = singleChunkPosList->get_offsets();
       chunk_offsets.resize(matches_size);
 
-      for (auto matches_position = 0; matches_position < matches_size; ++matches_position) {
+      for (auto matches_position = 0; matches_position < matches_size; ++matches_position, ++range_begin) {
         chunk_offsets[matches_position] = *range_begin;
-        range_begin++;
       }
       // set range for second half to all values greater than the search value
       range_begin = index->upper_bound(_right_values);
@@ -197,9 +195,8 @@ std::shared_ptr<SingleChunkPosList> IndexScan::_scan_chunk(const ChunkID chunk_i
   const auto matches_size = previous_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
   chunk_offsets.resize(matches_size);
 
-  for (auto matches_position = previous_matches_size; matches_position < matches_size; ++matches_position) {
+  for (auto matches_position = previous_matches_size; matches_position < matches_size; ++matches_position, ++range_begin) {
     chunk_offsets[matches_position] = *range_begin;
-    range_begin++;
   }
 
   // TODO: Maybe it is more easy to make the singleChunkPosList here, and previously only edit a chunk_offset vector
