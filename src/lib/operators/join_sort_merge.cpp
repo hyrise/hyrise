@@ -67,9 +67,12 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
-  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-      _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+  resolve_data_type(left_column_type, [&](const auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
+        *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+        _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+  });
 
   return _impl->_on_execute();
 }
