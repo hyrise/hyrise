@@ -55,6 +55,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       // Scope for the lock on the MVCC data
       {
         auto mvcc_data = referenced_chunk->mvcc_data();
+        DebugAssert(mvcc_data, "Delete cannot operate on a table without MVCC data");
 
         DebugAssert(
             Validate::is_row_visible(

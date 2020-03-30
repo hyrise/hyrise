@@ -36,7 +36,7 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
   int32_t o_entry_d;  // Current datetime
 
   // Values calculated WHILE the procedure is executed, exposed for facilitating the tests:
-  int32_t o_id{-1};  // Order ID
+  int32_t o_id{-1};  // Order ID, initialized with invalid value
 };
 
 }  // namespace opossum
