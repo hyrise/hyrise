@@ -9,7 +9,7 @@ using namespace opossum;  // NOLINT
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Table>& unsorted_table,
-                                                const PosList& pos_list, const ChunkOffset output_chunk_size) {
+                                                const RowIDPosList& pos_list, const ChunkOffset output_chunk_size) {
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
