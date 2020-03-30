@@ -48,24 +48,15 @@ int main(int argc, char* argv[]) {
   size_t num_warehouses;
   bool consistency_checks;
 
-  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
-    // JSON config file was passed in
-    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    num_warehouses = json_config.value("scale", 1);
-    consistency_checks = json_config.value("consistency_checks", false);
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
-  } else {
-    // Parse regular command line args
-    const auto cli_parse_result = cli_options.parse(argc, argv);
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
-    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+  num_warehouses = cli_parse_result["scale"].as<size_t>();
+  consistency_checks = cli_parse_result["consistency_checks"].as<bool>();
 
-    num_warehouses = cli_parse_result["scale"].as<size_t>();
-    consistency_checks = cli_parse_result["consistency_checks"].as<bool>();
-
-    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
-  }
+  config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
   // As TPC-C procedures may run into conflicts on both the Hyrise and the SQLite side, we cannot guarantee that the
   // two databases stay in sync.

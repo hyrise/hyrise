@@ -45,9 +45,15 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
+  const std::optional<T> access(ChunkOffset offset) const final {
+    ++_accesses;
+    return _segment.get_typed_value(offset);
+  }
+
+  ~SegmentAccessor() { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
 
  protected:
+  mutable uint64_t _accesses{0};
   const SegmentType& _segment;
 };
 
@@ -95,16 +101,23 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
+  explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id,
+                                               const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
+    ++_accesses;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
   }
 
+  ~SingleChunkReferenceSegmentAccessor() {
+    _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses;
+  }
+
  protected:
-  const PosList& _pos_list;
+  mutable uint64_t _accesses{0};
+  const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
 };

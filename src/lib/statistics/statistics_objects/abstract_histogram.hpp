@@ -24,8 +24,9 @@ using HistogramCountType = Cardinality;
 
 template <typename T>
 struct HistogramBin {
-  HistogramBin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count)
-      : min(min), max(max), height(height), distinct_count(distinct_count) {}
+  HistogramBin(const T& init_min, const T& init_max, const HistogramCountType init_height,
+               const HistogramCountType init_distinct_count)
+      : min(init_min), max(init_max), height(init_height), distinct_count(init_distinct_count) {}
 
   T min{};
   T max{};

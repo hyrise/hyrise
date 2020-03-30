@@ -74,10 +74,11 @@ using AggregateResultIdMap =
     ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
                          AggregateResultIdMapAllocator<AggregateKey>>;
 
-/*
-The key type that is used for the aggregation map.
-*/
+// The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;
+
+// A dummy type used as AggregateKey if no GROUP BY columns are present
+struct EmptyAggregateKey {};
 
 template <typename AggregateKey>
 using AggregateKeys = std::vector<AggregateKey>;
@@ -123,7 +124,7 @@ class AggregateHash : public AbstractAggregateOperator {
   void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
                                AggregateFunction function);
 
-  void _write_groupby_output(PosList& pos_list);
+  void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
@@ -140,6 +141,11 @@ class AggregateHash : public AbstractAggregateOperator {
 }  // namespace opossum
 
 namespace std {
+template <>
+struct hash<opossum::EmptyAggregateKey> {
+  size_t operator()(const opossum::EmptyAggregateKey& key) const { return 0; }
+};
+
 template <>
 struct hash<std::vector<opossum::AggregateKeyEntry>> {
   size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {

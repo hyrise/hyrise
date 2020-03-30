@@ -15,7 +15,7 @@ std::string DeleteNode::description(const DescriptionMode mode) const { return "
 
 bool DeleteNode::is_column_nullable(const ColumnID column_id) const { Fail("Delete does not output any columns"); }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& DeleteNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> DeleteNode::column_expressions() const {
   static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
   return empty_vector;
 }

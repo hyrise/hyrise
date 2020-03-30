@@ -51,8 +51,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   const size_t num_groups = group_boundaries.size() + 1;
 
   // Vectors to store aggregate values (and if they are NULL) for later usage in value segments
-  auto aggregate_results = std::vector<AggregateType>(num_groups);
-  auto aggregate_null_values = std::vector<bool>(num_groups);
+  auto aggregate_results = pmr_vector<AggregateType>(num_groups);
+  auto aggregate_null_values = pmr_vector<bool>(num_groups);
 
   // Variables needed for the aggregates. Not all variables are needed for all aggregates
 
@@ -174,7 +174,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
   // Store the aggregate values in a value segment
   _output_segments[aggregate_index + _groupby_column_ids.size()] =
-      std::make_shared<ValueSegment<AggregateType>>(aggregate_results, aggregate_null_values);
+      std::make_shared<ValueSegment<AggregateType>>(std::move(aggregate_results), std::move(aggregate_null_values));
 }
 
 /**
@@ -207,7 +207,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  */
 template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
-    std::vector<AggregateType>& aggregate_results, std::vector<bool>& aggregate_null_values,
+    pmr_vector<AggregateType>& aggregate_results, pmr_vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
     std::optional<AggregateType>& current_primary_aggregate, std::vector<AggregateType>& current_secondary_aggregates,
     [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
@@ -373,7 +373,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   for (const auto& column_id : _groupby_column_ids) {
     const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
     sorted_wrapper->execute();
-    Sort sort = Sort(sorted_wrapper, column_id);
+    Sort sort = Sort(sorted_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
     sort.execute();
     sorted_table = sort.get_output();
   }
@@ -458,8 +458,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      auto values = std::vector<ColumnDataType>(group_boundaries.size() + 1);
-      auto null_values = std::vector<bool>(group_boundaries.size() + 1);
+      auto values = pmr_vector<ColumnDataType>(group_boundaries.size() + 1);
+      auto null_values = pmr_vector<bool>(group_boundaries.size() + 1);
 
       for (size_t value_index = 0; value_index < values.size(); value_index++) {
         RowID group_start;
@@ -491,7 +491,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       }
 
       // Write group by segments
-      _output_segments[groupby_index] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
+      _output_segments[groupby_index] =
+          std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
     });
     groupby_index++;
   }

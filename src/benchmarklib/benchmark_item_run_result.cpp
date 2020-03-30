@@ -2,8 +2,8 @@
 
 namespace opossum {
 
-BenchmarkItemRunResult::BenchmarkItemRunResult(Duration begin, Duration duration,
-                                               std::vector<SQLPipelineMetrics> metrics)
-    : begin(begin), duration(duration), metrics(std::move(metrics)) {}
+BenchmarkItemRunResult::BenchmarkItemRunResult(Duration init_begin, Duration init_duration,
+                                               std::vector<SQLPipelineMetrics> init_metrics)
+    : begin(init_begin), duration(init_duration), metrics(std::move(init_metrics)) {}
 
 }  // namespace opossum

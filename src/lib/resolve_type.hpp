@@ -16,6 +16,8 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
+
 namespace opossum {
 
 namespace hana = boost::hana;
@@ -209,6 +211,22 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");
+  }
+}
+
+template <typename Functor>
+void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& func) {
+  if (!untyped_pos_list) {
+    func(untyped_pos_list);
+    return;
+  }
+
+  if (auto rowid_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
+    func(rowid_pos_list);
+  } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
+    func(entire_chunk_pos_list);
+  } else {
+    Fail("Unrecognized PosList type encountered");
   }
 }
 

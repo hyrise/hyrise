@@ -9,7 +9,7 @@ namespace opossum {
 
 // Stores the result of a SINGLE run of a single benchmark item (e.g., one execution of TPC-H query 5).
 struct BenchmarkItemRunResult {
-  BenchmarkItemRunResult(Duration begin, Duration duration, std::vector<SQLPipelineMetrics> metrics);
+  BenchmarkItemRunResult(Duration init_begin, Duration init_duration, std::vector<SQLPipelineMetrics> init_metrics);
 
   // Stores the begin timestamp of this run (measured as time since start of benchmark)
   Duration begin;
