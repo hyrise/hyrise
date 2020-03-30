@@ -34,7 +34,7 @@ struct SortColumnDefinition final {
 class Sort : public AbstractReadOnlyOperator {
  public:
   Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-       const size_t output_chunk_size = Chunk::DEFAULT_SIZE);
+       const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE);
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
 
@@ -55,7 +55,7 @@ class Sort : public AbstractReadOnlyOperator {
 
   const std::vector<SortColumnDefinition> _sort_definitions;
 
-  const size_t _output_chunk_size;
+  const ChunkOffset _output_chunk_size;
 };
 
 }  // namespace opossum

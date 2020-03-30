@@ -19,13 +19,13 @@ static std::shared_ptr<Table> generate_custom_table(const size_t row_count, cons
                                                     const float null_ratio = 0.0f) {
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
-  const auto num_columns = 2;
+  constexpr auto NUM_COLUMNS = 2;
+  constexpr auto LARGEST_VALUE = 10'000;
 
-  const int largest_value = 10'000;
-  const std::vector<DataType> column_data_types = {num_columns, data_type};
+  const std::vector<DataType> column_data_types = {NUM_COLUMNS, data_type};
 
   std::vector<ColumnSpecification> column_specifications =
-      std::vector(num_columns, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, largest_value),
+      std::vector(NUM_COLUMNS, ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, LARGEST_VALUE),
                                                    data_type, {EncodingType::Unencoded}, std::nullopt, null_ratio));
 
   return table_generator->generate_table(column_specifications, row_count);

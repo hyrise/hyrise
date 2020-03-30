@@ -9,7 +9,7 @@ using namespace opossum;  // NOLINT
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Table>& unsorted_table,
-                                                const PosList& pos_list, const size_t output_chunk_size) {
+                                                const PosList& pos_list, const ChunkOffset output_chunk_size) {
   // First we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
@@ -99,7 +99,7 @@ std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Tabl
 namespace opossum {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-           const size_t output_chunk_size)
+           const ChunkOffset output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size) {
@@ -131,13 +131,13 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
   std::shared_ptr<Table> sorted_table;
 
-  // Starting after the first (least significant) sort operation, this holds the order of the table as it has been
-  // determined so far. This is not a completely proper PosList on the input table as it might point to
+  // After the first (least significant) sort operation has been completed, this holds the order of the table as it has
+  // been determined so far. This is not a completely proper PosList on the input table as it might point to
   // ReferenceSegments.
   auto previously_sorted_pos_list = std::optional<PosList>{};
 
   for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
-    const bool is_last_sorting_run = (sort_step == 0);
+    const bool is_last_sorting_step = (sort_step == 0);
 
     const auto& sort_definition = _sort_definitions[sort_step];
     const auto data_type = input_table->column_data_type(sort_definition.column);
@@ -148,7 +148,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
       auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.order_by_mode);
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
 
-      if (is_last_sorting_run) {
+      if (is_last_sorting_step) {
         // This is inside the for loop so that we do not have to resolve the type again
         sorted_table = materialize_output_table(input_table, *previously_sorted_pos_list, _output_chunk_size);
       }
@@ -156,9 +156,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   auto final_sort_definition = _sort_definitions[0];
-  // Set the ordered_by attribute of the output's chunks to the column the chunk was sorted by last (because this
-  // is the column that the chunk is ordered by in any case; whereas it is not necessarily sorted by the other
-  // columns -- on their own -- as well).
+  // Set the ordered_by attribute of the output's chunks according to the most significant sort operation, which is the
+  // column the table was sorted by last.
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);
@@ -276,7 +275,7 @@ class Sort::SortImpl {
 
   std::vector<RowIDValuePair> _row_id_value_vector;
 
-  // Stored as RowIDValuePair even if value is unused for better type compatibility.
+  // Stored as RowIDValuePair for better type compatibility even if value is unused
   std::vector<RowIDValuePair> _null_value_rows;
 };
 
