@@ -148,6 +148,8 @@ ExpressionUnorderedSet gather_locally_required_expressions(
         locally_required_expressions.emplace(predicate->arguments[1]);
       }
     } break;
+
+    // Set Operations always require all columns of the left and right input node
     case LQPNodeType::Union:
     case LQPNodeType::Intersect:
     case LQPNodeType::Except: {

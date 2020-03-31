@@ -215,7 +215,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 9. LIMIT clause
   // 10. UNION/INTERSECT/EXCEPT clause
   // 11. UNION/INTERSECT/EXCEPT ORDER BY clause
-  // 12 UNION/INTERSECT/EXCEPT LIMIT clause
+  // 12. UNION/INTERSECT/EXCEPT LIMIT clause
 
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
@@ -286,7 +286,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   if (select.setOperations) {
     for (const auto set_operator : *select.setOperations) {
-      AssertInput(!(set_operator->setType == hsql::kSetUnion), "Union Operations are currently not supported");
+      // We remove the Union Operation here because we cannot make it fail during the lqp-translation, since the
+      // the Operator is used for other queries.
+      AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported");
       _translate_set_operation(*set_operator);
       if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
       if (set_operator->resultLimit) _translate_limit(*set_operator->resultLimit);
@@ -1050,7 +1052,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 }
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
-  const auto left_input_lqp = _current_lqp;
+  const auto& left_input_lqp = _current_lqp;
 
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
                                       _with_descriptions};
@@ -1070,11 +1072,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
-  auto set_operation_mode = SetOperationMode::Positions;
-
-  if (set_operator.isAll) {
-    set_operation_mode = SetOperationMode::All;
-  }
+  auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Positions;
 
   switch (set_operator.setType) {
     case hsql::kSetExcept:
