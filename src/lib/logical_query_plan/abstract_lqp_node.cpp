@@ -295,7 +295,7 @@ bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expres
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // Fetch functional dependencies from input nodes
+  // Fetch functional dependencies (FDs) from input nodes
   auto fds_left = std::vector<FunctionalDependency>();
   auto fds_right = std::vector<FunctionalDependency>();
   if (left_input()) {
@@ -305,17 +305,24 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_right = right_input()->functional_dependencies();
   }
 
-  // Forward functional dependencies
+  // Forward FDs
   if(fds_right.empty()) return fds_left;
   else {
-    // TODO(Julian) Get rid of duplicates by using a set
-    Fail("Fail: Not yet implemented!");
-//    auto fds = std::unordered_set<FunctionalDependency>();
-//
-//    boost::hash<FunctionalDependency>>(fds_left.begin(), fds_right.end());
-//    fds_all.insert(fds_right.begin(), fds_right.end());
-//
-//    return std::vector<FunctionalDependency>(fds_all.begin(), fds_all.end());
+    // Avoid forwarding duplicate FDs
+    auto fds_out = std::vector<FunctionalDependency>();
+    for(const auto& fd_right : fds_right) {
+      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
+          [&fd_right](const auto& fd_left) {
+            if (fd_left.first.size() != fd_right.first.size() || fd_left.second.size() != fd_right.second.size()
+            || fd_left.first != fd_right.first || fd_left.second != fd_right.second) return false;
+            else return true;
+          });
+      if(!duplicate) {
+        fds_out.push_back(fd_right);
+      }
+    }
+    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_out));
+    return fds_out;
   }
 }
 

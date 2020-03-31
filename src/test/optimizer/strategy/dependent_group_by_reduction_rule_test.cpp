@@ -241,7 +241,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   const auto expected_lqp = lqp->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // Check that we reduce using the shortest (in terms of number of columns) constraints.
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
