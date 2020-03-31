@@ -205,6 +205,7 @@ set(
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
     utils/meta_table_manager_test.cpp
+    utils/meta_tables/meta_cache_tables_test.cpp
     utils/meta_tables/meta_mock_table.cpp
     utils/meta_tables/meta_mock_table.hpp
     utils/meta_tables/meta_table_test.cpp

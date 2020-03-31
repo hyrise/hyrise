@@ -7,7 +7,10 @@ namespace opossum {
 MetaCachedOperatorsTable::MetaCachedOperatorsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"operator", DataType::String, false},
                                                {"query_hash", DataType::String, false},
-                                               {"walltime", DataType::Long, false}}) {}
+                                               {"description", DataType::String, false},
+                                               {"walltime_ns", DataType::Long, false},
+                                               {"output_chunks", DataType::Long, false},
+                                               {"output_rows", DataType::Long, false}}) {}
 
 const std::string& MetaCachedOperatorsTable::name() const {
   static const auto name = std::string{"cached_operators"};
@@ -35,8 +38,11 @@ void MetaCachedOperatorsTable::_process_pqp(
     const std::shared_ptr<const AbstractOperator>& op, const std::string& query_hex_hash,
     std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes,
     const std::shared_ptr<Table>& output_table) const {
-  output_table->append({pmr_string{op->name()}, pmr_string{query_hex_hash},
-                        static_cast<int64_t>(op->performance_data().walltime.count())});
+  const auto& performance_data = op->performance_data();
+  output_table->append({pmr_string{op->name()}, pmr_string{query_hex_hash}, pmr_string{op->description()},
+                        static_cast<int64_t>(performance_data.walltime.count()),
+                        static_cast<int64_t>(performance_data.output_chunk_count),
+                        static_cast<int64_t>(performance_data.output_row_count)});
 
   visited_pqp_nodes.insert(op);
 
