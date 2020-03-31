@@ -113,6 +113,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     ParameterID parameter_id(0);
 
+    const auto started_uniform_check = std::chrono::high_resolution_clock::now();
+
     bool contains_non_uniform_distribution = false;
 
     visit_lqp(unoptimized_lqp, [&contains_non_uniform_distribution](const auto& node) {
@@ -147,7 +149,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       return LQPVisitation::VisitInputs;
     });
 
-    //std::cout << "================== contains non uniform distribution?: " << contains_non_uniform_distribution << " ============" << std::endl;
+    const auto done_uniform_check = std::chrono::high_resolution_clock::now();
+    _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
 
     if (!contains_non_uniform_distribution) {
       visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
@@ -205,6 +208,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
+        _metrics->cache_duration -= _metrics->uniform_check_duration;
+
         return _optimized_logical_plan;
       }
     }
@@ -242,6 +247,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
   _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_preoptimization_cache - started_preoptimization_cache + done_postoptimization_cache - started_postoptimization_cache);
+  _metrics->cache_duration -= _metrics->uniform_check_duration;
 
   return _optimized_logical_plan;
 }
