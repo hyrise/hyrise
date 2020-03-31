@@ -1,7 +1,7 @@
 #pragma once
 
-#include <optional>
 #include <boost/hana/for_each.hpp>
+#include <optional>
 
 #include "base_test.hpp"
 #include "constant_mappings.hpp"

@@ -60,7 +60,7 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
 }
 
 void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                              PosList& matches, const OrderByMode order_by) const {
+                                                              RowIDPosList& matches, const OrderByMode order_by) const {
   const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
   const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
   segment_with_iterators(segment, [&](auto begin, auto end) {

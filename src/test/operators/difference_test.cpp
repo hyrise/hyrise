@@ -93,7 +93,7 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   }
 
   // Verify that the order_by flag is set when it's present in left input.
-  const auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0});
+  const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
   sort->execute();
 
   const auto difference_sorted = std::make_shared<Difference>(sort, _table_wrapper_b);

@@ -15,6 +15,7 @@
 #include "all_type_variant.hpp"
 #include "index/segment_index_type.hpp"
 #include "mvcc_data.hpp"
+#include "operators/sort.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
@@ -151,9 +152,9 @@ class Chunk : private Noncopyable {
    *
    * This is currently taken advantage of in, e.g., the ColumnVsValueScan. See #1519 for more details.
    */
-  const std::optional<std::vector<std::pair<ColumnID, OrderByMode>>>& ordered_by() const;
-  void set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by);
-  void set_ordered_by(const std::vector<std::pair<ColumnID, OrderByMode>>& ordered_by);
+  const std::optional<std::vector<SortColumnDefinition>>& ordered_by() const;
+  void set_ordered_by(const SortColumnDefinition& ordered_by);
+  void set_ordered_by(const std::vector<SortColumnDefinition>& ordered_by);
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
@@ -195,7 +196,7 @@ class Chunk : private Noncopyable {
   Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
-  std::optional<std::vector<std::pair<ColumnID, OrderByMode>>> _ordered_by;
+  std::optional<std::vector<SortColumnDefinition>> _ordered_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
   // Default value of zero means "not set"
