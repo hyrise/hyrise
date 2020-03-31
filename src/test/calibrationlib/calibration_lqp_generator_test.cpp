@@ -4,8 +4,8 @@
 #include <synthetic_table_generator.hpp>
 #include <operators/get_table.hpp>
 
-#include "../../calibrationlib/calibration_lqp_generator.hpp"
-#include "../../calibrationlib/calibration_table_generator.hpp"
+#include "calibration_lqp_generator.hpp"
+#include "calibration_table_generator.hpp"
 
 
 namespace opossum {

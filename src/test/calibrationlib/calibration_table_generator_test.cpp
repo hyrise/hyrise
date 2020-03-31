@@ -1,7 +1,7 @@
 #include "base_test.hpp"
 
 #include <synthetic_table_generator.hpp>
-#include "../../calibrationlib/calibration_table_generator.hpp"
+#include "calibration_table_generator.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
