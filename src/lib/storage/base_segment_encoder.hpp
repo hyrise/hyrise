@@ -19,10 +19,10 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
+class LZ4Encoder;
+
 /**
  * @brief Base class of all segment encoders
- *
- * Use the segment_encoder.template.hpp to add new implementations!
  */
 class BaseSegmentEncoder {
  public:
@@ -136,13 +136,8 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
 
-    // Obtain allocator of given input segment. Currently, only ValueSegments store the used allocator.
-    // TODO(anyone): obtain allocator for all types of segment, when available.
-    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
-    const auto segment_allocator =
-        value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
-
-    return _self()._on_encode(iterable, segment_allocator);
+    // For now, we allocate without a specific memory source.
+    return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
   }
   /**@}*/
 
@@ -150,7 +145,10 @@ class SegmentEncoder : public BaseSegmentEncoder {
   VectorCompressionType vector_compression_type() const { return _vector_compression_type; }
 
  private:
-  VectorCompressionType _vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
+  // LZ4Encoder only supports SimdBp128 in order to reduce the compile time, see the comment in lz4_encoder.hpp.
+  VectorCompressionType _vector_compression_type = std::is_same_v<Derived, LZ4Encoder>
+                                                       ? VectorCompressionType::SimdBp128
+                                                       : VectorCompressionType::FixedSizeByteAligned;
 
  private:
   Derived& _self() { return static_cast<Derived&>(*this); }

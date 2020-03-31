@@ -18,6 +18,7 @@ class TransactionContext;
 enum class OperatorType {
   Aggregate,
   Alias,
+  ChangeMetaTable,
   Delete,
   Difference,
   Export,

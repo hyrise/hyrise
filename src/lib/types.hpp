@@ -80,40 +80,11 @@ using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAl
 // `pmr_vector<pmr_string>` will pass its memory resource down to the strings while a `pmr_vector<std::string>` will
 // allocate the space for the vector at the correct location while the content of the strings will be in default
 // storage.
+// Note that a container initialized with a given allocator will keep that allocator, even if it is copy/move assigned:
+//   pmr_vector<int> a, b{alloc};
+//   a = b;  // a does NOT use alloc, neither for its current values, nor for future allocations (#623).
 template <typename T>
 using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
-
-// We are not using PMR here because of the problems described in #281.
-// Short version: The current TBB breaks with it, because it needs rebind.
-// Once that works, replace the class below with
-// using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
-template <typename T>
-class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
- public:
-  pmr_concurrent_vector(PolymorphicAllocator<T> alloc = {}) : pmr_concurrent_vector(0, alloc) {}  // NOLINT
-  pmr_concurrent_vector(std::initializer_list<T> init_list, PolymorphicAllocator<T> alloc = {})
-      : tbb::concurrent_vector<T>(init_list), _alloc(alloc) {}         // NOLINT
-  pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : pmr_concurrent_vector(n, T{}, alloc) {}
-  pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
-  pmr_concurrent_vector(tbb::concurrent_vector<T> other, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
-  pmr_concurrent_vector(const std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
-  pmr_concurrent_vector(std::vector<T>&& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : tbb::concurrent_vector<T>(std::make_move_iterator(values.begin()), std::make_move_iterator(values.end())),
-        _alloc(alloc) {}
-
-  template <class I>
-  pmr_concurrent_vector(I first, I last, PolymorphicAllocator<T> alloc = {})
-      : tbb::concurrent_vector<T>(first, last), _alloc(alloc) {}
-
-  const PolymorphicAllocator<T>& get_allocator() const { return _alloc; }
-
- protected:
-  PolymorphicAllocator<T> _alloc;
-};
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
@@ -245,11 +216,13 @@ enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
-enum class CleanupTemporaries : bool { Yes = true, No = false };
-
 enum class MemoryUsageCalculationMode { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
+
+enum class MetaTableChangeType { Insert, Delete, Update };
+
+enum class AutoCommit : bool { Yes = true, No = false };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by

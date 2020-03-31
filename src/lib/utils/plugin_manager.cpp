@@ -19,6 +19,19 @@ bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin)
   return false;
 }
 
+std::vector<PluginName> PluginManager::loaded_plugins() const {
+  std::vector<std::string> plugin_names;
+  plugin_names.reserve(_plugins.size());
+
+  for (const auto& [plugin_name, _] : _plugins) {
+    plugin_names.emplace_back(plugin_name);
+  }
+
+  std::sort(plugin_names.begin(), plugin_names.end());
+
+  return plugin_names;
+}
+
 void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto name = plugin_name_from_path(path);
 

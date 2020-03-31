@@ -7,6 +7,8 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "logical_query_plan/base_non_query_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
@@ -28,7 +30,7 @@ void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
-  DebugAssert(!_output, "Operator has already been executed");
+  DebugAssert(!_performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -54,10 +56,47 @@ void AbstractOperator::execute() {
   _on_cleanup();
 
   _performance_data->walltime = performance_timer.lap();
+  _performance_data->executed = true;
+  if (_output) {
+    _performance_data->has_output = true;
+    _performance_data->output_row_count = _output->row_count();
+    _performance_data->output_chunk_count = _output->chunk_count();
+  }
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
+
+  // Verify that LQP (if set) and PQP match.
+  if constexpr (HYRISE_DEBUG) {
+    if (lqp_node) {
+      [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
+      if (!_output) {
+        DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
+      } else if (std::dynamic_pointer_cast<const BaseNonQueryNode>(lqp_node) ||
+                 std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
+        // BaseNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return 'OK'
+        // for better compatibility with the console and the server. We do not assert anything here.
+        // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
+        // need to be tested.
+      } else {
+        // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
+        // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
+        // We cannot check the name of the column as LQP expressions do not know their alias.
+        DebugAssert(_output->column_count() == lqp_expressions.size(),
+                    std::string{"Mismatching number of output columns for "} + name());
+        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+          if (_type != OperatorType::Alias) {
+            [[maybe_unused]] const auto lqp_type = lqp_expressions[column_id]->data_type();
+            [[maybe_unused]] const auto pqp_type = _output->column_data_type(column_id);
+            [[maybe_unused]] const auto pqp_name = _output->column_name(column_id);
+            DebugAssert(pqp_type == lqp_type,
+                        std::string{"Mismatching column type in "} + name() + " for PQP column '" + pqp_name + "'");
+          }
+        }
+      }
+    }
+  }
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {

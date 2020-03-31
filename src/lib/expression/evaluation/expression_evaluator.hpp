@@ -67,7 +67,7 @@ class ExpressionEvaluator final {
                       const std::shared_ptr<const UncorrelatedSubqueryResults>& uncorrelated_subquery_results = {});
 
   std::shared_ptr<BaseValueSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
-  PosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
+  RowIDPosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
@@ -176,7 +176,7 @@ class ExpressionEvaluator final {
    * Either operand can be either empty (the operand is not nullable), contain one element (the operand is a literal
    * with null info) or can have n rows (the operand is a nullable series)
    */
-  static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
+  static pmr_vector<bool> _evaluate_default_null_logic(const pmr_vector<bool>& left, const pmr_vector<bool>& right);
 
   void _materialize_segment_if_not_yet_materialized(const ColumnID column_id);
 

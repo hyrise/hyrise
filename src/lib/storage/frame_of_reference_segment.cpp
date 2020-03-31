@@ -55,15 +55,19 @@ std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator
   auto new_null_values = pmr_vector<bool>{_null_values, alloc};
   auto new_offset_values = _offset_values->copy_using_allocator(alloc);
 
-  return std::allocate_shared<FrameOfReferenceSegment>(alloc, std::move(new_block_minima), std::move(new_null_values),
-                                                       std::move(new_offset_values));
+  auto copy = std::make_shared<FrameOfReferenceSegment>(std::move(new_block_minima), std::move(new_null_values),
+                                                        std::move(new_offset_values));
+
+  copy->access_counter = access_counter;
+
+  return copy;
 }
 
 template <typename T, typename U>
 size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode) const {
   // MemoryUsageCalculationMode ignored since full calculation is efficient.
-  return sizeof(*this) + sizeof(T) * _block_minima.size() + _offset_values->data_size() +
-         _null_values.size() / CHAR_BIT;
+  return sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() +
+         _null_values.capacity() / CHAR_BIT;
 }
 
 template <typename T, typename U>

@@ -16,7 +16,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
  public:
   using ValueType = bool;
 
-  explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
+  explicit NullValueVectorIterable(const pmr_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -25,21 +25,21 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     functor(begin, end);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
     auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
     functor(begin, end);
   }
 
  private:
-  const pmr_concurrent_vector<bool>& _null_values;
+  const pmr_vector<bool>& _null_values;
 
  private:
   class Iterator : public BaseSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
     using ValueType = bool;
-    using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
+    using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
@@ -64,17 +64,19 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     NullValueIterator _null_value_it;
   };
 
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
+  template <typename PosListIteratorType>
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                    IsNullSegmentPosition, PosListIteratorType> {
    public:
     using ValueType = bool;
-    using NullValueVector = pmr_concurrent_vector<bool>;
+    using NullValueVector = pmr_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values,
-                                 const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
-                                                                                     std::move(position_filter_it)},
+    explicit PointAccessIterator(const NullValueVector& null_values, const PosListIteratorType position_filter_begin,
+                                 PosListIteratorType position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,
+                                         PosListIteratorType>{std::move(position_filter_begin),
+                                                              std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:

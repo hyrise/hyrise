@@ -4,7 +4,7 @@
 #include <random>
 #include <sstream>
 
-#include "base_test.hpp"
+#include "encoding_test.hpp"
 
 #include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -23,13 +23,13 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   static constexpr auto row_count = size_t{1u} << 10;
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     for (auto index = size_t{0u}; index < row_count; ++index) {
       null_values[index] = index % 4 == 0;
@@ -39,7 +39,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
 
     for (auto index = size_t{0u}; index < row_count; ++index) {
       if (index % 3 == 0) {
@@ -55,8 +55,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<pmr_string>> create_string_with_null_value_segment() {
-    auto values = pmr_concurrent_vector<pmr_string>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<pmr_string>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     for (auto index = 0u; index < row_count; ++index) {
       null_values[index] = index % 4 == 0;
@@ -72,8 +72,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
   }
 
-  std::shared_ptr<PosList> create_sequential_position_filter() {
-    auto list = std::make_shared<PosList>();
+  std::shared_ptr<RowIDPosList> create_sequential_position_filter() {
+    auto list = std::make_shared<RowIDPosList>();
     list->guarantee_single_chunk();
 
     std::default_random_engine engine{};
@@ -88,7 +88,7 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<PosList> create_random_access_position_filter() {
+  std::shared_ptr<RowIDPosList> create_random_access_position_filter() {
     auto list = create_sequential_position_filter();
 
     auto random_device = std::random_device{};
@@ -107,7 +107,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
                                                      const DataType data_type,
                                                      const SegmentEncodingSpec& segment_encoding_spec) {
-    return encode_and_compress_segment(base_segment, data_type, segment_encoding_spec);
+    return std::dynamic_pointer_cast<BaseEncodedSegment>(
+        ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec));
   }
 };
 
@@ -302,11 +303,6 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
   encoded_segment =
       this->encode_segment(value_segment, DataType::String,
                            SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128});
-  EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
-
-  encoded_segment =
-      this->encode_segment(value_segment, DataType::String,
-                           SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned});
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 
   encoded_segment = this->encode_segment(
