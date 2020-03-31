@@ -10,6 +10,9 @@
 
 namespace opossum {
 
+/**
+ * This node type is used to represent set operation type of Intersect.
+ */
 class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public AbstractLQPNode {
  public:
   explicit IntersectNode(const SetOperationMode set_operation_mode);
