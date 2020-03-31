@@ -308,14 +308,14 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // Forward functional dependencies
   if(fds_right.empty()) return fds_left;
   else {
-    auto fds_all = fds_left;
-    fds_all.insert(fds_all.end(), fds_right.begin(), fds_right.end());
-
-    // Get rid of duplicates
-    sort(fds_all.begin(), fds_all.end());
-    fds_all.erase(unique(fds_all.begin(), fds_all.end()));
-
-    return fds_all;
+    // TODO(Julian) Get rid of duplicates by using a set
+    Fail("Fail: Not yet implemented!");
+//    auto fds = std::unordered_set<FunctionalDependency>();
+//
+//    boost::hash<FunctionalDependency>>(fds_left.begin(), fds_right.end());
+//    fds_all.insert(fds_right.begin(), fds_right.end());
+//
+//    return std::vector<FunctionalDependency>(fds_all.begin(), fds_all.end());
   }
 }
 
