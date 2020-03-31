@@ -35,27 +35,15 @@ class ExceptNodeTest : public BaseTest {
 TEST_F(ExceptNodeTest, Description) { EXPECT_EQ(_except_node->description(), "[ExceptNode] Mode: Positions"); }
 
 TEST_F(ExceptNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(*_except_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
-  EXPECT_EQ(*_except_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
-  EXPECT_EQ(*_except_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
+  EXPECT_TRUE(*_except_node->column_expressions() == *_mock_node1->column_expressions());
 }
 
 TEST_F(ExceptNodeTest, HashingAndEqualityCheck) {
-  auto same_except_node = ExceptNode::make(SetOperationMode::Positions);
-  same_except_node->set_left_input(_mock_node1);
-  same_except_node->set_right_input(_mock_node1);
-  auto different_except_node = ExceptNode::make(SetOperationMode::All);
-  different_except_node->set_left_input(_mock_node1);
-  different_except_node->set_right_input(_mock_node1);
-  auto different_except_node_1 = ExceptNode::make(SetOperationMode::Positions);
-  different_except_node_1->set_left_input(_mock_node1);
-  different_except_node_1->set_right_input(_mock_node2);
-  auto different_except_node_2 = ExceptNode::make(SetOperationMode::Positions);
-  different_except_node_2->set_left_input(_mock_node2);
-  different_except_node_2->set_right_input(_mock_node1);
-  auto different_except_node_3 = ExceptNode::make(SetOperationMode::Positions);
-  different_except_node_3->set_left_input(_mock_node2);
-  different_except_node_3->set_right_input(_mock_node2);
+  auto same_except_node = ExceptNode::make(SetOperationMode::Positions, _mock_node1, _mock_node1);
+  auto different_except_node = ExceptNode::make(SetOperationMode::All, _mock_node1, _mock_node1);
+  auto different_except_node_1 = ExceptNode::make(SetOperationMode::Positions, _mock_node1, _mock_node2);
+  auto different_except_node_2 = ExceptNode::make(SetOperationMode::Positions, _mock_node2, _mock_node1);
+  auto different_except_node_3 = ExceptNode::make(SetOperationMode::Positions, _mock_node2, _mock_node2);
 
   EXPECT_EQ(*_except_node, *same_except_node);
   EXPECT_NE(*_except_node, *different_except_node);
