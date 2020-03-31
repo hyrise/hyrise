@@ -19,7 +19,6 @@ class CalibrationLQPGenerator {
  private:
   using ColumnPair = std::pair<const std::string, const std::string>;
   void _generate_table_scans(const std::shared_ptr<const CalibrationTableWrapper>& table);
-  void _generate_joins(const std::shared_ptr<const CalibrationTableWrapper>& sharedPtr);
   void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper>& table);
   [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
       const std::shared_ptr<const CalibrationTableWrapper>& table) const;
