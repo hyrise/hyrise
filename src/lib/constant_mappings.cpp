@@ -4,6 +4,7 @@
 
 #include <boost/bimap.hpp>
 #include <boost/hana/fold.hpp>
+#include <operators/abstract_operator.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
@@ -51,6 +52,39 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
 
+const boost::bimap<OperatorType, std::string> operator_type_to_string = make_bimap<OperatorType, std::string>({
+                                                                              {OperatorType::Aggregate, "Aggregate"},
+                                                                              {OperatorType::Alias, "Alias"},
+                                                                              {OperatorType::Delete, "Delete"},
+                                                                              {OperatorType::Difference, "Difference"},
+                                                                              {OperatorType::Export, "Export"},
+                                                                              {OperatorType::GetTable, "GetTable"},
+                                                                              {OperatorType::Import, "Import"},
+                                                                              {OperatorType::IndexScan, "IndexScan"},
+                                                                              {OperatorType::Insert, "Insert"},
+                                                                              {OperatorType::JoinHash, "JoinHash"},
+                                                                              {OperatorType::JoinIndex, "JoinIndex"},
+                                                                              {OperatorType::JoinNestedLoop, "JoinNestedLoop"},
+                                                                              {OperatorType::JoinSortMerge, "JoinSortMerge"},
+                                                                              {OperatorType::JoinVerification, "JoinVerification"},
+                                                                              {OperatorType::Limit, "Limit"},
+                                                                              {OperatorType::Print, "Print"},
+                                                                              {OperatorType::Product, "Product"},
+                                                                              {OperatorType::Projection, "Projection"},
+                                                                              {OperatorType::Sort, "Sort"},
+                                                                              {OperatorType::TableScan, "TableScan"},
+                                                                              {OperatorType::TableWrapper, "TableWrapper"},
+                                                                              {OperatorType::UnionAll, "UnionAll"},
+                                                                              {OperatorType::UnionPositions, "UnionPositions"},
+                                                                              {OperatorType::Update, "Update"},
+                                                                              {OperatorType::Validate, "Validate"},
+                                                                              {OperatorType::CreateTable, "CreateTable"},
+                                                                              {OperatorType::CreatePreparedPlan, "CreatePreparedPlan"},
+                                                                              {OperatorType::CreateView, "CreateView"},
+                                                                              {OperatorType::DropTable, "DropTable"},
+                                                                              {OperatorType::DropView, "DropView"},
+                                                                              {OperatorType::Mock, "Mock"},});
+
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
 }
@@ -97,6 +131,10 @@ std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compre
       break;
   }
   return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const OperatorType opt) {
+  return stream << operator_type_to_string.left.at(opt);
 }
 
 }  // namespace opossum
