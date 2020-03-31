@@ -294,6 +294,31 @@ bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expres
   return false;
 }
 
+std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
+  // Fetch functional dependencies from input nodes
+  auto fds_left = std::vector<FunctionalDependency>();
+  auto fds_right = std::vector<FunctionalDependency>();
+  if (left_input()) {
+    fds_left = left_input()->functional_dependencies();
+  }
+  if (right_input()) {
+    fds_right = right_input()->functional_dependencies();
+  }
+
+  // Forward functional dependencies
+  if(fds_right.empty()) return fds_left;
+  else {
+    auto fds_all = fds_left;
+    fds_all.insert(fds_all.end(), fds_right.begin(), fds_right.end());
+
+    // Get rid of duplicates
+    sort(fds_all.begin(), fds_all.end());
+    fds_all.erase(unique(fds_all.begin(), fds_all.end()));
+
+    return fds_all;
+  }
+}
+
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());

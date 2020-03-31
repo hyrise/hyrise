@@ -130,14 +130,14 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::constra
   return lqp_constraints;
 }
 
-const std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
+std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
   const auto unique_constraints = this->constraints();
   const auto column_expressions = this->column_expressions();
 
   for(auto& constraint : *unique_constraints) {
 
-    // ToDo PK or non-nullable?
+    // ToDo(Julian) PK or non-nullable?
     auto left = constraint.column_expressions;
     auto right = ExpressionUnorderedSet{};
 

@@ -50,6 +50,9 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
+// ToDo(Julian) Doc!
+using FunctionalDependency = std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>;
+
 class LQPColumnExpression;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
@@ -164,6 +167,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return
    */
   [[nodiscard]] bool has_unique_constraint(ExpressionUnorderedSet column_expressions) const;
+
+  /**
+   * TODO(Julian) Is this too hacky?
+   * @return
+   */
+  [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
    * Perform a deep equality check
