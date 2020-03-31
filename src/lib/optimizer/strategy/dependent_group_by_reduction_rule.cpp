@@ -75,20 +75,20 @@ bool reduce_group_by_columns_for_constraint(const ExpressionsConstraintDefinitio
 
 namespace opossum {
 
-void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  // Store a copy of the root's column expressions.
-  const auto root_column_expressions = lqp->column_expressions();
-  visit_lqp(lqp, [&](const auto& node) {
+void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root_lqp) const {
+  visit_lqp(root_lqp, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
     }
     auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-    // Early exit if no constraints are set
+    // Early exit if there are no constraints
     const auto input_constraints = aggregate_node.left_input()->constraints();
     if(input_constraints->empty()) return LQPVisitation::VisitInputs;
 
     // Preparation:
+    // Store a copy of the root's column expressions.
+    const auto root_column_expressions = root_lqp->column_expressions();
     // Store copy of the aggregate's column expressions to later check if this order is the query's final column order
     const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
     auto group_by_list_changed = false;
@@ -108,7 +108,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       group_by_columns_non_nullable.insert(expression);
     }
 
-    // Sort constraints to start with the shortest constraint (either unique or primary key) in hope that the shorter
+    // Sort the constraints by column count to start with the shortest constraint in hope that the shorter
     // one will later form the group-by clause.
     auto input_constraints_sorted = std::vector<ExpressionsConstraintDefinition>{input_constraints->cbegin(), input_constraints->cend()};
     std::sort(input_constraints_sorted.begin(), input_constraints_sorted.end(),
@@ -118,10 +118,8 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
     // Main:
     // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
-    // constraints (e.g., a primary key and a unique column constraint) might result in different group-by lists
-    // (depending on the number of columns of the constraint), but we stop as soon as one constraint successfully
-    // reduced the group-by list. The reason is that there is no advantage in a second reduction if the first
-    // reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
+    // constraints might result in different group-by lists (depending on the number of columns of the constraint).
+    // We stop as soon as one constraint successfully reduced the group-by list. There is no advantage in a second reduction if the first reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
     // place, we can ignore the remaining constraints.
     for(size_t constraint_idx{0}; constraint_idx < input_constraints_sorted.size(); ++constraint_idx) {
       const auto& constraint = input_constraints_sorted[constraint_idx];
@@ -137,9 +135,9 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // by adding a projection with the initial column_references since we changed the column order by moving columns
     // from the group-by list to the aggregations.
     if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
-        lqp->type != LQPNodeType::Projection) {
+        root_lqp->type != LQPNodeType::Projection) {
       const auto projection_node = std::make_shared<ProjectionNode>(root_column_expressions);
-      lqp_insert_node(lqp, LQPInputSide::Left, projection_node);
+      lqp_insert_node(root_lqp, LQPInputSide::Left, projection_node);
     }
 
     return LQPVisitation::VisitInputs;

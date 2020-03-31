@@ -13,7 +13,7 @@ namespace opossum {
 
 class TableStatistics;
 
-// ToDo Doc!
+// ToDo(Julian) Doc!
 using FunctionalDependency = std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>;
 
 /**

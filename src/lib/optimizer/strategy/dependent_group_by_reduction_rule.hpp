@@ -29,7 +29,7 @@ class StoredTableNode;
  * the list of aggregates via the ANY() function:
  * 		Aggregate: Grouping = [ c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment],
  * 				   Aggregates = [ sum(l_extendedprice * (1 - l_discount)) ]
- *		>>>
+ *
  * 		Aggregate: Grouping = [ c_custkey, c_acctbal, c_phone, n_name, c_address, c_comment],
  * 				   Aggregates = [ SUM(l_extendedprice * (1 - l_discount)), ANY(c_name) ]
 
@@ -39,12 +39,12 @@ class StoredTableNode;
  * current lack of foreign key support, not all queries that are listed in the paper can be optimized.
  *
  * For this rule, we search the list of group-by columns for functional dependencies (as of now: primary key columns as
- * well as unique columns, given by soft constraints). Since unique columns might include NULLs (similar to previously
+ * well as unique columns, given by soft constraints) //TODO(Julian) adjust. Since unique columns might include NULLs (similar to previously
  * executed outer joins), we only consider non-nullable group-by columns.
  */
 class DependentGroupByReductionRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& root_lqp) const override;
 };
 
 }  // namespace opossum
