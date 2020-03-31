@@ -80,7 +80,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
 };
 
 // Test simple cases
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_SimpleCases) {
+TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   // Early out for LQP without any aggregates
   {
     const auto lqp = PredicateNode::make(equals_(column_a_0, 17), stored_table_node_a);
@@ -103,7 +103,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_SimpleCases) {
 
 // Test that a removable column is removed when the single primary key column is present.
 // Check for the restored colum order.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_SingleKeyReduction) {
+TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)), stored_table_node_a);  // NOLINT
@@ -119,7 +119,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_SingleKeyReduction) {
 } // TODO(Julian)
 
 // Test that a non-primary-key column is not removed if the full unique constraint is not present in the group by list.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_IncompleteKey) {
+TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_b_0, column_b_2), expression_vector(sum_(column_b_0), sum_(column_b_1), sum_(column_b_2)), stored_table_node_b);  // NOLINT
@@ -132,7 +132,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_IncompleteKey) {
 }  // TODO(Julian)
 
 // Test that a group by with the full (multi-column) unique constraint is not altered.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_FullKeyGroupBy) {
+TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_b_0, column_b_1), expression_vector(sum_(column_b_0), sum_(column_b_1), sum_(column_b_2)), stored_table_node_b);  // NOLINT
@@ -145,7 +145,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_FullKeyGroupBy) {
 }  // TODO(Julian)
 
 // Test adaption of multi-column and but inconsecutive column order primary key columns (table_c with {0,2})
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_FullInconsecutiveKeyGroupBy) {
+TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_c_0, column_c_1, column_c_2), expression_vector(sum_(column_c_1)), stored_table_node_c);  // NOLINT
@@ -162,7 +162,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_FullInconsecutiveKeyGroupBy) 
 
 // Test whether we remove the correct columns after joining (one column of a can be moved, none of b).
 // No projection added as root already is a projection.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_JoinSingleKeyPrimaryKey) {
+TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format off
   auto lqp =
   ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
@@ -181,7 +181,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_JoinSingleKeyPrimaryKey) {
 }  // TODO(Julian)
 
 // Test that the plan stays the same (no alias, no projection) for a table with a primary key but no removable columns
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_AggregteButNoChanges) {
+TEST_F(DependentGroupByReductionRuleTest, AggregteButNoChanges) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0)), stored_table_node_a);
@@ -194,7 +194,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_AggregteButNoChanges) {
 }  // TODO(Julian)
 
 // A simple aggregate follows an optimized aggregate, column order of root node should not change. Thus no projection.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_SimpleAggregateFollowsAdaptedAggregate) {
+TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_1)),
@@ -212,7 +212,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_SimpleAggregateFollowsAdapted
 
 // A sort follows an optimized aggregate. Operator following the aggregate does not change the column order itself, but
 // aggregate does. Hence, we need to add a projection.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_SortFollowsAggregate) {
+TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   // clang-format off
   auto lqp =
   SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
@@ -230,7 +230,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_SortFollowsAggregate) {
 }  // TODO(Julian)
 
 // When a primary key column is nullable after an outer join, check that we do not modify the aggregate.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_NoAdaptionForNullableColumns) {
+TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_a_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0)),
@@ -244,7 +244,7 @@ TEST_F(DependentGroupByReductionRuleTest, DISABLED_NoAdaptionForNullableColumns)
 }  // TODO(Julian)
 
 // Check that we reduce using the shortest (in terms of number of columns) constraints.
-TEST_F(DependentGroupByReductionRuleTest, DISABLED_ShortConstraintsFirst) {
+TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_e_0, column_e_1, column_e_2), expression_vector(), stored_table_node_e);
