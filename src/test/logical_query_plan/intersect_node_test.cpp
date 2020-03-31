@@ -34,27 +34,15 @@ class IntersectNodeTest : public BaseTest {
 TEST_F(IntersectNodeTest, Description) { EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: Positions"); }
 
 TEST_F(IntersectNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(*_intersect_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
-  EXPECT_EQ(*_intersect_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
-  EXPECT_EQ(*_intersect_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
+  EXPECT_TRUE(*_intersect_node->column_expressions() == *_mock_node1->column_expressions());
 }
 
 TEST_F(IntersectNodeTest, HashingAndEqualityCheck) {
-  auto same_intersect_node = IntersectNode::make(SetOperationMode::Positions);
-  same_intersect_node->set_left_input(_mock_node1);
-  same_intersect_node->set_right_input(_mock_node1);
-  auto different_intersect_node = IntersectNode::make(SetOperationMode::All);
-  different_intersect_node->set_left_input(_mock_node1);
-  different_intersect_node->set_right_input(_mock_node1);
-  auto different_intersect_node_1 = IntersectNode::make(SetOperationMode::Positions);
-  different_intersect_node_1->set_left_input(_mock_node1);
-  different_intersect_node_1->set_right_input(_mock_node2);
-  auto different_intersect_node_2 = IntersectNode::make(SetOperationMode::Positions);
-  different_intersect_node_2->set_left_input(_mock_node2);
-  different_intersect_node_2->set_right_input(_mock_node1);
-  auto different_intersect_node_3 = IntersectNode::make(SetOperationMode::Positions);
-  different_intersect_node_3->set_left_input(_mock_node2);
-  different_intersect_node_3->set_right_input(_mock_node2);
+  auto same_intersect_node = IntersectNode::make(SetOperationMode::Positions, _mock_node1, _mock_node1);
+  auto different_intersect_node = IntersectNode::make(SetOperationMode::All, _mock_node1, _mock_node1);
+  auto different_intersect_node_1 = IntersectNode::make(SetOperationMode::Positions, _mock_node1, _mock_node2);
+  auto different_intersect_node_2 = IntersectNode::make(SetOperationMode::Positions, _mock_node2, _mock_node1);
+  auto different_intersect_node_3 = IntersectNode::make(SetOperationMode::Positions, _mock_node2, _mock_node2);
 
   EXPECT_EQ(*_intersect_node, *same_intersect_node);
   EXPECT_NE(*_intersect_node, *different_intersect_node);
