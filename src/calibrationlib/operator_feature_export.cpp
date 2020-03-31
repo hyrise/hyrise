@@ -51,20 +51,20 @@ void OperatorFeatureExport::_export_table_scan(std::shared_ptr<const AbstractOpe
         if (original_node->type == LQPNodeType::StoredTable) {
           // Get values for INPUT_ROWS_LEFT
           if (op->input_left() != nullptr) {
-            csv_writer->set_value("INPUT_ROWS_LEFT", op->input_table_left()->row_count());
+            csv_writer->set_value("INPUT_ROWS_LEFT", op->input_left()->performance_data().output_row_count);
           } else {
             csv_writer->set_value("INPUT_ROWS_LEFT", CSVWriter::NA);
           }
 
-          // Get values for OUTPUT_ROWS
-          if (op->get_output() != nullptr) {
-            csv_writer->set_value("OUTPUT_ROWS", op->get_output()->row_count());
+          // Get values for OUTPUT_ROWS & RUNTIME_NS
+          if (op->performance_data().has_output) {
+            csv_writer->set_value("OUTPUT_ROWS", op->performance_data().output_row_count);
+            // Get values for RUNTIME_NS
+            csv_writer->set_value("RUNTIME_NS", op->performance_data().walltime.count());
           } else {
             csv_writer->set_value("OUTPUT_ROWS", CSVWriter::NA);
+            csv_writer->set_value("RUNTIME_NS", CSVWriter::NA);
           }
-
-          // Get values for RUNTIME_NS
-          csv_writer->set_value("RUNTIME_NS", op->performance_data().walltime.count());
 
           // Get values for SCAN_IMPLEMENTATION
           if (original_node == node->left_input()) {
