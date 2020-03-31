@@ -55,6 +55,11 @@ class ServerTestRunner : public BaseTest {
   const std::string _export_filename = test_data_path + "server_test.bin";
 };
 
+TEST_F(ServerTestRunner, TestCacheInitialization) {
+  EXPECT_NE(Hyrise::get().default_lqp_cache, nullptr);
+  EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
+}
+
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
 
