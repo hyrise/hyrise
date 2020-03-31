@@ -40,6 +40,12 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   // return empty table if input file is empty
   if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
 
+  {
+    std::string line;
+    std::getline(csvfile, line);
+    Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
+  }
+
   /**
    * Load the whole file(!) into a std::string using the, hopefully, fastest method to do so.
    * TODO(anybody) Maybe use mmap() in the future. The current approach needs to have the entire file in RAM, mmap might
@@ -129,7 +135,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   unsigned int rows = 0;
   unsigned int field_count = 1;
   bool in_quotes = false;
-  while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
+  while (rows < table.target_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
     auto pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
@@ -181,8 +187,11 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
     const auto is_nullable = table.column_is_nullable(column_id);
     const auto column_type = table.column_data_type(column_id);
 
-    converters.emplace_back(
-        make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, meta.config, is_nullable));
+    resolve_data_type(column_type, [&](const auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      converters.emplace_back(std::make_unique<CsvConverter<ColumnDataType>>(row_count, meta.config, is_nullable));
+    });
   }
 
   Assert(field_ends.size() == row_count * column_count, "Unexpected number of fields");

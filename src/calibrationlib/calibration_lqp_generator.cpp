@@ -22,9 +22,6 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
     case OperatorType::TableScan:
       _generate_table_scans(table);
       return;
-    case OperatorType::JoinHash:
-      _generate_joins(table);
-      return;
     default:
       break;
   }
@@ -155,17 +152,6 @@ void CalibrationLQPGenerator::_generate_column_vs_column_scans(
     _generated_lpqs.emplace_back(PredicateNode::make(
         greater_than_(stored_table_node->get_column(pair.first), stored_table_node->get_column(pair.second)),
         stored_table_node));
-  }
-}
-
-void CalibrationLQPGenerator::_generate_joins(const std::shared_ptr<const CalibrationTableWrapper>& table) {
-  const auto stored_table_node = StoredTableNode::make(table->get_name());
-  const auto column_vs_column_scan_pairs = _get_column_pairs(table);
-
-  for (const ColumnPair& pair : column_vs_column_scan_pairs) {
-    _generated_lpqs.emplace_back(std::make_shared<JoinNode>(
-        JoinMode::Inner,
-        equals_(stored_table_node->get_column(pair.first), stored_table_node->get_column(pair.second))));
   }
 }
 

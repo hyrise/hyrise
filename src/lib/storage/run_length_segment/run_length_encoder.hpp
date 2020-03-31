@@ -20,9 +20,9 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
                                                  const PolymorphicAllocator<T>& allocator) {
-    auto values = pmr_vector<T>{allocator};
-    auto null_values = pmr_vector<bool>{allocator};
-    auto end_positions = pmr_vector<ChunkOffset>{allocator};
+    auto values = std::make_shared<pmr_vector<T>>(allocator);
+    auto null_values = std::make_shared<pmr_vector<bool>>(allocator);
+    auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(allocator);
 
     segment_iterable.with_iterators([&](auto it, auto end) {
       // Early out for empty segments, code below assumes it to be non-empty
@@ -45,25 +45,23 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
         is_current_null = segment_value.is_null();
 
         if ((is_previous_null == is_current_null) && (is_previous_null || (previous_value == current_value))) {
-          end_positions.back() = current_index;
+          end_positions->back() = current_index;
         } else {
-          values.push_back(current_value);
-          null_values.push_back(is_current_null);
-          end_positions.push_back(current_index);
+          values->push_back(current_value);
+          null_values->push_back(is_current_null);
+          end_positions->push_back(current_index);
         }
 
         ++current_index;
       }
     });
 
-    values.shrink_to_fit();
-    null_values.shrink_to_fit();
-    end_positions.shrink_to_fit();
+    // The resize method of the vector might have overallocated memory - hand that memory back to the system
+    values->shrink_to_fit();
+    null_values->shrink_to_fit();
+    end_positions->shrink_to_fit();
 
-    auto values_ptr = std::allocate_shared<pmr_vector<T>>(allocator, std::move(values));
-    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(allocator, std::move(null_values));
-    auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(allocator, std::move(end_positions));
-    return std::allocate_shared<RunLengthSegment<T>>(allocator, values_ptr, null_values_ptr, end_positions_ptr);
+    return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
   }
 };
 

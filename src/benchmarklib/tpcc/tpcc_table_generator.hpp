@@ -56,14 +56,15 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
  protected:
   template <typename T>
-  std::vector<T> _generate_inner_order_line_column(std::vector<size_t> indices, OrderLineCounts order_line_counts,
-                                                   const std::function<T(std::vector<size_t>)>& generator_function);
+  std::vector<std::optional<T>> _generate_inner_order_line_column(
+      std::vector<size_t> indices, OrderLineCounts order_line_counts,
+      const std::function<std::optional<T>(std::vector<size_t>)>& generator_function);
 
   template <typename T>
   void _add_order_line_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                               std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
                               OrderLineCounts order_line_counts,
-                              const std::function<T(std::vector<size_t>)>& generator_function);
+                              const std::function<std::optional<T>(std::vector<size_t>)>& generator_function);
 
   // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
   // TPC-C Specification.
@@ -86,6 +87,10 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    * indices[2] = customer_size = 3000
    * So in total we have to generate 1*10*3000 = 30 000 customers.
    *
+   * Note that this is not a general purpose function. The implementation of _add_column checks whether NULL values
+   * were actually passed and sets the column's nullable flag accordingly. As such, if this method is used with an
+   * generator that returns optionals but no nullopts, the column will not be nullable. For TPC-C, this is fine.
+   *
    * @tparam T                  the type of the column
    * @param table               the column shall be added to this table as well as column metadata
    * @param name                the name of the column
@@ -96,14 +101,12 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
+                   const std::function<std::vector<std::optional<T>>(std::vector<size_t>)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
     bool is_first_column = column_definitions.size() == 0;
 
-    auto data_type = data_type_from_type<T>();
-    // TODO(anyone): NULL values are still represented as -1, so the columns are marked as non-nullable.
-    column_definitions.emplace_back(name, data_type, false);
+    auto has_null_value = false;
 
     /**
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
@@ -112,8 +115,11 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     auto loop_count =
         std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
-    pmr_concurrent_vector<T> data;
+    pmr_vector<T> data;
     data.reserve(chunk_size);
+
+    pmr_vector<bool> null_values;
+    null_values.reserve(chunk_size);
 
     /**
      * The loop over all records that the final column of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
@@ -148,24 +154,36 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * and iterate it to add to the output segment.
        */
       auto values = generator_function(indices);
-      for (T& value : values) {
-        data.push_back(value);
+      for (auto& value : values) {
+        if (value) {
+          data.emplace_back(std::move(*value));
+        } else {
+          data.emplace_back(T{});
+          has_null_value = true;
+        }
+        null_values.emplace_back(!value);
 
         // write output chunks if segment size has reached chunk_size
         if (row_index % chunk_size == chunk_size - 1) {
-          auto value_segment = std::make_shared<ValueSegment<T>>(std::move(data));
+          auto value_segment = has_null_value
+                                   ? std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values))
+                                   : std::make_shared<ValueSegment<T>>(std::move(data));
 
+          // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
           if (is_first_column) {
             segments_by_chunk.emplace_back();
-            segments_by_chunk.back().push_back(value_segment);
+            segments_by_chunk.back().emplace_back(value_segment);
           } else {
             ChunkID chunk_id{static_cast<uint32_t>(row_index / chunk_size)};
-            segments_by_chunk[chunk_id].push_back(value_segment);
+            segments_by_chunk[chunk_id].emplace_back(value_segment);
           }
 
           // reset data
-          data = decltype(data){};
+          data = {};
           data.reserve(chunk_size);
+
+          null_values = {};
+          null_values.reserve(chunk_size);
         }
         row_index++;
       }
@@ -173,22 +191,25 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
     // write partially filled last chunk
     if (row_index % chunk_size != 0) {
-      auto value_segment = std::make_shared<ValueSegment<T>>(std::move(data));
+      auto value_segment = has_null_value ? std::make_shared<ValueSegment<T>>(std::move(data), std::move(null_values))
+                                          : std::make_shared<ValueSegment<T>>(std::move(data));
 
-      // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
         segments_by_chunk.emplace_back();
-        segments_by_chunk.back().push_back(value_segment);
+        segments_by_chunk.back().emplace_back(value_segment);
       } else {
         ChunkID chunk_id{static_cast<uint32_t>(row_index / chunk_size)};
-        segments_by_chunk[chunk_id].push_back(value_segment);
+        segments_by_chunk[chunk_id].emplace_back(value_segment);
       }
     }
+
+    // add column definition
+    auto data_type = data_type_from_type<T>();
+    column_definitions.emplace_back(name, data_type, has_null_value);
   }
 
   /**
-   * This method simplifies the interface for columns
-   * where only a single element is added in the inner loop.
+   * This method simplifies the interface for columns where only a single element is added in the inner loop.
    *
    * @tparam T                  the type of the column
    * @param table               the column shall be added to this table as well as column metadata
@@ -203,6 +224,26 @@ class TPCCTableGenerator : public AbstractTableGenerator {
                    const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
+    _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+  }
+
+  /**
+   * Similar to the previous _add_column version, this is a shortcut for columns where only a single element is added
+   * in the inner loop. The difference is that this version accepts a lambda that produces an std::optional<T> (for
+   * NULL values).
+   *
+   * Note that this is not a general purpose function. The implementation of _add_column checks whether NULL values
+   * were actually passed and sets the column's nullable flag accordingly. As such, if this method is used with an
+   * generator that returns optionals but no nullopts, the column will not be nullable. For TPC-C, this is fine.
+   */
+  template <typename T>
+  void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
+                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   const std::function<std::optional<T>(std::vector<size_t>)>& generator_function) {
+    const std::function<std::vector<std::optional<T>>(std::vector<size_t>)> wrapped_generator_function =
+        [generator_function](std::vector<size_t> indices) {
+          return std::vector<std::optional<T>>({generator_function(indices)});
+        };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };

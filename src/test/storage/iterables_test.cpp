@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
+#include "encoding_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -84,15 +84,15 @@ class IterablesTest : public BaseTest {
     table_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
     table_strings = load_table("resources/test_data/tbl/string.tbl");
 
-    position_filter = std::make_shared<PosList>(
-        PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
+    position_filter = std::make_shared<RowIDPosList>(
+        RowIDPosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
     position_filter->guarantee_single_chunk();
   }
 
   std::shared_ptr<Table> table;
   std::shared_ptr<Table> table_with_null;
   std::shared_ptr<Table> table_strings;
-  std::shared_ptr<PosList> position_filter;
+  std::shared_ptr<RowIDPosList> position_filter;
 };
 
 class EncodedSegmentIterablesTest : public IterablesTest,
@@ -167,11 +167,42 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
     using SegmentType = std::decay_t<decltype(segment)>;
 
     if constexpr (!std::is_same_v<pmr_string, ColumnDataType>) {
-      auto sum = ColumnDataType{0};
-      auto accessed_offsets = std::vector<ChunkOffset>{};
-      const auto functor = SumUpWithIterator<ColumnDataType>{sum, accessed_offsets};
+      // Test summing up all values in the segment or all values referenced by the PosList
+      {
+        auto sum = ColumnDataType{0};
+        auto accessed_offsets = std::vector<ChunkOffset>{};
+        const auto functor = SumUpWithIterator<ColumnDataType>{sum, accessed_offsets};
 
+        const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+        if (with_position_filter) {
+          if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+            iterable.with_iterators(position_filter, functor);
+          }
+        } else {
+          iterable.with_iterators(functor);
+        }
+
+        EXPECT_EQ(sum, expected_sum(nullable, with_position_filter));
+        EXPECT_EQ(accessed_offsets, expected_offsets(with_position_filter));
+      }
+    }
+
+    // Next, test that begin and end iterators are compatible (i.e., that iterating from both ends allows us to meet in
+    // the middle)
+    {
       const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
+      const auto functor = [&](auto begin, auto end) {
+        if (with_position_filter) {
+          begin += position_filter->size() - 1;
+        } else {
+          begin += base_segment->size() - 1;
+        }
+        --end;
+
+        EXPECT_EQ(begin->value(), end->value());
+        EXPECT_EQ(begin->chunk_offset(), end->chunk_offset());
+      };
+
       if (with_position_filter) {
         if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
           iterable.with_iterators(position_filter, functor);
@@ -179,9 +210,6 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
       } else {
         iterable.with_iterators(functor);
       }
-
-      EXPECT_EQ(sum, expected_sum(nullable, with_position_filter));
-      EXPECT_EQ(accessed_offsets, expected_offsets(with_position_filter));
     }
   });
 }
@@ -318,11 +346,11 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
 // Reference Segment Tests
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
-  auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
-                          RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
+  auto pos_list = RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
+                               RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
@@ -336,37 +364,41 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
-  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  auto pos_list =
+      RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
-  auto nulls_found = uint32_t{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
-  EXPECT_EQ(nulls_found, 2u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
+  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased) {
-  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  auto pos_list =
+      RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::Yes>{*reference_segment};
 
-  auto nulls_found = uint32_t{0};
+  auto sum = int32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
 
-  EXPECT_EQ(nulls_found, 2u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
+  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 // Value Segment Tests

@@ -250,8 +250,7 @@ bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     auto builder = SQLPipelineBuilder{sql}
                        .with_lqp_cache(_lqp_cache)
-                       .with_pqp_cache(_pqp_cache)
-                       .dont_cleanup_temporaries();  // keep tables for debugging and visualization
+                       .with_pqp_cache(_pqp_cache);
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }

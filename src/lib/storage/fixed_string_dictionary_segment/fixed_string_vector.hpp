@@ -18,11 +18,16 @@ namespace opossum {
 class FixedStringVector {
  public:
   // Create a FixedStringVector of FixedStrings with given values
-  FixedStringVector(const FixedStringVector& other) = default;
+  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
+
+  // Create a FixedStringVector of FixedStrings with existing data
+  FixedStringVector(pmr_vector<char> chars, const size_t string_length)
+      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {}
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
-  template <class Iter>
-  FixedStringVector(Iter first, Iter last, const size_t string_length) : _string_length(string_length) {
+  template <typename Iter>
+  FixedStringVector(Iter first, Iter last, const size_t string_length, const PolymorphicAllocator<char>& allocator = {})
+      : _string_length(string_length), _chars(allocator) {
     const auto value_count = std::distance(first, last);
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
@@ -31,7 +36,10 @@ class FixedStringVector {
       _size = value_count;
     } else {
       _chars.reserve(_string_length * value_count);
-      _iterator_push_back(first, last);
+      while (first != last) {
+        push_back(*first);
+        ++first;
+      }
     }
   }
 
@@ -58,13 +66,15 @@ class FixedStringVector {
   ReverseIterator rend() noexcept;
 
   // Return a pointer to the underlying memory
-  char* data();
+  const char* data() const;
 
   // Return the number of entries in the vector.
   size_t size() const;
 
   // Return the amount of allocated memory
   size_t capacity() const;
+
+  size_t string_length() const;
 
   // Request the vector capacity to be at least enough to contain n elements
   void reserve(const size_t n);
@@ -85,14 +95,6 @@ class FixedStringVector {
   const size_t _string_length;
   pmr_vector<char> _chars;
   size_t _size = 0;
-
-  template <class Iter>
-  void _iterator_push_back(Iter first, Iter last) {
-    while (first != last) {
-      push_back(*first);
-      ++first;
-    }
-  }
 };
 
 }  // namespace opossum

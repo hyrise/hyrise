@@ -28,6 +28,7 @@ race:^opossum::MvccData::get_begin_cid
 race:^opossum::MvccData::set_begin_cid
 race:^opossum::MvccData::get_end_cid
 race:^opossum::MvccData::set_end_cid
+race:^opossum::ValueSegment*::resize
 
 # This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning
 race:^opossum::TableStatistics::from_table

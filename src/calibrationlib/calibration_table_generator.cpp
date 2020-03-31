@@ -1,5 +1,4 @@
 #include "calibration_table_generator.hpp"
-#include "constant_mappings.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

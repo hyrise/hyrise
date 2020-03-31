@@ -56,7 +56,7 @@ class TransactionManager : public Noncopyable {
   /**
    * Creates a new transaction context
    */
-  std::shared_ptr<TransactionContext> new_transaction_context();
+  std::shared_ptr<TransactionContext> new_transaction_context(const AutoCommit auto_commit = AutoCommit::No);
 
   /**
    * Returns the lowest snapshot-commit-id currently used by a transaction.

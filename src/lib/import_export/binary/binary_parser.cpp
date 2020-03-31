@@ -133,6 +133,13 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
       return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
     case EncodingType::Dictionary:
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
+    case EncodingType::FixedStringDictionary:
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FixedStringDictionary>,
+                                                hana::type_c<ColumnDataType>)) {
+        return _import_fixed_string_dictionary_segment(file, row_count);
+      } else {
+        Fail("Unsupported data type for FixedStringDictionary encoding");
+      }
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
@@ -144,25 +151,21 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
-    default:
-      // This case happens if the read column type is not a valid EncodingType.
-      Fail("Cannot import column: invalid column type");
   }
+
+  Fail("Invalid EncodingType");
 }
 
 template <typename T>
 std::shared_ptr<ValueSegment<T>> BinaryParser::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
-  // TODO(unknown): Ideally _read_values would directly write into a pmr_concurrent_vector so that no conversion is
-  // needed
   if (is_nullable) {
-    const auto nullables = _read_values<bool>(file, row_count);
-    const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()},
-                                             pmr_concurrent_vector<bool>{nullables.begin(), nullables.end()});
+    auto nullables = _read_values<bool>(file, row_count);
+    auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
   } else {
-    const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()});
+    auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueSegment<T>>(std::move(values));
   }
 }
 
@@ -171,12 +174,21 @@ std::shared_ptr<DictionarySegment<T>> BinaryParser::_import_dictionary_segment(s
                                                                                ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  const auto null_value_id = dictionary_size;
   auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
 
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
-  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
+  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
+}
+
+std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_fixed_string_dictionary_segment(
+    std::ifstream& file, ChunkOffset row_count) {
+  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
+  const auto dictionary_size = _read_value<ValueID>(file);
+  auto dictionary = _import_fixed_string_vector(file, dictionary_size);
+  auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
+
+  return std::make_shared<FixedStringDictionarySegment<pmr_string>>(dictionary, attribute_vector);
 }
 
 template <typename T>
@@ -287,6 +299,13 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
+}
+
+std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
+  const auto string_length = _read_value<uint32_t>(file);
+  pmr_vector<char> values(string_length * count);
+  file.read(values.data(), values.size());
+  return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
 
 }  // namespace opossum

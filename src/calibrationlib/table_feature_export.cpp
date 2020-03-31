@@ -17,7 +17,7 @@ void TableFeatureExport::export_table(std::shared_ptr<const CalibrationTableWrap
 void TableFeatureExport::_export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
   const auto table_name = table_wrapper->get_name();
   const auto row_count = table_wrapper->get_table()->row_count();
-  const auto chunk_size = table_wrapper->get_table()->max_chunk_size();
+  const auto chunk_size = table_wrapper->get_table()->target_chunk_size();
 
   _table_csv_writer.set_value("TABLE_NAME", table_name);
   _table_csv_writer.set_value("ROW_COUNT", row_count);

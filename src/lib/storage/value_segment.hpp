@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "base_value_segment.hpp"
+#include "chunk.hpp"
 
 namespace opossum {
 
@@ -14,19 +15,11 @@ namespace opossum {
 template <typename T>
 class ValueSegment : public BaseValueSegment {
  public:
-  explicit ValueSegment(bool nullable = false);
-  explicit ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable = false);
+  explicit ValueSegment(bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
 
   // Create a ValueSegment with the given values.
-  explicit ValueSegment(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
-                        const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(const std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(std::vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(const std::vector<T>& values, std::vector<bool>& null_values,
-                        const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(std::vector<T>&& values, std::vector<bool>&& null_values,
-                        const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueSegment(pmr_vector<T>&& values);
+  explicit ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values);
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
@@ -49,17 +42,15 @@ class ValueSegment : public BaseValueSegment {
     return _values[chunk_offset];
   }
 
-  // Add a value to the end of the segment.
+  // Add a value to the end of the segment. Not thread-safe. May fail if ValueSegment was not initially created with
+  // sufficient capacity.
   void append(const AllTypeVariant& val) final;
-
-  // Allocate enough space to hold at least @param capacity entries
-  void reserve(const size_t capacity) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.
   // e.g. auto& values = segment.values(); and then: values.at(i); in your loop.
-  const pmr_concurrent_vector<T>& values() const;
-  pmr_concurrent_vector<T>& values();
+  const pmr_vector<T>& values() const;
+  pmr_vector<T>& values();
 
   // Return whether segment supports null values.
   bool is_nullable() const final;
@@ -68,11 +59,21 @@ class ValueSegment : public BaseValueSegment {
   // Throws exception if is_nullable() returns false
   // This is the preferred method to check a for a null value at a certain index.
   // Usually you need to access more than a single value anyway.
-  const pmr_concurrent_vector<bool>& null_values() const final;
-  pmr_concurrent_vector<bool>& null_values() final;
+  const pmr_vector<bool>& null_values() const final;
+
+  // Writing a vector<bool> is not thread-safe. By only exposing the vector as a const reference, we force people to go
+  // through this thread-safe method. By design, this does not take a bool argument. All entries are false (i.e., not
+  // NULL) by default. Setting them to false again is unnecessarily expensive and changing them from true to false
+  // should never be necessary.
+  void set_null_value(const ChunkOffset chunk_offset);
 
   // Return the number of entries in the segment.
   ChunkOffset size() const final;
+
+  // Resizes the ValueSegment, but does not allocate new memory. This is used by the Insert operator instead of
+  // immediately resizing the vector. The reason for that is that the thread sanitizer does not understand atomic
+  // resizes and our MVCC concept. As such, this method is part of tsan-ignore.txt.
+  void resize(const size_t size);
 
   // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
@@ -80,16 +81,12 @@ class ValueSegment : public BaseValueSegment {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 
  protected:
-  // We do not run into the problem of uninitialized tbb::concurrent_vector values as described here:
-  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
-  // This is because the visibility of newly inserted values is guarded by MVCC.
+  pmr_vector<T> _values;
+  std::optional<pmr_vector<bool>> _null_values;
 
-  pmr_concurrent_vector<T> _values;
-
-  // While a ValueSegment knows if it is nullable or not by looking at this optional, most other segment types
-  // (e.g. DictionarySegment) do not. For this reason, we need to store the nullable information separately
-  // in the table's definition.
-  std::optional<pmr_concurrent_vector<bool>> _null_values;
+  // Protects set_null_value. Does not need to be acquired for reads, as we expect modifications to vector<bool> to be
+  // atomic.
+  std::mutex _null_value_modification_mutex;
 };
 
 }  // namespace opossum

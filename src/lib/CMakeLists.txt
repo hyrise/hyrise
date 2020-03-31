@@ -110,6 +110,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/change_meta_table_node.cpp
+    logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
@@ -184,6 +186,8 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/change_meta_table.cpp
+    operators/change_meta_table.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -474,7 +478,12 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/pos_list.hpp
+    storage/pos_lists/abstract_pos_list.hpp
+    storage/pos_lists/abstract_pos_list.cpp
+    storage/pos_lists/entire_chunk_pos_list.hpp
+    storage/pos_lists/entire_chunk_pos_list.cpp
+    storage/pos_lists/rowid_pos_list.hpp
+    storage/pos_lists/rowid_pos_list.cpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
     storage/reference_segment.cpp
@@ -487,6 +496,8 @@ set(
     storage/run_length_segment/run_length_segment_iterable.hpp
     storage/segment_accessor.cpp
     storage/segment_accessor.hpp
+    storage/segment_access_counter.cpp
+    storage/segment_access_counter.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
     storage/segment_iterables/any_segment_iterable.cpp
@@ -564,6 +575,26 @@ set(
     utils/make_bimap.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
+    utils/meta_tables/abstract_meta_table.cpp
+    utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_chunk_sort_orders_table.cpp
+    utils/meta_tables/meta_chunk_sort_orders_table.hpp
+    utils/meta_tables/meta_chunks_table.cpp
+    utils/meta_tables/meta_chunks_table.hpp
+    utils/meta_tables/meta_columns_table.cpp
+    utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_plugins_table.cpp
+    utils/meta_tables/meta_plugins_table.hpp
+    utils/meta_tables/meta_segments_accurate_table.cpp
+    utils/meta_tables/meta_segments_accurate_table.hpp
+    utils/meta_tables/meta_segments_table.cpp
+    utils/meta_tables/meta_segments_table.hpp
+    utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_tables_table.cpp
+    utils/meta_tables/meta_tables_table.hpp
+    utils/meta_tables/segment_meta_data.cpp
+    utils/meta_tables/segment_meta_data.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -571,7 +602,10 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
-    utils/scoped_locking_ptr.hpp
+    utils/settings/abstract_setting.hpp
+    utils/settings/abstract_setting.cpp
+    utils/settings_manager.cpp
+    utils/settings_manager.hpp
     utils/singleton.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp
@@ -643,7 +677,7 @@ add_custom_target (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ENABLE_COVERAGE AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
+if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
@@ -664,7 +698,7 @@ set_source_files_properties(
 # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
-target_link_libraries_system_private(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
