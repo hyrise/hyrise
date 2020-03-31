@@ -214,7 +214,7 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
 
   std::cout << "G-test value: " << g_test << std::endl;
 
-  return abs(g_test) < distribution_threshold;
+  return fabs(g_test) < distribution_threshold;
 }
 
 template <typename T>
