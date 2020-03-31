@@ -172,9 +172,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                     }
                     return ExpressionVisitation::VisitArguments;
                 });
+              }
             }
             return LQPVisitation::VisitInputs;
-        }
       });
     }
 
