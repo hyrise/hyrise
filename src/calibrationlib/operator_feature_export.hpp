@@ -2,11 +2,51 @@
 
 #include <string>
 
-#include "constant_mappings.hpp"
 #include <operators/abstract_operator.hpp>
 #include "csv_writer.hpp"
 
 namespace opossum {
+
+namespace {
+    // TODO(Bouncner): use magic_enum.name when available
+    std::string to_string(const OperatorType op_type){
+      switch (op_type){
+        case OperatorType::Aggregate: return "Aggregate";
+        case OperatorType::Alias: return "Alias";
+        case OperatorType::ChangeMetaTable: return "ChangeMetaTable";
+        case OperatorType::Delete: return "Delete";
+        case OperatorType::Difference: return "Difference";
+        case OperatorType::Export: return "Export";
+        case OperatorType::GetTable: return "GetTable";
+        case OperatorType::Import: return "Import";
+        case OperatorType::IndexScan: return "IndexScan";
+        case OperatorType::Insert: return "Insert";
+        case OperatorType::JoinHash: return "JoinHash";
+        case OperatorType::JoinIndex: return "JoinIndex";
+        case OperatorType::JoinNestedLoop: return "JoinNestedLoop";
+        case OperatorType::JoinSortMerge: return "JoinSortMerge";
+        case OperatorType::JoinVerification: return "JoinVerification";
+        case OperatorType::Limit: return "Limit";
+        case OperatorType::Print: return "Print";
+        case OperatorType::Product: return "Product";
+        case OperatorType::Projection: return "Projection";
+        case OperatorType::Sort: return "Sort";
+        case OperatorType::TableScan: return "TableScan";
+        case OperatorType::TableWrapper: return "TableWrapper";
+        case OperatorType::UnionAll: return "UnionAll";
+        case OperatorType::UnionPositions: return "UnionPositions";
+        case OperatorType::Update: return "Update";
+        case OperatorType::Validate: return "Validate";
+        case OperatorType::CreateTable: return "CreateTable";
+        case OperatorType::CreatePreparedPlan: return "CreatePreparedPlan";
+        case OperatorType::CreateView: return "CreateView";
+        case OperatorType::DropTable: return "DropTable";
+        case OperatorType::DropView: return "DropView";
+        case OperatorType::Mock: return "Mock";
+      }
+    }
+}
+
 class OperatorFeatureExport {
  public:
   explicit OperatorFeatureExport(const std::string& path_to_dir);
@@ -38,7 +78,7 @@ class OperatorFeatureExport {
 
       if (const auto headers = _get_header(op_type)) {
         std::stringstream path;
-        path << _path_to_dir << "/" << op_type << ".csv";
+        path << _path_to_dir << "/" << to_string(op_type) << ".csv";
         csv_writers_per_operator.emplace(op_type, std::make_shared<CSVWriter>(CSVWriter(path.str(), *headers)));
       }
     }
