@@ -117,7 +117,7 @@ TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
     ASSERT_TRUE(statistic);
     const auto histogram = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(statistic->histogram);
     ASSERT_TRUE(histogram);
-    ASSERT_FALSE(histogram->is_uniformly_distributed(0.05));
+    ASSERT_TRUE(histogram->is_uniformly_distributed(0.05));
   }
 }
 
