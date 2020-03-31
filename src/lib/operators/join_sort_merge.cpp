@@ -67,9 +67,12 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
-  _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
-      _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+  resolve_data_type(left_column_type, [&](const auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    _impl = std::make_unique<JoinSortMergeImpl<ColumnDataType>>(
+        *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+        _primary_predicate.predicate_condition, _mode, _secondary_predicates);
+  });
 
   return _impl->_on_execute();
 }
@@ -109,8 +112,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
   // Contains the null value row ids if a join column is an outer join column
-  std::unique_ptr<PosList> _null_rows_left;
-  std::unique_ptr<PosList> _null_rows_right;
+  std::unique_ptr<RowIDPosList> _null_rows_left;
+  std::unique_ptr<RowIDPosList> _null_rows_right;
 
   const ColumnID _primary_left_column_id;
   const ColumnID _primary_right_column_id;
@@ -127,8 +130,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
+  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_left;
+  std::vector<std::shared_ptr<RowIDPosList>> _output_pos_lists_right;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -136,7 +139,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() = default;
-    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
+    TablePosition(size_t init_cluster, size_t init_index) : cluster{init_cluster}, index{init_index} {}
 
     size_t cluster;
     size_t index;
@@ -768,8 +771,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
       // Create output position lists
-      _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-      _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+      _output_pos_lists_left[cluster_number] = std::make_shared<RowIDPosList>();
+      _output_pos_lists_right[cluster_number] = std::make_shared<RowIDPosList>();
 
       // Avoid empty jobs for inner equi joins
       if (_mode == JoinMode::Inner && _primary_predicate_condition == PredicateCondition::Equals) {
@@ -807,36 +810,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Concatenates a vector of pos lists into a single new pos list.
-  **/
-  std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
-    auto output = std::make_shared<PosList>();
-
-    // Determine the required space
-    size_t total_size = 0;
-    for (auto& pos_list : pos_lists) {
-      total_size += pos_list->size();
-    }
-
-    // Move the entries over the output pos list
-    output->reserve(total_size);
-    for (auto& pos_list : pos_lists) {
-      output->insert(output->end(), pos_list->begin(), pos_list->end());
-    }
-
-    return output;
-  }
-
-  /**
   * Adds the segments from an input table to the output table
   **/
   void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                            const std::shared_ptr<const PosList>& pos_list) {
+                            const std::shared_ptr<const RowIDPosList>& pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the segment data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
         // Create a pos_list referencing the original segment instead of the reference segment
+        // TODO(anyone): consider caching of dereferenced pos lists (as done in the hash join) when derefencing
+        //               becomes a bottleneck here.
         auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
@@ -865,10 +849,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference segment entries into a pos list pointing to the original table.
   * This is done because there should not be any reference segments referencing reference segments.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
-                                                 const std::shared_ptr<const PosList>& pos_list) {
+  std::shared_ptr<AbstractPosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table,
+                                                         ColumnID column_id,
+                                                         const std::shared_ptr<const AbstractPosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
-    auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+    auto input_pos_lists = std::vector<std::shared_ptr<const AbstractPosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       auto base_segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
       auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
@@ -876,8 +861,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     // Get the row ids that are referenced
-    auto new_pos_list = std::make_shared<PosList>();
-    for (const auto& row : *pos_list) {
+    auto new_pos_list = std::make_shared<RowIDPosList>();
+    for (const auto row : *pos_list) {
       if (row.is_null()) {
         new_pos_list->push_back(NULL_ROW_ID);
       } else {
@@ -910,31 +895,80 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     _perform_join();
 
-    // merge the pos lists into single pos lists
-    auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
-    auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
+    if (include_null_left || include_null_right) {
+      auto null_output_left = std::make_shared<RowIDPosList>();
+      auto null_output_right = std::make_shared<RowIDPosList>();
 
-    // Add the outer join rows which had a null value in their join column
-    if (include_null_left) {
-      for (auto row_id_left : *_null_rows_left) {
-        output_left->push_back(row_id_left);
-        output_right->push_back(NULL_ROW_ID);
+      // Add the outer join rows which had a null value in their join column
+      if (include_null_left) {
+        null_output_left->reserve(_null_rows_left->size());
+        null_output_right->insert(null_output_right->end(), _null_rows_left->size(), NULL_ROW_ID);
+        for (const auto& row_id_left : *_null_rows_left) {
+          null_output_left->push_back(row_id_left);
+        }
+      }
+      if (include_null_right) {
+        null_output_left->insert(null_output_left->end(), _null_rows_right->size(), NULL_ROW_ID);
+        null_output_right->reserve(_null_rows_right->size());
+        for (const auto& row_id_right : *_null_rows_right) {
+          null_output_right->push_back(row_id_right);
+        }
+      }
+
+      DebugAssert(null_output_left->size() == null_output_right->size(),
+                  "Null positions lists are expected to be of equal length.");
+      if (!null_output_left->empty()) {
+        _output_pos_lists_left.push_back(null_output_left);
+        _output_pos_lists_right.push_back(null_output_right);
       }
     }
-    if (include_null_right) {
-      for (auto row_id_right : *_null_rows_right) {
-        output_left->push_back(NULL_ROW_ID);
-        output_right->push_back(row_id_right);
+
+    // Intermediate structure for output chunks (to avoid concurrent appending to table)
+    std::vector<std::shared_ptr<Chunk>> output_chunks(_output_pos_lists_left.size());
+
+    // Threshold of expected rows per partition over which parallel output jobs are spawned.
+    constexpr auto PARALLEL_OUTPUT_THRESHOLD = 10'000;
+
+    // Determine if writing output in parallel is necessary.
+    // As partitions ought to be roughly equally sized, looking at the first should be sufficient.
+    const auto first_output_size = _output_pos_lists_left[0]->size();
+    const auto write_output_concurrently = _cluster_count > 1 && first_output_size > PARALLEL_OUTPUT_THRESHOLD;
+
+    std::vector<std::shared_ptr<AbstractTask>> output_jobs;
+    output_jobs.reserve(_output_pos_lists_left.size());
+    for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
+      if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
+        continue;
+      }
+
+      auto write_output_chunk = [this, pos_list_id, &output_chunks] {
+        Segments segments;
+        _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
+        _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
+        output_chunks[pos_list_id] = std::make_shared<Chunk>(std::move(segments));
+      };
+
+      if (write_output_concurrently) {
+        auto job = std::make_shared<JobTask>(write_output_chunk);
+        output_jobs.push_back(job);
+        output_jobs.back()->schedule();
+      } else {
+        write_output_chunk();
       }
     }
 
-    // Add the segments from both input tables to the output
-    Segments output_segments;
-    _add_output_segments(output_segments, _sort_merge_join.input_table_left(), output_left);
-    _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
+    if (write_output_concurrently) {
+      // Wait for all chunk creation tasks to finish
+      Hyrise::get().scheduler()->wait_for_tasks(output_jobs);
+    }
 
-    // Build the output_table with one Chunk
-    return _sort_merge_join._build_output_table({std::make_shared<Chunk>(output_segments)});
+    // Remove empty chunks that occur due to empty radix clusters or not matching tuples of clusters.
+    output_chunks.erase(
+        std::remove_if(output_chunks.begin(), output_chunks.end(),
+                       [](const auto& output_chunk) { return !output_chunk || output_chunk->size() == 0; }),
+        output_chunks.end());
+
+    return _sort_merge_join._build_output_table(std::move(output_chunks));
   }
 };
 

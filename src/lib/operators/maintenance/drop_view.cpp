@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-DropView::DropView(const std::string& view_name, const bool if_exists)
-    : AbstractReadOnlyOperator(OperatorType::DropView), view_name(view_name), if_exists(if_exists) {}
+DropView::DropView(const std::string& init_view_name, const bool init_if_exists)
+    : AbstractReadOnlyOperator(OperatorType::DropView), view_name(init_view_name), if_exists(init_if_exists) {}
 
 const std::string& DropView::name() const {
   static const auto name = std::string{"DropView"};

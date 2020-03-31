@@ -15,18 +15,18 @@ namespace opossum {
 class StorageChunkTest : public BaseTest {
  protected:
   void SetUp() override {
-    vs_int = make_shared_by_data_type<BaseValueSegment, ValueSegment>(DataType::Int);
-    vs_int->append(4);  // check for vs_ as well
+    vs_int = std::make_shared<ValueSegment<int>>();
+    vs_int->append(4);
     vs_int->append(6);
     vs_int->append(3);
 
-    vs_str = make_shared_by_data_type<BaseValueSegment, ValueSegment>(DataType::String);
+    vs_str = std::make_shared<ValueSegment<pmr_string>>();
     vs_str->append("Hello,");
     vs_str->append("world");
     vs_str->append("!");
 
-    ds_int = encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
-    ds_str = encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
+    ds_int = ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
+    ds_str = ChunkEncoder::encode_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
     Segments empty_segments;
     empty_segments.push_back(std::make_shared<ValueSegment<int32_t>>());
@@ -79,20 +79,15 @@ TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
 
 TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
   auto mvcc_data = std::make_shared<MvccData>(3, 0);
-  mvcc_data->begin_cids = {1, 2, 3};
+  mvcc_data->set_begin_cid(0, 1);
+  mvcc_data->set_begin_cid(1, 2);
+  mvcc_data->set_begin_cid(2, 3);
 
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
   chunk->finalize();
 
-  auto mvcc_data_chunk = chunk->get_scoped_mvcc_data_lock();
+  auto mvcc_data_chunk = chunk->mvcc_data();
   EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
-}
-
-TEST_F(StorageChunkTest, UnknownColumnType) {
-  // Exception will only be thrown in debug builds
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-  auto wrapper = []() { make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Null); };
-  EXPECT_THROW(wrapper(), std::logic_error);
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {

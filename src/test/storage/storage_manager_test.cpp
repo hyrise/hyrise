@@ -41,6 +41,18 @@ TEST_F(StorageManagerTest, AddTableTwice) {
                std::exception);
 }
 
+TEST_F(StorageManagerTest, StatisticCreationOnAddTable) {
+  auto& sm = Hyrise::get().storage_manager;
+  sm.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+
+  const auto table = sm.get_table("int_float");
+  EXPECT_EQ(table->table_statistics()->row_count, 3.0f);
+  const auto chunk = table->get_chunk(ChunkID{0});
+  EXPECT_TRUE(chunk->pruning_statistics().has_value());
+  EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type, DataType::Int);
+  EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type, DataType::Float);
+}
+
 TEST_F(StorageManagerTest, GetTable) {
   auto& sm = Hyrise::get().storage_manager;
   auto t3 = sm.get_table("first_table");

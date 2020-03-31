@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
+#include "storage/encoding_test.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
@@ -57,7 +58,7 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
     }
     return SegmentEncodingSpec{EncodingType::Unencoded};
   };
-  std::transform(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(),
+  std::transform(std::begin(all_segment_encoding_specs), std::end(all_segment_encoding_specs),
                  std::back_inserter(supported_segment_encodings), replace_unsupporting_encoding_types);
 
   std::vector<ColumnSpecification> column_specifications;

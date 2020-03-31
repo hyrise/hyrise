@@ -17,6 +17,10 @@ TEST_F(CsvParserTest, SingleFloatColumn) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
+TEST_F(CsvParserTest, WindowsEncoding) {
+  EXPECT_THROW(CsvParser::parse("resources/test_data/csv/float_crlf.csv"), std::exception);
+}
+
 TEST_F(CsvParserTest, FloatIntTable) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int.csv");
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", 2);
@@ -100,18 +104,18 @@ TEST_F(CsvParserTest, ChunkSize) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv", ChunkOffset{20});
 
   // check if chunk_size property is correct
-  EXPECT_EQ(table->max_chunk_size(), 20U);
+  EXPECT_EQ(table->target_chunk_size(), 20U);
 
   // check if actual chunk_size is correct
   EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 20U);
   EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 20U);
 }
 
-TEST_F(CsvParserTest, MaxChunkSize) {
+TEST_F(CsvParserTest, TargetChunkSize) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large_chunksize_max.csv", Chunk::DEFAULT_SIZE);
 
-  // check if chunk_size property is correct (maximum chunk size)
-  EXPECT_EQ(table->max_chunk_size(), Chunk::DEFAULT_SIZE);
+  // check if chunk_size property is correct (target chunk size)
+  EXPECT_EQ(table->target_chunk_size(), Chunk::DEFAULT_SIZE);
 
   // check if actual chunk_size and chunk_count is correct
   EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 100U);

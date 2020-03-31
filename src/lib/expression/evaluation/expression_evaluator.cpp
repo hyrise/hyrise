@@ -303,7 +303,7 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
   const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
-  auto result_values = std::vector<ExpressionEvaluator::Bool>(result_size, 0);
+  auto result_values = pmr_vector<ExpressionEvaluator::Bool>(result_size, 0);
 
   /**
    * Three different kinds of LIKE are considered for performance reasons and avoid redundant creation of the
@@ -353,7 +353,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_like_ex
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(const IsNullExpression& expression) {
-  std::vector<ExpressionEvaluator::Bool> result_values;
+  pmr_vector<ExpressionEvaluator::Bool> result_values;
 
   _resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
     result_values.resize(view.size());
@@ -384,8 +384,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   const auto& left_expression = *in_expression.value();
   const auto& right_expression = *in_expression.set();
 
-  std::vector<ExpressionEvaluator::Bool> result_values;
-  std::vector<bool> result_nulls;
+  pmr_vector<ExpressionEvaluator::Bool> result_values;
+  pmr_vector<bool> result_nulls;
 
   if (right_expression.type == ExpressionType::List) {
     const auto& list_expression = static_cast<const ListExpression&>(right_expression);
@@ -393,13 +393,13 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (list_expression.elements().empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     if (left_expression.data_type() == DataType::Null) {
       // `NULL [NOT] IN ...` is NULL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
-                                                                           std::vector<bool>{true});
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(pmr_vector<ExpressionEvaluator::Bool>{0},
+                                                                           pmr_vector<bool>{true});
     }
 
     /**
@@ -430,7 +430,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (type_compatible_elements.empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+          pmr_vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -446,7 +446,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
-          std::vector<LeftDataType> right_values(type_compatible_elements.size());
+          pmr_vector<LeftDataType> right_values(type_compatible_elements.size());
           auto right_values_idx = size_t{0};
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
@@ -630,8 +630,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
     const CaseExpression& case_expression) {
   const auto when = evaluate_expression_to_result<ExpressionEvaluator::Bool>(*case_expression.when());
 
-  std::vector<Result> values;
-  std::vector<bool> nulls;
+  pmr_vector<Result> values;
+  pmr_vector<bool> nulls;
 
   _resolve_to_expression_results(
       *case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
@@ -672,8 +672,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
    *    NULL -> Any type                    A nulled value of the requested type is returned.
    */
 
-  auto values = std::vector<Result>{};
-  auto nulls = std::vector<bool>{};
+  auto values = pmr_vector<Result>{};
+  auto nulls = pmr_vector<bool>{};
 
   _resolve_to_expression_result(*cast_expression.argument(), [&](const auto& argument_result) {
     using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
@@ -722,7 +722,7 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
 
   const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
-  std::vector<ExpressionEvaluator::Bool> result_values(subquery_result_tables.size());
+  pmr_vector<ExpressionEvaluator::Bool> result_values(subquery_result_tables.size());
 
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
@@ -768,12 +768,12 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     // NullValue can be evaluated to any type - it is then a null value of that type.
     // This makes it easier to implement expressions where a certain data type is expected, but a Null literal is
     // given. Think `CASE NULL THEN ... ELSE ...` - the NULL will be evaluated to be a bool.
-    std::vector<bool> nulls{};
+    pmr_vector<bool> nulls{};
     nulls.emplace_back(true);
-    return std::make_shared<ExpressionResult<Result>>(std::vector<Result>{{Result{}}}, nulls);
+    return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{Result{}}}, nulls);
   } else {
     Assert(value.type() == typeid(Result), "Can't evaluate ValueExpression to requested type Result");
-    return std::make_shared<ExpressionResult<Result>>(std::vector<Result>{{boost::get<Result>(value)}});
+    return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{boost::get<Result>(value)}});
   }
 }
 
@@ -829,7 +829,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
     const ExpressionResult<pmr_string>& from_result) {
   std::shared_ptr<ExpressionResult<pmr_string>> result;
 
-  std::vector<pmr_string> values(from_result.size());
+  pmr_vector<pmr_string> values(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(from_view.size());
@@ -848,8 +848,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_minus_expression(
     const UnaryMinusExpression& unary_minus_expression) {
-  std::vector<Result> values;
-  std::vector<bool> nulls;
+  pmr_vector<Result> values;
+  pmr_vector<bool> nulls;
 
   _resolve_to_expression_result(*unary_minus_expression.argument(), [&](const auto& argument_result) {
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
@@ -879,8 +879,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   // One ExpressionResult<Result> per row. Each ExpressionResult<Result> should have a single value
   const auto subquery_results = _prune_tables_to_expression_results<Result>(subquery_result_tables);
 
-  std::vector<Result> result_values(subquery_results.size());
-  std::vector<bool> result_nulls;
+  pmr_vector<Result> result_values(subquery_results.size());
+  pmr_vector<bool> result_nulls;
 
   // Materialize values
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(subquery_results.size());
@@ -977,7 +977,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
 
-  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
+  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
@@ -986,7 +986,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
 std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_segment(
     const AbstractExpression& expression) {
   std::shared_ptr<BaseValueSegment> segment;
-  std::vector<bool> nulls;
+  pmr_vector<bool> nulls;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
@@ -994,7 +994,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Segment from a NULL");
     } else {
-      std::vector<ColumnDataType> values(_output_row_count);
+      pmr_vector<ColumnDataType> values(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
            ++chunk_offset) {
@@ -1017,7 +1017,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
   return segment;
 }
 
-PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
+RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
   /**
    * Only Expressions returning a Bool can be evaluated to a PosList of matches.
    *
@@ -1028,7 +1028,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
    * All other Expression types have dedicated, hopefully fast, implementations.
    */
 
-  auto result_pos_list = PosList{};
+  auto result_pos_list = RowIDPosList{};
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
@@ -1216,8 +1216,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_logical
 template <typename Result, typename Functor>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_default_null_logic(
     const AbstractExpression& left_expression, const AbstractExpression& right_expression) {
-  std::vector<Result> values;
-  std::vector<bool> nulls;
+  pmr_vector<Result> values;
+  pmr_vector<bool> nulls;
 
   _resolve_to_expression_results(left_expression, right_expression, [&](const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
@@ -1262,8 +1262,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_row_count = _result_size(left.size(), right.size());
 
-      std::vector<bool> nulls(result_row_count);
-      std::vector<Result> values(result_row_count);
+      pmr_vector<bool> nulls(result_row_count);
+      pmr_vector<Result> values(result_row_count);
 
       for (auto row_idx = ChunkOffset{0}; row_idx < result_row_count; ++row_idx) {
         bool null;
@@ -1347,10 +1347,10 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
   return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
 
-std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
-                                                                    const std::vector<bool>& right) {
+pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vector<bool>& left,
+                                                                   const pmr_vector<bool>& right) {
   if (left.size() == right.size()) {
-    std::vector<bool> nulls(left.size());
+    pmr_vector<bool> nulls(left.size());
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](auto l, auto r) { return l || r; });
     return nulls;
   } else if (left.size() > right.size()) {
@@ -1358,7 +1358,7 @@ std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::v
                 "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
                 "rows (to represent a non-nullable operand)");
     if (!right.empty() && right.front()) {
-      return std::vector<bool>({true});
+      return pmr_vector<bool>({true});
     } else {
       return left;
     }
@@ -1367,7 +1367,7 @@ std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::v
                 "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
                 "rows (to represent a non-nullable operand)");
     if (!left.empty() && left.front()) {
-      return std::vector<bool>({true});
+      return pmr_vector<bool>({true});
     } else {
       return right;
     }
@@ -1384,32 +1384,42 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-    std::vector<ColumnDataType> values(segment.size());
+    pmr_vector<ColumnDataType> values;
+    pmr_vector<bool> nulls;
 
-    auto chunk_offset = ChunkOffset{0};
+    if (const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
+      // Shortcut
+      values = pmr_vector<ColumnDataType>{value_segment->values()};
+      if (_table->column_is_nullable(column_id)) {
+        nulls = pmr_vector<bool>{value_segment->null_values()};
+      }
+    } else {
+      values.resize(segment.size());
+      auto chunk_offset = ChunkOffset{0};
+      if (_table->column_is_nullable(column_id)) {
+        nulls.resize(segment.size());
+
+        segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+          if (position.is_null()) {
+            nulls[chunk_offset] = true;
+          } else {
+            values[chunk_offset] = position.value();
+          }
+          ++chunk_offset;
+        });
+      } else {
+        segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+          DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
+          values[chunk_offset] = position.value();
+          ++chunk_offset;
+        });
+      }
+    }
 
     if (_table->column_is_nullable(column_id)) {
-      std::vector<bool> nulls(segment.size());
-
-      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-        if (position.is_null()) {
-          nulls[chunk_offset] = true;
-        } else {
-          values[chunk_offset] = position.value();
-        }
-        ++chunk_offset;
-      });
-
       _segment_materializations[column_id] =
           std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
-
     } else {
-      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-        DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
-        values[chunk_offset] = position.value();
-        ++chunk_offset;
-      });
-
       _segment_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values));
     }
   });
@@ -1425,8 +1435,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
-  std::vector<pmr_string> result_values(row_count);
-  std::vector<bool> result_nulls(row_count);
+  pmr_vector<pmr_string> result_values(row_count);
+  pmr_vector<bool> result_nulls(row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(row_count); ++chunk_offset) {
     result_nulls[chunk_offset] =
@@ -1515,7 +1525,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   }
 
   // 3 - Concatenate the values
-  std::vector<pmr_string> result_values(result_size);
+  pmr_vector<pmr_string> result_values(result_size);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
@@ -1526,7 +1536,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   }
 
   // 4 - Optionally concatenate the nulls (i.e. one argument is null -> result is null) and return
-  std::vector<bool> result_nulls{};
+  pmr_vector<bool> result_nulls{};
   if (result_is_nullable) {
     result_nulls.resize(result_size, false);
     for (const auto& argument_result : argument_results) {
@@ -1562,8 +1572,8 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     Assert(table->column_data_type(ColumnID{0}) == data_type_from_type<Result>(),
            "Expected different DataType from Subquery");
 
-    std::vector<bool> result_nulls;
-    std::vector<Result> result_values(table->row_count());
+    pmr_vector<bool> result_nulls;
+    pmr_vector<Result> result_values(table->row_count());
 
     auto chunk_offset = ChunkOffset{0};
 

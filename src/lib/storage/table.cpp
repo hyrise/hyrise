@@ -24,20 +24,20 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             const std::optional<ChunkOffset> max_chunk_size, const UseMvcc use_mvcc)
+             const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
-      _max_chunk_size(type == TableType::Data ? max_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
+      _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
       _append_mutex(std::make_unique<std::mutex>()) {
-  // _max_chunk_size has no meaning if the table is a reference table.
-  DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
-  DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
+  DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
+  DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables");
+  DebugAssert(!target_chunk_size || *target_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
-    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt,
+    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc) {
   _chunks = {chunks.begin(), chunks.end()};
 
@@ -119,7 +119,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
-  if (!last_chunk || last_chunk->size() >= _max_chunk_size || !last_chunk->is_mutable()) {
+  if (!last_chunk || last_chunk->size() >= _target_chunk_size || !last_chunk->is_mutable()) {
     // One chunk reached its capacity and was not finalized before.
     if (last_chunk && last_chunk->is_mutable()) {
       last_chunk->finalize();
@@ -137,33 +137,51 @@ void Table::append_mutable_chunk() {
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable));
+      segments.push_back(
+          std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, _target_chunk_size));
     });
   }
 
   std::shared_ptr<MvccData> mvcc_data;
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(0, CommitID{0});
+    mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);
 }
 
 uint64_t Table::row_count() const {
-  uint64_t ret = 0;
+  if (_type == TableType::References && _cached_row_count && !HYRISE_DEBUG) {
+    return *_cached_row_count;
+  }
+
+  uint64_t row_count = 0;
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (chunk) ret += chunk->size();
+    if (chunk) row_count += chunk->size();
   }
-  return ret;
+
+  if (_type == TableType::References) {
+    // After being created, reference tables should never be changed again.
+    DebugAssert(!_cached_row_count || row_count == *_cached_row_count, "Size of reference table has changed");
+
+    // row_count() is called by AbstractOperator after the operator has finished to fill the performance data. As such,
+    // no synchronization is necessary.
+    _cached_row_count = row_count;
+  }
+
+  return row_count;
 }
 
 bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-ChunkOffset Table::max_chunk_size() const { return _max_chunk_size; }
+ChunkOffset Table::target_chunk_size() const {
+  DebugAssert(_type == TableType::Data, "target_chunk_size is only valid for data tables");
+  return _target_chunk_size;
+}
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");

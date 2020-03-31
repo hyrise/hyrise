@@ -10,9 +10,9 @@ namespace opossum {
 
 class StorageValueSegmentTest : public BaseTest {
  protected:
-  ValueSegment<int> vs_int;
-  ValueSegment<pmr_string> vs_str;
-  ValueSegment<double> vs_double;
+  ValueSegment<int> vs_int{false, 100};
+  ValueSegment<pmr_string> vs_str{false, 100};
+  ValueSegment<double> vs_double{false, 100};
 };
 
 TEST_F(StorageValueSegmentTest, GetSize) {
@@ -83,8 +83,8 @@ TEST_F(StorageValueSegmentTest, ArraySubscriptOperatorReturnsNullValue) {
 
 TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   /**
-   * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
-   * memory usage estimations
+   * As ValueSegments are pre-allocated, their size should not change when inserting data, except for strings placed
+   * on the heap.
    */
 
   const auto empty_usage_int = vs_int.memory_usage(MemoryUsageCalculationMode::Sampled);
@@ -102,13 +102,12 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
 
   vs_double.append(42.1337);
 
-  EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
-  EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_int, vs_int.memory_usage(MemoryUsageCalculationMode::Sampled));
+  EXPECT_EQ(empty_usage_double, vs_double.memory_usage(MemoryUsageCalculationMode::Sampled));
 
-  const auto min_expected_size = empty_usage_str + 2 * sizeof(pmr_string);
-  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), min_expected_size);
+  EXPECT_GE(vs_str.memory_usage(MemoryUsageCalculationMode::Sampled), empty_usage_str);
   // The short string will fit within the SSO capacity of a string and the long string will be placed on the heap.
-  EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), min_expected_size + longer_str.capacity() + 1);
+  EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), empty_usage_str + longer_str.capacity() + 1);
 }
 
 }  // namespace opossum

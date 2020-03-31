@@ -106,8 +106,8 @@ class AggregateSort : public AbstractAggregateOperator {
    * This is required because it depends on the <code>function</code> template parameter whether arguments are used or not.
    */
   template <typename AggregateType, AggregateFunction function>
-  void _set_and_write_aggregate_value(std::vector<AggregateType>& aggregate_results,
-                                      std::vector<bool>& aggregate_null_values, const uint64_t aggregate_group_index,
+  void _set_and_write_aggregate_value(pmr_vector<AggregateType>& aggregate_results,
+                                      pmr_vector<bool>& aggregate_null_values, const uint64_t aggregate_group_index,
                                       [[maybe_unused]] const uint64_t aggregate_index,
                                       std::optional<AggregateType>& current_primary_aggregate,
                                       std::vector<AggregateType>& current_secondary_aggregates,

@@ -19,7 +19,7 @@ enum class PredicateCondition;
  */
 class BaseAttributeStatistics {
  public:
-  explicit BaseAttributeStatistics(const DataType data_type);
+  explicit BaseAttributeStatistics(const DataType init_data_type);
   virtual ~BaseAttributeStatistics() = default;
 
   /**
