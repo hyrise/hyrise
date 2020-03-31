@@ -77,7 +77,7 @@ class GenericHistogramTest : public BaseTest {
 };
 
 TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
-  const auto equally_distributed_table = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
+  const auto equally_distributed_table = load_table("resources/test_data/tbl/int_equally_distributed.tbl");
   const auto not_equally_distributed_table = load_table("resources/test_data/tbl/int_not_quite_equal_distribution.tbl");
 
   const auto table_statistics_equal = TableStatistics::from_table(*equally_distributed_table);
