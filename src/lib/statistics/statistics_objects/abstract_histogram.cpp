@@ -201,10 +201,6 @@ float AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value
 
 template <typename T>
 bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_threshold) const {
-  if (bin_count() <= 1 || total_count() < 100) {
-    return true;
-  }
-
   // https://en.wikipedia.org/wiki/G-test
   auto expected_value = total_count() / total_distinct_count();
 
@@ -219,24 +215,6 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
   std::cout << "G-test value: " << g_test << std::endl;
 
   return abs(g_test) < distribution_threshold;
-
-  /*
-  std::vector<HistogramCountType> counts(bin_count());
-  for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
-    counts[bin_id] = bin_height(bin_id);
-    //std::cout << "Bin Height: " << bin_height(bin_id) << " of Bin: " << bin_id << std::endl;
-    //std::cout << "Bin Min: " << bin_minimum(bin_id) << " of Bin: " << bin_id << std::endl;
-    //std::cout << "Bin Max: " << bin_maximum(bin_id) << " of Bin: " << bin_id << std::endl;
-  }
-  std::sort(counts.begin(), counts.end());
-
-  HistogramCountType sum = 0;
-  for (BinID bin_id = BinID(1); bin_id < bin_count(); bin_id++) {
-    sum += counts[bin_id] - counts[bin_id-1];
-  }
-  HistogramCountType average = sum / (bin_count() - 1);
-  return average < distribution_threshold;
-  */
 }
 
 template <typename T>
