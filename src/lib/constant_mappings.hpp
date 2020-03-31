@@ -9,13 +9,13 @@
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 
+#include <synthetic_table_generator.hpp>
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
 #include "import_export/file_type.hpp"
 #include "storage/encoding_type.hpp"
-#include "types.hpp"
-#include <synthetic_table_generator.hpp>
 #include "storage/vector_compression/compressed_vector_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

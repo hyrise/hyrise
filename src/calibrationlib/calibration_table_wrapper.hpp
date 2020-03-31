@@ -10,9 +10,8 @@ class CalibrationTableWrapper {
  * Intended for communication from the CalibrationTableGenerator to the CalibrationLQPGenerator.
  */
  public:
-  CalibrationTableWrapper(
-      const std::shared_ptr<Table> table, const std::string& table_name,
-      const std::vector<ColumnDataDistribution> column_data_distribution_collection);
+  CalibrationTableWrapper(const std::shared_ptr<Table> table, const std::string& table_name,
+                          const std::vector<ColumnDataDistribution> column_data_distribution_collection);
 
   CalibrationTableWrapper(const std::shared_ptr<Table> table, const std::string& table_name);
 

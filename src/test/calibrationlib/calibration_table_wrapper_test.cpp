@@ -1,5 +1,5 @@
-#include "calibration_table_wrapper.hpp"
 #include "base_test.hpp"
+#include "calibration_table_wrapper.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

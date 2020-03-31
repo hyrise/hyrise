@@ -34,15 +34,14 @@ const boost::bimap<DataType, std::string> data_type_to_string =
       return map;
     });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string =
-    make_bimap<EncodingType, std::string>({
-        {EncodingType::Dictionary, "Dictionary"},
-        {EncodingType::RunLength, "RunLength"},
-        {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
-        {EncodingType::FrameOfReference, "FrameOfReference"},
-        {EncodingType::LZ4, "LZ4"},
-        {EncodingType::Unencoded, "Unencoded"},
-    });
+const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
+    {EncodingType::Dictionary, "Dictionary"},
+    {EncodingType::RunLength, "RunLength"},
+    {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
+    {EncodingType::FrameOfReference, "FrameOfReference"},
+    {EncodingType::LZ4, "LZ4"},
+    {EncodingType::Unencoded, "Unencoded"},
+});
 
 const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileType, std::string>(
     {{FileType::Tbl, "Tbl"}, {FileType::Csv, "Csv"}, {FileType::Binary, "Binary"}, {FileType::Auto, "Auto"}});
@@ -55,53 +54,52 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
 
 const boost::bimap<DataDistributionType, std::string> data_distribution_type_to_string =
     make_bimap<DataDistributionType, std::string>({
-    {DataDistributionType::Uniform, "Uniform"},
-    {DataDistributionType::NormalSkewed, "NormalSkewed"},
-    {DataDistributionType::Pareto, "Pareto"},
+        {DataDistributionType::Uniform, "Uniform"},
+        {DataDistributionType::NormalSkewed, "NormalSkewed"},
+        {DataDistributionType::Pareto, "Pareto"},
     });
 
-const boost::bimap<OperatorType, std::string> operator_type_to_string =
-    make_bimap<OperatorType, std::string>({
-        {OperatorType::Aggregate, "Aggregate" },
-        {OperatorType::Alias, "Alias" },
-        {OperatorType::Delete, "Delete" },
-        {OperatorType::Difference, "Difference" },
-        {OperatorType::Export, "Export" },
-        {OperatorType::GetTable, "GetTable" },
-        {OperatorType::Import, "Import" },
-        {OperatorType::IndexScan, "IndexScan" },
-        {OperatorType::Insert, "Insert" },
-        {OperatorType::JoinHash, "JoinHash" },
-        {OperatorType::JoinIndex, "JoinIndex" },
-        {OperatorType::JoinNestedLoop, "JoinNestedLoop" },
-        {OperatorType::JoinSortMerge, "JoinSortMerge" },
-        {OperatorType::JoinVerification, "JoinVerification" },
-        {OperatorType::Limit, "Limit" },
-        {OperatorType::Print, "Print" },
-        {OperatorType::Product, "Product" },
-        {OperatorType::Projection, "Projection" },
-        {OperatorType::Sort, "Sort" },
-        {OperatorType::TableScan, "TableScan" },
-        {OperatorType::TableWrapper, "TableWrapper" },
-        {OperatorType::UnionAll, "UnionAll" },
-        {OperatorType::UnionPositions, "UnionPositions" },
-        {OperatorType::Update, "Update" },
-        {OperatorType::Validate, "Validate" },
-        {OperatorType::CreateTable, "CreateTable" },
-        {OperatorType::CreatePreparedPlan, "CreatePreparedPlan" },
-        {OperatorType::CreateView, "CreateView" },
-        {OperatorType::DropTable, "DropTable" },
-        {OperatorType::DropView, "DropView" },
-        {OperatorType::Mock, "Mock" },
-    });
+const boost::bimap<OperatorType, std::string> operator_type_to_string = make_bimap<OperatorType, std::string>({
+    {OperatorType::Aggregate, "Aggregate"},
+    {OperatorType::Alias, "Alias"},
+    {OperatorType::Delete, "Delete"},
+    {OperatorType::Difference, "Difference"},
+    {OperatorType::Export, "Export"},
+    {OperatorType::GetTable, "GetTable"},
+    {OperatorType::Import, "Import"},
+    {OperatorType::IndexScan, "IndexScan"},
+    {OperatorType::Insert, "Insert"},
+    {OperatorType::JoinHash, "JoinHash"},
+    {OperatorType::JoinIndex, "JoinIndex"},
+    {OperatorType::JoinNestedLoop, "JoinNestedLoop"},
+    {OperatorType::JoinSortMerge, "JoinSortMerge"},
+    {OperatorType::JoinVerification, "JoinVerification"},
+    {OperatorType::Limit, "Limit"},
+    {OperatorType::Print, "Print"},
+    {OperatorType::Product, "Product"},
+    {OperatorType::Projection, "Projection"},
+    {OperatorType::Sort, "Sort"},
+    {OperatorType::TableScan, "TableScan"},
+    {OperatorType::TableWrapper, "TableWrapper"},
+    {OperatorType::UnionAll, "UnionAll"},
+    {OperatorType::UnionPositions, "UnionPositions"},
+    {OperatorType::Update, "Update"},
+    {OperatorType::Validate, "Validate"},
+    {OperatorType::CreateTable, "CreateTable"},
+    {OperatorType::CreatePreparedPlan, "CreatePreparedPlan"},
+    {OperatorType::CreateView, "CreateView"},
+    {OperatorType::DropTable, "DropTable"},
+    {OperatorType::DropView, "DropView"},
+    {OperatorType::Mock, "Mock"},
+});
 
 const boost::bimap<CompressedVectorType, std::string> compressed_vector_type_to_string =
-        make_bimap<CompressedVectorType, std::string>({
+    make_bimap<CompressedVectorType, std::string>({
         {CompressedVectorType::FixedSize4ByteAligned, "FixedSize4ByteAligned"},
         {CompressedVectorType::FixedSize2ByteAligned, "FixedSize2ByteAligned"},
         {CompressedVectorType::FixedSize1ByteAligned, "FixedSize1ByteAligned"},
         {CompressedVectorType::SimdBp128, "SimdBp128"},
-});
+    });
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
@@ -156,23 +154,20 @@ std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compre
 }
 
 std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution) {
-    stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
-    switch (column_data_distribution.distribution_type){
-        case DataDistributionType::Uniform:
-            stream << column_data_distribution.min_value << "_"
-                   << column_data_distribution.max_value;
-            break;
-        case DataDistributionType::NormalSkewed:
-            stream << column_data_distribution.skew_location << "_"
-                   << column_data_distribution.skew_scale << "_"
-                   << column_data_distribution.skew_shape;
-            break;
-        case DataDistributionType::Pareto:
-            stream << column_data_distribution.pareto_scale << "_"
-                   << column_data_distribution.pareto_shape;
-            break;
-    }
-    return stream;
+  stream << data_distribution_type_to_string.left.at(column_data_distribution.distribution_type) << "_";
+  switch (column_data_distribution.distribution_type) {
+    case DataDistributionType::Uniform:
+      stream << column_data_distribution.min_value << "_" << column_data_distribution.max_value;
+      break;
+    case DataDistributionType::NormalSkewed:
+      stream << column_data_distribution.skew_location << "_" << column_data_distribution.skew_scale << "_"
+             << column_data_distribution.skew_shape;
+      break;
+    case DataDistributionType::Pareto:
+      stream << column_data_distribution.pareto_scale << "_" << column_data_distribution.pareto_shape;
+      break;
+  }
+  return stream;
 }
 
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec spec) {

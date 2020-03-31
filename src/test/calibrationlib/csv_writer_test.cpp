@@ -1,9 +1,9 @@
+#include <fstream>
 #include <string>
 #include <utility>
-#include <fstream>
 
-#include "csv_writer.hpp"
 #include "base_test.hpp"
+#include "csv_writer.hpp"
 
 namespace opossum {
 
