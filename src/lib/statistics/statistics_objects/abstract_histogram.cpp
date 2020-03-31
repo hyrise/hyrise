@@ -218,7 +218,7 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
 
   std::cout << "G-test value: " << g_test << std::endl;
 
-  return g_test < distribution_threshold;
+  return abs(g_test) < distribution_threshold;
 
   /*
   std::vector<HistogramCountType> counts(bin_count());
