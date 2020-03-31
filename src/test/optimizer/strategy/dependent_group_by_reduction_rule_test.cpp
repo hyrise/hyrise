@@ -99,7 +99,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
     const auto expected_lqp = lqp->deep_copy();
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
-}  // TODO(Julian)
+}
 
 // Test that a removable column is removed when the single primary key column is present.
 // Check for the restored colum order.
@@ -129,7 +129,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   const auto expected_lqp = lqp->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // Test that a group by with the full (multi-column) unique constraint is not altered.
 TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
@@ -142,7 +142,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   const auto expected_lqp = lqp->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // Test adaption of multi-column and but inconsecutive column order primary key columns (table_c with {0,2})
 TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
@@ -158,7 +158,7 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // Test whether we remove the correct columns after joining (one column of a can be moved, none of b).
 // No projection added as root already is a projection.
@@ -191,7 +191,7 @@ TEST_F(DependentGroupByReductionRuleTest, AggregteButNoChanges) {
   const auto expected_lqp = lqp->deep_copy();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // A simple aggregate follows an optimized aggregate, column order of root node should not change. Thus no projection.
 TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate) {
@@ -208,7 +208,7 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // A sort follows an optimized aggregate. Operator following the aggregate does not change the column order itself, but
 // aggregate does. Hence, we need to add a projection.
@@ -227,7 +227,7 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // When a primary key column is nullable after an outer join, check that we do not modify the aggregate.
 TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
@@ -253,10 +253,10 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_e_0, column_e_1, column_e_2),
-    AggregateNode::make(expression_vector(column_e_2), expression_vector(any_(column_e_0), any_(column_e_1)), stored_table_node_e));  // NOLINT
+    AggregateNode::make(expression_vector(column_e_2), expression_vector(any_(column_e_1), any_(column_e_0)), stored_table_node_e));  // NOLINT
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 }  // namespace opossum
