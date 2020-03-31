@@ -10,6 +10,9 @@
 
 namespace opossum {
 
+/**
+ * This node type is used to represent set operation type of Except.
+ */
 class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNode {
  public:
   explicit ExceptNode(const SetOperationMode set_operation_mode);
