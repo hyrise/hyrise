@@ -113,10 +113,9 @@ TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
   }
 
   for (const auto column_statistic : string_table_statistics->column_statistics) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-    const auto statistic = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistic);
+    const auto statistic = std::dynamic_pointer_cast<AttributeStatistics<std::string*>>(column_statistic);
     ASSERT_TRUE(statistic);
-    const auto histogram = std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(statistic->histogram);
+    const auto histogram = std::dynamic_pointer_cast<AbstractHistogram<std::string*>>(statistic->histogram);
     ASSERT_TRUE(histogram);
     ASSERT_TRUE(histogram->is_uniformly_distributed(0.05));
   }
