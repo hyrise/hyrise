@@ -127,12 +127,14 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
                       } else {
                         const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                        //std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
-                        values.push_back(expression);
-                        auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
-                        expression->replaced_by = new_expression;
-                        expression = new_expression;
-                        parameter_id++;
+                        if (valexp->data_type() != DataType::Null) {
+                          //std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
+                          values.push_back(expression);
+                          auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
+                          expression->replaced_by = new_expression;
+                          expression = new_expression;
+                          parameter_id++;
+                        }
                       }
                     }
                     return ExpressionVisitation::VisitArguments;
