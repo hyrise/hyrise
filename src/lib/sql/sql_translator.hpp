@@ -42,7 +42,7 @@ struct SQLTranslationResult {
 };
 
 /**
- * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
+ * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParserResult.
  *
  * The elements of the vector returned by SQLTranslator::translate_parse_result(const hsql::SQLParserResult&)
  * point to the root/result nodes of the LQPs.
