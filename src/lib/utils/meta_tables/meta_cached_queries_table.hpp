@@ -7,9 +7,9 @@ namespace opossum {
 /**
  * This is a class for showing all cached SQL queries via a meta table.
  */
-class MetaQueriesTable : public AbstractMetaTable {
+class MetaCachedQueriesTable : public AbstractMetaTable {
  public:
-  MetaQueriesTable();
+  MetaCachedQueriesTable();
   const std::string& name() const final;
 
  protected:

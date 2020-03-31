@@ -1,19 +1,20 @@
-#include "meta_operators_table.hpp"
+#include "meta_cached_operators_table.hpp"
 
 #include "hyrise.hpp"
 
 namespace opossum {
 
-MetaOperatorsTable::MetaOperatorsTable()
-    : AbstractMetaTable(
-          TableColumnDefinitions{{"query_hash", DataType::String, false}, {"operator", DataType::String, false}}) {}
+MetaCachedOperatorsTable::MetaCachedOperatorsTable()
+    : AbstractMetaTable(TableColumnDefinitions{{"operator", DataType::String, false},
+                                               {"query_hash", DataType::String, false},
+                                               {"walltime", DataType::Long, false}}) {}
 
-const std::string& MetaOperatorsTable::name() const {
+const std::string& MetaCachedOperatorsTable::name() const {
   static const auto name = std::string{"cached_operators"};
   return name;
 }
 
-std::shared_ptr<Table> MetaOperatorsTable::_on_generate() const {
+std::shared_ptr<Table> MetaCachedOperatorsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
   if (!Hyrise::get().default_pqp_cache) return output_table;
 
@@ -30,11 +31,12 @@ std::shared_ptr<Table> MetaOperatorsTable::_on_generate() const {
   return output_table;
 }
 
-void MetaOperatorsTable::_process_pqp(const std::shared_ptr<const AbstractOperator>& op,
-                                      const std::string& query_hex_hash,
-                                      std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes,
-                                      const std::shared_ptr<Table>& output_table) const {
-  output_table->append({pmr_string{query_hex_hash}, pmr_string{op->name()}});
+void MetaCachedOperatorsTable::_process_pqp(
+    const std::shared_ptr<const AbstractOperator>& op, const std::string& query_hex_hash,
+    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_pqp_nodes,
+    const std::shared_ptr<Table>& output_table) const {
+  output_table->append({pmr_string{op->name()}, pmr_string{query_hex_hash},
+                        static_cast<int64_t>(op->performance_data().walltime.count())});
 
   visited_pqp_nodes.insert(op);
 

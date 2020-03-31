@@ -5,6 +5,8 @@
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/meta_cached_operators_table.hpp"
+#include "utils/meta_tables/meta_cached_queries_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -23,10 +25,11 @@ using MetaTableNames = std::vector<std::string>;
 class MetaTableManagerTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-    return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
-            std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
-            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>(),
-            std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
+    return {std::make_shared<MetaTablesTable>(),        std::make_shared<MetaColumnsTable>(),
+            std::make_shared<MetaChunksTable>(),        std::make_shared<MetaChunkSortOrdersTable>(),
+            std::make_shared<MetaSegmentsTable>(),      std::make_shared<MetaSegmentsAccurateTable>(),
+            std::make_shared<MetaPluginsTable>(),       std::make_shared<MetaSettingsTable>(),
+            std::make_shared<MetaCachedQueriesTable>(), std::make_shared<MetaCachedOperatorsTable>()};
   }
 
   static MetaTableNames meta_table_names() {

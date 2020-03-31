@@ -9,9 +9,9 @@ namespace opossum {
 /**
  * This is a class for showing all cached PQP operators via a meta table.
  */
-class MetaOperatorsTable : public AbstractMetaTable {
+class MetaCachedOperatorsTable : public AbstractMetaTable {
  public:
-  MetaOperatorsTable();
+  MetaCachedOperatorsTable();
   const std::string& name() const final;
 
  protected:

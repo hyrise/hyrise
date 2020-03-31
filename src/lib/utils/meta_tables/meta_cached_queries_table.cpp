@@ -1,20 +1,20 @@
-#include "meta_queries_table.hpp"
+#include "meta_cached_queries_table.hpp"
 
 #include "hyrise.hpp"
 
 namespace opossum {
 
-MetaQueriesTable::MetaQueriesTable()
+MetaCachedQueriesTable::MetaCachedQueriesTable()
     : AbstractMetaTable(TableColumnDefinitions{{"hash", DataType::String, false},
                                                {"frequency", DataType::Int, false},
-                                               {"query_string", DataType::String, false}}) {}
+                                               {"sql_string", DataType::String, false}}) {}
 
-const std::string& MetaQueriesTable::name() const {
+const std::string& MetaCachedQueriesTable::name() const {
   static const auto name = std::string{"cached_queries"};
   return name;
 }
 
-std::shared_ptr<Table> MetaQueriesTable::_on_generate() const {
+std::shared_ptr<Table> MetaCachedQueriesTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
   if (!Hyrise::get().default_pqp_cache) return output_table;
 
