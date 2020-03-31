@@ -213,14 +213,17 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution) {
   switch (column_data_distribution.distribution_type) {
     case DataDistributionType::Uniform:
-      stream << "Uniform" << "_" << column_data_distribution.min_value << "_" << column_data_distribution.max_value;
+      stream << "Uniform"
+             << "_" << column_data_distribution.min_value << "_" << column_data_distribution.max_value;
       break;
     case DataDistributionType::NormalSkewed:
-      stream << "Skewed" << "_" << column_data_distribution.skew_location << "_" << column_data_distribution.skew_scale << "_"
+      stream << "Skewed"
+             << "_" << column_data_distribution.skew_location << "_" << column_data_distribution.skew_scale << "_"
              << column_data_distribution.skew_shape;
       break;
     case DataDistributionType::Pareto:
-      stream << "Pareto" << "_" << column_data_distribution.pareto_scale << "_" << column_data_distribution.pareto_shape;
+      stream << "Pareto"
+             << "_" << column_data_distribution.pareto_scale << "_" << column_data_distribution.pareto_shape;
       break;
   }
   return stream;
