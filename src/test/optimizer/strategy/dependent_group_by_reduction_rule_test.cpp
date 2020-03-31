@@ -116,7 +116,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-} // TODO(Julian)
+}
 
 // Test that a non-primary-key column is not removed if the full unique constraint is not present in the group by list.
 TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {

@@ -98,7 +98,9 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     if(input_constraints->empty()) return LQPVisitation::VisitInputs;
 
     // --- Preparation ---
-    // Store copy of the aggregate's column expressions to later check if this order is the query's final column order
+    // Store a copy of the root's column expressions before applying the rule
+    const auto root_column_expressions = root_lqp->column_expressions();
+    // Also store a copy of the aggregate's column expressions to verify the output column order later on.
     const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
     auto group_by_list_changed = false;
 
@@ -133,9 +135,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // constraints might result in different group-by lists (depending on the number of columns of the constraint).
     // We stop as soon as one constraint successfully reduced the group-by list. There is no advantage in a second reduction if the first reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
     // place, we can ignore the remaining constraints.
-    for(size_t constraint_idx{0}; constraint_idx < input_constraints_sorted.size(); ++constraint_idx) {
-      const auto& constraint = input_constraints_sorted[constraint_idx];
-
+    for(const auto& constraint : input_constraints_sorted) {
       group_by_list_changed |= reduce_group_by_columns_for_constraint(constraint, fds, group_by_columns_non_nullable,
           aggregate_node);
       if (group_by_list_changed) break;
@@ -147,7 +147,6 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
     // by adding a projection with the initial column_references since we changed the column order by moving columns
     // from the group-by list to the aggregations.
-    const auto root_column_expressions = root_lqp->column_expressions();
     if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
         root_lqp->type != LQPNodeType::Projection) {
       const auto projection_node = std::make_shared<ProjectionNode>(root_column_expressions);
