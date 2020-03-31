@@ -22,7 +22,7 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * Generate a random pos_list of length pos_list_size with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
+std::shared_ptr<opossum::RowIDPosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
   std::random_device random_device;
   std::default_random_engine random_engine(random_device());
 
@@ -31,7 +31,7 @@ std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk
   std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(
       opossum::ChunkOffset{0}, static_cast<opossum::ChunkOffset>(referenced_table_chunk_size - 1));
 
-  auto pos_list = std::make_shared<opossum::PosList>();
+  auto pos_list = std::make_shared<opossum::RowIDPosList>();
   pos_list->reserve(pos_list_size);
 
   for (size_t pos_list_idx = 0; pos_list_idx < pos_list_size; ++pos_list_idx) {
@@ -128,7 +128,7 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
     std::sort(left.begin(), left.end());
     std::sort(right.begin(), right.end());
 
-    PosList result;
+    RowIDPosList result;
     result.reserve(std::min(left.size(), right.size()));
     std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
   }

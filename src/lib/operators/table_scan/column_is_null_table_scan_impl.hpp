@@ -24,15 +24,15 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
   std::string description() const override;
 
-  std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
+  std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) const override;
 
  protected:
-  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches) const;
+  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
   void _scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                      const OrderByMode order_by) const;
 
   // Optimized scan on ValueSegments
-  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches) const;
+  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
 
   /**
    * @defgroup Methods used for handling value segments
@@ -43,7 +43,7 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
   bool _matches_none(const BaseValueSegment& segment) const;
 
-  static void _add_all(const ChunkID chunk_id, PosList& matches, const size_t segment_size);
+  static void _add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size);
 
   /**@}*/
 

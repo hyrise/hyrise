@@ -257,7 +257,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmar
 
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+    const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
@@ -275,7 +275,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
 
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+    const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }

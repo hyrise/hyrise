@@ -184,6 +184,9 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
           can_prune = true;
         }
       }
+      // RangeFilters contain all the information stored in a MinMaxFilter. There is no point in having both.
+      DebugAssert(!segment_statistics.min_max_filter,
+                  "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
     }
 
     if (segment_statistics.min_max_filter) {

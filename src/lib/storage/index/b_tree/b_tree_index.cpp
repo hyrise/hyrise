@@ -16,8 +16,10 @@ BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& se
       _indexed_segment(segments_to_index.empty() ? nullptr : segments_to_index[0]) {
   Assert(static_cast<bool>(_indexed_segment), "BTreeIndex requires segments_to_index not to be empty.");
   Assert((segments_to_index.size() == 1), "BTreeIndex only works with a single segment.");
-  _impl = make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_indexed_segment->data_type(), _indexed_segment,
-                                                                       _null_positions);
+  resolve_data_type(_indexed_segment->data_type(), [&](const auto column_data_type) {
+    using ColumnDataType = typename decltype(column_data_type)::type;
+    _impl = std::make_shared<BTreeIndexImpl<ColumnDataType>>(_indexed_segment, _null_positions);
+  });
 }
 
 size_t BTreeIndex::_memory_consumption() const { return _impl->memory_consumption(); }

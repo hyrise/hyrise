@@ -451,7 +451,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       for (const auto& column_id : _groupby_column_ids) {
         auto table_wrapper = std::make_shared<TableWrapper>(sorted_table);
         table_wrapper->execute();
-        auto sort = std::make_shared<Sort>(table_wrapper, column_id);
+        auto sort = std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
         sort->execute();
         sorted_table = sort->get_output();
       }
