@@ -2,7 +2,7 @@
 #include <utility>
 #include <fstream>
 
-#include "../../calibration/csv_writer.hpp"
+#include "../../calibrationlib/csv_writer.hpp"
 #include "base_test.hpp"
 
 namespace opossum {

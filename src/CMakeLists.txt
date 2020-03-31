@@ -56,6 +56,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
+    ${PROJECT_SOURCE_DIR}/src/calibrationlib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugin/
 
@@ -89,10 +90,11 @@ if (ENABLE_CLANG_TIDY)
 endif()
 
 add_subdirectory(benchmarklib)
+add_subdirectory(calibrationlib)
+add_subdirectory(calibration)
 add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(plugins)
-add_subdirectory(calibration)
 
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")

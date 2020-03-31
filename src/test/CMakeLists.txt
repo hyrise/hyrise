@@ -14,13 +14,13 @@ set(
     benchmarklib/sqlite_add_indices_test.cpp
     benchmarklib/table_builder_test.cpp
     cache/cache_test.cpp
-    calibration/calibration_benchmark_runner_test.cpp
-    calibration/calibration_table_generator_test.cpp
-    calibration/calibration_table_wrapper_test.cpp
-    calibration/csv_writer_test.cpp
-        calibration/calibration_lqp_generator_test.cpp
-    calibration/operator_feature_export_test.cpp
-    calibration/table_feature_export_test.cpp
+    calibrationlib/calibration_benchmark_runner_test.cpp
+    calibrationlib/calibration_table_generator_test.cpp
+    calibrationlib/calibration_table_wrapper_test.cpp
+    calibrationlib/csv_writer_test.cpp
+    calibrationlib/calibration_lqp_generator_test.cpp
+    calibrationlib/operator_feature_export_test.cpp
+    calibrationlib/table_feature_export_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     concurrency/transaction_manager_test.cpp
@@ -254,7 +254,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
-target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyrise hyriseCalibrationLib ${LIBRARIES})
 target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

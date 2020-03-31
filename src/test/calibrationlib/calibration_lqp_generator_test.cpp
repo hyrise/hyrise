@@ -2,14 +2,10 @@
 
 #include "storage/table.hpp"
 #include <synthetic_table_generator.hpp>
-#include <synthetic_table_generator.cpp>
 #include <operators/get_table.hpp>
 
-#include "../../calibration/calibration_lqp_generator.hpp"
-#include "../../calibration/calibration_lqp_generator.cpp"
-
-#include "../../calibration/calibration_table_generator.hpp"
-#include "../../calibration/calibration_table_generator.cpp"
+#include "../../calibrationlib/calibration_lqp_generator.hpp"
+#include "../../calibrationlib/calibration_table_generator.hpp"
 
 
 namespace opossum {

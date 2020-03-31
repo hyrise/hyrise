@@ -8,11 +8,11 @@
 #include "scheduler/operator_task.hpp"
 #include "types.hpp"
 
-#include "calibration_benchmark_runner.hpp"
-#include "calibration_table_generator.hpp"
-#include "calibration_lqp_generator.hpp"
-#include "operator_feature_export.hpp"
-#include "table_feature_export.hpp"
+#include "../calibrationlib/calibration_benchmark_runner.hpp"
+#include "../calibrationlib/calibration_table_generator.hpp"
+#include "../calibrationlib/calibration_lqp_generator.hpp"
+#include "../calibrationlib/operator_feature_export.hpp"
+#include "../calibrationlib/table_feature_export.hpp"
 
 #include "benchmark_runner.hpp"
 
