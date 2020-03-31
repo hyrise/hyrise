@@ -2618,9 +2618,9 @@ TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
       "SELECT a FROM int_float2;");
 
   // clang-format off
-  const auto expected_lqp = 
-  ExceptNode::make(SetOperationMode::Positions, 
-    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float), 
+  const auto expected_lqp =
+  ExceptNode::make(SetOperationMode::Positions,
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
       ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
   // clang-format on
 
@@ -2634,9 +2634,9 @@ TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
       "SELECT a FROM int_float2;");
 
   // clang-format off
-  const auto expected_lqp = 
-  IntersectNode::make(SetOperationMode::Positions, 
-    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float), 
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Positions,
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
       ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
   // clang-format on
 
@@ -2653,10 +2653,10 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
 
   // clang-format off
   const auto expected_lqp =
-  IntersectNode::make(SetOperationMode::Positions, 
-    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int), 
-      ExceptNode::make(SetOperationMode::Positions, 
-        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int), 
+  IntersectNode::make(SetOperationMode::Positions,
+    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int),
+      ExceptNode::make(SetOperationMode::Positions,
+        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
   // clang-format on
 
