@@ -28,7 +28,7 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
  protected:
   void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
-  void _scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+  void _scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                      const OrderByMode order_by) const;
 
   // Optimized scan on ValueSegments

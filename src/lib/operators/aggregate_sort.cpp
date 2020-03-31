@@ -297,7 +297,8 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
         // This ensures that values that belong together are continuous.
         auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
         table_wrapper->execute();
-        auto sort = std::make_shared<Sort>(table_wrapper, column_id);
+        auto sort = std::make_shared<Sort>(table_wrapper,
+                                           std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
         sort->execute();
         single_chunk_table = sort->get_output();
         output_order_by = {std::pair<ColumnID, OrderByMode>(std::make_pair(column_id, OrderByMode::Ascending))};
