@@ -209,20 +209,12 @@ class Sort::SortImpl {
       }
     }
 
-    // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
-    // full and create the next one. Each chunk is filled row by row.
-    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
-                                                                                       _output_chunk_size);
-    auto output = materialization->execute();
-
-    const auto chunk_count = output->chunk_count();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = output->get_chunk(chunk_id);
-      chunk->finalize();
-      chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+    RowIDPosList pos_list{};
+    pos_list.reserve(_row_id_value_vector.size());
+    for (const auto& [row_id, _] : _row_id_value_vector) {
+      pos_list.emplace_back(row_id);
     }
-
-    return output;
+    return pos_list;
   }
 
  protected:
