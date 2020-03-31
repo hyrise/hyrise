@@ -78,12 +78,24 @@ class GenericHistogramTest : public BaseTest {
 
 TEST_F(GenericHistogramTest, IsUniformlyDistributed) {
   const auto equally_distributed_table = load_table("resources/test_data/tbl/int_equally_distributed.tbl");
+  const auto equally_distributed_table_2 = load_table("resources/test_data/tbl/int_equally_distributed_2.tbl");
   const auto not_equally_distributed_table = load_table("resources/test_data/tbl/int_not_quite_equal_distribution.tbl");
 
   const auto table_statistics_equal = TableStatistics::from_table(*equally_distributed_table);
+  const auto table_statistics_equal_2 = TableStatistics::from_table(*equally_distributed_table_2);
   const auto table_statistics_not_equal = TableStatistics::from_table(*not_equally_distributed_table);
   
   for (const auto column_statistic : table_statistics_equal->column_statistics) {
+    const auto statistic = std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(column_statistic);
+    ASSERT_TRUE(statistic);
+
+    const auto histogram = std::dynamic_pointer_cast<AbstractHistogram<int32_t>>(statistic->histogram);
+    ASSERT_TRUE(histogram);
+
+    ASSERT_TRUE(histogram->is_uniformly_distributed(0.1));
+  }
+
+  for (const auto column_statistic : table_statistics_equal_2->column_statistics) {
     const auto statistic = std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(column_statistic);
     ASSERT_TRUE(statistic);
 
