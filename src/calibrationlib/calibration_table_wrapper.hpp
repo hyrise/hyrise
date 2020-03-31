@@ -1,6 +1,7 @@
 #pragma once
 
 #include "storage/table.hpp"
+#include "synthetic_table_generator.hpp"
 
 namespace opossum {
 

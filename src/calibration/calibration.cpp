@@ -1,7 +1,3 @@
-#include <benchmark_config.hpp>
-#include <sql/sql_pipeline_builder.hpp>
-#include <tpch/tpch_benchmark_item_runner.hpp>
-#include <tpch/tpch_table_generator.hpp>
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -13,8 +9,6 @@
 #include "calibration_table_generator.hpp"
 #include "operator_feature_export.hpp"
 #include "table_feature_export.hpp"
-
-#include "benchmark_runner.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -49,7 +43,7 @@ int main() {
   // Execution of lpqs; In the future a good scheduler as replacement for following code would be awesome.
   for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::No);
+    const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
     // Execute LQP directly after generation

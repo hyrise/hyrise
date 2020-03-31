@@ -4,6 +4,7 @@
 
 #include <expression/expression_functional.hpp>
 #include <logical_query_plan/abstract_lqp_node.hpp>
+#include <operators/abstract_operator.hpp>
 
 #include "calibration_table_wrapper.hpp"
 #include "logical_query_plan/stored_table_node.hpp"

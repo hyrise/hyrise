@@ -12,5 +12,3 @@ target_link_libraries(
     hyrise
     hyriseCalibrationLib
 )
-
-target_link_libraries_system(hyriseCalibration nlohmann_json::nlohmann_json)

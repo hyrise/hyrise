@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include <operators/abstract_operator.hpp>
 #include "constant_mappings.hpp"
+#include <operators/abstract_operator.hpp>
 #include "csv_writer.hpp"
 
 namespace opossum {

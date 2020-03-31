@@ -4,7 +4,6 @@
 #include <expression/lqp_column_expression.hpp>
 #include <logical_query_plan/stored_table_node.hpp>
 #include <utils/assert.hpp>
-#include "constant_mappings.hpp"
 #include "csv_writer.hpp"
 #include "hyrise.hpp"
 #include "operator_feature_export.hpp"
