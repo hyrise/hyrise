@@ -205,6 +205,22 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
     return true;
   }
 
+  // https://en.wikipedia.org/wiki/G-test
+  auto expected_value = total_count() / total_distinct_count();
+
+  HistogramCountType sum = 0;
+  for (BinID bin_id = BinID(1); bin_id < bin_count(); bin_id++) {
+    auto observed_count = bin_height(bin_id) / bin_distinct_count(bin_id);
+    sum += (observed_count * log(observed_count / expected_value));
+  }
+
+  auto g_test = 2 * sum;
+
+  std::cout << "G-test value: " << g_test << std::endl;
+
+  return g_test < distribution_threshold;
+
+  /*
   std::vector<HistogramCountType> counts(bin_count());
   for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
     counts[bin_id] = bin_height(bin_id);
@@ -220,6 +236,7 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
   }
   HistogramCountType average = sum / (bin_count() - 1);
   return average < distribution_threshold;
+  */
 }
 
 template <typename T>
