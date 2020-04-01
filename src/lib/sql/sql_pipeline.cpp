@@ -269,6 +269,8 @@ SQLPipelineMetrics& SQLPipeline::metrics() {
 
 std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics) {
   auto total_sql_translate_nanos = std::chrono::nanoseconds::zero();
+  auto total_uniform_check_nanos = std::chrono::nanoseconds::zero();
+  auto total_cache_nanos = std::chrono::nanoseconds::zero();
   auto total_optimize_nanos = std::chrono::nanoseconds::zero();
   auto total_lqp_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_execute_nanos = std::chrono::nanoseconds::zero();
@@ -276,6 +278,8 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
 
   for (const auto& statement_metric : metrics.statement_metrics) {
     total_sql_translate_nanos += statement_metric->sql_translation_duration;
+    total_uniform_check_nanos += statement_metric->uniform_check_duration;
+    total_cache_nanos += statement_metric->cache_duration;
     total_optimize_nanos += statement_metric->optimization_duration;
     total_lqp_translate_nanos += statement_metric->lqp_translation_duration;
     total_execute_nanos += statement_metric->plan_execution_duration;
@@ -288,6 +292,8 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
   stream << "Execution info: [";
   stream << "PARSE: " << format_duration(metrics.parse_time_nanos) << ", ";
   stream << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
+  stream << "UNIFORM DISTRIBUTION CHECK: " << format_duration(total_uniform_check_nanos) << ", ";
+  stream << "CACHE: " << format_duration(total_cache_nanos) << ", ";
   stream << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
   stream << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
   stream << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
