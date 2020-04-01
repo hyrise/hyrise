@@ -70,9 +70,10 @@ class MetaCacheTablesTest : public BaseTest {
   }
 };
 
-class MultiCacheMetaTablesTest : public MetaCacheTablesTest, public ::testing::WithParamInterface<MetaTable> {};
+class MultiCacheMetaTablesTest : public MetaCacheTablesTest,
+                                 public ::testing::WithParamInterface<std::shared_ptr<AbstractMetaTable>> {};
 
-auto meta_cache_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
+auto meta_cache_table_test_formatter = [](const ::testing::TestParamInfo<std::shared_ptr<AbstractMetaTable>> info) {
   auto stream = std::stringstream{};
   stream << info.param->name();
 
