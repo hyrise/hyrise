@@ -54,6 +54,65 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
   EXPECT_EQ(2, performance_data->output_row_count);
 }
 
+TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
+  const TableColumnDefinitions column_definitions{{"a", DataType::Int, false}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  table->append({1});
+  table->append({2});
+  table->append({2});
+  table->append({3});
+
+  // Finalize last chunk
+  table->get_chunk(ChunkID{1})->finalize();
+
+  ChunkEncoder::encode_all_chunks(table);
+
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_sorted);
+  }
+
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 1));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(1, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_sorted);
+  }
+
+  // Check counters for sorted segment scanning
+  table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
+  table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(2, scan_performance_data.chunk_scans_sorted);
+  }
+}
+
 TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
   auto join = std::make_shared<JoinHash>(
       _table_wrapper, _table_wrapper, JoinMode::Inner,
@@ -133,9 +192,6 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
                        _table->column_is_nullable(ColumnID{0}),
                        _table->column_name(ColumnID{0})))},
       std::initializer_list<ColumnID>{ColumnID{1}});
-
-  
-
 
   aggregate->execute();
 
