@@ -16,7 +16,7 @@ class OperatorFeatureExport {
  private:
   const std::string& _path_to_dir;
 
-  [[nodiscard]] std::optional<const std::vector<std::string>> _get_header(const OperatorType type) const {
+  std::optional<const std::vector<std::string>> _get_header(const OperatorType type) const {
     std::stringstream ss;
     switch (type) {
       case OperatorType::TableScan:
@@ -30,7 +30,6 @@ class OperatorFeatureExport {
   const std::map<OperatorType, std::shared_ptr<CSVWriter>> _csv_writers = [&]() {
     auto csv_writers_per_operator = std::map<OperatorType, std::shared_ptr<CSVWriter>>();
 
-    // TODO(Martin): How to iterate over enums in a safe way?
     for (int op_type_id = static_cast<int>(OperatorType::Projection);
          op_type_id != static_cast<int>(OperatorType::Validate); ++op_type_id) {
       const auto op_type = static_cast<OperatorType>(op_type_id);
@@ -49,7 +48,7 @@ class OperatorFeatureExport {
   void _export_table_scan(std::shared_ptr<const AbstractOperator> op) const;
 
   // TODO(Bouncner): use magic_enum.name when available
-  std::string _map_operator_type(const OperatorType op_type) {
+  const std::string _map_operator_type(const OperatorType op_type) {
     switch (op_type) {
       case OperatorType::Aggregate:
         return "Aggregate";
