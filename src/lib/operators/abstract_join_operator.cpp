@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "constant_mappings.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -38,23 +39,35 @@ const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predic
 }
 
 std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
-  const auto column_name = [](const auto& table, const auto column_id) {
-    return table ? table->column_name(column_id) : "Column #"s + std::to_string(column_id);
+  const auto column_name = [&](const auto from_left, const auto column_id) {
+    const auto& input_table = from_left ? _input_left->get_output() : _input_right->get_output();
+    if (input_table) {
+      // Input table is still available, use name from there
+      return input_table->column_name(column_id);
+    }
+
+    if (lqp_node) {
+      // LQP is available, use column name from there
+      const auto& input_lqp_node = lqp_node->input(from_left ? LQPInputSide::Left : LQPInputSide::Right);
+      return input_lqp_node->column_expressions()[column_id]->as_column_name();
+    }
+
+    // Fallback - use column ID
+    return "Column #"s + std::to_string(column_id);
   };
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
   stream << name() << separator << "(" << _mode << " Join where "
-         << column_name(input_table_left(), _primary_predicate.column_ids.first) << " "
-         << _primary_predicate.predicate_condition << " "
-         << column_name(input_table_right(), _primary_predicate.column_ids.second);
+         << column_name(true, _primary_predicate.column_ids.first) << " " << _primary_predicate.predicate_condition
+         << " " << column_name(false, _primary_predicate.column_ids.second);
 
   // add information about secondary join predicates
   for (const auto& secondary_predicate : _secondary_predicates) {
-    stream << " AND " << column_name(input_table_left(), secondary_predicate.column_ids.first) << " "
+    stream << " AND " << column_name(true, secondary_predicate.column_ids.first) << " "
            << secondary_predicate.predicate_condition << " "
-           << column_name(input_table_right(), secondary_predicate.column_ids.second);
+           << column_name(false, secondary_predicate.column_ids.second);
   }
 
   stream << ")";

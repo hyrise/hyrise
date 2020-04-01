@@ -143,10 +143,10 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
            * constructor in a regular interval based on the null_ratio with true.
            */
-          if (column_specifications[column_index].null_ratio) {
+          if (column_specifications[column_index].null_ratio > 0.0f) {
             null_values.resize(chunk_size, false);
 
-            const double step_size = 1.0 / column_specifications[column_index].null_ratio.value();
+            const double step_size = 1.0 / column_specifications[column_index].null_ratio;
             double current_row_offset = 0.0;
             while (current_row_offset < chunk_size) {
               null_values[static_cast<size_t>(std::round(current_row_offset))] = true;
@@ -170,7 +170,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
 
           std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
-          if (column_specifications[column_index].null_ratio) {
+          if (column_specifications[column_index].null_ratio > 0.0f) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
                 create_typed_segment_values<ColumnDataType>(values), std::move(null_values));
           } else {

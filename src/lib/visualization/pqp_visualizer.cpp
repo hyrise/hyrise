@@ -67,7 +67,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 
     VizVertexInfo vertex_info = _default_vertex;
     vertex_info.shape = "record";
-    vertex_info.label = operator_breakdown_stream.str();
+    vertex_info.plain_label = operator_breakdown_stream.str();
 
     boost::add_vertex(vertex_info, _graph);
   }
@@ -139,19 +139,17 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
                                     const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  if (const auto& output = from->get_output()) {
+  const auto& performance_data = from->performance_data;
+  if (performance_data->executed && performance_data->has_output) {
     std::stringstream stream;
-
-    stream << std::to_string(output->row_count()) + " row(s)/";
-    stream << std::to_string(output->chunk_count()) + " chunk(s)/";
-    stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-
+    stream << std::to_string(performance_data->output_row_count) + " row(s)/";
+    stream << std::to_string(performance_data->output_chunk_count) + " chunk(s)";
     info.label = stream.str();
+  }
 
-    info.pen_width = output->row_count();
-    if (to->input_right() != nullptr) {
-      info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
-    }
+  info.pen_width = performance_data->output_row_count;
+  if (to->input_right() != nullptr) {
+    info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
   _add_edge(from, to, info);
@@ -181,9 +179,8 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   //   label = "=TITLE=" + first_line + "=/TITLE=" + label.substr(first_linebreak_position);
   // }
 
+  const auto total = op->performance_data->walltime;
   if (op->get_output()) {
-    auto total = op->performance_data->walltime;
-
     std::stringstream ss;
     if (dynamic_cast<StagedOperatorPerformanceData*>(op->performance_data.get())) {
       auto& staged_performance_data = dynamic_cast<StagedOperatorPerformanceData&>(*op->performance_data);
@@ -201,13 +198,20 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
       description_label = splitted_description_label.first + "=DESC=" + *splitted_description_label.second + "=/DESC=";
     }
     label += description_label;
-
-    info.pen_width = total.count();
   }
 
-  _duration_by_operator_name[op->name()] += op->performance_data->walltime;
+  const auto& performance_data = op->performance_data;
+  if (performance_data->executed) {
+    label += "\n\n" + format_duration(total);
+    info.pen_width = total.count();
+  } else {
+    info.pen_width = 1;
+  }
 
-  info.label = label;
+  _duration_by_operator_name[op->name()] += performance_data->walltime;
+
+  info.plain_label = label;
+  info.formatted_labels.emplace_back("TITLE");
   _add_vertex(op, info);
 }
 

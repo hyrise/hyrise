@@ -29,7 +29,8 @@ struct VizGraphInfo {
 
 struct VizVertexInfo {
   uintptr_t id;
-  std::string label;
+  std::string plain_label;
+  std::vector<std::string> formatted_labels;
   std::string color = "white";
   std::string font_color = "white";
   std::string shape = "rectangle";
@@ -75,7 +76,7 @@ class AbstractVisualizer {
     // Add vertex properties
     _add_property("node_id", &VizVertexInfo::id);
     _add_property("color", &VizVertexInfo::color);
-    _add_property("label", &VizVertexInfo::label);
+    _add_property("label", &VizVertexInfo::plain_label);
     _add_property("shape", &VizVertexInfo::shape);
     _add_property("fontcolor", &VizVertexInfo::font_color);
     _add_property("penwidth", &VizVertexInfo::pen_width);
@@ -92,13 +93,13 @@ class AbstractVisualizer {
 
   virtual ~AbstractVisualizer() = default;
 
-  class label_writer2 {
-  public:
-    template <class VertexOrEdge>
-    void operator()(std::ostream& out, const VertexOrEdge& v) const {
-      out << "[label=<" << v << ">]";
-    }
-  };
+  // class label_writer2 {
+  // public:
+  //   template <class VertexOrEdge>
+  //   void operator()(std::ostream& out, const VertexOrEdge& v) const {
+  //     out << "[label=<" << v << ">]";
+  //   }
+  // };
 
   template <class Label>
   class label_writer {
@@ -122,7 +123,9 @@ class AbstractVisualizer {
     } else {
       // Escape HTML characters as we use the "HTML-like" output of graphviz. Otherise, descriptions such as
       // `shipdate <= 1990-11-17` are parsed as HTML tags.
+      std::cout  << s << std::endl;
       boost::algorithm::replace_all(s, "<", "&lt;");
+      std::cout  << s << std::endl;
       boost::algorithm::replace_all(s, ">", "&gt;");
       boost::algorithm::replace_all(s, "&", "&amp;");
       boost::algorithm::replace_all(s, "\"", "&quot;");
@@ -133,8 +136,8 @@ class AbstractVisualizer {
       boost::algorithm::replace_all(s, "\\n", "<BR/>");
 
       // Rewrite markup-like notation to HTML-like for graphviz
-      boost::algorithm::replace_all(s, "=TITLE=", "<FONT POINT-SIZE=\"17\">");
-      boost::algorithm::replace_all(s, "=/TITLE=", "</FONT>");
+      boost::algorithm::replace_all(s, "=TITLE=", "<B><FONT POINT-SIZE=\"17\">");
+      boost::algorithm::replace_all(s, "=/TITLE=", "</FONT></B>");
       boost::algorithm::replace_all(s, "=DESC=", "<FONT POINT-SIZE=\"10\">");
       boost::algorithm::replace_all(s, "=/DESC=", "</FONT>");
 
@@ -224,16 +227,18 @@ class AbstractVisualizer {
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
       }
-      if (max_unnormalized_width == 0.0) {
-        // All widths are the same, don't do anything
-        return;
-      }
 
       double offset = max_unnormalized_width - (max_normalized_width - 1.0);
 
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         auto& pen_width = _graph[*iter].pen_width;
-        pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
+        if (max_unnormalized_width == 0.0) {
+          // All widths are the same, set pen width to 1
+          pen_width = 1.0;
+        } else {
+          // Set normalized pen width
+          pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
+        }
       }
 #pragma GCC diagnostic pop
     };
@@ -276,7 +281,7 @@ class AbstractVisualizer {
   void _add_vertex(const T& vertex, const std::string& label = "", const WrapLabel wrap_label = WrapLabel::On) {
     VizVertexInfo info = _default_vertex;
     info.id = _get_id(vertex);
-    info.label = label;
+    info.plain_label = label;
     _add_vertex(vertex, info, wrap_label);
   }
 
@@ -290,7 +295,7 @@ class AbstractVisualizer {
     }
 
     vertex_info.id = vertex_id;
-    if (wrap_label == WrapLabel::On) vertex_info.label = _wrap_label(vertex_info.label);
+    if (wrap_label == WrapLabel::On) vertex_info.plain_label = _wrap_label(vertex_info.plain_label);
     boost::add_vertex(vertex_info, _graph);
   }
 

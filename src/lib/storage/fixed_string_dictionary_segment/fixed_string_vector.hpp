@@ -20,6 +20,10 @@ class FixedStringVector {
   // Create a FixedStringVector of FixedStrings with given values
   FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator = {});
 
+  // Create a FixedStringVector of FixedStrings with existing data
+  FixedStringVector(pmr_vector<char> chars, const size_t string_length)
+      : _string_length(string_length), _chars{std::move(chars)}, _size(_chars.size() / string_length) {}
+
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <typename Iter>
   FixedStringVector(Iter first, Iter last, const size_t string_length, const PolymorphicAllocator<char>& allocator = {})
@@ -62,13 +66,15 @@ class FixedStringVector {
   ReverseIterator rend() noexcept;
 
   // Return a pointer to the underlying memory
-  char* data();
+  const char* data() const;
 
   // Return the number of entries in the vector.
   size_t size() const;
 
   // Return the amount of allocated memory
   size_t capacity() const;
+
+  size_t string_length() const;
 
   // Request the vector capacity to be at least enough to contain n elements
   void reserve(const size_t n);

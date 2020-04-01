@@ -51,12 +51,7 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
   auto& performance_data = table_scan->performance_data;
   EXPECT_GT(performance_data->walltime.count(), 0ul);
 
-  EXPECT_TRUE(performance_data->input_row_count_left);
-  EXPECT_EQ(3, *(performance_data->input_row_count_left));
-
-  EXPECT_FALSE(performance_data->input_row_count_right);
-
-  EXPECT_EQ(2, *(performance_data->output_row_count));
+  EXPECT_EQ(2, performance_data->output_row_count);
 }
 
 TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
