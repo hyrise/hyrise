@@ -136,7 +136,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                 using ColumnDataType = typename decltype(type)::type;
 
                 std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-                if (!statistics->histogram->is_uniformly_distributed(0.1)) {
+                if (!statistics->histogram->is_uniformly_distributed(1)) {
                   contains_non_uniform_distribution = true;
                 }
               });
