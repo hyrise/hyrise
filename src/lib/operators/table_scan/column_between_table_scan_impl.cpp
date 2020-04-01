@@ -40,6 +40,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
     _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
+    ++chunk_scans_sorted;
   } else {
     // Select optimized or generic scanning implementation based on segment type
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
