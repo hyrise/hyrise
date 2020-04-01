@@ -630,6 +630,7 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
 
   EXPECT_EQ(for_segment->block_minima().size(), 1);  // single block
   EXPECT_EQ(for_segment->offset_values().size(), row_count);
+  EXPECT_TRUE(for_segment->null_values());
   EXPECT_EQ(for_segment->null_values()->size(), row_count);
 
   EXPECT_EQ((*for_segment->null_values())[0], false);
