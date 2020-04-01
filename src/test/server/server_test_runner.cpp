@@ -24,9 +24,6 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-    // Set scheduler so that the server can execute the tasks on separate threads.
-    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-
     auto server_runner = [](Server& server) { server.run(); };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
@@ -34,6 +31,9 @@ class ServerTestRunner : public BaseTest {
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
     std::remove(_export_filename.c_str());
+
+    // Wait to run the server and set the scheduler
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
   void TearDown() override {
@@ -55,9 +55,8 @@ class ServerTestRunner : public BaseTest {
   const std::string _export_filename = test_data_path + "server_test.bin";
 };
 
-TEST_F(ServerTestRunner, TestCacheInitialization) {
-  // Wait for the server to actually run
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+TEST_F(ServerTestRunner, TestCacheAndSchedulerInitialization) {
+  EXPECT_NE(std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler()), nullptr);
   EXPECT_NE(Hyrise::get().default_lqp_cache, nullptr);
   EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
 }
