@@ -213,8 +213,6 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
   std::optional<pmr_vector<bool>> null_values;
   if (null_values_size != 0) {
     null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
-  } else {
-    null_values = std::nullopt;
   }
 
   auto offset_values = _import_offset_value_vector(file, row_count, attribute_vector_width);
