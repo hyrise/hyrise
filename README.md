@@ -126,14 +126,17 @@ Contact: firstname.lastname@hpi.de
 -   Pascal    Führlich
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Ivan      Illic
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   David     Justen
+-   Youri     Kaminsky
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
 -   Sven      Lehmann
+-   Till      Lehmann
 -   Tom       Lichtenstein
 -   Daniel    Lindner
 -   Alexander Löser
@@ -157,6 +160,3 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
--   Ivan      Illic
--   Youri     Kaminsky
--   Till      Lehmann
