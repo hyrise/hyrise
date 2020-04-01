@@ -25,7 +25,6 @@ void Server::run() {
   // Set caches
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  std::cout << Hyrise::get().default_lqp_cache << std::endl;
 
   _accept_new_session();
   _io_service.run();

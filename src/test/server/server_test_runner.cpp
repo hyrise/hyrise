@@ -56,6 +56,8 @@ class ServerTestRunner : public BaseTest {
 };
 
 TEST_F(ServerTestRunner, TestCacheInitialization) {
+  // Wait for the server to actually run
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   EXPECT_NE(Hyrise::get().default_lqp_cache, nullptr);
   EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
 }
