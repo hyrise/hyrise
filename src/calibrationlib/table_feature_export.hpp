@@ -23,8 +23,7 @@ class TableFeatureExport {
   const std::string _column_meta_file_name = "column_meta";
   const std::string _segment_meta_file_name = "segment_meta";
 
-  const std::vector<std::string> _get_header(
-      const TableFeatureExportType type) const {  // TODO(Martin): How to make this constexpr?
+  const std::vector<std::string> _get_header(const TableFeatureExportType type) const {
     switch (type) {
       case TableFeatureExportType::TABLE:
         return std::vector<std::string>({"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"});
