@@ -149,7 +149,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       return LQPVisitation::VisitInputs;
     });
 
-    std::cout << "contains_non_uniform_distribution: " << contains_non_uniform_distribution << std::endl;
+    std::cout << contains_non_uniform_distribution;
 
     const auto done_uniform_check = std::chrono::high_resolution_clock::now();
     _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
