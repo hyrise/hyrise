@@ -111,7 +111,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
 
     if (!segment_contains_null_values) {
       return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::nullopt,
-                                                          std::move(compressed_offset_values)); 
+                                                          std::move(compressed_offset_values));
     }
     return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::move(null_values),
                                                         std::move(compressed_offset_values));

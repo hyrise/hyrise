@@ -8,7 +8,8 @@
 namespace opossum {
 
 template <typename T, typename U>
-FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima, std::optional<pmr_vector<bool>> null_values,
+FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima,
+                                                       std::optional<pmr_vector<bool>> null_values,
                                                        std::unique_ptr<const BaseCompressedVector> offset_values)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
@@ -58,7 +59,7 @@ std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator
   if (_null_values) {
     null_values = pmr_vector<bool>{*_null_values, alloc};
   }
-  
+
   auto copy = std::make_shared<FrameOfReferenceSegment>(std::move(new_block_minima), std::move(null_values),
                                                         std::move(new_offset_values));
   copy->access_counter = access_counter;
@@ -68,7 +69,8 @@ std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator
 template <typename T, typename U>
 size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode) const {
   // MemoryUsageCalculationMode ignored since full calculation is efficient.
-  size_t segment_size = sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() + sizeof(_null_values);
+  size_t segment_size =
+      sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() + sizeof(_null_values);
 
   if (_null_values) {
     segment_size += _null_values->capacity() / CHAR_BIT;
