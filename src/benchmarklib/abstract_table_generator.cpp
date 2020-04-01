@@ -23,7 +23,7 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"index_duration", metrics.index_duration.count()}};
 }
 
-BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& table) : table(table) {}
+BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& init_table) : table(init_table) {}
 
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
@@ -100,7 +100,9 @@ void AbstractTableGenerator::generate_and_store() {
 
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
-      auto sort = std::make_shared<Sort>(table_wrapper, sort_column_id, order_by_mode, _benchmark_config->chunk_size);
+      auto sort = std::make_shared<Sort>(
+          table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, order_by_mode}},
+          _benchmark_config->chunk_size);
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
 

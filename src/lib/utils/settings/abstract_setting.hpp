@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.hpp"
+
 namespace opossum {
 
 /**

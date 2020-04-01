@@ -335,7 +335,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    initial_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   std::atomic_int successful_increments{0};
@@ -384,7 +384,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   // Really pessimistic, but at least 2 statements should have made it

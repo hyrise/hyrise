@@ -50,6 +50,6 @@ RUN apt-get update && apt-get install -y wget libssl-dev && apt-get clean \
     && wget https://github.com/Kitware/CMake/releases/download/v3.16.0/cmake-3.16.0.tar.gz \
     && tar xf cmake-3.16.0.tar.gz \
     && cd cmake-3.16.0 \
-    && ./configure && make -j && make install
+    && ./configure && make -j $(nproc) && make install
 
 ENV OPOSSUM_HEADLESS_SETUP=true
