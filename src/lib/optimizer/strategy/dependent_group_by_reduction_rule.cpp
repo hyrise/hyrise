@@ -93,9 +93,10 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     }
     auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-    // Early exit if there are no constraints
+    // Early exit if there are no constraints and/or functional dependencies
     const auto input_constraints = aggregate_node.left_input()->constraints();
-    if(input_constraints->empty()) return LQPVisitation::VisitInputs;
+    const auto fds = aggregate_node.functional_dependencies();
+    if(input_constraints->empty() || fds.empty()) return LQPVisitation::VisitInputs;
 
     // --- Preparation ---
     // Store a copy of the root's column expressions before applying the rule
@@ -126,9 +127,6 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
               [](const auto& left, const auto& right) {
                 return left.column_expressions.size() < right.column_expressions.size();
     });
-
-    // Fetch functional dependencies
-    const auto fds = aggregate_node.functional_dependencies();
 
     // --- Main ---
     // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
