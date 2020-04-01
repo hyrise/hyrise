@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 
+#include "operators/get_table.hpp"
 #include "utils/meta_tables/meta_cached_operators_table.hpp"
 #include "utils/meta_tables/meta_cached_queries_table.hpp"
 
@@ -9,20 +10,6 @@ class MetaCacheTablesTest : public BaseTest {
  public:
   static std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables() {
     return {std::make_shared<MetaCachedQueriesTable>(), std::make_shared<MetaCachedOperatorsTable>()};
-  }
-
-  const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
-    return table->_generate();
-  }
-
-  std::shared_ptr<Table> reference_meta_table(const std::string& name) {
-    if (name == "cached_queries") return queries_table;
-    return operators_table;
-  }
-
-  std::vector<AllTypeVariant> reference_meta_table_values(const std::string& name) {
-    if (name == "cached_queries") return queries_values;
-    return operators_values;
   }
 
  protected:
@@ -67,6 +54,20 @@ class MetaCacheTablesTest : public BaseTest {
   }
 
   void TearDown() { Hyrise::reset(); }
+
+  const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
+    return table->_generate();
+  }
+
+  std::shared_ptr<Table> reference_meta_table(const std::string& name) {
+    if (name == "cached_queries") return queries_table;
+    return operators_table;
+  }
+
+  std::vector<AllTypeVariant> reference_meta_table_values(const std::string& name) {
+    if (name == "cached_queries") return queries_values;
+    return operators_values;
+  }
 };
 
 class MultiCacheMetaTablesTest : public MetaCacheTablesTest, public ::testing::WithParamInterface<MetaTable> {};

@@ -1,6 +1,5 @@
 #include "base_test.hpp"
 
-#include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
