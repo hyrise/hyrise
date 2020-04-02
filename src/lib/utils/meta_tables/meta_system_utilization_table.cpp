@@ -136,7 +136,12 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_ticks() {
   const auto kernel_ticks = cpu_ticks.at(2);
 
   const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
-  const auto cpu_count = _get_cpu_count();
+  int cpu_count;
+  if (numa_available() != -1) {
+    cpu_count = numa_num_task_cpus();
+  } else {
+    cpu_count = _get_cpu_count();
+  }
 
   return active_ticks / cpu_count;
 #endif
@@ -176,7 +181,12 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_ticks() {
   const auto user_ticks = time_sample.tms_utime;
 
   const auto active_ticks = user_ticks + kernel_ticks;
-  const auto cpu_count = _get_cpu_count();
+  int cpu_count;
+  if (numa_available() != -1) {
+    cpu_count = numa_num_task_cpus();
+  } else {
+    cpu_count = _get_cpu_count();
+  }
 
   return active_ticks / cpu_count;
 #endif
