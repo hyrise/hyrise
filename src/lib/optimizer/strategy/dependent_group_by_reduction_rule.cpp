@@ -24,7 +24,8 @@ using namespace opossum;  // NOLINT
  *
  * @returns   Boolean value denoting whether at the group-by list of @param aggregate_node changed.
  */
-bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd, ExpressionUnorderedSet& group_by_columns, AggregateNode& aggregate_node) {
+bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd,const ExpressionUnorderedSet& group_by_columns,
+    AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's  columns have to be part of the group-by list
@@ -86,22 +87,12 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     const auto root_column_expressions = root_lqp->column_expressions();
     // Also store a copy of the aggregate's column expressions to verify the output column order later on.
     const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
-    auto group_by_list_changed = false;
 
-    // Collect non-nullable group-by columns
-    ExpressionUnorderedSet group_by_columns_non_nullable;
-    group_by_columns_non_nullable.reserve(aggregate_node.aggregate_expressions_begin_idx + 1);
-    for (auto expression_idx = size_t{0}; expression_idx < aggregate_node.aggregate_expressions_begin_idx;
-         ++expression_idx) {
-      const auto& expression = aggregate_node.node_expressions[expression_idx];
-      // Check that group by columns are not nullable. Unique columns can generally store NULLs while previous
-      // operators (e.g., outer joins) might have added NULLs to a primary key column. For now, we take the safe route
-      // and ignore all cases where group-by columns are nullable.
-      if (expression->is_nullable_on_lqp(aggregate_node)) {
-        continue;
-      }
-      group_by_columns_non_nullable.insert(expression);
-    }
+    // Gather group-by columns
+    ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
+    auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
+    std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx + 1,
+              std::inserter(group_by_columns, group_by_columns.end()));
 
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
     std::sort(fds.begin(), fds.end(),
@@ -114,9 +105,9 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // constraints might result in different group-by lists (depending on the number of columns of the constraint).
     // We stop as soon as one constraint successfully reduced the group-by list. There is no advantage in a second reduction if the first reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
     // place, we can ignore the remaining constraints.
+    auto group_by_list_changed = false;
     for(const auto& fd : fds) {
-      group_by_list_changed |= reduce_group_by_columns_for_fd(fd, group_by_columns_non_nullable,
-          aggregate_node);
+      group_by_list_changed |= reduce_group_by_columns_for_fd(fd, group_by_columns,aggregate_node);
       if (group_by_list_changed) break;
     }
 

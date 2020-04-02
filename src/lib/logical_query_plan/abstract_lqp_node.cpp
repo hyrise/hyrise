@@ -295,7 +295,8 @@ bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expres
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // Fetch functional dependencies (FDs) from input nodes
+
+  // Gather input FDs
   auto fds_left = std::vector<FunctionalDependency>();
   auto fds_right = std::vector<FunctionalDependency>();
   if (left_input()) {
@@ -305,11 +306,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_right = right_input()->functional_dependencies();
   }
 
-  // Forward FDs
-  if(fds_right.empty()) return fds_left;
+  auto fds_in = std::vector<FunctionalDependency>();
+  if(fds_right.empty()) fds_in = fds_left;
   else {
-    // Avoid forwarding duplicate FDs
-    auto fds_out = std::vector<FunctionalDependency>();
+    // Remove duplicate FDs that might result from e.g. self-joins
     for(const auto& fd_right : fds_right) {
       bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
           [&fd_right](const auto& fd_left) {
@@ -318,12 +318,29 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
             else return true;
           });
       if(!duplicate) {
-        fds_out.push_back(fd_right);
+        fds_in.push_back(fd_right);
       }
     }
-    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_out));
-    return fds_out;
+    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
   }
+
+  // Currently, we do not support FDs in conjunction with null values.
+  // Since previous operators like outer joins might have added null values, we have to check columns for nullability.
+  // Only FDs with non-nullable columns will be returned by this function.
+  auto fds_out = std::vector<FunctionalDependency>();
+  for(const auto& fd : fds_in) {
+    auto fd_expressions = fd.first;
+    fd_expressions.insert(fd.second.begin(), fd.second.end());
+
+    if(std::any_of(fd_expressions.cbegin(), fd_expressions.cend(), [this](const auto& expression) {
+      return expression->is_nullable_on_lqp(*this);
+    })) continue;
+    else {
+      fds_out.push_back(fd);
+    }
+  }
+
+  return fds_out;
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
