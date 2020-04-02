@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID parameter_id, DataType data_type) :
-  PlaceholderExpression(parameter_id),
-  _data_type{data_type} {
+TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID init_parameter_id, DataType init_data_type) :
+  PlaceholderExpression(init_parameter_id),
+  _data_type{init_data_type} {
 
   /* This type of placeholder is used for cache paramitrization, where null values should not be replaced by
    * placeholers. */
