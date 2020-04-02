@@ -5,6 +5,9 @@
 #include <iostream>
 #include <thread>
 
+#include "hyrise.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+
 namespace opossum {
 
 // Specified port (default: 5432) will be opened after initializing the _acceptor
@@ -16,6 +19,13 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
 }
 
 void Server::run() {
+  // Set scheduler so that the server can execute the tasks on separate threads.
+  Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
+
+  // Set caches
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
   _accept_new_session();
   _io_service.run();
 }
