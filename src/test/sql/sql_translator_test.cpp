@@ -2793,16 +2793,18 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
       "(SELECT c FROM int_int_int ORDER by c) LIMIT 10) ORDER BY a");
 
   // clang-format off
-  const auto expected_lqp = 
+  const auto expected_lqp =
   SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
-    IntersectNode::make(SetOperationMode::Unique, 
+    IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending }, stored_table_node_int_int_int)), 
+        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+                       stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
-        ExceptNode::make(SetOperationMode::Unique, 
+        ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending }, stored_table_node_int_int_int))))));
+            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending },
+                           stored_table_node_int_int_int))))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
