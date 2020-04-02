@@ -1072,7 +1072,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
-  auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Positions;
+  auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Unique;
 
   switch (set_operator.setType) {
     case hsql::kSetExcept:

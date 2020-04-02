@@ -2619,7 +2619,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
 
   // clang-format off
   const auto expected_lqp =
-  ExceptNode::make(SetOperationMode::Positions,
+  ExceptNode::make(SetOperationMode::Unique,
     ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
       ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
   // clang-format on
@@ -2635,7 +2635,7 @@ TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
 
   // clang-format off
   const auto expected_lqp =
-  IntersectNode::make(SetOperationMode::Positions,
+  IntersectNode::make(SetOperationMode::Unique,
     ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
       ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
   // clang-format on
@@ -2653,9 +2653,9 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
 
   // clang-format off
   const auto expected_lqp =
-  IntersectNode::make(SetOperationMode::Positions,
+  IntersectNode::make(SetOperationMode::Unique,
     ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int),
-      ExceptNode::make(SetOperationMode::Positions,
+      ExceptNode::make(SetOperationMode::Unique,
         ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
   // clang-format on
@@ -2663,25 +2663,25 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-/* TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
+TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
   const auto actual_lqp = compile_query(
-      "(SELECT a FROM int_int_int "
+      "SELECT a FROM int_int_int "
       "INTERSECT "
-      "SELECT b FROM int_int_int) "
+      "((SELECT b FROM int_int_int ORDER BY b) "
       "EXCEPT "
-      "SELECT c FROM int_int_int;");
+      "SELECT c FROM int_int_int LIMIT 10) ORDER BY a;");
 
   // clang-format off
   const auto expected_lqp =
-  IntersectNode::make(SetOperationMode::Positions, 
+  IntersectNode::make(SetOperationMode::Unique, 
     ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int), 
-      ExceptNode::make(SetOperationMode::Positions, 
+      ExceptNode::make(SetOperationMode::Unique, 
         ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int), 
           ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-} */
+}
 
 TEST_F(SQLTranslatorTest, CopyStatementImport) {
   {

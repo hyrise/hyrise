@@ -12,6 +12,15 @@ namespace opossum {
 
 /**
  * This node type is used to represent set operation type of Intersect.
+ *
+ * Please Note the following about the cardinality for an implementation:
+ *
+ * "By default these operators remove duplicates, which can occur if there are duplicates in the inputs.
+ * If ALL is specified then duplicates are not removed.
+ * If t1 has m copies of row R and t2 has n copies then t1 INTERSECT ALL t2 returns min(m,n) copies of R,
+ * and t1 EXCEPT ALL t2 returns max( 0, m-n) copies of R." 
+ *
+ * Source: https://db.apache.org/derby/papers/Intersect-design.html 
  */
 class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public AbstractLQPNode {
  public:

@@ -206,7 +206,9 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-enum class SetOperationMode { Positions, All };
+// SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
+// We have a third mode (Positions) that is used to intersect position lists that point to the same table, see union_positions.hpp for details.
+enum class SetOperationMode { Unique, Positions, All };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
