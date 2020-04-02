@@ -2665,19 +2665,23 @@ TEST_F(SQLTranslatorTest, MultiSetOperations) {
 
 TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
   const auto actual_lqp = compile_query(
-      "SELECT a FROM int_int_int "
+      "(SELECT a FROM int_int_int ORDER by a) "
       "INTERSECT "
-      "((SELECT b FROM int_int_int ORDER BY b) "
+      "(SELECT b FROM int_int_int "
       "EXCEPT "
-      "SELECT c FROM int_int_int LIMIT 10) ORDER BY a;");
+      "(SELECT c FROM int_int_int ORDER by c) LIMIT 10) ORDER BY a");
 
   // clang-format off
-  const auto expected_lqp =
-  IntersectNode::make(SetOperationMode::Unique, 
-    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int), 
-      ExceptNode::make(SetOperationMode::Unique, 
-        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int), 
-          ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
+  const auto expected_lqp = 
+  SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+    IntersectNode::make(SetOperationMode::Unique, 
+      ProjectionNode::make(expression_vector(int_int_int_a),
+        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending }, stored_table_node_int_int_int)), 
+      LimitNode::make(value_(10),
+        ExceptNode::make(SetOperationMode::Unique, 
+          ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
+          ProjectionNode::make(expression_vector(int_int_int_c),
+            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending }, stored_table_node_int_int_int))))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
