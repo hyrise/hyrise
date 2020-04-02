@@ -34,8 +34,9 @@
 namespace opossum {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
-    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_usage", DataType::Float, false},
-                                                     {"cpu_process_usage", DataType::Float, false},
+    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_ticks", DataType::Long, false},
+                                                     {"cpu_process_ticks", DataType::Long, false},
+                                                     {"total_ticks", DataType::Long, false},
                                                      {"load_average_1_min", DataType::Float, false},
                                                      {"load_average_5_min", DataType::Float, false},
                                                      {"load_average_15_min", DataType::Float, false},
@@ -49,27 +50,26 @@ const std::string& MetaSystemUtilizationTable::name() const {
   return name;
 }
 
-void MetaSystemUtilizationTable::init() {
-  _get_system_cpu_usage();
-  _get_process_cpu_usage();
-}
-
 std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  const auto system_cpu_usage = _get_system_cpu_usage();
-  const auto process_cpu_usage = _get_process_cpu_usage();
+  const auto system_cpu_ticks = _get_system_cpu_ticks();
+  const auto process_cpu_ticks = _get_process_cpu_ticks();
+  const auto total_ticks = _get_total_ticks();
   const auto load_avg = _get_load_avg();
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
 
-  output_table->append({system_cpu_usage, process_cpu_usage, load_avg.load_1_min, load_avg.load_5_min,
+  output_table->append({system_cpu_ticks, process_cpu_ticks, total_ticks, load_avg.load_1_min, load_avg.load_5_min,
                         load_avg.load_15_min, system_memory_usage.free_memory, system_memory_usage.available_memory,
                         process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
 
   return output_table;
 }
 
+/*
+  * Returns the load average values for 1min, 5min, and 15min.
+*/
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
 #ifdef __linux__
   std::ifstream load_avg_file;
@@ -101,7 +101,27 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   Fail("Method not implemented for this platform");
 }
 
-float MetaSystemUtilizationTable::_get_system_cpu_usage() {
+/*
+  * Returns the number of clock ticks since an arbitrary point in the past.
+*/
+int64_t MetaSystemUtilizationTable::_get_total_ticks() {
+#ifdef __linux__
+  struct tms time_sample {};
+  return times(&time_sample);
+#endif
+
+#ifdef __APPLE__
+  return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+#endif
+
+  Fail("Method not implemented for this platform");
+}
+
+/*
+ * Returns the number of clock ticks that ALL processes have spend on the CPU 
+ * since an arbitrary point in the past. 
+*/
+int64_t MetaSystemUtilizationTable::_get_system_cpu_ticks() {
 #ifdef __linux__
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
@@ -109,23 +129,16 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
   std::getline(stat_file, cpu_line);
   stat_file.close();
 
-  const auto cpu_times = _get_values(cpu_line);
-  SystemCPUTime system_cpu_time{};
-  system_cpu_time.user_time = cpu_times.at(0);
-  system_cpu_time.user_nice_time = cpu_times.at(1);
-  system_cpu_time.kernel_time = cpu_times.at(2);
-  system_cpu_time.idle_time = cpu_times.at(3);
+  const auto cpu_ticks = _get_values(cpu_line);
 
-  const auto used = (system_cpu_time.user_time - _last_system_cpu_time.user_time) +
-                    (system_cpu_time.user_nice_time - _last_system_cpu_time.user_nice_time) +
-                    (system_cpu_time.kernel_time - _last_system_cpu_time.kernel_time);
-  const auto total = used + (system_cpu_time.idle_time - _last_system_cpu_time.idle_time);
+  const auto user_ticks = cpu_ticks.at(0);
+  const auto user_nice_ticks = cpu_ticks.at(1);
+  const auto kernel_ticks = cpu_ticks.at(2);
 
-  _last_system_cpu_time = system_cpu_time;
+  const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
+  const auto cpu_count = _get_cpu_count();
 
-  const auto cpus = _get_cpu_count();
-
-  return static_cast<float>(100.0 * used) / static_cast<float>(total * cpus);
+  return active_ticks / cpu_count;
 #endif
 
 #ifdef __APPLE__
@@ -136,67 +149,53 @@ float MetaSystemUtilizationTable::_get_system_cpu_usage() {
     Fail("Unable to access host_statistics");
   }
 
-  SystemCPUTicks system_cpu_ticks{};
-  system_cpu_ticks.total_ticks = 0;
+  int64_t total_ticks = 0;
   for (int cpu_state = 0; cpu_state <= CPU_STATE_MAX; ++cpu_state) {
-    system_cpu_ticks.total_ticks += cpu_info.cpu_ticks[cpu_state];
+    total_ticks += cpu_info.cpu_ticks[cpu_state];
   }
-  system_cpu_ticks.idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
+  const auto idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
+  const auto active_ticks = total_ticks - idle_ticks;
 
-  const auto total = system_cpu_ticks.total_ticks - _last_system_cpu_ticks.total_ticks;
-  const auto idle = system_cpu_ticks.idle_ticks - _last_system_cpu_ticks.idle_ticks;
-
-  _last_system_cpu_ticks = system_cpu_ticks;
-
-  return 100.0f * (1.0f - (static_cast<float>(idle) / static_cast<float>(total)));
+  // TODO(j-tr): make this ns not ticks
+  return active_ticks;
 #endif
 
   Fail("Method not implemented for this platform");
 }
 
-float MetaSystemUtilizationTable::_get_process_cpu_usage() {
+/*
+ * Returns the number of clock ticks that THIS process has spend on the CPU 
+ * since an arbitrary point in the past. 
+*/
+int64_t MetaSystemUtilizationTable::_get_process_cpu_ticks() {
 #ifdef __linux__
   struct tms time_sample {};
+  times(&time_sample);
 
-  ProcessCPUTime process_cpu_time{};
-  process_cpu_time.clock_time = times(&time_sample);
-  process_cpu_time.kernel_time = time_sample.tms_stime;
-  process_cpu_time.user_time = time_sample.tms_utime;
+  const auto kernel_ticks = time_sample.tms_stime;
+  const auto user_ticks = time_sample.tms_utime;
 
-  const auto used = (process_cpu_time.user_time - _last_process_cpu_time.user_time) +
-                    (process_cpu_time.kernel_time - _last_process_cpu_time.kernel_time);
-  const auto total = process_cpu_time.clock_time - _last_process_cpu_time.clock_time;
+  const auto active_ticks = user_ticks + kernel_ticks;
+  const auto cpu_count = _get_cpu_count();
 
-  _last_process_cpu_time = process_cpu_time;
-
-  int cpus;
-  if (numa_available() != -1) {
-    cpus = numa_num_task_cpus();
-  } else {
-    cpus = _get_cpu_count();
-  }
-
-  return static_cast<float>(100.0 * used) / static_cast<float>(total * cpus);
+  return active_ticks / cpu_count;
 #endif
 
 #ifdef __APPLE__
-  ProcessCPUTime process_cpu_time;
-  process_cpu_time.system_clock = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
-  process_cpu_time.process_clock = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
+  const auto active_time = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
 
-  const auto used = (process_cpu_time.process_clock - _last_process_cpu_time.process_clock);
-  const auto total = (process_cpu_time.system_clock - _last_process_cpu_time.system_clock);
-
-  const auto cpus = _get_cpu_count();
-
-  _last_process_cpu_time = process_cpu_time;
-
-  return static_cast<float>(100.0f * used) / static_cast<float>(total * cpus);
+  return active_time;
 #endif
 
   Fail("Method not implemented for this platform");
 }
 
+/*
+ * Returns a struct that contains the avaiable and free memory size in bytes.
+ * - Free memory is unallocated memory.
+ * - Availlable memory includes free memory and currently allocated memory that 
+ *   could be made available (e.g. buffers, caches ...)
+*/
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
   std::ifstream meminfo_file;
@@ -242,25 +241,11 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   Fail("Method not implemented for this platform");
 }
 
-#ifdef __linux__
-std::vector<int64_t> MetaSystemUtilizationTable::_get_values(std::string& input_string) {
-  std::stringstream input_stream;
-  input_stream << input_string;
-  std::vector<int64_t> output_values;
-
-  std::string token;
-  int64_t value;
-  while (!input_stream.eof()) {
-    input_stream >> token;
-    if (std::stringstream(token) >> value) {
-      output_values.push_back(value);
-    }
-  }
-
-  return output_values;
-}
-#endif
-
+/*
+ * Returns a struct that contains the virtual and physical memory used by this process in bytes.
+ * - Virtual Memory is the total memory usage of the process
+ * - Physical Memory is the resident set size (RSS), the portion of memory that is held in RAM
+*/
 MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
 #ifdef __linux__
   std::ifstream self_status_file;
@@ -293,5 +278,24 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
   Fail("Method not implemented for this platform");
 }
+
+#ifdef __linux__
+std::vector<int64_t> MetaSystemUtilizationTable::_get_values(std::string& input_string) {
+  std::stringstream input_stream;
+  input_stream << input_string;
+  std::vector<int64_t> output_values;
+
+  std::string token;
+  int64_t value;
+  while (!input_stream.eof()) {
+    input_stream >> token;
+    if (std::stringstream(token) >> value) {
+      output_values.push_back(value);
+    }
+  }
+
+  return output_values;
+}
+#endif
 
 }  // namespace opossum
