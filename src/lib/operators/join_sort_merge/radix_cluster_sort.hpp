@@ -21,8 +21,8 @@ template <typename T>
 struct RadixClusterOutput {
   std::unique_ptr<MaterializedSegmentList<T>> clusters_left;
   std::unique_ptr<MaterializedSegmentList<T>> clusters_right;
-  std::unique_ptr<PosList> null_rows_left;
-  std::unique_ptr<PosList> null_rows_right;
+  std::unique_ptr<RowIDPosList> null_rows_left;
+  std::unique_ptr<RowIDPosList> null_rows_right;
 };
 
 /*
