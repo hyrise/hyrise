@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "storage/encoding_test.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -19,13 +19,11 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   static void SetUpTestCase() {
     int_values = {1, 2, 2, 2, 5, 2, 2, 8, 2, 2};
-    float_values = {1.5f, 2.5f, 3.5f, 4.5f, 5.5f, 6.5f, 7.5f, 8.5f, 9.5f, 10.5f};
-    string_values = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
-    null_values = {false, true, true, false, false, true, false, true, true, false};
 
-    auto row_ids = PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{8}}, {ChunkID{0}, ChunkOffset{7}},
-                           {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{5}}};
-    position_filter = std::make_shared<PosList>(std::move(row_ids));
+    auto row_ids =
+        RowIDPosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{8}}, {ChunkID{0}, ChunkOffset{7}},
+                     {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{5}}};
+    position_filter = std::make_shared<RowIDPosList>(std::move(row_ids));
     position_filter->guarantee_single_chunk();
   }
 
@@ -36,27 +34,24 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
     if (param.vector_compression_type) {
       segment_encoding_spec.vector_compression_type = *param.vector_compression_type;
     }
-    const auto value_int_segment = std::make_shared<ValueSegment<int32_t>>(int_values);
+    auto int_values_copy = int_values;
+    const auto value_int_segment = std::make_shared<ValueSegment<int32_t>>(std::move(int_values_copy));
+
     int_segment = ChunkEncoder::encode_segment(std::dynamic_pointer_cast<ValueSegment<int32_t>>(value_int_segment),
                                                DataType::Int, segment_encoding_spec);
   }
 
  protected:
   std::shared_ptr<BaseSegment> int_segment;
-  std::shared_ptr<BaseSegment> float_segment;
-  std::shared_ptr<BaseSegment> string_segment;
 
-  inline static std::vector<int32_t> int_values;
-  inline static std::vector<float> float_values;
-  inline static std::vector<pmr_string> string_values;
-  inline static std::vector<bool> null_values;
-  inline static std::shared_ptr<PosList> position_filter;
+  inline static pmr_vector<int32_t> int_values;
+  inline static std::shared_ptr<RowIDPosList> position_filter;
 };
 
 TEST_P(AnySegmentIterableTest, Int) {
   auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
-  auto values = std::vector<int32_t>{};
+  auto values = pmr_vector<int32_t>{};
   any_segment_iterable_int.for_each([&](const auto& position) { values.emplace_back(position.value()); });
 
   EXPECT_EQ(values, int_values);
@@ -74,12 +69,22 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    AnySegmentIterableTestInstances, AnySegmentIterableTest,
-    ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference}, SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4}));
+auto any_segment_iterable_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+  const auto spec = info.param;
 
+  auto stream = std::stringstream{};
+  stream << spec.encoding_type;
+  if (spec.vector_compression_type) {
+    stream << "-" << *spec.vector_compression_type;
+  }
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
+                         ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, true)),
+                         any_segment_iterable_test_formatter);
 }  // namespace opossum

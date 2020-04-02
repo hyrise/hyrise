@@ -11,7 +11,6 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
-#include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
@@ -28,6 +27,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
     _apply_to_inputs(node);
     return;
   }
+
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
@@ -79,9 +79,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const Table& table, const AbstractExpression& predicate,
-    const std::shared_ptr<StoredTableNode>& stored_table_node) const {
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, const AbstractExpression& predicate,
+                                                          const std::shared_ptr<StoredTableNode>& stored_table_node) {
   // Hacky:
   // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
   // `stored_table_node`.
@@ -134,6 +133,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     auto condition = operator_predicate.predicate_condition;
 
     const auto chunk_count = table.chunk_count();
+    auto num_rows_pruned = size_t{0};
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table.get_chunk(chunk_id);
       if (!chunk) continue;
@@ -143,8 +143,24 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
       if (_can_prune(*segment_statistics, condition, *value, value2)) {
+        const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+        if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
+            already_pruned_chunk_ids.end()) {
+          // Chunk was not yet marked as pruned - update statistics
+          num_rows_pruned += chunk->size();
+        } else {
+          // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
+          // we do not over-prune the statistics.
+        }
         result.insert(chunk_id);
       }
+    }
+
+    if (num_rows_pruned > size_t{0}) {
+      const auto& old_statistics =
+          stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
+      const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, num_rows_pruned);
+      stored_table_node->table_statistics = pruned_statistics;
     }
   }
 
@@ -153,7 +169,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
 bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
                                   const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-                                  const std::optional<AllTypeVariant>& variant_value2) const {
+                                  const std::optional<AllTypeVariant>& variant_value2) {
   auto can_prune = false;
 
   resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
@@ -162,12 +178,15 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
     const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
 
     // Range filters are only available for arithmetic (non-string) types.
-    if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+    if constexpr (std::is_arithmetic_v<ColumnDataType>) {  // NOLINT
       if (segment_statistics.range_filter) {
         if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           can_prune = true;
         }
       }
+      // RangeFilters contain all the information stored in a MinMaxFilter. There is no point in having both.
+      DebugAssert(!segment_statistics.min_max_filter,
+                  "Segment should not have a MinMaxFilter and a RangeFilter at the same time");
     }
 
     if (segment_statistics.min_max_filter) {
@@ -180,8 +199,43 @@ bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_st
   return can_prune;
 }
 
-bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const {
+bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) {
   return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
+}
+
+std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
+                                                                           OperatorScanPredicate predicate,
+                                                                           size_t num_rows_pruned) {
+  // If a chunk is pruned, we update the table statistics. This is so that the selectivity of the predicate that was
+  // used for pruning can be correctly estimated. Example: For a table that has sorted values from 1 to 100 and a chunk
+  // size of 10, the predicate `x > 90` has a selectivity of 10%. However, if the ChunkPruningRule removes nine chunks
+  // out of ten, the selectivity is now 100%. Updating the statistics is important so that the predicate ordering
+  // can properly order the predicates.
+  //
+  // For the column that the predicate pruned on, we remove num_rows_pruned values that do not match the predicate
+  // from the statistics. See the pruned() implementation of the different statistics types for details.
+  // The other columns are simply scaled to reflect the reduced table size.
+  //
+  // For now, this does not take any sorting on a chunk- or table-level into account. In the future, this may be done
+  // to further improve the accuracy of the statistics.
+
+  const auto column_count = old_statistics.column_statistics.size();
+
+  std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
+
+  const auto scale = 1 - (num_rows_pruned / old_statistics.row_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    if (column_id == predicate.column_id) {
+      column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(
+          num_rows_pruned, predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value),
+          predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)}
+                           : std::nullopt);
+    } else {
+      column_statistics[column_id] = old_statistics.column_statistics[column_id]->scaled(scale);
+    }
+  }
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics.row_count - num_rows_pruned);
 }
 
 }  // namespace opossum

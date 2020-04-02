@@ -1,28 +1,15 @@
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <string>
 
-#include "SQLParser.h"
-#include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
-#include "file_based_table_generator.hpp"
-#include "json.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/pqp_visualizer.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -57,24 +44,16 @@ int main(int argc, char* argv[]) {
 
   auto config = std::shared_ptr<opossum::BenchmarkConfig>{};
   auto scale_factor = int32_t{};
-  if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
-    // JSON config file was passed in
-    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 1);
-    config = std::make_shared<opossum::BenchmarkConfig>(
-        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
-  } else {
-    // Parse regular command line args
-    const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
-      return 0;
-    }
-    scale_factor = cli_parse_result["scale"].as<int32_t>();
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    config =
-        std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
+    return 0;
   }
+  scale_factor = cli_parse_result["scale"].as<int32_t>();
+
+  config = std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_cli_options(cli_parse_result));
 
   const auto valid_scale_factors = std::array{1, 1000, 3000, 10000, 30000, 100000};
 
@@ -97,7 +76,7 @@ int main(int argc, char* argv[]) {
   auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator),
                                           opossum::BenchmarkRunner::create_context(*config)};
-  if (config->verify && benchmark_runner.sqlite_wrapper) {
+  if (config->verify) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
                           benchmark_runner.sqlite_wrapper);
   }

@@ -8,8 +8,8 @@
 namespace opossum {
 
 ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& subquery,
-                                   const ExistsExpressionType exists_expression_type)
-    : AbstractExpression(ExpressionType::Exists, {subquery}), exists_expression_type(exists_expression_type) {
+                                   const ExistsExpressionType init_exists_expression_type)
+    : AbstractExpression(ExpressionType::Exists, {subquery}), exists_expression_type(init_exists_expression_type) {
   Assert(subquery->type == ExpressionType::LQPSubquery || subquery->type == ExpressionType::PQPSubquery,
          "EXISTS needs SubqueryExpression as argument");
 }
@@ -20,10 +20,10 @@ std::shared_ptr<AbstractExpression> ExistsExpression::subquery() const {
   return arguments[0];
 }
 
-std::string ExistsExpression::as_column_name() const {
+std::string ExistsExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << (exists_expression_type == ExistsExpressionType::Exists ? "EXISTS" : "NOT EXISTS");
-  stream << "(" << subquery()->as_column_name() << ")";
+  stream << "(" << subquery()->description(mode) << ")";
   return stream.str();
 }
 

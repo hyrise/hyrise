@@ -62,9 +62,12 @@ class ExpressionResult : public BaseExpressionResult {
 
   ExpressionResult() = default;
 
-  explicit ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
-      : values(std::move(values)), nulls(std::move(nulls)) {
-    DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
+  explicit ExpressionResult(pmr_vector<T> init_values, pmr_vector<bool> init_nulls = {})
+      : values(std::move(init_values)), nulls(std::move(init_nulls)) {
+    // Allowed size of nulls: 0 (not nullable)
+    //                        1 (nullable, all values are NULL or NOT NULL, depending on the value)
+    //                        n (same as values, 1:1 mapping)
+    DebugAssert(nulls.empty() || nulls.size() == 1 || nulls.size() == values.size(), "Mismatching number of nulls");
   }
 
   bool is_nullable_series() const { return size() != 1; }
@@ -108,8 +111,8 @@ class ExpressionResult : public BaseExpressionResult {
 
   size_t size() const { return values.size(); }
 
-  std::vector<T> values;
-  std::vector<bool> nulls;
+  pmr_vector<T> values;
+  pmr_vector<bool> nulls;
 };
 
 }  // namespace opossum

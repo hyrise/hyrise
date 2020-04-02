@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <filesystem>
 #include <unordered_map>
 
 #include "encoding_config.hpp"
@@ -13,7 +14,7 @@ class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
   BenchmarkTableInfo() = default;
-  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& init_table);
 
   std::shared_ptr<Table> table;
 
@@ -71,6 +72,9 @@ class AbstractTableGenerator {
   // (right side).
   using SortOrderByTable = std::map<std::string, std::string>;
   virtual SortOrderByTable _sort_order_by_table() const;
+
+  // Optionally, the benchmark may add constraints once the tables are generated / loaded from binary
+  virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };

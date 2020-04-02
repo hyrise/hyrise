@@ -15,9 +15,12 @@ AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& inpu
   Assert(_column_ids.size() == _aliases.size(), "Expected as many aliases as columns");
 }
 
-const std::string AliasOperator::name() const { return "Alias"; }
+const std::string& AliasOperator::name() const {
+  static const auto name = std::string{"Alias"};
+  return name;
+}
 
-const std::string AliasOperator::description(DescriptionMode description_mode) const {
+std::string AliasOperator::description(DescriptionMode description_mode) const {
   std::stringstream stream;
   stream << "Alias [";
   stream << boost::algorithm::join(_aliases, description_mode == DescriptionMode::SingleLine ? ", " : "\n");
@@ -57,7 +60,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   const auto chunk_count = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{};
     output_segments.reserve(input_table.column_count());
@@ -70,7 +73,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   }
 
   return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks),
-                                 input_table.has_mvcc());
+                                 input_table.uses_mvcc());
 }
 
 }  // namespace opossum

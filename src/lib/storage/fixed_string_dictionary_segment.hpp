@@ -22,11 +22,7 @@ template <typename T>
 class FixedStringDictionarySegment : public BaseDictionarySegment {
  public:
   explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
-                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                        const ValueID null_value_id);
-
-  // returns the dictionary as pmr_vector
-  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
+                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
@@ -36,15 +32,15 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t estimate_memory_usage() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode = MemoryUsageCalculationMode::Full) const final;
   /**@}*/
 
   /**
@@ -69,14 +65,13 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
 
-  const ValueID null_value_id() const final;
+  ValueID null_value_id() const final;
 
   /**@}*/
 
  protected:
   const std::shared_ptr<const FixedStringVector> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
-  const ValueID _null_value_id;
   const std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 

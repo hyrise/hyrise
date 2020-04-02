@@ -9,20 +9,25 @@
 
 namespace opossum {
 
-CreateTable::CreateTable(const std::string& table_name, const bool if_not_exists,
-                         const std::shared_ptr<const AbstractOperator>& in)
-    : AbstractReadWriteOperator(OperatorType::CreateTable, in), table_name(table_name), if_not_exists(if_not_exists) {}
+CreateTable::CreateTable(const std::string& init_table_name, const bool init_if_not_exists,
+                         const std::shared_ptr<const AbstractOperator>& input_operator)
+    : AbstractReadWriteOperator(OperatorType::CreateTable, input_operator),
+      table_name(init_table_name),
+      if_not_exists(init_if_not_exists) {}
 
-const std::string CreateTable::name() const { return "Create Table"; }
+const std::string& CreateTable::name() const {
+  static const auto name = std::string{"CreateTable"};
+  return name;
+}
 
-const std::string CreateTable::description(DescriptionMode description_mode) const {
+std::string CreateTable::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
 
   const auto separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
 
   const auto column_definitions = input_table_left()->column_definitions();
 
-  stream << "Create Table '" << table_name << "' (";
+  stream << "CreateTable '" << table_name << "' (";
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     const auto& column_definition = column_definitions[column_id];
 
@@ -42,7 +47,7 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
   return stream.str();
 }
 
-const TableColumnDefinitions CreateTable::column_definitions() const {
+const TableColumnDefinitions& CreateTable::column_definitions() const {
   return input_table_left()->column_definitions();
 }
 
@@ -66,7 +71,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<CreateTable>(table_name, if_not_exists, _input_left);
+  return std::make_shared<CreateTable>(table_name, if_not_exists, copied_input_left);
 }
 
 void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

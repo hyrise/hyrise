@@ -62,7 +62,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Make this Task the dependency of another
    * @param successor Task that will be executed after this
    */
-  void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
+  void set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor);
 
   /**
    * @return the predecessors of this Task
@@ -123,14 +123,14 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   /**
    * Blocks the calling thread until the Task finished executing.
-   * This is only called from non-Worker threads and from Hyrise::get().scheduler().wait_for_tasks().
+   * This is only called from non-Worker threads and from Hyrise::get().scheduler()->wait_for_tasks().
    */
   void _join();
 
   std::atomic<TaskID> _id{INVALID_TASK_ID};
   std::atomic<NodeID> _node_id = INVALID_NODE_ID;
   SchedulePriority _priority;
-  bool _stealable;
+  std::atomic<bool> _stealable;
   std::atomic_bool _done{false};
   std::function<void()> _done_callback;
 

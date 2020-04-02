@@ -11,8 +11,8 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
  public:
   explicit ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
-  std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
  protected:

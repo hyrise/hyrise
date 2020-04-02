@@ -10,9 +10,10 @@
 
 namespace opossum {
 
-UpdateNode::UpdateNode(const std::string& table_name) : BaseNonQueryNode(LQPNodeType::Update), table_name(table_name) {}
+UpdateNode::UpdateNode(const std::string& init_table_name)
+    : BaseNonQueryNode(LQPNodeType::Update), table_name(init_table_name) {}
 
-std::string UpdateNode::description() const {
+std::string UpdateNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Update] Table: '" << table_name << "'";
@@ -26,12 +27,9 @@ std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& no
 
 bool UpdateNode::is_column_nullable(const ColumnID column_id) const { Fail("Update does not output any colums"); }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& UpdateNode::column_expressions() const {
-  static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
-  return empty_vector;
-}
+std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::column_expressions() const { return {}; }
 
-size_t UpdateNode::_shallow_hash() const { return boost::hash_value(table_name); }
+size_t UpdateNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& update_node_rhs = static_cast<const UpdateNode&>(rhs);

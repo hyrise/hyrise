@@ -5,15 +5,15 @@
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
+#include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class AbstractExpression;
-
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
@@ -21,6 +21,8 @@ enum class LQPNodeType {
   DropView,
   DropTable,
   DummyTable,
+  Export,
+  Import,
   Insert,
   Join,
   Limit,
@@ -49,13 +51,14 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
+                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
    * @return a string describing this node, but nothing about its inputs.
    */
-  virtual std::string description() const = 0;
+  enum class DescriptionMode { Short, Detailed };
+  virtual std::string description(const DescriptionMode mode = DescriptionMode::Short) const = 0;
 
   /**
    * @defgroup Access the outputs/inputs
@@ -105,8 +108,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /** @} */
 
   /**
-   * @param input_node_mapping     if the LQP contains external expressions, a mapping for the nodes used by them needs
-   *                               to be provided
+   * @param input_node_mapping     If the LQP contains external expressions, a mapping for the nodes used by them needs
+   *                               to be provided.
    * @return                       A deep copy of the LQP this Node is the root of
    */
   std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping input_node_mapping = {}) const;
@@ -121,10 +124,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The Expressions defining each column that this node outputs
    */
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
+  virtual std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const;
 
   /**
-   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
+   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
+   *         has a special treatment (it is represented as an LQPColumnReference with an INVALID_COLUMN_ID), it might
+  *          be evaluable even if find_column_id returns nullopt.
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 
@@ -171,11 +176,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  protected:
   /**
    * Override to hash data fields in derived types. No override needed if derived expression has no
-   * data members.
+   * data members. We do not need to take care of the input nodes here since they are already handled
+   * by the calling methods.
    */
-  virtual size_t _shallow_hash() const;
+  virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
+
+  /*
+   * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
+   */
+  static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
 
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;

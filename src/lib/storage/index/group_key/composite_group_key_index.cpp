@@ -77,7 +77,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     return decompressors;
   }();
 
-  for (ChunkOffset chunk_offset = 0; chunk_offset < segment_size; ++chunk_offset) {
+  for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
     for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
       concatenated_key.shift_and_set(decompressor->get(chunk_offset), static_cast<uint8_t>(byte_width * CHAR_BIT));
@@ -91,14 +91,14 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
             [&keys](auto left, auto right) { return keys[left] < keys[right]; });
 
   _keys = VariableLengthKeyStore(static_cast<ChunkOffset>(segment_size), bytes_per_key);
-  for (ChunkOffset chunk_offset = 0; chunk_offset < segment_size; ++chunk_offset) {
+  for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
     _keys[chunk_offset] = keys[_position_list[chunk_offset]];
   }
 
   // create offsets to unique keys
   _key_offsets.reserve(segment_size);
   _key_offsets.emplace_back(0);
-  for (ChunkOffset chunk_offset = 1; chunk_offset < segment_size; ++chunk_offset) {
+  for (ChunkOffset chunk_offset = 1; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
     if (_keys[chunk_offset] != _keys[chunk_offset - 1]) _key_offsets.emplace_back(chunk_offset);
   }
   _key_offsets.shrink_to_fit();

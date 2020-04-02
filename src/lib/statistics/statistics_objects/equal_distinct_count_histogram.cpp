@@ -17,9 +17,9 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-std::unordered_map<T, HistogramCountType> add_segment_to_value_distribution(
-    const BaseSegment& segment, std::unordered_map<T, HistogramCountType> value_distribution,
-    const HistogramDomain<T>& domain) {
+void add_segment_to_value_distribution(const BaseSegment& segment,
+                                       std::unordered_map<T, HistogramCountType>& value_distribution,
+                                       const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) return;
 
@@ -34,8 +34,6 @@ std::unordered_map<T, HistogramCountType> add_segment_to_value_distribution(
       ++value_distribution[iterator_value.value()];
     }
   });
-
-  return value_distribution;
 }
 
 template <typename T>
@@ -51,8 +49,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     const auto chunk = table.get_chunk(chunk_id);
     if (!chunk) continue;
 
-    value_distribution_map =
-        add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), std::move(value_distribution_map), domain);
+    add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
   }
 
   auto value_distribution =
@@ -190,13 +187,13 @@ BinID EqualDistinctCountHistogram<T>::_next_bin_for_value(const T& value) const 
 }
 
 template <typename T>
-T EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
+const T& EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < _bin_minima.size(), "Index is not a valid bin.");
   return _bin_minima[index];
 }
 
 template <typename T>
-T EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
+const T& EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_maxima.size(), "Index is not a valid bin.");
   return _bin_maxima[index];
 }

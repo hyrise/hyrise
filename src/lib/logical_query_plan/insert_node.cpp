@@ -10,9 +10,10 @@
 
 namespace opossum {
 
-InsertNode::InsertNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Insert), table_name(table_name) {}
+InsertNode::InsertNode(const std::string& init_table_name)
+    : AbstractLQPNode(LQPNodeType::Insert), table_name(init_table_name) {}
 
-std::string InsertNode::description() const {
+std::string InsertNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;
 
   desc << "[Insert] Into table '" << table_name << "'";
@@ -22,12 +23,12 @@ std::string InsertNode::description() const {
 
 bool InsertNode::is_column_nullable(const ColumnID column_id) const { Fail("Insert returns no columns"); }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& InsertNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> InsertNode::column_expressions() const {
   static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
   return empty_vector;
 }
 
-size_t InsertNode::_shallow_hash() const { return boost::hash_value(table_name); }
+size_t InsertNode::_on_shallow_hash() const { return boost::hash_value(table_name); }
 
 std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return InsertNode::make(table_name);

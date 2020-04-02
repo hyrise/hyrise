@@ -4,7 +4,6 @@
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
@@ -46,7 +45,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
@@ -113,9 +112,5 @@ BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
-
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinMPSM);
 
 }  // namespace opossum

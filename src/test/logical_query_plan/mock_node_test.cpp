@@ -1,8 +1,6 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -14,7 +12,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class MockNodeTest : public ::testing::Test {
+class MockNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
@@ -28,11 +26,11 @@ class MockNodeTest : public ::testing::Test {
 };
 
 TEST_F(MockNodeTest, Description) {
-  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned: 0/4 columns");
-  EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name'] pruned: 0/2 columns");
+  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] Columns: a b c d | pruned: 0/4 columns");
+  EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name'] Columns: a b | pruned: 0/2 columns");
 
   _mock_node_a->set_pruned_column_ids({ColumnID{2}});
-  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned: 1/4 columns");
+  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] Columns: a b d | pruned: 1/4 columns");
 }
 
 TEST_F(MockNodeTest, OutputColumnExpression) {
@@ -61,7 +59,7 @@ TEST_F(MockNodeTest, HashingAndEqualityCheck) {
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "other_name");
   EXPECT_EQ(*_mock_node_b, *_mock_node_b);
   EXPECT_NE(*_mock_node_b, *different_mock_node_1);
-  EXPECT_EQ(*_mock_node_b, *different_mock_node_2);
+  EXPECT_NE(*_mock_node_b, *different_mock_node_2);
   EXPECT_EQ(*_mock_node_b, *same_mock_node_b);
 
   EXPECT_NE(_mock_node_b->hash(), different_mock_node_1->hash());
@@ -70,9 +68,11 @@ TEST_F(MockNodeTest, HashingAndEqualityCheck) {
 }
 
 TEST_F(MockNodeTest, Copy) {
-  EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
+  const auto copy = _mock_node_b->deep_copy();
+  EXPECT_EQ(*_mock_node_b, *copy);
 
   _mock_node_b->set_pruned_column_ids({ColumnID{1}});
+  EXPECT_NE(*_mock_node_b, *copy);
   EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
 }
 

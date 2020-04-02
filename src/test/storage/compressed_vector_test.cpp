@@ -3,8 +3,8 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
@@ -53,6 +53,7 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
 
     auto encoded_vector = compress_vector(vector, compression_type, {}, {max()});
     EXPECT_EQ(encoded_vector->size(), vector.size());
+    EXPECT_EQ(parent_vector_compression_type(encoded_vector->type()), compression_type);
 
     return encoded_vector;
   }
@@ -66,10 +67,23 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
     for (; encoded_seq_it != encoded_seq_end; expected_it++, encoded_seq_it++) {
       EXPECT_EQ(*encoded_seq_it, *expected_it);
     }
+
+    // Test advancing the iterators to the middle of the sequence.
+    expected_it = expected_values.cbegin() + (expected_values.size() / 2);
+    encoded_seq_it = encoded_sequence.cbegin() + (expected_values.size() / 2);
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
+
+    // Test decrement and negative advance.
+    expected_it = expected_values.cend() - 1;  // Last element
+    encoded_seq_it = encoded_sequence.cend() - 1;
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
+    expected_it -= expected_values.size() / 2;
+    encoded_seq_it -= expected_values.size() / 2;
+    EXPECT_EQ(*encoded_seq_it, *expected_it);
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
+auto compressed_vector_test_formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
   const auto type = info.param;
   auto string = vector_compression_type_to_string.left.at(type);
   string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
@@ -79,7 +93,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
                          ::testing::Values(VectorCompressionType::SimdBp128,
                                            VectorCompressionType::FixedSizeByteAligned),
-                         formatter);
+                         compressed_vector_test_formatter);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);

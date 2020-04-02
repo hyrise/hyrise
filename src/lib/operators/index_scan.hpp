@@ -6,7 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/index/segment_index_type.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -25,7 +25,7 @@ class IndexScan : public AbstractReadOnlyOperator {
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 
-  const std::string name() const final;
+  const std::string& name() const final;
 
   // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
   std::vector<ChunkID> included_chunk_ids;
@@ -40,7 +40,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   void _validate_input();
   std::shared_ptr<AbstractTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
-  PosList _scan_chunk(const ChunkID chunk_id);
+  RowIDPosList _scan_chunk(const ChunkID chunk_id);
 
  private:
   const SegmentIndexType _index_type;

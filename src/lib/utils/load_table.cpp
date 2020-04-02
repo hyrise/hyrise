@@ -20,6 +20,7 @@ namespace opossum {
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t chunk_size) {
   std::string line;
   std::getline(infile, line);
+  Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
   std::vector<std::string> column_names = split_string_by_delimiter(line, '|');
   std::getline(infile, line);
   std::vector<std::string> column_types = split_string_by_delimiter(line, '|');
@@ -50,7 +51,8 @@ std::shared_ptr<Table> create_table_from_header(const std::string& file_name, si
   return create_table_from_header(infile, chunk_size);
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size) {
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size,
+                                  FinalizeLastChunk finalize_last_chunk) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
 
@@ -74,10 +76,15 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
     table->append(variant_values);
 
-    const auto chunk = table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1));
-    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
-    mvcc_data->begin_cids.back() = 0;
+    auto mvcc_data = table->last_chunk()->mvcc_data();
+    mvcc_data->set_begin_cid(table->last_chunk()->size() - 1, 0);
   }
+
+  // All other chunks have been finalized by Table::append() when they reached their capacity.
+  if (!table->empty() && static_cast<bool>(finalize_last_chunk)) {
+    table->last_chunk()->finalize();
+  }
+
   return table;
 }
 

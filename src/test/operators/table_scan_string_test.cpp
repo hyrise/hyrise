@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -57,14 +56,14 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
   std::shared_ptr<TableWrapper> _tw, _tw_special_chars, _tw_string, _tw_string_compressed;
 };
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto table_scan_scring_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanStringTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary,
                                            EncodingType::FixedStringDictionary, EncodingType::RunLength),
-                         formatter);
+                         table_scan_scring_test_formatter);
 
 TEST_P(OperatorsTableScanStringTest, ScanEquals) {
   auto scan = create_table_scan(_tw_string_compressed, ColumnID{1}, PredicateCondition::Equals, "Reeperbahn");

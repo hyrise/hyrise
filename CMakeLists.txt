@@ -19,7 +19,7 @@ function(compiler_not_supported message)
 endfunction(compiler_not_supported)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.2)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
     if (APPLE)
@@ -27,12 +27,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     if(NOT EXISTS "/usr/local/opt/llvm/bin/clang")
-        set(CMAKE_OSX_INSTALL_TEXT "install the official llvm/clang package using `install.sh` or `brew install llvm --with-toolchain` and then ")
+        set(CMAKE_OSX_INSTALL_TEXT "install the official llvm/clang package using `install_dependencies.sh` or `brew install llvm --with-toolchain` and then ")
     endif()
     compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++`.")
 else()
@@ -44,8 +44,10 @@ option(ENABLE_ADDR_UB_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSA
 if (${ENABLE_ADDR_UB_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
-    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
+    # -fno-sanitize-recover=all is used to make UBsan fail (i.e., return a non-zero exit code) when an error is found.
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/resources/.ubsan-blacklist.txt -fno-omit-frame-pointer")
 endif()
 
 # Enable thread sanitization if requested
@@ -54,6 +56,7 @@ if (${ENABLE_THREAD_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
     add_compile_options(-fsanitize=thread -O1)
+    add_link_options(-fsanitize=thread)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
@@ -82,30 +85,40 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${FLAGS_ALL} ${FLAGS_REL
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_ALL} ${FLAGS_RELEASE}")
 
+# Check for unity builds
+if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    if(DEFINED CMAKE_UNITY_BUILD)
+        message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
+    endif()
+endif()
+
+# On Linux, use the lld linker, which is twice as fast for incremental debug builds
+if (NOT APPLE)
+    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
+    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
+endif()
+
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
+# Surprisingly, this makes the linking process on Mac faster by 5x
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
+
 # Dependencies
-find_package(FS REQUIRED)
-find_package(Numa)
-find_package(LLVM 7 CONFIG)
+find_package(Numa QUIET)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
-find_package(PQ REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container system thread)
+find_package(Boost REQUIRED COMPONENTS container system)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 
-if(${LLVM_FOUND})
-    # FindLLVM does not provide a LLVM_LIBRARY or LLVM_LIBRARIES output variable, so we have to build it ourselves
-    set(LLVM_LIBRARY ${LLVM_LIBRARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}LLVM${CMAKE_SHARED_LIBRARY_SUFFIX})
-    message(STATUS "Found llvm library: inc=${LLVM_INCLUDE_DIR}, lib=${LLVM_LIBRARY}")
-endif()
-
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
-if(DEFINED CI_BUILD)
+if(CI_BUILD)
     if(NOT ${NUMA_FOUND})
         message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
     endif()

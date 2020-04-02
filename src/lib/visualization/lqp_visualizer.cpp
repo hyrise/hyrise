@@ -1,6 +1,5 @@
 #include "lqp_visualizer.hpp"
 
-#include <boost/algorithm/string.hpp>
 #include <iomanip>
 #include <memory>
 #include <string>
@@ -10,7 +9,6 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "statistics/cardinality_estimator.hpp"
 
 namespace opossum {
 
@@ -84,8 +82,9 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
                                     const std::shared_ptr<AbstractLQPNode>& to, const InputSide side) {
-  float row_count, row_percentage = 100.0f;
+  float row_count;
   double pen_width;
+  auto row_percentage = 100.0f;
 
   try {
     row_count = _cardinality_estimator.estimate_cardinality(from);
@@ -99,7 +98,12 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   if (from->left_input()) {
     try {
       float input_count = _cardinality_estimator.estimate_cardinality(from->left_input());
-      if (from->right_input()) {
+
+      // Include right side in cardinality estimation unless it is a semi/anti join
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(from);
+      if (from->right_input() &&
+          (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
+                          join_node->join_mode != JoinMode::AntiNullAsFalse))) {
         input_count *= _cardinality_estimator.estimate_cardinality(from->right_input());
       }
       row_percentage = 100 * row_count / input_count;

@@ -46,9 +46,12 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
-const std::string TableScan::name() const { return "TableScan"; }
+const std::string& TableScan::name() const {
+  static const auto name = std::string{"TableScan"};
+  return name;
+}
 
-const std::string TableScan::description(DescriptionMode description_mode) const {
+std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
@@ -94,7 +97,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.
     auto job_task = std::make_shared<JobTask>([this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
@@ -115,7 +118,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (in_table->type() == TableType::References) {
-        auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
+        auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
           auto segment_in = chunk_in->get_segment(column_id);
@@ -131,7 +134,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
           if (!filtered_pos_list) {
-            filtered_pos_list = std::make_shared<PosList>(matches_out->size());
+            filtered_pos_list = std::make_shared<RowIDPosList>(matches_out->size());
             if (pos_list_in->references_single_chunk()) {
               filtered_pos_list->guarantee_single_chunk();
             }
@@ -163,7 +166,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     job_task->schedule();
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

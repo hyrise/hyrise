@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -18,7 +18,7 @@ class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::shared_ptr<const AbstractOperator>& referencing_table_op);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -26,7 +26,7 @@ class Delete : public AbstractReadWriteOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-  void _on_commit_records(CommitID cid) override;
+  void _on_commit_records(const CommitID commit_id) override;
   void _on_rollback_records() override;
 
  private:

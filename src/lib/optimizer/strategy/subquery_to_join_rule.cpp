@@ -6,7 +6,6 @@
 #include <memory>
 #include <utility>
 
-#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -23,7 +22,6 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -70,7 +68,7 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
     default:
       return {false, false};
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 /**
@@ -199,6 +197,33 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
   return {result, false};
 }
 
+void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredicateExpression>& predicate_expression,
+                                              const std::shared_ptr<ArithmeticExpression>& arithmetic_expression,
+                                              const std::shared_ptr<LQPSubqueryExpression>& subquery_expression,
+                                              size_t arithmetic_expression_argument_idx,
+                                              bool subquery_expression_is_left) {
+  DebugAssert(
+      subquery_expression->lqp->node_expressions.size() == 1,
+      "Subqueries used in arithmetic expressions must return a single value, so they must have one node_expression");
+
+  // (1) Create a new arithmetic expression that takes the result expression of the subquery and applies the arithmetic
+  //     operation on it.
+  const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
+      arithmetic_expression->arithmetic_operator,
+      subquery_expression_is_left ? subquery_expression->lqp->node_expressions[0]
+                                  : arithmetic_expression->left_operand(),
+      subquery_expression_is_left ? arithmetic_expression->right_operand()
+                                  : subquery_expression->lqp->node_expressions[0]);
+
+  // (2) Insert a ProjectionNode on top of the subquery's LQP that evaluates this arithmetic expression.
+  subquery_expression->lqp = ProjectionNode::make(
+      std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression}, subquery_expression->lqp);
+
+  // (3) In the PredicateExpression outside of the LQP, replace the old arithmetic expression with the updated subquery
+  //     expression.
+  predicate_expression->arguments[arithmetic_expression_argument_idx] = subquery_expression;
+}
+
 }  // namespace
 
 namespace opossum {
@@ -214,7 +239,8 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     }
 
     result.join_mode = in_expression->is_negated() ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
-    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set());
+    // We need to deep_copy the subquery before modifying it as it might be in use somewhere else, too.
+    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set()->deep_copy());
     result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->column_expressions()[0]);
 
     // Correlated NOT IN is very weird w.r.t. handling of null values and cannot be turned into a
@@ -227,18 +253,53 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
                  std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
     result.join_mode = JoinMode::Semi;
 
+    /**
+     * Identify a subquery in an arithmetic expression and push the arithmetics into the subquery.
+     * e.g. SELECT * FROM a WHERE a.a > 3 * (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+     * becomes SELECT * FROM a WHERE a.a > (SELECT 3 * SUM(b.a) FROM b WHERE b.b = a.b)
+     * We cover 4 cases that are essentially the same: The subquery could be in the left/right operand of the binary
+     * predicate and then it could be the left/right operand of that arithmetic expression.
+     * More complex cases, such as SELECT * FROM a WHERE a.a > 1 + (SELECT ... ) + 2 are not covered yet.
+     */
+
+    if (const auto arithmetic_expression =
+            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->left_operand())) {
+      if (const auto left_subquery_expression =
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->left_operand())) {
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, left_subquery_expression, 0,
+                                                 true);
+      } else if (const auto right_subquery_expression =
+                     std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->right_operand())) {
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, right_subquery_expression, 0,
+                                                 false);
+      }
+    }
+
+    if (const auto arithmetic_expression =
+            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
+      if (const auto left_subquery_expression =
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->left_operand())) {
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, left_subquery_expression, 1,
+                                                 true);
+      } else if (const auto right_subquery_expression =
+                     std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->right_operand())) {
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, right_subquery_expression, 1,
+                                                 false);
+      }
+    }
+
     if (const auto left_subquery_expression =
             std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->left_operand())) {
+      result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(left_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           flip_predicate_condition(binary_predicate->predicate_condition), binary_predicate->right_operand(),
-          left_subquery_expression->lqp->column_expressions()[0]);
-      result.subquery = left_subquery_expression;
+          result.subquery->lqp->column_expressions()[0]);
     } else if (const auto right_subquery_expression =
                    std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->right_operand())) {
+      result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(right_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           binary_predicate->predicate_condition, binary_predicate->left_operand(),
-          right_subquery_expression->lqp->column_expressions()[0]);
-      result.subquery = right_subquery_expression;
+          result.subquery->lqp->column_expressions()[0]);
     } else {
       return std::nullopt;
     }
@@ -247,7 +308,7 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     result.join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists
                            ? JoinMode::Semi
                            : JoinMode::AntiNullAsFalse;
-    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(exists_expression->subquery());
+    result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(exists_expression->subquery()->deep_copy());
 
     // We cannot optimize uncorrelated EXISTS into a join
     if (!result.subquery->is_correlated()) {
@@ -563,40 +624,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
   join_node->set_right_input(pull_up_result.adapted_lqp);
-
-  if (pull_up_result.adapted_lqp) {
-    const auto& estimator = cost_estimator->cardinality_estimator;
-    const auto probe_side_cardinality = estimator->estimate_cardinality(join_node->left_input());
-    const auto build_side_cardinality = estimator->estimate_cardinality(join_node->right_input());
-    const auto& primary_join_predicate = join_predicates[0];
-
-    bool primary_join_predicate_is_equals = false;
-    if (const auto predicate_expression =
-            std::dynamic_pointer_cast<BinaryPredicateExpression>(primary_join_predicate)) {
-      if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
-        primary_join_predicate_is_equals = true;
-      }
-    }
-
-    if ((join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
-         join_mode == JoinMode::AntiNullAsFalse) &&
-        build_side_cardinality > probe_side_cardinality * 10 && build_side_cardinality > 1'000 &&
-        primary_join_predicate_is_equals) {
-      // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much bigger
-      // than the left side. For that case, we add a second semi join on the build side, which throws out all values
-      // that will not be found by the primary (first) predicate of the later join, anyway. This is the case no matter
-      // if the original join is a semi or anti join. In any case, we want the reducing join introduced here to limit
-      // the input to the join operator to those values that have a chance of being relevant for the semi/anti join.
-      // However, we can only throw away values on the build side if the primary predicate is an equals predicate. For
-      // an example, see TPC-H query 21. That query is the main reason this part exists. The current thresholds are
-      // somewhat arbitrary. If we start to see more of those cases, we can try and find a more complex heuristic. This
-      // is also called "semi join reduction": http://www.db.in.tum.de/research/publications/conferences/semijoin.pdf
-      const auto pre_join_node = JoinNode::make(JoinMode::Semi, primary_join_predicate);
-      pre_join_node->comment = "Semi Reduction";
-      lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
-      pre_join_node->set_right_input(join_node->left_input());
-    }
-  }
 
   _apply_to_inputs(join_node);
 }

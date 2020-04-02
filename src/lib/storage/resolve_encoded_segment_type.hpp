@@ -1,11 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/value.hpp>
-
-#include <memory>
 
 // Include your encoded segment file here!
 #include "storage/dictionary_segment.hpp"
@@ -35,6 +35,7 @@ constexpr auto encoded_segment_for_type = hana::make_map(
                     template_c<FixedStringDictionarySegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, template_c<LZ4Segment>));
+// When adding something here, please also append all_segment_encoding_specs in the BaseTest class.
 
 /**
  * @brief Resolves the type of an encoded segment.

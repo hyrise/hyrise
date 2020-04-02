@@ -10,6 +10,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 
 namespace {
@@ -27,7 +28,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
   // Fill the temporary table with values
   resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
-    auto right_values = pmr_concurrent_vector<ColumnDataType>{};
+    auto right_values = pmr_vector<ColumnDataType>{};
     right_values.reserve(right_side_expressions.size());
 
     for (const auto& element : right_side_expressions) {
@@ -42,6 +43,10 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
     const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(right_values));
     list_as_table->append_chunk({value_segment});
   });
+
+  // Add statistics to the dummy table so that following rules or other steps (such as the LQPVisualizer), which
+  // expect statistics to be present, do not run into problems.
+  list_as_table->set_table_statistics(TableStatistics::from_table(*list_as_table));
 
   // Create a join node
   const auto static_table_node = std::make_shared<StaticTableNode>(list_as_table);
@@ -75,7 +80,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
     predicate_nodes.push_back(std::move(predicate_node));
   }
 
-  // Create a PredicateNode for the first value. Then, succesively hook up additional PredicateNodes using UnionNodes.
+  // Create a PredicateNode for the first value. Then, successively hook up additional PredicateNodes using UnionNodes.
   std::shared_ptr<AbstractLQPNode> last_node = predicate_nodes[0];
   for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes.size(); ++predicate_node_idx) {
     last_node = UnionNode::make(UnionMode::All, last_node, predicate_nodes[predicate_node_idx]);

@@ -19,10 +19,11 @@ std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_ope
   return stream;
 }
 
-LogicalExpression::LogicalExpression(const LogicalOperator logical_operator,
+LogicalExpression::LogicalExpression(const LogicalOperator init_logical_operator,
                                      const std::shared_ptr<AbstractExpression>& left_operand,
                                      const std::shared_ptr<AbstractExpression>& right_operand)
-    : AbstractExpression(ExpressionType::Logical, {left_operand, right_operand}), logical_operator(logical_operator) {}
+    : AbstractExpression(ExpressionType::Logical, {left_operand, right_operand}),
+      logical_operator(init_logical_operator) {}
 
 const std::shared_ptr<AbstractExpression>& LogicalExpression::left_operand() const { return arguments[0]; }
 
@@ -33,10 +34,10 @@ std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {
                                              right_operand()->deep_copy());
 }
 
-std::string LogicalExpression::as_column_name() const {
+std::string LogicalExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << _enclose_argument_as_column_name(*left_operand()) << " " << logical_operator << " "
-         << _enclose_argument_as_column_name(*right_operand());
+  stream << _enclose_argument(*left_operand(), mode) << " " << logical_operator << " "
+         << _enclose_argument(*right_operand(), mode);
   return stream.str();
 }
 

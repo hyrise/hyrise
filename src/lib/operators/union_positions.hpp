@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 
 namespace opossum {
 
@@ -72,11 +72,11 @@ class UnionPositions : public AbstractReadOnlyOperator {
   UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  private:
   // See docs at the top of the cpp
-  using ReferenceMatrix = std::vector<opossum::PosList>;
+  using ReferenceMatrix = std::vector<opossum::RowIDPosList>;
   using VirtualPosList = std::vector<size_t>;
 
   /**
@@ -108,8 +108,8 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _prepare_operator();
 
   UnionPositions::ReferenceMatrix _build_reference_matrix(const std::shared_ptr<const Table>& input_table) const;
-  bool _compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
-                                      const ReferenceMatrix& right_matrix, size_t right_row_idx) const;
+  static bool _compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
+                                             const ReferenceMatrix& right_matrix, size_t right_row_idx);
 
   // See the "About ColumnClusters" doc in the cpp
   std::vector<ColumnID> _column_cluster_offsets;

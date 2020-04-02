@@ -1,28 +1,20 @@
+#include <chrono>
+#include <iostream>
+#include <string>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <random>
-#include <string>
-
-#include "SQLParser.h"
 #include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
-#include "json.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/pqp_visualizer.hpp"
+#include "utils/sqlite_add_indices.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -54,31 +46,20 @@ int main(int argc, char* argv[]) {
   float scale_factor;
   bool use_prepared_statements;
 
-  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
-    // JSON config file was passed in
-    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 1.f);
-    comma_separated_queries = json_config.value("queries", std::string(""));
+  // Parse command line args
+  const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
-    use_prepared_statements = json_config.value("use_prepared_statements", false);
-  } else {
-    // Parse regular command line args
-    const auto cli_parse_result = cli_options.parse(argc, argv);
-
-    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
-
-    if (cli_parse_result.count("queries")) {
-      comma_separated_queries = cli_parse_result["queries"].as<std::string>();
-    }
-
-    scale_factor = cli_parse_result["scale"].as<float>();
-
-    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
-
-    use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
+  if (cli_parse_result.count("queries")) {
+    comma_separated_queries = cli_parse_result["queries"].as<std::string>();
   }
+
+  scale_factor = cli_parse_result["scale"].as<float>();
+
+  config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+
+  use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
 
   std::vector<BenchmarkItemID> item_ids;
 
@@ -100,10 +81,10 @@ int main(int argc, char* argv[]) {
   }
 
   std::cout << "- Benchmarking Queries: [ ";
-  for (const auto& item_id : item_ids) {
-    std::cout << (item_id + 1) << ", ";
-  }
-  std::cout << "]" << std::endl;
+  auto printable_item_ids = std::vector<std::string>();
+  std::for_each(item_ids.begin(), item_ids.end(),
+                [&printable_item_ids](auto& id) { printable_item_ids.push_back(std::to_string(id + 1)); });
+  std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]" << std::endl;
 
   auto context = BenchmarkRunner::create_context(*config);
 
@@ -128,10 +109,15 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
       *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
+
+  if (config->verify) {
+    add_indices_to_sqlite("resources/benchmark/tpch/schema.sql", "resources/benchmark/tpch/indices.sql",
+                          benchmark_runner->sqlite_wrapper);
+  }
+
   benchmark_runner->run();
 }

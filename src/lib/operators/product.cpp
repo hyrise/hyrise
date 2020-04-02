@@ -13,7 +13,10 @@ Product::Product(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(OperatorType::Product, left, right) {}
 
-const std::string Product::name() const { return "Product"; }
+const std::string& Product::name() const {
+  static const auto name = std::string{"Product"};
+  return name;
+}
 
 std::shared_ptr<const Table> Product::_on_execute() {
   TableColumnDefinitions column_definitions;
@@ -34,11 +37,11 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
     const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
-    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
       const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
-      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
@@ -63,8 +66,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   // we can first repeat each line on the left side #rightSide times and then repeat the ascending sequence for the
   // right side #leftSide times
 
-  std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
-  std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
+  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> calculated_pos_lists_left;
+  std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> calculated_pos_lists_right;
 
   Segments output_segments;
   auto is_left_side = true;
@@ -77,7 +80,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
       std::shared_ptr<const Table> referenced_table;
       ColumnID referenced_segment;
-      std::shared_ptr<const PosList> pos_list_in;
+      std::shared_ptr<const AbstractPosList> pos_list_in;
 
       if (auto reference_segment_in =
               std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id))) {
@@ -94,7 +97,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
       auto& pos_list_out = (is_left_side ? calculated_pos_lists_left : calculated_pos_lists_right)[pos_list_in];
       if (!pos_list_out) {
         // can't reuse
-        pos_list_out = std::make_shared<PosList>();
+        pos_list_out = std::make_shared<RowIDPosList>();
         pos_list_out->reserve(chunk_left->size() * chunk_right->size());
         for (size_t i = 0; i < chunk_left->size() * chunk_right->size(); ++i) {
           // size_t is sufficient here, because ChunkOffset::max is 2^32 and (2^32 * 2^32 = 2^64)

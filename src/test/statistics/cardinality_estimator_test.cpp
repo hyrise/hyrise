@@ -1,9 +1,8 @@
 #include <memory>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
+
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -576,6 +575,48 @@ TEST_F(CardinalityEstimatorTest, PredicateTwoOnTheSameColumn) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 25);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateAnd) {
+  // Same as PredicateTwoOnTheSameColumn, but the conditions are within one predicate
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(and_(greater_than_(a_a, 50), less_than_equals_(a_a, 75)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 25);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateOr) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_equals_(a_a, 10), greater_than_(a_a, 90)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateOrDoesNotIncreaseCardinality) {
+  // While we do not handle overlapping ranges yet, we at least want to make sure that tables don't become bigger.
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_equals_(a_a, 60), greater_than_(a_a, 20)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 100);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateIn) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(in_(a_a, list_(10, 11, 12, 13)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 40);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
@@ -628,6 +669,19 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
   const auto lqp_e =
       PredicateNode::make(between_inclusive_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateMultipleWithCorrelatedParameter) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, 50),  // s=0.5
+    PredicateNode::make(less_than_equals_(a_b, correlated_parameter_(ParameterID{1}, a_a)),
+      node_a));
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 45.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 90.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
@@ -832,11 +886,7 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
   // more to test here
 
-  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
-  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  EXPECT_EQ(estimator.estimate_cardinality(static_table_node), 0.0f);
-
-  const auto create_table_lqp = CreateTableNode::make("t", false, static_table_node);
+  const auto create_table_lqp = CreateTableNode::make("t", false, node_a);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0f);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(node_a, std::vector<ParameterID>{});

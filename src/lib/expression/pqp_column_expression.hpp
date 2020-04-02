@@ -15,11 +15,11 @@ class PQPColumnExpression : public AbstractExpression {
   static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const std::string& column_name);
   static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const ColumnID column_id);
 
-  PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
+  PQPColumnExpression(const ColumnID init_column_id, const DataType data_type, const bool nullable,
                       const std::string& column_name);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
   bool requires_computation() const override;
 

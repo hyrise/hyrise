@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 
+#include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 
@@ -30,9 +31,11 @@ struct ColumnDataDistribution {
     return c;
   }
 
-  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0,
-                                                          const double skew_scale = 1.0,
-                                                          const double skew_shape = 0.0) {
+  static ColumnDataDistribution make_skewed_normal_config(
+      const double skew_location = 0.0, const double skew_scale = 1.0,
+      // Temporary work around for https://github.com/boostorg/math/issues/254.
+      // TODO(anyone): reset to 0.0 when Hyrise's boost has the fix.
+      const double skew_shape = 0.0001) {
     ColumnDataDistribution c{};
     c.skew_location = skew_location;
     c.skew_scale = skew_scale;
@@ -56,18 +59,34 @@ struct ColumnDataDistribution {
   double max_value;
 };
 
+struct ColumnSpecification {
+  ColumnSpecification(const ColumnDataDistribution& init_data_distribution, const DataType& init_data_type,
+                      const std::optional<SegmentEncodingSpec> init_segment_encoding_spec = std::nullopt,
+                      const std::optional<std::string> init_name = std::nullopt, const float init_null_ratio = 0.0f)
+      : data_distribution(init_data_distribution),
+        data_type(init_data_type),
+        segment_encoding_spec(init_segment_encoding_spec),
+        name(init_name),
+        null_ratio(init_null_ratio) {}
+
+  const ColumnDataDistribution data_distribution;
+  const DataType data_type;
+  const std::optional<SegmentEncodingSpec> segment_encoding_spec;
+  const std::optional<std::string> name;
+  const float null_ratio;
+};
+
 class SyntheticTableGenerator {
  public:
   // Simple table generation, mainly for simple tests
-  std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows, const ChunkOffset chunk_size,
+  std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows,
+                                        const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                         const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
-  std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
-                                        const ChunkOffset chunk_size,
-                                        const std::optional<std::vector<SegmentEncodingSpec>>& segment_encoding_specs,
-                                        const std::optional<std::vector<std::string>>& column_names = std::nullopt,
-                                        const UseMvcc use_mvcc = UseMvcc::No);
+  static std::shared_ptr<Table> generate_table(const std::vector<ColumnSpecification>& column_specifications,
+                                               const size_t num_rows,
+                                               const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+                                               const UseMvcc use_mvcc = UseMvcc::No);
 
   /**
     * Function to create a typed value from an integer. The data generation creates integers with the requested
@@ -97,12 +116,12 @@ class SyntheticTableGenerator {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
       return static_cast<T>(input) * 0.999999f;
-    } else {
+    } else if constexpr (std::is_same_v<T, pmr_string>) {
+      Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
+
       constexpr auto generated_string_length = size_t{10};
       constexpr auto prefix_length = size_t{4};
       constexpr auto variable_string_length = generated_string_length - prefix_length;
-
-      Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
 
       const std::vector<char> chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
                                        'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
@@ -129,8 +148,6 @@ class SyntheticTableGenerator {
   }
 
  protected:
-  const size_t _num_columns = 10;
-  const size_t _num_rows = 40'000;
   const int _max_different_value = 10'000;
 };
 

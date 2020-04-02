@@ -32,7 +32,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     threads.emplace_back([&] {
       while (true) {
         auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};
-        if (static_cast<size_t>(my_column_id) >= table.column_count()) return;
+        if (static_cast<ColumnCount>(my_column_id) >= table.column_count()) return;
 
         const auto column_data_type = table.column_data_type(my_column_id);
 
@@ -73,9 +73,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
 }
 
-TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics,
-                                 const Cardinality row_count)
-    : column_statistics(std::move(column_statistics)), row_count(row_count) {}
+TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
+                                 const Cardinality init_row_count)
+    : column_statistics(std::move(init_column_statistics)), row_count(init_row_count) {}
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");

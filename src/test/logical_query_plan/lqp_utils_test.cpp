@@ -1,6 +1,5 @@
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
+
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -155,7 +154,7 @@ TEST_F(LQPUtilsTest, VisitLQPUpwards) {
     auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
     visit_lqp_upwards(node_a, [&](const auto& node) {
       actual_nodes.emplace_back(node);
-      return LQPVisitation::VisitInputs;
+      return LQPUpwardVisitation::VisitOutputs;
     });
 
     EXPECT_EQ(actual_nodes, expected_nodes);

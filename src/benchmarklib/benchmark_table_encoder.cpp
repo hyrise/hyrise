@@ -10,6 +10,7 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -17,38 +18,12 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-SegmentEncodingSpec get_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
-
-SegmentEncodingSpec get_segment_encoding_spec(const ReferenceSegment&) {
-  Fail("Did not expect a ReferenceSegment in base table");
-}
-
-SegmentEncodingSpec get_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
-  if (base_encoded_segment.compressed_vector_type()) {
-    switch (*base_encoded_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize1ByteAligned:
-      case CompressedVectorType::FixedSize2ByteAligned:
-      case CompressedVectorType::FixedSize4ByteAligned:
-        return {base_encoded_segment.encoding_type(), VectorCompressionType::FixedSizeByteAligned};
-      case CompressedVectorType::SimdBp128:
-        return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
-    }
-
-    Fail("GCC thinks this is reachable");
-  } else {
-    return {base_encoded_segment.encoding_type()};
-  }
-}
-
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
 
   for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
-    const auto& base_segment = *chunk.get_segment(column_id);
-
-    resolve_data_and_segment_type(base_segment, [&](const auto /* data_type_t */, const auto& segment) {
-      chunk_encoding_spec[column_id] = get_segment_encoding_spec(segment);
-    });
+    const auto& base_segment = chunk.get_segment(column_id);
+    chunk_encoding_spec[column_id] = get_segment_encoding_spec(base_segment);
   }
 
   return chunk_encoding_spec;
@@ -134,21 +109,21 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto encoding_performed = std::atomic<bool>{false};
   const auto column_data_types = table->column_data_types();
 
-  // Encode chunks in parallel, using `hardware_concurrency + 1` worker
+  // Encode chunks in parallel, using `hardware_concurrency + 1` workers
   // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
   auto next_chunk = std::atomic_uint{0};
+  const auto thread_count = std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
   auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
 
-  for (auto thread_id = 0u;
-       thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
-       ++thread_id) {
+  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_chunk = next_chunk++;
         if (my_chunk >= table->chunk_count()) return;
 
         const auto chunk = table->get_chunk(ChunkID{my_chunk});
-        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
         if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
           ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
           encoding_performed = true;

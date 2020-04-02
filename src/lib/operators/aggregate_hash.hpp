@@ -1,8 +1,5 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/container/scoped_allocator.hpp>
-#include <boost/functional/hash.hpp>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -13,18 +10,24 @@
 #include <utility>
 #include <vector>
 
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
+#include <boost/functional/hash.hpp>
+
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 #include "bytell_hash_map.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+// empty base class for AggregateResultContext
+class SegmentVisitorContext {};
 
 template <typename AggregateKey>
 struct GroupByContext;
@@ -71,10 +74,11 @@ using AggregateResultIdMap =
     ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
                          AggregateResultIdMapAllocator<AggregateKey>>;
 
-/*
-The key type that is used for the aggregation map.
-*/
+// The key type that is used for the aggregation map.
 using AggregateKeyEntry = uint64_t;
+
+// A dummy type used as AggregateKey if no GROUP BY columns are present
+struct EmptyAggregateKey {};
 
 template <typename AggregateKey>
 using AggregateKeys = std::vector<AggregateKey>;
@@ -92,10 +96,11 @@ using DistinctAggregateType = int8_t;
 
 class AggregateHash : public AbstractAggregateOperator {
  public:
-  AggregateHash(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
+  AggregateHash(const std::shared_ptr<AbstractOperator>& in,
+                const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnDataType, AggregateFunction function>
@@ -119,7 +124,7 @@ class AggregateHash : public AbstractAggregateOperator {
   void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
                                AggregateFunction function);
 
-  void _write_groupby_output(PosList& pos_list);
+  void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
@@ -137,6 +142,11 @@ class AggregateHash : public AbstractAggregateOperator {
 
 namespace std {
 template <>
+struct hash<opossum::EmptyAggregateKey> {
+  size_t operator()(const opossum::EmptyAggregateKey& key) const { return 0; }
+};
+
+template <>
 struct hash<std::vector<opossum::AggregateKeyEntry>> {
   size_t operator()(const std::vector<opossum::AggregateKeyEntry>& key) const {
     return boost::hash_range(key.begin(), key.end());
@@ -145,7 +155,7 @@ struct hash<std::vector<opossum::AggregateKeyEntry>> {
 
 template <>
 struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
-  // gcc7 doesn't support templating by `int N` here.
+  // gcc9 doesn't support templating by `int N` here.
   size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }

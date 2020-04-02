@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -24,7 +24,7 @@ class Insert : public AbstractReadWriteOperator {
   explicit Insert(const std::string& target_table_name,
                   const std::shared_ptr<const AbstractOperator>& values_to_insert);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

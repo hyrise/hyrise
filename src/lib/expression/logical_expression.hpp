@@ -12,14 +12,15 @@ std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_ope
 
 class LogicalExpression : public AbstractExpression {
  public:
-  LogicalExpression(const LogicalOperator logical_operator, const std::shared_ptr<AbstractExpression>& left_operand,
+  LogicalExpression(const LogicalOperator init_logical_operator,
+                    const std::shared_ptr<AbstractExpression>& left_operand,
                     const std::shared_ptr<AbstractExpression>& right_operand);
 
   const std::shared_ptr<AbstractExpression>& left_operand() const;
   const std::shared_ptr<AbstractExpression>& right_operand() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
 
   const LogicalOperator logical_operator;

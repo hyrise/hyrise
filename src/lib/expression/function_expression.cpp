@@ -10,9 +10,9 @@
 
 namespace opossum {
 
-FunctionExpression::FunctionExpression(const FunctionType function_type,
-                                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
-    : AbstractExpression(ExpressionType::Function, arguments), function_type(function_type) {
+FunctionExpression::FunctionExpression(const FunctionType init_function_type,
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
+    : AbstractExpression(ExpressionType::Function, init_arguments), function_type(init_function_type) {
   switch (function_type) {
     case FunctionType::Substring:
       Assert(arguments.size() == 3, "Substring expects 3 parameters");
@@ -31,12 +31,12 @@ std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
   return std::make_shared<FunctionExpression>(function_type, expressions_deep_copy(arguments));
 }
 
-std::string FunctionExpression::as_column_name() const {
+std::string FunctionExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
-    stream << arguments[argument_idx]->as_column_name();
+    stream << arguments[argument_idx]->description(mode);
     if (argument_idx + 1 < arguments.size()) stream << ",";
   }
   stream << ")";
@@ -46,11 +46,10 @@ std::string FunctionExpression::as_column_name() const {
 DataType FunctionExpression::data_type() const {
   switch (function_type) {
     case FunctionType::Substring:
-      return DataType::String;
     case FunctionType::Concatenate:
       return DataType::String;
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {

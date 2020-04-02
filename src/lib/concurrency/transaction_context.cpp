@@ -10,9 +10,11 @@
 
 namespace opossum {
 
-TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id)
+TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
+                                       const AutoCommit is_auto_commit)
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
+      _is_auto_commit{is_auto_commit},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {
   Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
@@ -21,7 +23,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
                 auto an_operator_failed = false;
-                for (const auto& op : _rw_operators) {
+                for (const auto& op : _read_write_operators) {
                   if (op->state() == ReadWriteOperatorState::Failed) {
                     an_operator_failed = true;
                     break;
@@ -35,7 +37,7 @@ TransactionContext::~TransactionContext() {
               "exception if an operator threw an uncaught exception.");
 
   DebugAssert(([this]() {
-                const auto has_registered_operators = !_rw_operators.empty();
+                const auto has_registered_operators = !_read_write_operators.empty();
                 const auto committed_or_rolled_back =
                     _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
                 return !has_registered_operators || committed_or_rolled_back;
@@ -53,6 +55,7 @@ TransactionContext::~TransactionContext() {
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
 CommitID TransactionContext::snapshot_commit_id() const { return _snapshot_commit_id; }
+AutoCommit TransactionContext::is_auto_commit() const { return _is_auto_commit; }
 
 CommitID TransactionContext::commit_id() const {
   Assert(_commit_context, "TransactionContext cid only available after commit context has been created.");
@@ -70,7 +73,7 @@ bool TransactionContext::aborted() const {
 void TransactionContext::rollback() {
   _abort();
 
-  for (const auto& op : _rw_operators) {
+  for (const auto& op : _read_write_operators) {
     op->rollback_records();
   }
 
@@ -80,7 +83,7 @@ void TransactionContext::rollback() {
 void TransactionContext::commit_async(const std::function<void(TransactionID)>& callback) {
   _prepare_commit();
 
-  for (const auto& op : _rw_operators) {
+  for (const auto& op : _read_write_operators) {
     op->commit_records(commit_id());
   }
 
@@ -91,7 +94,7 @@ void TransactionContext::commit() {
   Assert(_phase == TransactionPhase::Active, "TransactionContext must be active to be committed.");
 
   // No modifications made, nothing to commit, no need to acquire a commit ID
-  if (_rw_operators.empty()) {
+  if (_read_write_operators.empty()) {
     _transition(TransactionPhase::Active, TransactionPhase::Committed);
     return;
   }
@@ -113,7 +116,7 @@ void TransactionContext::_abort() {
 
 void TransactionContext::_mark_as_rolled_back() {
   DebugAssert(([this]() {
-                for (const auto& op : _rw_operators) {
+                for (const auto& op : _read_write_operators) {
                   if (op->state() != ReadWriteOperatorState::RolledBack) return false;
                 }
                 return true;
@@ -125,7 +128,7 @@ void TransactionContext::_mark_as_rolled_back() {
 
 void TransactionContext::_prepare_commit() {
   DebugAssert(([this]() {
-                for (const auto& op : _rw_operators) {
+                for (const auto& op : _read_write_operators) {
                   if (op->state() != ReadWriteOperatorState::Executed) return false;
                 }
                 return true;
@@ -139,9 +142,9 @@ void TransactionContext::_prepare_commit() {
   _commit_context = Hyrise::get().transaction_manager._new_commit_context();
 }
 
-void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
+void TransactionContext::_mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback) {
   DebugAssert(([this]() {
-                for (const auto& op : _rw_operators) {
+                for (const auto& op : _read_write_operators) {
                   if (op->state() != ReadWriteOperatorState::Committed) return false;
                 }
                 return true;
@@ -181,6 +184,27 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
 void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase) {
   const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
   Assert(success, "Illegal phase transition detected.");
+}
+
+std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {
+  switch (phase) {
+    case TransactionPhase::Active:
+      stream << "Active";
+      break;
+    case TransactionPhase::Aborted:
+      stream << "Aborted";
+      break;
+    case TransactionPhase::RolledBack:
+      stream << "RolledBack";
+      break;
+    case TransactionPhase::Committing:
+      stream << "Committing";
+      break;
+    case TransactionPhase::Committed:
+      stream << "Committed";
+      break;
+  }
+  return stream;
 }
 
 }  // namespace opossum

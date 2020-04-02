@@ -1,9 +1,7 @@
-#include "gtest/gtest.h"
-
 #include "strategy_base_test.hpp"
-#include "testing_assert.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -14,7 +12,6 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
@@ -31,7 +28,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10);
     const auto string_histogram = GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 10);
 
-    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -40,21 +37,22 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     a_b_expression = to_expression(a_b);
     a_c_expression = to_expression(a_c);
 
-    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 10, {histogram, histogram});
+    node_b =
+        create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram, histogram});
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     c_a = node_c->get_column("a");
 
-    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     d_a = node_d->get_column("a");
     d_b = node_d->get_column("b");
     d_c = node_d->get_column("c");
 
-    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     e_a = node_e->get_column("a");
     e_b = node_e->get_column("b");
@@ -641,7 +639,7 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesCorrelatedExis
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
   EXPECT_FALSE(input_info->join_predicate);
 }
@@ -654,7 +652,7 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesCorrelatedNotE
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::AntiNullAsFalse);
   EXPECT_FALSE(input_info->join_predicate);
 }
@@ -666,9 +664,12 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesIn) {
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, b_a));
+
+  const auto mapping = lqp_create_node_mapping(subquery_expression->lqp, input_info->subquery->lqp);
+  const auto copied_b_a = expression_adapt_to_different_lqp(*lqp_column_(b_a), mapping);
+  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, copied_b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesUncorrelatedNotIn) {
@@ -678,9 +679,12 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesUncorrelatedNo
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::AntiNullAsTrue);
-  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, b_a));
+
+  const auto mapping = lqp_create_node_mapping(subquery_expression->lqp, input_info->subquery->lqp);
+  const auto copied_b_a = expression_adapt_to_different_lqp(*lqp_column_(b_a), mapping);
+  EXPECT_EQ(*input_info->join_predicate, *equals_(a_a, copied_b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesComparison) {
@@ -690,9 +694,12 @@ TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesComparison) {
 
   const auto input_info = SubqueryToJoinRule::is_predicate_node_join_candidate(*lqp);
   ASSERT_TRUE(input_info);
-  EXPECT_EQ(input_info->subquery, subquery_expression);
+  EXPECT_EQ(*input_info->subquery, *subquery_expression);
   EXPECT_EQ(input_info->join_mode, JoinMode::Semi);
-  EXPECT_EQ(*input_info->join_predicate, *less_than_(a_a, b_a));
+
+  const auto mapping = lqp_create_node_mapping(subquery_expression->lqp, input_info->subquery->lqp);
+  const auto copied_b_a = expression_adapt_to_different_lqp(*lqp_column_(b_a), mapping);
+  EXPECT_EQ(*input_info->join_predicate, *less_than_(a_a, copied_b_a));
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateRejectsCorrelatedNotIn) {
@@ -940,91 +947,6 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsSemiJoinWithoutReduction) {
-  // SELECT * FROM larger WHERE EXISTS (SELECT * FROM smaller WHERE larger.b = smaller.a)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, large_node_a);
-
-  // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(small_node_a, parameter),
-    small_node);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, large_node_a));
-
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery),
-    large_node);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(large_node_a, small_node_a),
-    large_node,
-    small_node);
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToSemiJoinWithReduction) {
-  // SELECT * FROM smaller WHERE EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
-
-  // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(large_node_a, parameter),
-    large_node);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, small_node_a));
-
-  const auto input_lqp =
-  PredicateNode::make(exists_(subquery),
-    small_node);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
-    small_node,
-    JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
-      large_node,
-      small_node));
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedNotExistsToSemiJoinWithReduction) {
-  // SELECT * FROM smaller WHERE NOT EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
-
-  // clang-format off
-  const auto subquery_lqp =
-  PredicateNode::make(equals_(large_node_a, parameter),
-    large_node);
-
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, small_node_a));
-
-  const auto input_lqp =
-  PredicateNode::make(not_exists_(subquery),
-    small_node);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::AntiNullAsFalse, equals_(small_node_a, large_node_a),
-    small_node,
-    JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
-      large_node,
-      small_node));
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SubqueryToJoinRuleTest, UncorrelatedNestedInToSemiJoins) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a IN (SELECT c.a FROM c))
 
@@ -1210,6 +1132,102 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, MultipliedCorrelatedComparatorToSemiJoin) {
+  // clang-format off
+  // SELECT * FROM a WHERE a.a > 3 / (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(greater_than_(a_a, div_(value_(3), subquery)),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(value_(3), sum_(b_a))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(value_(3), sum_(b_a)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // SELECT * FROM a WHERE a.a > (SELECT SUM(b.a) FROM b WHERE b.b = a.b) / 3
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(greater_than_(a_a, div_(subquery, value_(3))),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(sum_(b_a), value_(3))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(sum_(b_a), value_(3)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // SELECT * FROM a WHERE 3 / (SELECT SUM(b.a) FROM b WHERE b.b = a.b) < a.a
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(less_than_(div_(value_(3), subquery), a_a),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(value_(3), sum_(b_a))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(value_(3), sum_(b_a)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // SELECT * FROM a WHERE (SELECT SUM(b.a) FROM b WHERE b.b = a.b) / 3 < a.a
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(less_than_(div_(subquery, value_(3)), a_a),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(sum_(b_a), value_(3))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(sum_(b_a), value_(3)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  // clang-format on
 }
 
 TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredicates) {
@@ -1494,6 +1512,46 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
+  // SELECT * FROM a WHERE a.a > (SELECT SUM(a.a) FROM a WHERE a.b = a.b) + (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+
+  // clang-format off
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+
+  const auto subquery_lqp0 =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)),
+    PredicateNode::make(equals_(a_b, parameter),
+      node_a));
+  const auto subquery0 = lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, a_b));
+
+  const auto subquery_lqp1 =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+    PredicateNode::make(equals_(b_b, parameter),
+      node_b));
+  const auto subquery1 = lqp_subquery_(subquery_lqp1, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, add_(subquery0, subquery1)),
+    node_a);
+
+
+  const auto subquery_lqp2 =
+  ProjectionNode::make(expression_vector(add_(sum_(a_a), subquery1)),
+    AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)),
+      PredicateNode::make(equals_(a_b, parameter),
+        node_a)));
+  const auto subquery2 = lqp_subquery_(subquery_lqp2, std::make_pair(ParameterID{0}, a_b));
+
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(a_a, subquery2),
+    node_a);
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 

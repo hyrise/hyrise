@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
@@ -34,13 +33,9 @@ class OperatorsDeleteTest : public BaseTest {
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     Hyrise::get().storage_manager.add_table(_table_name, _table);
     Hyrise::get().storage_manager.add_table(_table2_name, _table2);
-
-    _gt = std::make_shared<GetTable>(_table_name);
-    _gt->execute();
   }
 
   std::string _table_name, _table2_name;
-  std::shared_ptr<GetTable> _gt;
   std::shared_ptr<Table> _table, _table2;
 
   void helper(bool commit);
@@ -50,8 +45,10 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, 456.7f);
+  auto gt = std::make_shared<GetTable>(_table_name);
+  gt->execute();
 
+  auto table_scan = create_table_scan(gt, ColumnID{1}, PredicateCondition::GreaterThan, 456.7f);
   table_scan->execute();
 
   auto delete_op = std::make_shared<Delete>(table_scan);
@@ -59,11 +56,9 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(0u),
-            transaction_context->transaction_id());
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(2u),
-            transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(0u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(2u), transaction_context->transaction_id());
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
@@ -74,15 +69,15 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = MvccData::MAX_COMMIT_ID;
   }
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(2u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(0u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(1u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(2u), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(0u), expected_tid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(2u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(0u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(2u), expected_tid);
 }
 
 TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
@@ -93,9 +88,12 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto t2_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-  auto table_scan1 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "123");
-  auto expected_result = create_table_scan(_gt, ColumnID{0}, PredicateCondition::NotEquals, "123");
-  auto table_scan2 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::LessThan, "1234");
+  auto gt = std::make_shared<GetTable>(_table_name);
+  gt->execute();
+
+  auto table_scan1 = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "123");
+  auto expected_result = create_table_scan(gt, ColumnID{0}, PredicateCondition::NotEquals, "123");
+  auto table_scan2 = create_table_scan(gt, ColumnID{0}, PredicateCondition::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
@@ -116,13 +114,31 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_FALSE(delete_op1->execute_failed());
   EXPECT_TRUE(delete_op2->execute_failed());
 
+  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
+  // operator:
+  {
+    const auto& performance_data_1 = delete_op1->performance_data();
+    EXPECT_TRUE(performance_data_1.executed);
+    EXPECT_GT(performance_data_1.walltime.count(), 0);
+    EXPECT_FALSE(performance_data_1.has_output);
+
+    const auto& performance_data_2 = delete_op2->performance_data();
+    EXPECT_TRUE(performance_data_2.executed);
+    EXPECT_GT(performance_data_2.walltime.count(), 0);
+    EXPECT_FALSE(performance_data_2.has_output);
+  }
+
   // MVCC commit.
   t1_context->commit();
   t2_context->rollback();
 
   // Get validated table which should have only one row deleted.
   auto t_context = Hyrise::get().transaction_manager.new_transaction_context();
-  auto validate = std::make_shared<Validate>(_gt);
+
+  auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  gt_post_delete->execute();
+
+  auto validate = std::make_shared<Validate>(gt_post_delete);
   validate->set_transaction_context(t_context);
 
   validate->execute();
@@ -133,7 +149,10 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 TEST_F(OperatorsDeleteTest, EmptyDelete) {
   auto tx_context_modification = Hyrise::get().transaction_manager.new_transaction_context();
 
-  auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "112233");
+  auto gt = std::make_shared<GetTable>(_table_name);
+  gt->execute();
+
+  auto table_scan = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "112233");
 
   table_scan->execute();
 
@@ -151,22 +170,29 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
 
   // Get validated table which should be the original one
   auto tx_context_verification = Hyrise::get().transaction_manager.new_transaction_context();
-  auto validate = std::make_shared<Validate>(_gt);
+
+  auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  gt_post_delete->execute();
+
+  auto validate = std::make_shared<Validate>(gt_post_delete);
   validate->set_transaction_context(tx_context_verification);
 
   validate->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), _gt->get_output());
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), gt_post_delete->get_output());
 }
 
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto t2_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-  auto validate1 = std::make_shared<Validate>(_gt);
+  auto gt = std::make_shared<GetTable>(_table_name);
+  gt->execute();
+
+  auto validate1 = std::make_shared<Validate>(gt);
   validate1->set_transaction_context(t1_context);
 
-  auto validate2 = std::make_shared<Validate>(_gt);
+  auto validate2 = std::make_shared<Validate>(gt);
   validate2->set_transaction_context(t2_context);
 
   validate1->execute();
@@ -211,7 +237,10 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     insert->set_transaction_context(context);
     insert->execute();
 
-    auto validate1 = std::make_shared<Validate>(_gt);
+    auto gt = std::make_shared<GetTable>(_table_name);
+    gt->execute();
+
+    auto validate1 = std::make_shared<Validate>(gt);
     validate1->set_transaction_context(context);
     validate1->execute();
 
@@ -223,10 +252,10 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     delete_op->set_transaction_context(context);
     delete_op->execute();
 
-    auto gt = std::make_shared<GetTable>(_table_name);
-    gt->execute();
+    auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+    gt_post_delete->execute();
 
-    auto validate2 = std::make_shared<Validate>(_gt);
+    auto validate2 = std::make_shared<Validate>(gt_post_delete);
     validate2->set_transaction_context(context);
     validate2->execute();
 
@@ -246,10 +275,10 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   {
     auto context = Hyrise::get().transaction_manager.new_transaction_context();
 
-    auto gt = std::make_shared<GetTable>(_table_name);
-    gt->execute();
+    auto gt2 = std::make_shared<GetTable>(_table_name);
+    gt2->execute();
 
-    auto validate1 = std::make_shared<Validate>(_gt);
+    auto validate1 = std::make_shared<Validate>(gt2);
     validate1->set_transaction_context(context);
     validate1->execute();
 
@@ -266,7 +295,10 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-  auto validate1 = std::make_shared<Validate>(_gt);
+  auto gt = std::make_shared<GetTable>(_table_name);
+  gt->execute();
+
+  auto validate1 = std::make_shared<Validate>(gt);
   validate1->set_transaction_context(t1_context);
   validate1->execute();
 
@@ -328,14 +360,14 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   transaction_context->commit();
 
   const auto expected_end_cid = transaction_context->commit_id();
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(0u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(1u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(1u), expected_end_cid);
 }
 
 }  // namespace opossum

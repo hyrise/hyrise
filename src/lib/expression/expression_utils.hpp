@@ -42,8 +42,8 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
-/*
- * Recurse through the expression and replace them according to replacements, where applicable
+/**
+ * Recurse through the expression and replace them according to @param mapping, where applicable
  */
 void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
                              const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping);
@@ -72,9 +72,10 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
                                                                        const LQPNodeMapping& node_mapping);
 
 /**
- * Create a comma separated string with the AbstractExpression::as_column_name() of each expression
+ * Create a comma separated string with the AbstractExpression::description(mode) of each expression
  */
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                    const AbstractExpression::DescriptionMode mode);
 
 enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 
@@ -113,8 +114,9 @@ void visit_expression(Expression& expression, Visitor visitor) {
 DataType expression_common_type(const DataType lhs, const DataType rhs);
 
 /**
- * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
- *         all required LQPColumnExpressions are available from this LQP).
+ * @return Checks whether the expression can be evaluated on top of a specified LQP (i.e., all required
+ *         LQPColumnExpressions are available from this LQP). This does not mean that all expressions are already
+ *         readily available as a column. It might be necessary to add a Projection or an Aggregate.
  *         To check if an expression is available in a form ready to be used by a scan/join,
  *         use `Operator*Predicate::from_expression(...)`.
  */
@@ -148,7 +150,8 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
 void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                          const std::weak_ptr<TransactionContext>& transaction_context);
 
-bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
+bool expression_contains_placeholder(const std::shared_ptr<AbstractExpression>& expression);
+bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpression>& expression);
 
 /**
  * @return  The value of a CorrelatedParameterExpression or ValueExpression

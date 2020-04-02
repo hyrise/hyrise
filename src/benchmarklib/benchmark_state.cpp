@@ -4,7 +4,18 @@
 
 namespace opossum {
 
-BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
+BenchmarkState::BenchmarkState(const opossum::Duration init_max_duration) : max_duration(init_max_duration) {}
+
+// NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
+BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
+  Assert(state != State::Running && other.state != State::Running, "Cannot assign to or from a running benchmark");
+  state = other.state.load();
+  benchmark_begin = other.benchmark_begin;
+  benchmark_duration = other.benchmark_duration;
+  max_duration = other.max_duration;
+
+  return *this;
+}
 
 bool BenchmarkState::keep_running() {
   switch (state) {
@@ -14,7 +25,8 @@ bool BenchmarkState::keep_running() {
       break;
     case State::Over:
       return false;
-    default: {}
+    default: {
+    }
   }
 
   benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;

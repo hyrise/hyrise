@@ -11,6 +11,7 @@
 namespace opossum {
 
 class LQPColumnExpression;
+class TableStatistics;
 
 /**
  * Represents a Table from the StorageManager in an LQP
@@ -19,7 +20,7 @@ class LQPColumnExpression;
  */
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
-  explicit StoredTableNode(const std::string& table_name);
+  explicit StoredTableNode(const std::string& init_table_name);
 
   LQPColumnReference get_column(const std::string& name) const;
 
@@ -38,14 +39,18 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   std::vector<IndexStatistics> indexes_statistics() const;
 
-  std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   const std::string table_name;
 
+  // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these
+  // statistics if they have changed from the original table, e.g., as the result of chunk pruning.
+  std::shared_ptr<TableStatistics> table_statistics;
+
  protected:
-  size_t _shallow_hash() const override;
+  size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 

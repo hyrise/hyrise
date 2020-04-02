@@ -9,8 +9,9 @@
 
 namespace opossum {
 
-AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator)
-    : cardinality_estimator(cardinality_estimator) {}
+AbstractCostEstimator::AbstractCostEstimator(
+    const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
+    : cardinality_estimator(init_cardinality_estimator) {}
 
 Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the
@@ -36,7 +37,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
 
     // Not every visited node has a cached cost. Costs are only cached for the roots of the plans for which
     // `AbstractCostEstimator::estimate_plan_cost()` is called. For subplans below the root, costs cannot be cached
-    // because their costs are never aggregated due to the traversal being a BFS.
+    // because their costs are never aggregated due to the traversal being a breadth-first search.
     const auto cached_cost = _get_subplan_cost_from_cache(current_node, visited);
     if (cached_cost) {
       // Cost for subplan successfully retrieved from cache, no need to look at the inputs of the current_node

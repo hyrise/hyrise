@@ -1,7 +1,7 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "utils/assert.hpp"
 
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
@@ -13,8 +13,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -38,11 +36,11 @@ class CreateTableTest : public BaseTest {
 };
 
 TEST_F(CreateTableTest, NameAndDescription) {
-  EXPECT_EQ(create_table->name(), "Create Table");
+  EXPECT_EQ(create_table->name(), "CreateTable");
   EXPECT_EQ(create_table->description(DescriptionMode::SingleLine),
-            "Create Table 't' ('a' int NOT NULL, 'b' float NULL)");
+            "CreateTable 't' ('a' int NOT NULL, 'b' float NULL)");
   EXPECT_EQ(create_table->description(DescriptionMode::MultiLine),
-            "Create Table 't' ('a' int NOT NULL\n'b' float NULL)");
+            "CreateTable 't' ('a' int NOT NULL\n'b' float NULL)");
 }
 
 TEST_F(CreateTableTest, Execute) {

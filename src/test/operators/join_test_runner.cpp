@@ -1,10 +1,9 @@
 #include <fstream>
 
 #include "base_test.hpp"
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_verification.hpp"
@@ -177,10 +176,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
-
-    const auto all_encoding_types = std::vector{EncodingType::Unencoded,        EncodingType::Dictionary,
-                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                                EncodingType::RunLength,        EncodingType::LZ4};
 
     // clang-format off
     JoinTestConfiguration default_configuration{
@@ -509,7 +504,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           Segments reference_segments;
 
           if (input_table_type == InputTableType::SharedPosList) {
-            const auto pos_list = std::make_shared<PosList>();
+            const auto pos_list = std::make_shared<RowIDPosList>();
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
@@ -520,7 +515,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
           } else if (input_table_type == InputTableType::IndividualPosLists) {
             for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-              const auto pos_list = std::make_shared<PosList>();
+              const auto pos_list = std::make_shared<RowIDPosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
@@ -677,6 +672,5 @@ INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
 // TODO(anyone) #1852
 // INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
 //                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
-INSTANTIATE_TEST_SUITE_P(JoinMPSM, JoinTestRunner,
-                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()));
+
 }  // namespace opossum

@@ -1,3 +1,5 @@
+#include "chunk.hpp"
+
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -8,7 +10,6 @@
 #include <vector>
 
 #include "base_segment.hpp"
-#include "chunk.hpp"
 #include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
@@ -19,32 +20,27 @@ namespace opossum {
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
     : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
-  Assert(!_segments.empty(),
-         "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
+  DebugAssert(!_segments.empty(),
+              "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
-#if HYRISE_DEBUG
-  const auto chunk_size = _segments.empty() ? 0u : _segments[0]->size();
-  const auto is_reference_chunk =
-      !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
+  if constexpr (HYRISE_DEBUG) {
+    const auto is_reference_chunk =
+        !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
 
-  DebugAssert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
-  for (const auto& segment : _segments) {
-    DebugAssert(
-        !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
-        "Chunks containing ReferenceSegments should not contains MvccData. They implicitly use the MvccData of the "
-        "referenced Table");
-    DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
-    DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
-                "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+    for (const auto& segment : _segments) {
+      Assert(segment, "Segment must not be nullptr");
+      Assert(!mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
+             "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
+             "referenced Table");
+      Assert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
+             "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+    }
   }
-#endif
 
   if (alloc) _alloc = *alloc;
 }
 
 bool Chunk::is_mutable() const { return _is_mutable; }
-
-void Chunk::mark_immutable() { _is_mutable = false; }
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
@@ -53,8 +49,10 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
-  // Do this first to ensure that the first thing to exist in a row is the MVCC data.
-  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, INVALID_TRANSACTION_ID, CommitID{0});
+  if (has_mvcc_data()) {
+    // Make the row visible - mvcc_data has been pre-allocated
+    mvcc_data()->set_begin_cid(size(), CommitID{0});
+  }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
@@ -74,23 +72,15 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-const Segments& Chunk::segments() const { return _segments; }
+ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
-uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.size()); }
-
-uint32_t Chunk::size() const {
+ChunkOffset Chunk::size() const {
   if (_segments.empty()) return 0;
-  auto first_segment = get_segment(ColumnID{0});
-  return static_cast<uint32_t>(first_segment->size());
+  const auto first_segment = get_segment(ColumnID{0});
+  return static_cast<ChunkOffset>(first_segment->size());
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
-
-SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
-  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
-
-  return {*_mvcc_data, _mvcc_data->_mutex};
-}
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
@@ -100,6 +90,24 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
   std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
   return result;
+}
+
+void Chunk::finalize() {
+  Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
+  _is_mutable = false;
+
+  if (has_mvcc_data()) {
+    const auto chunk_size = size();
+    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
+    _mvcc_data->max_begin_cid = CommitID{0};
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
+    }
+
+    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
+           "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
+           "finalized before all transactions committed/rolled back.");
+  }
 }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
@@ -164,20 +172,17 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
 
 const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
 
-size_t Chunk::estimate_memory_usage() const {
+size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
 
   for (const auto& segment : _segments) {
-    bytes += segment->estimate_memory_usage();
+    bytes += segment->memory_usage(mode);
   }
 
   // TODO(anybody) Index memory usage missing
 
   if (_mvcc_data) {
-    bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);
-    bytes += _mvcc_data->tids.size() * sizeof(decltype(_mvcc_data->tids)::value_type);
-    bytes += _mvcc_data->begin_cids.size() * sizeof(decltype(_mvcc_data->begin_cids)::value_type);
-    bytes += _mvcc_data->end_cids.size() * sizeof(decltype(_mvcc_data->end_cids)::value_type);
+    bytes += _mvcc_data->memory_usage();
   }
 
   return bytes;
@@ -187,7 +192,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
-                  if (column_id >= column_count()) return false;
+                  if (column_id >= static_cast<ColumnID>(column_count())) return false;
                 return true;
               }()),
               "column ids not within range [0, column_count()).");
@@ -203,20 +208,28 @@ const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
 
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
-  Assert(!pruning_statistics || pruning_statistics->size() == column_count(),
+  Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
          "Pruning statistics must have same number of segments as Chunk");
 
   _pruning_statistics = pruning_statistics;
 }
-void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
-
-void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
-  DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");
-  _cleanup_commit_id = cleanup_commit_id;
-}
+void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
 const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
 
 void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
+
+std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
+  if (_cleanup_commit_id == 0) {
+    // Cleanup-Commit-ID is not yet set
+    return std::nullopt;
+  }
+  return std::optional<CommitID>{_cleanup_commit_id.load()};
+}
+
+void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
+  Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
+  _cleanup_commit_id.store(cleanup_commit_id);
+}
 
 }  // namespace opossum

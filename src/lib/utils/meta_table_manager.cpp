@@ -1,126 +1,93 @@
 #include "meta_table_manager.hpp"
 
-#include "constant_mappings.hpp"
-#include "hyrise.hpp"
-#include "statistics/table_statistics.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/table.hpp"
-#include "storage/table_column_definition.hpp"
+#include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
+#include "utils/meta_tables/meta_chunks_table.hpp"
+#include "utils/meta_tables/meta_columns_table.hpp"
+#include "utils/meta_tables/meta_plugins_table.hpp"
+#include "utils/meta_tables/meta_segments_accurate_table.hpp"
+#include "utils/meta_tables/meta_segments_table.hpp"
+#include "utils/meta_tables/meta_settings_table.hpp"
+#include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  _methods["tables"] = std::bind(&MetaTableManager::generate_tables_table, this);
-  _methods["columns"] = std::bind(&MetaTableManager::generate_columns_table, this);
-  _methods["chunks"] = std::bind(&MetaTableManager::generate_chunks_table, this);
-  _methods["segments"] = std::bind(&MetaTableManager::generate_segments_table, this);
+  const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {
+      std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
+      std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
+      std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>(),
+      std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>()};
 
-  _table_names.reserve(_methods.size());
-  for (const auto& [table_name, _] : _methods) {
-    _table_names.emplace_back(table_name);
+  _table_names.reserve(_meta_tables.size());
+  for (const auto& table : meta_tables) {
+    _meta_tables[table->name()] = table;
+    _table_names.emplace_back(table->name());
   }
   std::sort(_table_names.begin(), _table_names.end());
 }
 
-const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
-
-std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
-  const auto table = _methods.at(table_name)();
-  table->set_table_statistics(TableStatistics::from_table(*table));
-  return table;
-}
-
-std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
-                                              {"column_count", DataType::Int, false},
-                                              {"row_count", DataType::Long, false},
-                                              {"chunk_count", DataType::Int, false},
-                                              {"max_chunk_size", DataType::Int, false}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
-
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
-                          static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
-                          static_cast<int32_t>(table->max_chunk_size())});
-  }
-
-  return output_table;
-}
-
-std::shared_ptr<Table> MetaTableManager::generate_columns_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
-                                              {"name", DataType::String, false},
-                                              {"data_type", DataType::String, false},
-                                              {"nullable", DataType::Int, false}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
-
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      output_table->append({pmr_string{table_name}, static_cast<pmr_string>(table->column_name(column_id)),
-                            static_cast<pmr_string>(data_type_to_string.left.at(table->column_data_type(column_id))),
-                            static_cast<int32_t>(table->column_is_nullable(column_id))});
-    }
-  }
-
-  return output_table;
-}
-
-std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
-                                              {"chunk_id", DataType::Int, false},
-                                              {"rows", DataType::Long, false},
-                                              {"invalid_rows", DataType::Long, false},
-                                              {"cleanup_commit_id", DataType::Long, true}};
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
-
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
-      const auto cleanup_commit_id = chunk->get_cleanup_commit_id()
-                                         ? AllTypeVariant{static_cast<int64_t>(*chunk->get_cleanup_commit_id())}
-                                         : NULL_VALUE;
-      output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int64_t>(chunk->size()),
-                            static_cast<int64_t>(chunk->invalid_row_count()), cleanup_commit_id});
-    }
-  }
-
-  return output_table;
-}
-
-std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
-                                              {"chunk_id", DataType::Int, false},
-                                              {"column_id", DataType::Int, false},
-                                              {"column_name", DataType::String, false},
-                                              {"column_data_type", DataType::String, false},
-                                              {"encoding", DataType::String, true}};
-  // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
-  auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
-
-  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        const auto& chunk = table->get_chunk(chunk_id);
-        const auto& segment = chunk->get_segment(column_id);
-
-        const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
-        AllTypeVariant encoding = NULL_VALUE;
-        if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
-          encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
-        }
-
-        output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, encoding});
-      }
-    }
-  }
-
-  return output_table;
-}
-
-bool MetaTableManager::is_meta_table_name(const std::string& name) const {
+bool MetaTableManager::is_meta_table_name(const std::string& name) {
   const auto prefix_len = META_PREFIX.size();
   return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
+}
+
+const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
+
+bool MetaTableManager::has_table(const std::string& table_name) const {
+  return _meta_tables.count(_trim_table_name(table_name));
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
+  return (_meta_tables.at(_trim_table_name(table_name)))->_generate();
+}
+
+bool MetaTableManager::can_insert_into(const std::string& table_name) const {
+  return _meta_tables.at(_trim_table_name(table_name))->can_insert();
+}
+
+bool MetaTableManager::can_delete_from(const std::string& table_name) const {
+  return _meta_tables.at(_trim_table_name(table_name))->can_delete();
+}
+
+bool MetaTableManager::can_update(const std::string& table_name) const {
+  return _meta_tables.at(_trim_table_name(table_name))->can_update();
+}
+
+void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values) {
+  const auto rows = values->get_rows();
+
+  for (const auto& row : rows) {
+    _meta_tables.at(table_name)->_insert(row);
+  }
+}
+
+void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
+  const auto& rows = values->get_rows();
+
+  for (const auto& row : rows) {
+    _meta_tables.at(table_name)->_remove(row);
+  }
+}
+
+void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values,
+                              const std::shared_ptr<const Table>& update_values) {
+  const auto& selected_rows = selected_values->get_rows();
+  const auto& update_rows = update_values->get_rows();
+  Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
+
+  for (size_t row = 0; row < selected_rows.size(); row++) {
+    _meta_tables.at(table_name)->_update(selected_rows[row], update_rows[row]);
+  }
+}
+
+void MetaTableManager::_add(const std::shared_ptr<AbstractMetaTable>& table) {
+  _meta_tables[table->name()] = table;
+  _table_names.push_back(table->name());
+  std::sort(_table_names.begin(), _table_names.end());
+}
+
+std::string MetaTableManager::_trim_table_name(const std::string& table_name) {
+  return is_meta_table_name(table_name) ? table_name.substr(MetaTableManager::META_PREFIX.size()) : table_name;
 }
 
 }  // namespace opossum

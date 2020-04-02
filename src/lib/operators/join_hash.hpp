@@ -12,12 +12,11 @@ namespace opossum {
 /**
  * This operator joins two tables using one column of each table.
  * The output is a new table with referenced columns for all columns of the two inputs and filtered pos_lists.
- * If you want to filter by multiple criteria, you can chain this operator.
  *
  * As with most operators, we do not guarantee a stable operation with regards to positions -
  * i.e., your sorting order might be disturbed.
  *
- * Find more information in our Wiki: https://github.com/hyrise/hyrise/wiki/Radix-Partitioned-and-Hash-Based-Join
+ * Find more information in our Wiki: https://github.com/hyrise/hyrise/wiki/Hash-Join-Operator
  */
 class JoinHash : public AbstractJoinOperator {
  public:
@@ -28,8 +27,8 @@ class JoinHash : public AbstractJoinOperator {
            const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
            const std::optional<size_t>& radix_bits = std::nullopt);
 
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
+  const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
 
   template <typename T>
   static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);

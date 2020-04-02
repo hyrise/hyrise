@@ -10,14 +10,14 @@
 
 namespace opossum {
 
-PlaceholderExpression::PlaceholderExpression(const ParameterID parameter_id)
-    : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(parameter_id) {}
+PlaceholderExpression::PlaceholderExpression(const ParameterID init_parameter_id)
+    : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(init_parameter_id) {}
 
 std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
   return std::make_shared<PlaceholderExpression>(parameter_id);
 }
 
-std::string PlaceholderExpression::as_column_name() const {
+std::string PlaceholderExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "Placeholder[id=" << std::to_string(parameter_id) << "]";
   return stream.str();

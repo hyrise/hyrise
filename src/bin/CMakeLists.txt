@@ -50,6 +50,7 @@ target_link_libraries(
     ncurses
     ${READLINE_LIBRARY}
 )
+
 target_include_directories(
     hyriseConsole
 

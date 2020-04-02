@@ -20,8 +20,7 @@ template <typename T>
 class DictionarySegment : public BaseDictionarySegment {
  public:
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                             const ValueID null_value_id);
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
@@ -31,22 +30,22 @@ class DictionarySegment : public BaseDictionarySegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == _null_value_id) {
+    if (value_id == _dictionary->size()) {
       return std::nullopt;
     }
     return (*_dictionary)[value_id];
   }
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t estimate_memory_usage() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
   /**@}*/
 
   /**
@@ -81,14 +80,13 @@ class DictionarySegment : public BaseDictionarySegment {
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
 
-  const ValueID null_value_id() const final;
+  ValueID null_value_id() const final;
 
   /**@}*/
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
-  const ValueID _null_value_id;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 

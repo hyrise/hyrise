@@ -1,6 +1,6 @@
 #include <optional>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -22,14 +22,13 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ExpressionEvaluatorToValuesTest : public ::testing::Test {
+class ExpressionEvaluatorToValuesTest : public BaseTest {
  public:
   void SetUp() override {
     // Load table_a
@@ -70,10 +69,9 @@ class ExpressionEvaluatorToValuesTest : public ::testing::Test {
     table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
 
     Segments segments;
-    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
-    segments.emplace_back(
-        std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
-    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_concurrent_vector<pmr_string>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<float>>(pmr_vector<float>{}, pmr_vector<bool>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_vector<pmr_string>{}));
     table_empty->append_chunk(segments);
 
     empty_a = PQPColumnExpression::from_table(*table_empty, "a");

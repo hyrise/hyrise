@@ -9,45 +9,49 @@
 namespace opossum {
 
 /**
- * Stores visibility information for multiversion concurrency control
+ * Stores visibility information for multiversion concurrency control.
  */
 struct MvccData {
   friend class Chunk;
+  friend std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
  public:
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
-  pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-  pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
-  pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+  // This is used for optimizing the validation process. It is set during Chunk::finalize(). Consult
+  // Validate::_on_execute for further details.
+  std::optional<CommitID> max_begin_cid;
 
+  // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
+  // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
-  size_t size() const;
-
   /**
-   * Compacts the internal representation of the mvcc data in order to reduce fragmentation.
-   * Locks mvcc data exclusively in order to do so.
+   * The thread sanitizer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
+   * unaware of their thread-safety being guaranteed by the update of the global last_cid. Furthermore, we exploit that
+   * writes up to eight bytes are atomic on x64, which C++ and tsan do not know about. These helper methods were added
+   * to .tsan-ignore.txt and can be used (carefully) to avoid those false positives.
    */
-  void shrink();
+  CommitID get_begin_cid(const ChunkOffset offset) const;
+  void set_begin_cid(const ChunkOffset offset, const CommitID commit_id);
 
-  /**
-   * Grows mvcc data by the given delta
-   */
-  void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
+  CommitID get_end_cid(const ChunkOffset offset) const;
+  void set_end_cid(const ChunkOffset offset, const CommitID commit_id);
+
+  TransactionID get_tid(const ChunkOffset offset) const;
+  void set_tid(const ChunkOffset offset, const TransactionID transaction_id,
+               const std::memory_order memory_order = std::memory_order_seq_cst);
+  bool compare_exchange_tid(const ChunkOffset offset, TransactionID expected_transaction_id,
+                            TransactionID new_transaction_id);
+
+  size_t memory_usage() const;
 
  private:
-  /**
-   * @brief Mutex used to manage access to MVCC data
-   *
-   * Exclusively locked in shrink()
-   * Locked for shared ownership when MVCC data of a Chunk are accessed
-   * via the get_scoped_mvcc_data_lock() getters
-   */
-  std::shared_mutex _mutex;
-
-  size_t _size{0};
+  // These vectors are pre-allocated. Do not resize them as someone might be reading them concurrently.
+  pmr_vector<CommitID> _begin_cids;                  // < commit id when record was added
+  pmr_vector<CommitID> _end_cids;                    // < commit id when record was deleted
+  pmr_vector<copyable_atomic<TransactionID>> _tids;  // < 0 unless locked by a transaction
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

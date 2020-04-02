@@ -19,7 +19,7 @@ enum class PredicateCondition;
  */
 class BaseAttributeStatistics {
  public:
-  explicit BaseAttributeStatistics(const DataType data_type);
+  explicit BaseAttributeStatistics(const DataType init_data_type);
   virtual ~BaseAttributeStatistics() = default;
 
   /**
@@ -42,6 +42,15 @@ class BaseAttributeStatistics {
   virtual std::shared_ptr<BaseAttributeStatistics> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
+
+  /*
+   * Creates a new AttributeStatistics that reflects pruning on a given predicate where num_values_pruned have been
+   * pruned. That is, remove num_values_pruned that DO NOT satisfy the predicate from the statistics, assuming
+   * equidistribution.
+   */
+  virtual std::shared_ptr<BaseAttributeStatistics> pruned(
+      const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   const DataType data_type;
 };

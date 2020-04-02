@@ -1,9 +1,9 @@
 #include "sql_pipeline.hpp"
 
-#include <boost/algorithm/string.hpp>
-
 #include <algorithm>
 #include <utility>
+
+#include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
@@ -14,14 +14,12 @@
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                         const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
-                         const std::shared_ptr<Optimizer>& optimizer,
-                         const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
-                         const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
-                         const CleanupTemporaries cleanup_temporaries)
-    : pqp_cache(pqp_cache),
-      lqp_cache(lqp_cache),
+SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
+                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+                         const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
+                         const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
+    : pqp_cache(init_pqp_cache),
+      lqp_cache(init_lqp_cache),
       _sql(sql),
       _transaction_context(transaction_context),
       _optimizer(optimizer) {
@@ -81,9 +79,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
-        statement_string, std::move(parsed_statement), use_mvcc, transaction_context, lqp_translator, optimizer,
-        pqp_cache, lqp_cache, cleanup_temporaries);
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
+                                                                     use_mvcc, transaction_context, optimizer,
+                                                                     pqp_cache, lqp_cache);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
@@ -92,7 +90,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
-const std::string SQLPipeline::get_sql() const { return _sql; }
+const std::string& SQLPipeline::get_sql() const { return _sql; }
 
 const std::vector<std::string>& SQLPipeline::get_sql_per_statement() {
   if (!_sql_strings.empty()) {
@@ -146,15 +144,18 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
+  // The optimizer modifies the input LQP and requires exclusive ownership of that LQP. This means that we need to
+  // clear _unoptimized_logical_plans. This is not an issue as the unoptimized plans will no longer be needed.
+  // Calls to get_unoptimized_logical_plans are still allowed (e.g., for visualization), in which case the unoptimized
+  // plan will be recreated. Note that this
+  // does not clear the unoptimized LQPs stored in the SQLPipelineStatement - those are cleared as part of
+  // SQLPipelineStatement::get_optimized_logical_plan.
+  _unoptimized_logical_plans.clear();
+
   _optimized_logical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     _optimized_logical_plans.push_back(pipeline_statement->get_optimized_logical_plan());
   }
-
-  // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
-  // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
-  // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
-  _unoptimized_logical_plans.clear();
 
   return _optimized_logical_plans;
 }

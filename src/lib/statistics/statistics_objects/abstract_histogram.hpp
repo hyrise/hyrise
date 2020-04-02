@@ -24,8 +24,9 @@ using HistogramCountType = Cardinality;
 
 template <typename T>
 struct HistogramBin {
-  HistogramBin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count)
-      : min(min), max(max), height(height), distinct_count(distinct_count) {}
+  HistogramBin(const T& init_min, const T& init_max, const HistogramCountType init_height,
+               const HistogramCountType init_distinct_count)
+      : min(init_min), max(init_max), height(init_height), distinct_count(init_distinct_count) {}
 
   T min{};
   T max{};
@@ -115,6 +116,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
+  std::shared_ptr<AbstractStatisticsObject> pruned(
+      const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   /**
@@ -168,12 +173,18 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * Returns the smallest value in the bin.
    */
-  virtual T bin_minimum(const BinID index) const = 0;
+  virtual const T& bin_minimum(const BinID index) const = 0;
 
   /**
    * Returns the largest value in a bin.
    */
-  virtual T bin_maximum(const BinID index) const = 0;
+  virtual const T& bin_maximum(const BinID index) const = 0;
+
+  /**
+   * Returns whether the value belongs into a given bin. This does not necessarily mean that the value is actually
+   * present.
+   */
+  bool bin_contains(const BinID index, const T& value) const;
 
   /**
    * Returns the number of values in a bin.
@@ -207,6 +218,11 @@ class AbstractHistogram : public AbstractStatisticsObject {
   float bin_ratio_less_than(const BinID bin_id, const T& value) const;
   float bin_ratio_less_than_equals(const BinID bin_id, const T& value) const;
   /** @} */
+
+  /**
+   * Returns the share of the value range of a bin that is within [value, value2], i.e., BetweenInclusive
+   */
+  float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
 
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid

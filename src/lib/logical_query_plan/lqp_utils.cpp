@@ -5,6 +5,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -164,8 +165,10 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
 }
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node) {
-  DebugAssert(node->input_count() == 0 && node->output_count() == 0, "Expected node without inputs and outputs");
+                     const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
+  DebugAssert(!node->left_input() && (!node->right_input() || allow_right_input == AllowRightInput::Yes) &&
+                  node->output_count() == 0,
+              "Expected node without inputs and outputs");
 
   const auto old_input = parent_node->input(input_side);
   parent_node->set_input(input_side, node);
@@ -187,10 +190,10 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
       case LQPNodeType::Insert:
-        modified_tables.insert(std::static_pointer_cast<InsertNode>(node)->table_name);
+        modified_tables.insert(static_cast<InsertNode&>(*node).table_name);
         break;
       case LQPNodeType::Update:
-        modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
+        modified_tables.insert(static_cast<UpdateNode&>(*node).table_name);
         break;
       case LQPNodeType::Delete: {
         visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
@@ -204,6 +207,9 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
           return LQPVisitation::VisitInputs;
         });
       } break;
+      case LQPNodeType::ChangeMetaTable:
+        modified_tables.insert(static_cast<ChangeMetaTableNode&>(*node).table_name);
+        break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:
@@ -213,6 +219,8 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::CreateView:
       case LQPNodeType::DropView:
       case LQPNodeType::DummyTable:
+      case LQPNodeType::Export:
+      case LQPNodeType::Import:
       case LQPNodeType::Join:
       case LQPNodeType::Limit:
       case LQPNodeType::Predicate:
@@ -236,7 +244,7 @@ namespace {
  * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
  * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
  * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
- * translated expressions to the translation of its children nodes which enables to add the translated expression of
+ * translated expressions to the translation of its children nodes, which allows to add the translated expression of
  * child node before its parent node to the output expression.
  */
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(

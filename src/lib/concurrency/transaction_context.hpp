@@ -44,6 +44,8 @@ enum class TransactionPhase {
   Committed    // Transaction has been committed.
 };
 
+std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
+
 /**
  * @brief Representation of a transaction
  */
@@ -51,7 +53,8 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id);
+  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id,
+                     AutoCommit is_auto_commit = AutoCommit::No);
   ~TransactionContext();
 
   /**
@@ -71,6 +74,11 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * Only available after TransactionManager::prepare_commit has been called
    */
   CommitID commit_id() const;
+
+  /**
+   * Flag that indicates whether the context belongs to a transaction or non-transaction (i.e., it auto-commits).
+   */
+  AutoCommit is_auto_commit() const;
 
   /**
    * Returns the current phase of the transaction
@@ -104,7 +112,16 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Add an operator to the list of read-write operators.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
+  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) {
+    _read_write_operators.push_back(op);
+  }
+
+  /**
+   * Returns the read-write operators.
+   */
+  const std::vector<std::shared_ptr<AbstractReadWriteOperator>>& read_write_operators() {
+    return _read_write_operators;
+  }
 
   /**
    * @defgroup Update the counter of active operators
@@ -149,7 +166,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    *
    * @param callback called when transaction is committed
    */
-  void _mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback);
+  void _mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback);
 
   /**@}*/
 
@@ -163,8 +180,9 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
+  const AutoCommit _is_auto_commit;
 
-  std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
+  std::vector<std::shared_ptr<AbstractReadWriteOperator>> _read_write_operators;
 
   std::atomic<TransactionPhase> _phase;
   std::shared_ptr<CommitContext> _commit_context;

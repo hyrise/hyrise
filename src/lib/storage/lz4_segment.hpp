@@ -1,16 +1,15 @@
 #pragma once
 
+#include <array>
+#include <memory>
+#include <type_traits>
+
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include <type_traits>
-
-#include <array>
-#include <memory>
-
 #include "base_encoded_segment.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
@@ -97,19 +96,23 @@ class LZ4Segment : public BaseEncodedSegment {
                       const size_t num_elements);
 
   const std::optional<pmr_vector<bool>>& null_values() const;
-  const std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
+  std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
+  const pmr_vector<pmr_vector<char>>& lz4_blocks() const;
+  size_t block_size() const;
+  size_t last_block_size() const;
+  const std::optional<std::unique_ptr<const BaseCompressedVector>>& string_offsets() const;
 
   /**
    * @defgroup BaseSegment interface
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   /**
    * Decompresses the whole segment at once into a single vector.
@@ -152,7 +155,7 @@ class LZ4Segment : public BaseEncodedSegment {
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t estimate_memory_usage() const final;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
   /**@}*/
 

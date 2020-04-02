@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include "boost/variant.hpp"
-
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
@@ -44,18 +42,18 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
   }
 
   const auto number_of_slots = static_cast<size_t>(std::pow(2, quotient_size));
-  boost::apply_visitor([&](auto& filter) { qf_init(&filter, number_of_slots, _hash_bits, 0); }, _quotient_filter);
+  std::visit([&](auto& filter) { qf_init(&filter, number_of_slots, _hash_bits, 0); }, _quotient_filter);
 }
 
 template <typename ElementType>
 CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
-  boost::apply_visitor([&](auto& filter) { qf_destroy(&filter); }, _quotient_filter);
+  std::visit([&](auto& filter) { qf_destroy(&filter); }, _quotient_filter);
 }
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType value, size_t count) {
   const auto hash = get_hash_bits(value, _hash_bits);
-  boost::apply_visitor([&](auto& filter) { qf_insert(&filter, hash, 0, count); }, _quotient_filter);
+  std::visit([&](auto& filter) { qf_insert(&filter, hash, 0, count); }, _quotient_filter);
 }
 
 template <typename ElementType>
@@ -74,7 +72,7 @@ size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) cons
   const auto hash = get_hash_bits(value, _hash_bits);
 
   auto count = size_t{0};
-  boost::apply_visitor([&](auto& filter) { count = qf_count_key_value(&filter, hash, 0); }, _quotient_filter);
+  std::visit([&](auto& filter) { count = qf_count_key_value(&filter, hash, 0); }, _quotient_filter);
   return count;
 }
 
@@ -105,15 +103,15 @@ void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const B
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::memory_consumption() const {
   size_t consumption = 0;
-  boost::apply_visitor([&](auto& filter) { consumption = qf_memory_consumption(filter); }, _quotient_filter);
+  std::visit([&](auto& filter) { consumption = qf_memory_consumption(filter); }, _quotient_filter);
   return consumption;
 }
 
 template <typename ElementType>
 float CountingQuotientFilter<ElementType>::load_factor() const {
   auto load_factor = 0.f;
-  boost::apply_visitor([&](auto& filter) { load_factor = filter.noccupied_slots / static_cast<float>(filter.nslots); },
-                       _quotient_filter);
+  std::visit([&](auto& filter) { load_factor = filter.noccupied_slots / static_cast<float>(filter.nslots); },
+             _quotient_filter);
   return load_factor;
 }
 
