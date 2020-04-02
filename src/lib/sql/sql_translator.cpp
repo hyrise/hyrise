@@ -1054,6 +1054,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
   const auto& left_input_lqp = _current_lqp;
 
+  // Create a nested SQL-Translator for the right hand site of the Set-Statement to not make changes in the current one
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
                                       _with_descriptions};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
@@ -1061,6 +1062,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(),
               "The size of tables connected via set operators needs to match");
 
+  // Check to see if both input lqps use the same data-type for each column
   for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size();
        ++column_expression_idx) {
     const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
@@ -1072,8 +1074,10 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
+  // Check to see, if distinct values are filtered. More about the options can be seen in types.cpp
   auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Unique;
 
+  // Create corresponding SetNode depending on the SetType
   switch (set_operator.setType) {
     case hsql::kSetExcept:
       lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
