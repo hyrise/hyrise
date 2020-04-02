@@ -59,7 +59,9 @@ TEST_F(StorageManagerTest, GetTable) {
   auto t4 = sm.get_table("second_table");
   EXPECT_THROW(sm.get_table("third_table"), std::exception);
   auto names = std::vector<std::string>{"first_table", "second_table"};
-  EXPECT_EQ(sm.table_names(), names);
+  auto sm_names = sm.table_names();
+  std::sort(sm_names.begin(), sm_names.end());
+  EXPECT_EQ(sm_names, names);
 }
 
 TEST_F(StorageManagerTest, DropTable) {

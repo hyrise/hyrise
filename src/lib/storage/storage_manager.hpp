@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include <tbb/concurrent_unordered_map.h>
+
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
 #include "types.hpp"
@@ -29,7 +31,7 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const std::string& name) const;
   std::vector<std::string> table_names() const;
-  const std::map<std::string, std::shared_ptr<Table>>& tables() const;
+  const tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>>& tables() const;
   /** @} */
 
   /**
@@ -62,9 +64,10 @@ class StorageManager : public Noncopyable {
   StorageManager() = default;
   friend class Hyrise;
 
-  // Tables can currently not be modified concurrently
-  std::map<std::string, std::shared_ptr<Table>> _tables;
-  mutable std::unique_ptr<std::shared_mutex> _table_mutex = std::make_unique<std::shared_mutex>();
+  // We preallocate maps to prevent costly re-allocation.
+  static constexpr size_t _INITIAL_MAP_SIZE = 100;
+  
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
 
   // The map of views is locked because views are created dynamically, e.g., in TPC-H 15
   std::map<std::string, std::shared_ptr<LQPView>> _views;

@@ -19,8 +19,8 @@
 namespace opossum {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
-  std::unique_lock lock(*_table_mutex);
-  Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
+  const auto table_iter = _tables.find(name);
+  Assert(table_iter == _tables.end() || !table_iter->second, "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
@@ -35,41 +35,49 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   table->set_table_statistics(TableStatistics::from_table(*table));
   generate_chunk_pruning_statistics(table);
 
-  _tables.emplace(name, std::move(table));
+  if (table_iter == _tables.end())
+    _tables.emplace(name, std::move(table));
+  else
+    _tables[name] = std::move(table);
 }
 
 void StorageManager::drop_table(const std::string& name) {
-  std::unique_lock lock(*_table_mutex);
-  const auto num_deleted = _tables.erase(name);
-  Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
+  const auto table_iter = _tables.find(name);
+  Assert(table_iter != _tables.end() && table_iter->second, "Error deleting table. No such table named '" + name + "'");
+
+  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply replace the table.
+  _tables[name] = nullptr;
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  std::shared_lock lock(*_table_mutex);
-  const auto iter = _tables.find(name);
-  Assert(iter != _tables.end(), "No such table named '" + name + "'");
+  const auto table_iter = _tables.find(name);
 
-  return iter->second;
+  // Second check necessary because drop_table does not delete the entry, but set it to nullptr
+  Assert(table_iter != _tables.end() && table_iter->second, "No such table named '" + name + "'");
+
+  return table_iter->second;
 }
 
 bool StorageManager::has_table(const std::string& name) const { 
-  std::shared_lock lock(*_table_mutex);
-  return _tables.count(name);
+  const auto table_iter = _tables.find(name);
+  return table_iter != _tables.end() && table_iter->second;
 }
 
 std::vector<std::string> StorageManager::table_names() const {
-  std::shared_lock lock(*_table_mutex);
   std::vector<std::string> table_names;
   table_names.reserve(_tables.size());
 
   for (const auto& table_item : _tables) {
+    if (!table_item.second)
+      continue;
+
     table_names.emplace_back(table_item.first);
   }
 
   return table_names;
 }
 
-const std::map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const { return _tables; }
+const tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const { return _tables; }
 
 void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
   std::unique_lock lock(*_view_mutex);
@@ -151,10 +159,13 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.reserve(_tables.size());
 
-  for (auto& pair : _tables) {
-    auto job_task = std::make_shared<JobTask>([pair, &path]() {
-      const auto& name = pair.first;
-      auto& table = pair.second;
+  for (const auto& table_item : _tables) {
+    if (!table_item.second)
+      continue;
+
+    auto job_task = std::make_shared<JobTask>([table_item, &path]() {
+      const auto& name = table_item.first;
+      auto& table = table_item.second;
 
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
