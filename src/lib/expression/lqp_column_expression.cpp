@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-LQPColumnExpression::LQPColumnExpression(const LQPColumnReference& column_reference)
-    : AbstractExpression(ExpressionType::LQPColumn, {}), column_reference(column_reference) {}
+LQPColumnExpression::LQPColumnExpression(const LQPColumnReference& init_column_reference)
+    : AbstractExpression(ExpressionType::LQPColumn, {}), column_reference(init_column_reference) {}
 
 std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
   return std::make_shared<LQPColumnExpression>(column_reference);

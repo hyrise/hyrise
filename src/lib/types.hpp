@@ -218,11 +218,13 @@ enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
-enum class CleanupTemporaries : bool { Yes = true, No = false };
-
 enum class MemoryUsageCalculationMode { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
+
+enum class MetaTableChangeType { Insert, Delete, Update };
+
+enum class AutoCommit : bool { Yes = true, No = false };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by

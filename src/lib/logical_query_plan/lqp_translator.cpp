@@ -10,6 +10,7 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
+#include "change_meta_table_node.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"
 #include "create_view_node.hpp"
@@ -34,6 +35,7 @@
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/alias_operator.hpp"
+#include "operators/change_meta_table.hpp"
 #include "operators/delete.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
@@ -127,6 +129,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Union:              return _translate_union_node(node);
     case LQPNodeType::Intersect:          return _translate_intersect_node(node);
     case LQPNodeType::Except:             return _translate_except_node(node);
+    case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
 
       // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
@@ -270,29 +273,23 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   auto input_operator = translate_node(node->left_input());
 
-  /**
-   * Go through all the order descriptions and create a sort operator for each of them.
-   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
-   * We therefore sort by the n+1-th column before sorting by the n-th column.
-   */
-
   std::shared_ptr<AbstractOperator> current_pqp = input_operator;
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
-  if (pqp_expressions.size() > 1) {
-    PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
-  }
 
-  auto pqp_expression_iter = pqp_expressions.rbegin();
-  auto order_by_mode_iter = sort_node->order_by_modes.rbegin();
+  auto pqp_expression_iter = pqp_expressions.begin();
+  auto order_by_mode_iter = sort_node->order_by_modes.begin();
 
-  for (; pqp_expression_iter != pqp_expressions.rend(); ++pqp_expression_iter, ++order_by_mode_iter) {
+  std::vector<SortColumnDefinition> column_definitions;
+  column_definitions.reserve(pqp_expressions.size());
+  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++order_by_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    current_pqp = std::make_shared<Sort>(current_pqp, pqp_column_expression->column_id, *order_by_mode_iter);
+    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *order_by_mode_iter});
   }
+  current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
   return current_pqp;
 }
@@ -456,6 +453,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   return std::make_shared<Validate>(input_operator);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_change_meta_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator_left = translate_node(node->left_input());
+  const auto input_operator_right = translate_node(node->right_input());
+  const auto change_meta_table_node = std::dynamic_pointer_cast<ChangeMetaTableNode>(node);
+  return std::make_shared<ChangeMetaTable>(change_meta_table_node->table_name, change_meta_table_node->change_type,
+                                           input_operator_left, input_operator_right);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

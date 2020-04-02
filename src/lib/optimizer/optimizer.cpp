@@ -270,6 +270,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
           break;
 
         case LQPNodeType::Join:
+        case LQPNodeType::ChangeMetaTable:
         case LQPNodeType::Update:
         case LQPNodeType::Union:
         case LQPNodeType::Intersect:

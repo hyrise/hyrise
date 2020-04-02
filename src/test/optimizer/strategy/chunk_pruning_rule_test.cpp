@@ -130,6 +130,8 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
 TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
   auto table = Hyrise::get().storage_manager.get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
+  EXPECT_TRUE(chunk->pruning_statistics());
+  chunk->set_pruning_statistics(std::nullopt);
   EXPECT_FALSE(chunk->pruning_statistics());
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");

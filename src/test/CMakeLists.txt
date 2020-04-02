@@ -38,10 +38,12 @@ set(
     lib/import_export/csv/csv_writer_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
+    lib/entire_chunk_pos_list_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
+    logical_query_plan/change_meta_table_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/create_prepared_plan_node_test.cpp
     logical_query_plan/create_table_node_test.cpp
@@ -74,6 +76,7 @@ set(
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
+    operators/change_meta_table_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
     operators/export_test.cpp
@@ -183,6 +186,7 @@ set(
     storage/multi_segment_index_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
+    storage/segment_access_counter_test.cpp
     storage/segment_accessor_test.cpp
     storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
@@ -198,14 +202,23 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/column_ids_after_pruning_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
     utils/meta_table_manager_test.cpp
+    utils/meta_tables/meta_mock_table.cpp
+    utils/meta_tables/meta_mock_table.hpp
+    utils/meta_tables/meta_table_test.cpp
+    utils/meta_tables/meta_plugins_test.cpp
+    utils/meta_tables/meta_settings_test.cpp
+    utils/mock_setting.hpp
+    utils/mock_setting.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
-    utils/column_ids_after_pruning_test.cpp
+    utils/setting_test.cpp
+    utils/settings_manager_test.cpp
     utils/singleton_test.cpp
     utils/size_estimation_utils_test.cpp
     utils/string_utils_test.cpp

@@ -16,96 +16,11 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
+
 namespace opossum {
 
 namespace hana = boost::hana;
-
-/**
- * Resolves a data type by creating an instance of a templated class and
- * returning it as a unique_ptr of its non-templated base class.
- *
- * @param data_type is an enum value of any of the supported data types
- * @param args is a list of constructor arguments
- *
- *
- * Example:
- *
- *   class BaseImpl {
- *    public:
- *     virtual void execute() = 0;
- *   };
- *
- *   template <typename T>
- *   class Impl : public BaseImpl {
- *    public:
- *     Impl(int var) : _var{var} { ... }
- *
- *     void execute() override { ... }
- *   };
- *
- *   constexpr auto var = 12;
- *   auto impl = make_unique_by_data_type<BaseImpl, Impl>(DataType::String, var);
- *   impl->execute();
- */
-template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_type(DataType data_type, ConstructorArgs&&... args) {
-  DebugAssert(data_type != DataType::Null, "data_type cannot be null.");
-
-  std::unique_ptr<Base> ret = nullptr;
-  hana::for_each(data_type_pairs, [&](auto x) {
-    if (hana::first(x) == data_type) {
-      // The + before hana::second - which returns a reference - converts its return value
-      // into a value so that we can access ::type
-      using ColumnDataType = typename decltype(+hana::second(x))::type;
-      ret = std::make_unique<Impl<ColumnDataType, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
-      return;
-    }
-  });
-  return ret;
-}
-
-/**
- * Resolves two data types by creating an instance of a templated class and
- * returning it as a unique_ptr of its non-templated base class.
- * It does the same as make_unique_by_data_type but with two data types.
- *
- * @param data_type1 is an enum value of any of the supported column types
- * @param data_type2 is an enum value of any of the supported column types
- * @param args is a list of constructor arguments
- *
- * Note: We need to pass parameter packs explicitly for GCC due to the following bug:
- *       http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
- */
-template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType data_type2, ConstructorArgs&&... args) {
-  DebugAssert(data_type1 != DataType::Null, "data_type1 cannot be null.");
-  DebugAssert(data_type2 != DataType::Null, "data_type2 cannot be null.");
-
-  std::unique_ptr<Base> ret = nullptr;
-  hana::for_each(data_type_pairs, [&ret, &data_type1, &data_type2, &args...](auto x) {
-    if (hana::first(x) == data_type1) {
-      hana::for_each(data_type_pairs, [&ret, &data_type2, &args...](auto y) {
-        if (hana::first(y) == data_type2) {
-          using ColumnDataType1 = typename decltype(+hana::second(x))::type;
-          using ColumnDataType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(
-              std::forward<ConstructorArgs>(args)...);
-          return;
-        }
-      });
-      return;
-    }
-  });
-  return ret;
-}
-
-/**
- * Convenience function. Calls make_unique_by_data_type and casts the result into a shared_ptr.
- */
-template <class Base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
-std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorArgs&&... args) {
-  return make_unique_by_data_type<Base, impl, TemplateArgs...>(data_type, std::forward<ConstructorArgs>(args)...);
-}
 
 /**
  * Resolves a data type by passing a hana::type object on to a generic lambda
@@ -209,6 +124,22 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");
+  }
+}
+
+template <typename Functor>
+void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& func) {
+  if (!untyped_pos_list) {
+    func(untyped_pos_list);
+    return;
+  }
+
+  if (auto rowid_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
+    func(rowid_pos_list);
+  } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
+    func(entire_chunk_pos_list);
+  } else {
+    Fail("Unrecognized PosList type encountered");
   }
 }
 

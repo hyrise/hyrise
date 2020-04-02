@@ -11,14 +11,14 @@
 
 namespace opossum {
 
-UnionNode::UnionNode(const SetOperationMode set_operation_mode)
-    : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(set_operation_mode) {}
+UnionNode::UnionNode(const SetOperationMode init_operation_mode)
+    : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(init_operation_mode) {}
 
 std::string UnionNode::description(const DescriptionMode mode) const {
   return "[UnionNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
   Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
          "Input Expressions must match");
   return left_input()->column_expressions();

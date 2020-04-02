@@ -5,6 +5,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -189,10 +190,10 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
       case LQPNodeType::Insert:
-        modified_tables.insert(std::static_pointer_cast<InsertNode>(node)->table_name);
+        modified_tables.insert(static_cast<InsertNode&>(*node).table_name);
         break;
       case LQPNodeType::Update:
-        modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
+        modified_tables.insert(static_cast<UpdateNode&>(*node).table_name);
         break;
       case LQPNodeType::Delete: {
         visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
@@ -206,6 +207,9 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
           return LQPVisitation::VisitInputs;
         });
       } break;
+      case LQPNodeType::ChangeMetaTable:
+        modified_tables.insert(static_cast<ChangeMetaTableNode&>(*node).table_name);
+        break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:

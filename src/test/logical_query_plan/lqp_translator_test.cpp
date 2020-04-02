@@ -15,6 +15,7 @@
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
@@ -32,6 +33,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/change_meta_table.hpp"
 #include "operators/export.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import.hpp"
@@ -326,22 +328,19 @@ TEST_F(LQPTranslatorTest, Sort) {
   const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp);
   ASSERT_TRUE(projection_a);
 
-  const auto sort_a = std::dynamic_pointer_cast<const Sort>(pqp->input_left());
-  ASSERT_TRUE(sort_a);
-  EXPECT_EQ(sort_a->column_id(), ColumnID{1});
-  EXPECT_EQ(sort_a->order_by_mode(), OrderByMode::Ascending);
+  const auto sort = std::dynamic_pointer_cast<const Sort>(pqp->input_left());
+  ASSERT_TRUE(sort);
 
-  const auto sort_a_plus_b = std::dynamic_pointer_cast<const Sort>(sort_a->input_left());
-  ASSERT_TRUE(sort_a_plus_b);
-  EXPECT_EQ(sort_a_plus_b->column_id(), ColumnID{0});
-  EXPECT_EQ(sort_a_plus_b->order_by_mode(), OrderByMode::Descending);
+  EXPECT_EQ(sort->sort_definitions().at(0).column, ColumnID{1});
+  EXPECT_EQ(sort->sort_definitions().at(0).order_by_mode, OrderByMode::Ascending);
 
-  const auto sort_b = std::dynamic_pointer_cast<const Sort>(sort_a_plus_b->input_left());
-  ASSERT_TRUE(sort_b);
-  EXPECT_EQ(sort_b->column_id(), ColumnID{2});
-  EXPECT_EQ(sort_b->order_by_mode(), OrderByMode::AscendingNullsLast);
+  EXPECT_EQ(sort->sort_definitions().at(1).column, ColumnID{0});
+  EXPECT_EQ(sort->sort_definitions().at(1).order_by_mode, OrderByMode::Descending);
 
-  const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort_b->input_left());
+  EXPECT_EQ(sort->sort_definitions().at(2).column, ColumnID{2});
+  EXPECT_EQ(sort->sort_definitions().at(2).order_by_mode, OrderByMode::AscendingNullsLast);
+
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort->input_left());
   ASSERT_TRUE(projection_b);
 
   const auto get_table = std::dynamic_pointer_cast<const GetTable>(projection_b->input_left());
@@ -993,6 +992,22 @@ TEST_F(LQPTranslatorTest, Import) {
 
   EXPECT_EQ(importer->type(), OperatorType::Import);
   EXPECT_EQ(importer->input_left(), nullptr);
+}
+
+TEST_F(LQPTranslatorTest, ChangeMetaTable) {
+  // clang-format off
+  const auto lqp =
+  ChangeMetaTableNode::make("meta_table", MetaTableChangeType::Insert,
+    DummyTableNode::make(),
+    DummyTableNode::make());
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
+
+  EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
+  EXPECT_EQ(change_meta_table->input_left()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->input_right()->type(), OperatorType::TableWrapper);
 }
 
 }  // namespace opossum

@@ -60,7 +60,12 @@ class ValueSegment : public BaseValueSegment {
   // This is the preferred method to check a for a null value at a certain index.
   // Usually you need to access more than a single value anyway.
   const pmr_vector<bool>& null_values() const final;
-  pmr_vector<bool>& null_values() final;
+
+  // Writing a vector<bool> is not thread-safe. By only exposing the vector as a const reference, we force people to go
+  // through this thread-safe method. By design, this does not take a bool argument. All entries are false (i.e., not
+  // NULL) by default. Setting them to false again is unnecessarily expensive and changing them from true to false
+  // should never be necessary.
+  void set_null_value(const ChunkOffset chunk_offset);
 
   // Return the number of entries in the segment.
   ChunkOffset size() const final;
@@ -77,11 +82,11 @@ class ValueSegment : public BaseValueSegment {
 
  protected:
   pmr_vector<T> _values;
-
-  // While a ValueSegment knows if it is nullable or not by looking at this optional, most other segment types
-  // (e.g. DictionarySegment) do not. For this reason, we need to store the nullable information separately
-  // in the table's definition.
   std::optional<pmr_vector<bool>> _null_values;
+
+  // Protects set_null_value. Does not need to be acquired for reads, as we expect modifications to vector<bool> to be
+  // atomic.
+  std::mutex _null_value_modification_mutex;
 };
 
 }  // namespace opossum
