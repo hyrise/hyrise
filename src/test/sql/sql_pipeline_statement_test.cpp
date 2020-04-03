@@ -290,7 +290,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   auto validated_sql_pipeline =
-     SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   auto cache_key = validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
@@ -708,8 +708,7 @@ TEST_F(SQLPipelineStatementTest, PrecheckDDLOperators) {
 TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   const auto meta_table_query = "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables";
 
-  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}
-                          //.with_lqp_cache(_lqp_cache)
+  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}  //.with_lqp_cache(_lqp_cache)
                           .with_pqp_cache(_pqp_cache)
                           .create_pipeline_statement();
   sql_pipeline.get_result_table();

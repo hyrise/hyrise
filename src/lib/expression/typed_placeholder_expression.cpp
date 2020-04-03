@@ -2,10 +2,8 @@
 
 namespace opossum {
 
-TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID init_parameter_id, DataType init_data_type) :
-  PlaceholderExpression(init_parameter_id),
-  _data_type{init_data_type} {
-
+TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID init_parameter_id, DataType init_data_type)
+    : PlaceholderExpression(init_parameter_id), _data_type{init_data_type} {
   /* This type of placeholder is used for cache paramitrization, where null values should not be replaced by
    * placeholers. */
   assert(_data_type != DataType::Null);
@@ -24,8 +22,6 @@ std::shared_ptr<AbstractExpression> TypedPlaceholderExpression::deep_copy() cons
   return std::make_shared<TypedPlaceholderExpression>(parameter_id, _data_type);
 }
 
-bool TypedPlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
-  return false;
-}
+bool TypedPlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const { return false; }
 
-}
+}  // namespace opossum

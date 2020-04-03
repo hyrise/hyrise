@@ -2,16 +2,16 @@
 
 #include <fstream>
 #include <iomanip>
-#include <utility>
 #include <numeric>
+#include <utility>
 
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
-#include "expression/value_expression.hpp"
-#include "expression/typed_placeholder_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/typed_placeholder_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export.hpp"
@@ -33,7 +33,8 @@ namespace opossum {
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
-                                           const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<Optimizer> &pruning_optimizer,
+                                           const std::shared_ptr<Optimizer>& optimizer,
+                                           const std::shared_ptr<Optimizer>& pruning_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
     : pqp_cache(init_pqp_cache),
@@ -101,43 +102,45 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
-const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(std::vector<std::shared_ptr<AbstractExpression>>& values) {
-    auto& unoptimized_lqp = get_unoptimized_logical_plan();
+const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(
+    std::vector<std::shared_ptr<AbstractExpression>>& values) {
+  auto& unoptimized_lqp = get_unoptimized_logical_plan();
 
-    ParameterID parameter_id(0);
+  ParameterID parameter_id(0);
 
-    if (_translation_info.cacheable) {
-      visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
-          if (node) {
-              for (auto& root_expression : node->node_expressions) {
-                  visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-                      if (expression->type == ExpressionType::Value) {
-                        if (expression->replaced_by) {
-                          const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                          // std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;
-                          expression = expression->replaced_by;
-                        } else {
-                          const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                          if (valexp->data_type() != DataType::Null) {
-                            // std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
-                            assert(expression->arguments.size() == 0);
-                            values.push_back(expression);
-                            auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
-                            expression->replaced_by = new_expression;
-                            expression = new_expression;
-                            parameter_id++;
-                          }
-                        }
-                      }
-                      return ExpressionVisitation::VisitArguments;
-                  });
+  if (_translation_info.cacheable) {
+    visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+      if (node) {
+        for (auto& root_expression : node->node_expressions) {
+          visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
+            if (expression->type == ExpressionType::Value) {
+              if (expression->replaced_by) {
+                const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
+                // std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;
+                expression = expression->replaced_by;
+              } else {
+                const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
+                if (valexp->data_type() != DataType::Null) {
+                  // std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
+                  assert(expression->arguments.size() == 0);
+                  values.push_back(expression);
+                  auto new_expression =
+                      std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
+                  expression->replaced_by = new_expression;
+                  expression = new_expression;
+                  parameter_id++;
+                }
               }
-          }
-          return LQPVisitation::VisitInputs;
-      });
-    }
+            }
+            return ExpressionVisitation::VisitArguments;
+          });
+        }
+      }
+      return LQPVisitation::VisitInputs;
+    });
+  }
 
-    return unoptimized_lqp;
+  return unoptimized_lqp;
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
@@ -163,7 +166,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         _metrics->query_plan_cache_hit = true;
         _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
         const auto done_cache = std::chrono::high_resolution_clock::now();
-        _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
+        _metrics->cache_duration =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
         return _optimized_logical_plan;
       }
     }
@@ -182,7 +186,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   auto optimized_without_values = _optimizer->optimize(std::move(ulqp));
 
   const auto done_optimize = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
+  _metrics->optimization_duration =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
 
   const auto started_postoptimization_cache = std::chrono::high_resolution_clock::now();
 
@@ -200,7 +205,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
 
   const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
-  _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_preoptimization_cache - started_preoptimization_cache + done_postoptimization_cache - started_postoptimization_cache);
+  _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      done_preoptimization_cache - started_preoptimization_cache + done_postoptimization_cache -
+      started_postoptimization_cache);
 
   return _optimized_logical_plan;
 }

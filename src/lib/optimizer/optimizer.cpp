@@ -95,8 +95,6 @@ std::shared_ptr<Optimizer> Optimizer::create_pruning_optimizer() {
   return optimizer;
 }
 
-
-
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
 

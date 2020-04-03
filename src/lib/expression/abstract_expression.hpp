@@ -46,7 +46,7 @@ enum class ExpressionType {
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
   std::shared_ptr<AbstractExpression> replaced_by;
-  
+
   explicit AbstractExpression(const ExpressionType init_type,
                               const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
   virtual ~AbstractExpression() = default;
