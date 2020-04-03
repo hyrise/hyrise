@@ -116,12 +116,10 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
             if (expression->type == ExpressionType::Value) {
               if (expression->replaced_by) {
                 const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                // std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;
                 expression = expression->replaced_by;
               } else {
                 const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
                 if (valexp->data_type() != DataType::Null) {
-                  // std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
                   assert(expression->arguments.size() == 0);
                   values.push_back(expression);
                   auto new_expression =
