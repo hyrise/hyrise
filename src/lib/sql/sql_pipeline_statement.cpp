@@ -106,14 +106,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     ParameterID parameter_id(0);
 
-    /*visit_lqp(unoptimized_lqp, [](const auto& node) {
-       if (node) {
-          node->visited = false;
-       }
-       return LQPVisitation::VisitInputs;
-
-    });*/
-
     if (_translation_info.cacheable) {
       visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
           if (node) {
@@ -122,12 +114,12 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                       if (expression->type == ExpressionType::Value) {
                         if (expression->replaced_by) {
                           const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                          //std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;
+                          std::cout << "================== took out expression again: " << valexp->value << " ============" << std::endl;
                           expression = expression->replaced_by;
                         } else {
                           const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
                           if (valexp->data_type() != DataType::Null) {
-                            //std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
+                            std::cout << "================== took out expression: " << valexp->value << " ============" << std::endl;
                             assert(expression->arguments.size() == 0);
                             values.push_back(expression);
                             auto new_expression = std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
