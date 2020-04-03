@@ -138,7 +138,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                 using ColumnDataType = typename decltype(type)::type;
 
                 std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-                contains_uniform_distribution = statistics->histogram->is_uniformly_distributed(1);
+                contains_uniform_distribution = statistics->histogram->is_uniformly_distributed(100);
               });
             }
           }
@@ -147,7 +147,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       return LQPVisitation::VisitInputs;
     });
 
-    std::cout << contains_uniform_distribution;
+    std::cout << " " << contains_uniform_distribution;
 
     const auto done_uniform_check = std::chrono::high_resolution_clock::now();
     _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
