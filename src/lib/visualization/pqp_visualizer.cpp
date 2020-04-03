@@ -144,6 +144,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   const auto& performance_data = from->performance_data;
   if (performance_data->executed && performance_data->has_output) {
     std::stringstream stream;
+    // TODO: https://stackoverflow.com/a/17530535/1147726
     stream << std::to_string(performance_data->output_row_count) + " row(s)/";
     stream << std::to_string(performance_data->output_chunk_count) + " chunk(s)";
     info.label = stream.str();
