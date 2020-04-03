@@ -209,10 +209,10 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_minima = pmr_vector<T>(_read_values<T>(file, block_count));
 
-  const auto null_values_size = _read_value<uint32_t>(file);
+  const auto null_values_stored = _read_value<BoolAsByteType>(file);
   std::optional<pmr_vector<bool>> null_values;
-  if (null_values_size != 0) {
-    null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
+  if (null_values_stored) {
+    null_values = pmr_vector<bool>(_read_values<bool>(file, row_count));
   }
 
   auto offset_values = _import_offset_value_vector(file, row_count, attribute_vector_width);
