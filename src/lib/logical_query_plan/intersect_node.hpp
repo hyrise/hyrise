@@ -11,9 +11,9 @@
 namespace opossum {
 
 /**
- * This node type is used to represent set operation type of Intersect.
+ * This node type is used to represent the intersect set operation.
  *
- * Please Note the following about the cardinality for an implementation:
+ * Please note the following about the cardinality for an implementation:
  *
  * "By default these operators remove duplicates, which can occur if there are duplicates in the inputs.
  * If ALL is specified then duplicates are not removed.

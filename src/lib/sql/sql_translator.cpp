@@ -292,10 +292,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   if (select.setOperations) {
     for (const auto set_operator : *select.setOperations) {
-      // We remove the Union Operation here because we cannot make it fail during the lqp-translation, since the
-      // the Operator is used for other queries.
+      // Currently, only the SQL translation of intersect and except is implemented.
       AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported");
       _translate_set_operation(*set_operator);
+
+      // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
       if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
       if (set_operator->resultLimit) _translate_limit(*set_operator->resultLimit);
     }
@@ -1141,31 +1142,31 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   const auto& left_input_lqp = _current_lqp;
   const auto left_column_expressions = left_input_lqp->column_expressions();
 
-  // Create a nested SQL-Translator for the right hand site of the Set-Statement to not make changes in the current one
+  // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
+  // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
                                       _with_descriptions, _meta_tables};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
   const auto right_column_expressions = right_input_lqp->column_expressions();
 
   AssertInput(left_column_expressions.size() == right_column_expressions.size(),
-              "The size of tables connected via set operators needs to match");
+              "Mismatching number of input columns for set operation");
 
-  // Check to see if both input lqps use the same data-type for each column
+  // Check to see if both input LQPs use the same data type for each column
   for (auto column_expression_idx = size_t{0}; column_expression_idx < left_column_expressions.size();
        ++column_expression_idx) {
     const auto& left_expression = left_column_expressions[column_expression_idx];
     const auto& right_expression = right_column_expressions[column_expression_idx];
 
     AssertInput(left_expression->data_type() == right_expression->data_type(),
-                "The data type of both columns needs to match");
+                "Mismatching input data types for left and right side of set operation");
   }
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
-  // Check to see, if distinct values are filtered. More about the options can be seen in types.cpp
   auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Unique;
 
-  // Create corresponding SetNode depending on the SetType
+  // Create corresponding node depending on the SetType
   switch (set_operator.setType) {
     case hsql::kSetExcept:
       lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
@@ -1176,9 +1177,8 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
     case hsql::kSetUnion:
       lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
-    default:
-      FailInput("Unknown Set Type");
   }
+  Fail("Invalid enum value");
 
   _current_lqp = lqp;
 }

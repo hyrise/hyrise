@@ -428,13 +428,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   const auto input_operator_right = translate_node(node->right_input());
 
   switch (union_node->set_operation_mode) {
-    case SetOperationMode::Positions:
-      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+    case SetOperationMode::Unique:
+      Fail("Currently, only the All and Positions modes are implemented for the union operation");
     case SetOperationMode::All:
       return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
-    default:
-      Fail("The Union Operator does not support this SetOperationMode.");
+    case SetOperationMode::Positions:
+      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
   }
+  Fail("Invalid enum value.");
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
