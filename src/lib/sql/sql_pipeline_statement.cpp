@@ -106,6 +106,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     ParameterID parameter_id(0);
 
+    std::cout << "=========== expression lqp ============" << std::endl;
+
     if (_translation_info.cacheable) {
       visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
           if (node) {
