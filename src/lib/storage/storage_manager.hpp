@@ -1,13 +1,13 @@
 #pragma once
 
+#include <tbb/concurrent_unordered_map.h>
+
 #include <iostream>
 #include <map>
 #include <memory>
 #include <shared_mutex>
 #include <string>
 #include <vector>
-
-#include <tbb/concurrent_unordered_map.h>
 
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
@@ -67,9 +67,12 @@ class StorageManager : public Noncopyable {
   // We preallocate maps to prevent costly re-allocation.
   static constexpr size_t _INITIAL_MAP_SIZE = 100;
 
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<LQPView>>>()};
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<PreparedPlan>>>()};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{
+      _INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{
+      _INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<LQPView>>>()};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{
+      _INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<PreparedPlan>>>()};
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

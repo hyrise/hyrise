@@ -22,7 +22,6 @@ class StorageManagerTest : public BaseTest {
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
 
-
     const auto v1_lqp = StoredTableNode::make("first_table");
     const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
 
@@ -31,7 +30,6 @@ class StorageManagerTest : public BaseTest {
 
     sm.add_view("first_view", std::move(v1));
     sm.add_view("second_view", std::move(v2));
-
 
     const auto pp1_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     const auto pp1 = std::make_shared<PreparedPlan>(pp1_lqp, std::vector<ParameterID>{});
