@@ -13,8 +13,14 @@ class FixedSizeByteAlignedDecompressor : public BaseVectorDecompressor {
   FixedSizeByteAlignedDecompressor(const FixedSizeByteAlignedDecompressor&) = default;
   FixedSizeByteAlignedDecompressor(FixedSizeByteAlignedDecompressor&&) = default;
 
-  FixedSizeByteAlignedDecompressor& operator=(const FixedSizeByteAlignedDecompressor& other) { return *this; }
-  FixedSizeByteAlignedDecompressor& operator=(FixedSizeByteAlignedDecompressor&& other) = default;
+  FixedSizeByteAlignedDecompressor& operator=(const FixedSizeByteAlignedDecompressor& other) {
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    return *this;
+  }
+  FixedSizeByteAlignedDecompressor& operator=(FixedSizeByteAlignedDecompressor&& other) {
+    DebugAssert(&_data == &other._data, "Cannot reassign FixedSizeByteAlignedDecompressor");
+    return *this;
+  }
 
   uint32_t get(size_t i) final {
     // GCC warns here: _data may be used uninitialized in this function [-Werror=maybe-uninitialized]
