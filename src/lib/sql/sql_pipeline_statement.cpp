@@ -120,7 +120,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
               } else {
                 const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
                 if (valexp->data_type() != DataType::Null) {
-                  assert(expression->arguments.size() == 0);
+                  assert(expression->arguments.empty());
                   values.push_back(expression);
                   auto new_expression =
                       std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
