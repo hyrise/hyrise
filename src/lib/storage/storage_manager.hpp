@@ -54,7 +54,7 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
   bool has_prepared_plan(const std::string& name) const;
   void drop_prepared_plan(const std::string& name);
-  const std::map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
+  const tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
   /** @} */
 
   // For debugging purposes mostly, dump all tables as csv
@@ -69,8 +69,7 @@ class StorageManager : public Noncopyable {
 
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<LQPView>>>()};
-
-  std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<PreparedPlan>>>()};
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

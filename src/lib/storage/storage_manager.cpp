@@ -127,31 +127,35 @@ std::vector<std::string> StorageManager::view_names() const {
 const tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>>& StorageManager::views() const { return _views; }
 
 void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
-  Assert(_prepared_plans.find(name) == _prepared_plans.end(),
-         "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
+  const auto iter = _prepared_plans.find(name);
+  Assert(iter == _prepared_plans.end() || !iter->second, "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
 
-  _prepared_plans.emplace(name, prepared_plan);
+  if (iter == _prepared_plans.end())
+    _prepared_plans.emplace(name, std::move(prepared_plan));
+  else
+    _prepared_plans[name] = std::move(prepared_plan);
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::string& name) const {
   const auto iter = _prepared_plans.find(name);
-  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
+  Assert(iter != _prepared_plans.end() && iter->second, "No such prepared plan named '" + name + "'");
 
   return iter->second;
 }
 
 bool StorageManager::has_prepared_plan(const std::string& name) const {
-  return _prepared_plans.find(name) != _prepared_plans.end();
+  const auto iter = _prepared_plans.find(name);
+  return iter != _prepared_plans.end() && iter->second;
 }
 
 void StorageManager::drop_prepared_plan(const std::string& name) {
   const auto iter = _prepared_plans.find(name);
-  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
+  Assert(iter != _prepared_plans.end() && iter->second, "Error deleting prepared plan. No such prepared plan named '" + name + "'");
 
-  _prepared_plans.erase(iter);
+  _prepared_plans[name] = nullptr;
 }
 
-const std::map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prepared_plans() const {
+const tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prepared_plans() const {
   return _prepared_plans;
 }
 
