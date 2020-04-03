@@ -115,13 +115,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
-    std::vector<LQPColumnExpression> column_expressions;
+    std::vector<std::shared_ptr<LQPColumnExpression>> column_expressions;
 
     visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
       if (node) {
           for (auto& root_expression : node->node_expressions) {
               visit_expression(root_expression, [&column_expressions](auto& expression) {
-                  if (expression->type == LQPColumnExpression) {
+                  if (expression->type == ExpressionType::LQPColumn) {
                     auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
                     column_expressions.push_back(column_expression);
                   }
@@ -143,9 +143,6 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
           const auto &table_statistics = table->table_statistics();
 
           for (auto &expression: column_expressions) {
-            const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-            assert(column_expression);
-            //const auto column_id = column_expression->column_reference.original_column_id();
             const auto column_id = node->find_column_id(*expression);
             if (column_id) {
               std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
