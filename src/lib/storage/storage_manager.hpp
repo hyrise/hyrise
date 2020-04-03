@@ -23,7 +23,7 @@ class AbstractLQPNode;
 class StorageManager : public Noncopyable {
  public:
   /**
-   * @defgroup Manage Tables, this is only thread-safe for operations on different tables
+   * @defgroup Manage Tables, this is only thread-safe for operations on tables with different names
    * @{
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
@@ -35,7 +35,7 @@ class StorageManager : public Noncopyable {
   /** @} */
 
   /**
-   * @defgroup Manage SQL VIEWs, this is only thread-safe for operations on different views
+   * @defgroup Manage SQL VIEWs, this is only thread-safe for operations on views with different names
    * @{
    */
   void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
@@ -47,7 +47,7 @@ class StorageManager : public Noncopyable {
   /** @} */
 
   /**
-   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, this is only thread-safe when operating on different prepared plans
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, this is only thread-safe for operations on prepared plans with different names
    * @{
    */
   void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
@@ -67,12 +67,9 @@ class StorageManager : public Noncopyable {
   // We preallocate maps to prevent costly re-allocation.
   static constexpr size_t _INITIAL_MAP_SIZE = 100;
 
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{
-      _INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{
-      _INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<LQPView>>>()};
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{
-      _INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<PreparedPlan>>>()};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{_INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{_INITIAL_MAP_SIZE};
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
