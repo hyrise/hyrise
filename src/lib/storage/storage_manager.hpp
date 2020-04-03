@@ -43,7 +43,7 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const std::string& name) const;
   std::vector<std::string> view_names() const;
-  const std::map<std::string, std::shared_ptr<LQPView>>& views() const;
+  const tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>>& views() const;
   /** @} */
 
   /**
@@ -66,12 +66,9 @@ class StorageManager : public Noncopyable {
 
   // We preallocate maps to prevent costly re-allocation.
   static constexpr size_t _INITIAL_MAP_SIZE = 100;
-  
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
 
-  // The map of views is locked because views are created dynamically, e.g., in TPC-H 15
-  std::map<std::string, std::shared_ptr<LQPView>> _views;
-  mutable std::unique_ptr<std::shared_mutex> _view_mutex = std::make_unique<std::shared_mutex>();
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<Table>>>()};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{_INITIAL_MAP_SIZE, tbb::tbb_allocator<std::pair<const std::string, std::shared_ptr<LQPView>>>()};
 
   std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 };

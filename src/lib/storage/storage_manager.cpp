@@ -20,8 +20,9 @@ namespace opossum {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   const auto table_iter = _tables.find(name);
-  Assert(table_iter == _tables.end() || !table_iter->second, "A table with the name " + name + " already exists");
-  Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
+  const auto view_iter = _views.find(name);
+  Assert(table_iter == _tables.end() || !table_iter->second, "Cannot add table " + name + " - a table with the same name already exists");
+  Assert(view_iter == _views.end() || !view_iter->second, "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     // We currently assume that all tables stored in the StorageManager are mutable and, as such, have MVCC data. This
@@ -51,8 +52,6 @@ void StorageManager::drop_table(const std::string& name) {
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
   const auto table_iter = _tables.find(name);
-
-  // Second check necessary because drop_table does not delete the entry, but set it to nullptr
   Assert(table_iter != _tables.end() && table_iter->second, "No such table named '" + name + "'");
 
   return table_iter->second;
@@ -80,51 +79,52 @@ std::vector<std::string> StorageManager::table_names() const {
 const tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const { return _tables; }
 
 void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
-  std::unique_lock lock(*_view_mutex);
+  const auto table_iter = _tables.find(name);
+  const auto view_iter = _views.find(name);
+  Assert(table_iter == _tables.end() || !table_iter->second, "Cannot add view " + name + " - a table with the same name already exists");
+  Assert(view_iter == _views.end() || !view_iter->second, "Cannot add view " + name + " - a view with the same name already exists");
 
-  Assert(_tables.find(name) == _tables.end(),
-         "Cannot add view " + name + " - a table with the same name already exists");
-  Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
-
-  _views.emplace(name, view);
+  if (view_iter == _views.end())
+    _views.emplace(name, std::move(view));
+  else
+    _views[name] = std::move(view);
 }
 
 void StorageManager::drop_view(const std::string& name) {
-  std::unique_lock lock(*_view_mutex);
+  const auto view_iter = _views.find(name);
+  Assert(view_iter != _views.end() && view_iter->second, "Error deleting view. No such view named '" + name + "'");
 
-  const auto num_deleted = _views.erase(name);
-  Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
+  _views[name] = nullptr;
 }
 
 std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
-  std::shared_lock lock(*_view_mutex);
+  const auto view_iter = _views.find(name);
+  Assert(view_iter != _views.end() && view_iter->second, "No such view named '" + name + "'");
 
-  const auto iter = _views.find(name);
-  Assert(iter != _views.end(), "No such view named '" + name + "'");
-
-  return iter->second->deep_copy();
+  return view_iter->second->deep_copy();
 }
 
 bool StorageManager::has_view(const std::string& name) const {
-  std::shared_lock lock(*_view_mutex);
-
-  return _views.count(name);
+  const auto view_iter = _views.find(name);
+  return view_iter != _views.end() && view_iter->second;
 }
 
 std::vector<std::string> StorageManager::view_names() const {
-  std::shared_lock lock(*_view_mutex);
 
   std::vector<std::string> view_names;
   view_names.reserve(_views.size());
 
   for (const auto& view_item : _views) {
+    if (!view_item.second)
+      continue;
+
     view_names.emplace_back(view_item.first);
   }
 
   return view_names;
 }
 
-const std::map<std::string, std::shared_ptr<LQPView>>& StorageManager::views() const { return _views; }
+const tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>>& StorageManager::views() const { return _views; }
 
 void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   Assert(_prepared_plans.find(name) == _prepared_plans.end(),
