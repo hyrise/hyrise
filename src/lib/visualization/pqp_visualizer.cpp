@@ -2,8 +2,6 @@
 #include <string>
 #include <utility>
 
-#include <boost/algorithm/string.hpp>
-
 #include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
@@ -141,15 +139,15 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
                                     const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  const auto& performance_data = from->performance_data;
-  if (performance_data->executed && performance_data->has_output) {
+  const auto& performance_data = from->performance_data();
+  if (performance_data.executed && performance_data.has_output) {
     std::stringstream stream;
-    stream << std::to_string(performance_data->output_row_count) + " row(s)/";
-    stream << std::to_string(performance_data->output_chunk_count) + " chunk(s)";
+    stream << std::to_string(performance_data.output_row_count) + " row(s)/";
+    stream << std::to_string(performance_data.output_chunk_count) + " chunk(s)";
     info.label = stream.str();
   }
 
-  info.pen_width = performance_data->output_row_count;
+  info.pen_width = performance_data.output_row_count;
   if (to->input_right() != nullptr) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
@@ -159,81 +157,18 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
 
 void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>& op) {
   VizVertexInfo info = _default_vertex;
-  const auto html_formatting_marker = std::string{"[formatted]"};
-  // Prepend marker for HTML-based formatting in AbstractVisualizer
   auto label = op->description(DescriptionMode::MultiLine);
 
-  auto split_with_first_linebreak = [](const std::string& text) {
-    const auto first_linebreak_position = text.find("\n");
-    if (first_linebreak_position != std::string::npos) {
-      return std::pair<std::string, std::optional<std::string>>{text.substr(0, first_linebreak_position),
-                                                 text.substr(first_linebreak_position)};
-    }
-    return std::pair<std::string, std::optional<std::string>>{text, std::nullopt};
-  };
-
-  // Escape HTML characters as we use the "HTML-like" output of graphviz. Otherise, descriptions such as
-  // `shipdate <= 1990-11-17` are parsed as HTML tags.
-  boost::algorithm::replace_all(label, "&", "&amp;");
-  boost::algorithm::replace_all(label, "<", "&lt;");
-  boost::algorithm::replace_all(label, ">", "&gt;");
-  boost::algorithm::replace_all(label, "\"", "&quot;");
-  boost::algorithm::replace_all(label, "'", "&apos;");
-
-  auto splitted_label = split_with_first_linebreak(label);
-  if (splitted_label.second) {
-    // label = "[pqp_title]" + splitted_label.first + "[/pqp_title]" + *splitted_label.second;
-    label = html_formatting_marker + "<B><FONT POINT-SIZE=\"17\">" + splitted_label.first + "</FONT></B>\n" + *splitted_label.second;
-  } else {
-    label = html_formatting_marker + label;
-  }
-
-  // const auto first_linebreak_position = label.find("\n");
-  // if (first_linebreak_position != std::string::npos) {
-  //   const auto first_line = label.substr(0, first_linebreak_position);
-  //   label = "=TITLE=" + first_line + "=/TITLE=" + label.substr(first_linebreak_position);
-  // }
-
-  const auto& performance_data = op->performance_data;
-  const auto total_runtime = performance_data->walltime;
-  if (performance_data->has_output) {
-    std::cout << op->name() << " has output " << std::endl;
-    std::stringstream ss;
-    if (dynamic_cast<StagedOperatorPerformanceData*>(op->performance_data.get())) {
-      auto& staged_performance_data = dynamic_cast<StagedOperatorPerformanceData&>(*op->performance_data);
-      std::cout << " ss before " << ss.str() << std::endl;
-      staged_performance_data.output_to_stream(ss, DescriptionMode::MultiLine);
-      std::cout << " ss after " << ss.str() << std::endl;
-    } else if (dynamic_cast<TableScan::TableScanPerformanceData*>(op->performance_data.get())) {
-      auto& table_scan_performance_data = dynamic_cast<TableScan::TableScanPerformanceData&>(*op->performance_data);
-      table_scan_performance_data.output_to_stream(ss, DescriptionMode::MultiLine);
-      // TODO: IndexJoin and more?
-    }
-
-    auto description_label = "\n\n" + ss.str();
-    auto splitted_description_label = split_with_first_linebreak(description_label);
-    if (splitted_description_label.second) {
-      description_label = splitted_description_label.first + "<FONT POINT-SIZE='10' COLOR='azure3'>" + *splitted_description_label.second + "</FONT>";
-    }
-    label += description_label;
-  }
-
-  if (performance_data->executed) {
-    label += "\n\n<B>" + format_duration(total_runtime) + "</B>";
-    info.pen_width = total_runtime.count();
+  const auto& performance_data = op->performance_data();
+  if (performance_data.executed) {
+    auto total = performance_data.walltime;
+    label += "\n\n" + format_duration(total);
+    info.pen_width = total.count();
   } else {
     info.pen_width = 1;
   }
 
-  // Change \n to html tag for line break
-  boost::algorithm::replace_all(label, "\n", "<BR/>");
-  // boost::algorithm::replace_all(label, "\\n", "<BR/>");
-
-  _duration_by_operator_name[op->name()] += performance_data->walltime;
-
-  std::cout << "###################### Setting label to" << std::endl;
-  std::cout << label << std::endl;
-  std::cout << "###################### /" << std::endl;
+  _duration_by_operator_name[op->name()] += performance_data.walltime;
 
   info.label = label;
   _add_vertex(op, info);
