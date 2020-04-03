@@ -28,9 +28,12 @@ bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
   if (this == &other) return true;
+
   if (type != other.type) return false;
+  if (!_shallow_equals(other)) return false;
   if (!expressions_equal(arguments, other.arguments)) return false;
-  return _shallow_equals(other);
+
+  return true;
 }
 
 bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
@@ -38,7 +41,10 @@ bool AbstractExpression::operator!=(const AbstractExpression& other) const { ret
 size_t AbstractExpression::hash() const {
   auto hash = boost::hash_value(type);
   for (const auto& argument : arguments) {
-    boost::hash_combine(hash, argument->hash());
+    // Include the hash value of the inputs, but do not recurse any deeper. We will have to perform a deep comparison
+    // anyway.
+    boost::hash_combine(hash, argument->type);
+    boost::hash_combine(hash, argument->_shallow_hash());
   }
   boost::hash_combine(hash, _shallow_hash());
   return hash;
