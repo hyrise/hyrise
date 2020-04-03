@@ -208,6 +208,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
     case hsql::kStmtTransaction:
       FailInput("Statement type not supported");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
@@ -556,6 +557,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
     case hsql::kTableCrossProduct:
       return _translate_cross_product(*hsql_table_ref.list);
   }
+  Fail("Invalid enum value");
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsql::TableRef& hsql_table_ref) {
@@ -1232,6 +1234,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
       return PredicateNode::make(predicate, static_table_node);
     }
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
@@ -1243,6 +1246,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
     case hsql::CreateType::kCreateTableFromTbl:
       FailInput("CREATE TABLE FROM is not yet supported");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsql::CreateStatement& create_statement) {
@@ -1329,6 +1333,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
     case hsql::DropType::kDropPreparedStatement:
       FailInput("This DROP type is not implemented yet");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::PrepareStatement& prepare_statement) {
@@ -1677,7 +1682,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                                                     ExistsExpressionType::Exists);
 
         default:
-          Fail("Unexpected expression type");  // There are 19 of these , so we make an exception here and use default
+          Fail("Unexpected expression type");  // There are 19 of these, so we make an exception here and use default
       }
     }
 
@@ -1695,6 +1700,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     case hsql::kExprHint:
       FailInput("Can't translate this hsql expression into a Hyrise expression");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
