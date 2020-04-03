@@ -120,8 +120,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
     visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
       if (node) {
           for (auto& root_expression : node->node_expressions) {
-              visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-                  if (expression->type == ExpressionType::LQPColumnExpression) {
+              visit_expression(root_expression, [&column_expressions](auto& expression) {
+                  if (expression->type == LQPColumnExpression) {
                     auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
                     column_expressions.push_back(column_expression);
                   }
