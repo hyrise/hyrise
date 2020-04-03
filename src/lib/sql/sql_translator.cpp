@@ -1179,8 +1179,9 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
     case hsql::kSetUnion:
       lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
+    default:
+      FailInput("Invalid enum value");
   }
-  Fail("Invalid enum value");
 
   _current_lqp = lqp;
 }
