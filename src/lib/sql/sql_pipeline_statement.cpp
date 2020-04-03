@@ -178,7 +178,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _unoptimized_logical_plan = nullptr;
 
   auto ulqp = unoptimized_lqp->deep_copy();
-  
+
   const auto done_preoptimization_cache = std::chrono::high_resolution_clock::now();
   const auto started_optimize = std::chrono::high_resolution_clock::now();
 
