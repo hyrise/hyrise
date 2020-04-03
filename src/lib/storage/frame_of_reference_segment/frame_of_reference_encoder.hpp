@@ -115,7 +115,6 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     }
     return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::nullopt,
                                                         std::move(compressed_offset_values));
-    
   }
 };
 
