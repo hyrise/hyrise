@@ -36,6 +36,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
   // Check all tables
   for (auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
+    const double row_count = static_cast<double>(table->row_count());
+    auto removed_row_count = uint64_t{0};
 
     // Check all chunks, except for the last one, which is currently used for insertions
     const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
@@ -76,8 +78,14 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
           std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
           _physical_delete_queue.emplace(table, chunk_id);
+          removed_row_count += chunk->invalid_row_count();
         }
       }
+    }
+    if (removed_row_count > 0) {
+      std::ostringstream message;
+      message << "Compressed " << table_name << " by factor " << std::to_string(removed_row_count / row_count);
+      Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str());
     }
   }
 }
