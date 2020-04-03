@@ -184,17 +184,20 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                                        reference_segment_pos_list);
             });
           }
-          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
+          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] +=
+              timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
-          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+              timer.lap();
         }
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+            timer.lap();
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
@@ -224,11 +227,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           });
         }
         join_index_performance_data.chunks_scanned_with_index++;
-        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] +=
+            timer.lap();
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+            timer.lap();
       }
     }
 
@@ -252,11 +257,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   }
 
-  if (join_index_performance_data.chunks_scanned_with_index < join_index_performance_data.chunks_scanned_without_index) {
-    PerformanceWarning(
-        std::string("Only ") + std::to_string(join_index_performance_data.chunks_scanned_with_index) + " of " +
-        std::to_string(join_index_performance_data.chunks_scanned_with_index + join_index_performance_data.chunks_scanned_without_index) +
-        " chunks processed using an index.");
+  if (join_index_performance_data.chunks_scanned_with_index <
+      join_index_performance_data.chunks_scanned_without_index) {
+    PerformanceWarning(std::string("Only ") + std::to_string(join_index_performance_data.chunks_scanned_with_index) +
+                       " of " +
+                       std::to_string(join_index_performance_data.chunks_scanned_with_index +
+                                      join_index_performance_data.chunks_scanned_without_index) +
+                       " chunks processed using an index.");
   }
   join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
 
@@ -562,8 +569,8 @@ void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, Descript
   StagedOperatorPerformanceData::output_to_stream(stream, description_mode);
 
   stream << (description_mode == DescriptionMode::SingleLine ? " - " : "\n");
-  stream << chunks_scanned_with_index << " of "
-         << (chunks_scanned_with_index + chunks_scanned_without_index) << " chunks used an index.";
+  stream << chunks_scanned_with_index << " of " << (chunks_scanned_with_index + chunks_scanned_without_index)
+         << " chunks used an index.";
 }
 
 }  // namespace opossum

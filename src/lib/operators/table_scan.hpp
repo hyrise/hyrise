@@ -63,7 +63,7 @@ class TableScan : public AbstractReadOnlyOperator {
           stream << ", ";
         }
         if (chunk_scans_sorted > 0) {
-         stream << chunk_scans_sorted << " scanned sorted";
+          stream << chunk_scans_sorted << " scanned sorted";
         }
         stream << ". ";
       }

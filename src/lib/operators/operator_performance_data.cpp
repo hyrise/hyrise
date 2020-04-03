@@ -27,18 +27,19 @@ std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& pe
 }
 
 void StagedOperatorPerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-	// As we do not know the number of stages of the operator at this point (and we do not know if there might be
+  // As we do not know the number of stages of the operator at this point (and we do not know if there might be
   // skipped stage in between stages, we search backwards for the first non-zero value and assume that the position
   // index equals the number of stages of the operator.
-	const auto stage_count = std::distance(
-      std::find_if(stage_runtimes.crbegin(), stage_runtimes.crend(),
-                                         [](const auto& value) { return value != std::chrono::nanoseconds::zero(); }), stage_runtimes.crend());
+  const auto stage_count =
+      std::distance(std::find_if(stage_runtimes.crbegin(), stage_runtimes.crend(),
+                                 [](const auto& value) { return value != std::chrono::nanoseconds::zero(); }),
+                    stage_runtimes.crend());
 
   stream << "Stage runtimes: ";
-	for (auto stage = 0; stage < stage_count; ++stage) {
+  for (auto stage = 0; stage < stage_count; ++stage) {
     if (stage > 0) stream << ", ";
-	  stream << format_duration(stage_runtimes[stage]);
-	}
+    stream << format_duration(stage_runtimes[stage]);
+  }
   stream << ". ";
 }
 

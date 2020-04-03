@@ -248,9 +248,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
-    auto builder = SQLPipelineBuilder{sql}
-                       .with_lqp_cache(_lqp_cache)
-                       .with_pqp_cache(_pqp_cache);
+    auto builder = SQLPipelineBuilder{sql}.with_lqp_cache(_lqp_cache).with_pqp_cache(_pqp_cache);
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }

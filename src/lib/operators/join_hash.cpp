@@ -57,7 +57,7 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
-  
+
   return stream.str();
 }
 
