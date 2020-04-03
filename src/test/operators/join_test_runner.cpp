@@ -202,7 +202,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
      */
     const auto build_join_type_specific_variations = [&](const auto& configuration) {
       if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
-        // using factor 2 since has_indexes can either be true or false.
+        // For the JoinIndex, two additional parameters influence its execution behavior.
+        // These are the index side and the availability of indexes on that index side.
+        // Based on the input configuration, two configurations are generated for each possible
+        // index side: configurations (1) with and (2) without indexes on the index side.
         std::vector<JoinTestConfiguration> variations(all_index_sides.size() * 2, configuration);
         uint8_t variation_index{0};
         for (const auto& index_side : all_index_sides) {
@@ -651,16 +654,48 @@ TEST_P(JoinTestRunner, TestJoin) {
     FAIL();
   }
 
-  // TODO(anyone) check performance data if an index join was used.
-  // For this, configuration.index_side has to be set.
-  // For a chunk to be scanned, indexes are used
-  // if (index_exists && (data_table || (ref_table && inner_join && single_chunk_ref))) with
-  // - index_exists: the correct index exists for the corresponding table
-  // - data_table: the table type is TableType::Data
-  // - ref_table: the table type is TableType::Referene
-  // - inner_join: the join mode is JoinMode::Inner
-  // - single_chunk_ref: the (reference) chunk to be scanned references a single chunk
-  // For more infomation about performance data, checkout join_index_test.cpp, `static void test_join_output(…)`.
+  if (configuration.index_side) {  // configuration is a specialized JoinIndex configuration
+    std::shared_ptr<const Table> index_table = nullptr;
+    if (configuration.index_side == IndexSide::Left) {
+      index_table = join_op->input_table_left();
+    } else {
+      index_table = join_op->input_table_right();
+    }
+
+    // count how many chunks had to be scanned with index
+    auto expected_chunks_scanned_with_index{0};
+
+    ColumnID index_side_column_id{0};
+    if (configuration.index_side == IndexSide::Left) {
+      index_side_column_id = join_op->primary_predicate().column_ids.first;
+    } else {
+      index_side_column_id = join_op->primary_predicate().column_ids.second;
+    }
+
+    for (ChunkID chunk_id{0}; index_table->chunk_count(); ++chunk_id) {
+      const auto& chunk = index_table->get_chunk(chunk_id);
+      const auto& indexes = chunk->get_indexes({index_side_column_id});
+
+      if (indexes.empty()) {
+        continue;
+      }
+
+      if (index_table->type() == TableType::Data) {
+        ++expected_chunks_scanned_with_index;
+      } else {  // INDEX REFERENCE TABLE
+        const auto& reference_segment =
+            std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(index_side_column_id));
+        const auto single_chunk_reference_guarantee = reference_segment->pos_list()->references_single_chunk();
+        if (join_op->mode() == JoinMode::Inner && single_chunk_reference_guarantee) {
+          ++expected_chunks_scanned_with_index;
+        }
+      }
+    }
+
+    // verify correctness of index usage
+    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join_op->performance_data());
+    EXPECT_EQ(performance_data.chunks_scanned_with_index, expected_chunks_scanned_with_index);
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
