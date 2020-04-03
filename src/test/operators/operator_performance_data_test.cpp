@@ -220,6 +220,20 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
   }
 }
 
+// Ensure that only non-zero runtimes are listed but at the same time assume that stages might be skipped and thus zero
+// runtimes can occur in between non-zero runtimes.
+TEST_F(OperatorPerformanceDataTest, StagedOperatorPerformanceDataToOutputStream) {
+  StagedOperatorPerformanceData performance_data;
+  performance_data.stage_runtimes[0] = std::chrono::nanoseconds{17};
+  performance_data.stage_runtimes[1] = std::chrono::nanoseconds{17};
+  performance_data.stage_runtimes[2] = std::chrono::nanoseconds{0};
+  performance_data.stage_runtimes[3] = std::chrono::nanoseconds{17};
+
+  std::stringstream stringstream;
+  stringstream << performance_data << std::endl;
+  EXPECT_TRUE(stringstream.str().starts_with("Stage runtimes: 17 ns, 17 ns, 0 ns, 17 ns."));
+}
+
 // TODO: include mrks tests from #2061
 
 }  // namespace opossum
