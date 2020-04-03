@@ -202,9 +202,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
     case hsql::kStmtExport:
       return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
-
-    default:
-      FailInput("SQL statement type not supported");
+    case hsql::kStmtAlter:
+    case hsql::kStmtError:
+    case hsql::kStmtRename:
+    case hsql::kStmtTransaction:
+      FailInput("Statement type not supported");
   }
 }
 
@@ -553,9 +555,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
 
     case hsql::kTableCrossProduct:
       return _translate_cross_product(*hsql_table_ref.list);
-
-    default:
-      Fail("Unexpected SQLParser TableRef in FROM");
   }
 }
 
@@ -659,8 +658,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       table_name = hsql_table_ref.alias->name;
     } break;
 
-    default:
-      Fail("_translate_table_origin() is only for Tables, Views and Sub Selects.");
+    case hsql::kTableJoin:
+    case hsql::kTableCrossProduct:
+      // These should not make it this far.
+      Fail("Unexpected table reference type");
   }
 
   // Rename columns as in "SELECT * FROM t AS x (y,z)"
@@ -1179,8 +1180,6 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
     case hsql::kSetUnion:
       lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
-    default:
-      FailInput("Invalid enum value");
   }
 
   _current_lqp = lqp;
@@ -1232,8 +1231,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
                                                                          value_(show_statement.name));
       return PredicateNode::make(predicate, static_table_node);
     }
-    default:
-      FailInput("hsql::ShowType is not supported.");
   }
 }
 
@@ -1243,8 +1240,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
       return _translate_create_view(create_statement);
     case hsql::CreateType::kCreateTable:
       return _translate_create_table(create_statement);
-    default:
-      FailInput("hsql::CreateType is not supported.");
+    case hsql::CreateType::kCreateTableFromTbl:
+      FailInput("CREATE TABLE FROM is not yet supported");
   }
 }
 
@@ -1308,8 +1305,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
           column_definition.data_type = DataType::String;
           break;
-        default:
-          Fail("CREATE TABLE: Data type not supported");
+        case hsql::DataType::UNKNOWN:
+          Fail("UNKNOWN data type cannot be handled here");
       }
 
       column_definition.name = parser_column_definition->name;
@@ -1327,9 +1324,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
       return DropViewNode::make(drop_statement.name, drop_statement.ifExists);
     case hsql::DropType::kDropTable:
       return DropTableNode::make(drop_statement.name, drop_statement.ifExists);
-
-    default:
-      FailInput("hsql::DropType is not supported.");
+    case hsql::DropType::kDropSchema:
+    case hsql::DropType::kDropIndex:
+    case hsql::DropType::kDropPreparedStatement:
+      FailInput("This DROP type is not implemented yet");
   }
 }
 
@@ -1635,7 +1633,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
       }
 
-      // Translate all other expression types
+      // Translate other expression types that can be expected at this point
       switch (expr.opType) {
         case hsql::kOpUnaryMinus:
           return std::make_shared<UnaryMinusExpression>(left);
@@ -1679,7 +1677,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                                                     ExistsExpressionType::Exists);
 
         default:
-          FailInput("Not handling this OperatorType yet");
+          Fail("Unexpected expression type");  // There are 19 of these , so we make an exception here and use default
       }
     }
 
@@ -1689,13 +1687,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     case hsql::kExprArray:
       FailInput("Can't translate a standalone array, arrays only valid in IN expressions");
 
-    case hsql::kExprHint:
     case hsql::kExprStar:
-    case hsql::kExprArrayIndex:
-      FailInput("Can't translate this hsql expression into a Hyrise expression");
+      Fail("Star expression should have been handled earlier");
 
-    default:
-      FailInput("Unknown expression type, can't translate expression");
+    case hsql::kExprArrayIndex:
+    case hsql::kExprDatetimeField:
+    case hsql::kExprHint:
+      FailInput("Can't translate this hsql expression into a Hyrise expression");
   }
 }
 
