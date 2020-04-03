@@ -115,9 +115,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
-    bool contains_non_uniform_distribution = false;
+    bool contains_uniform_distribution = false;
 
-    visit_lqp(unoptimized_lqp, [&contains_non_uniform_distribution](const auto& node) {
+    visit_lqp(unoptimized_lqp, [&contains_uniform_distribution](const auto& node) {
       if (node) {
         const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
         if (table_node) {
@@ -138,9 +138,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                 using ColumnDataType = typename decltype(type)::type;
 
                 std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-                if (!statistics->histogram->is_uniformly_distributed(1)) {
-                  contains_non_uniform_distribution = true;
-                }
+                contains_uniform_distribution = statistics->histogram->is_uniformly_distributed(1);
               });
             }
           }
@@ -149,10 +147,12 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       return LQPVisitation::VisitInputs;
     });
 
+    std::cout << contains_uniform_distribution;
+
     const auto done_uniform_check = std::chrono::high_resolution_clock::now();
     _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
 
-    if (!contains_non_uniform_distribution) {
+    if (contains_uniform_distribution) {
       visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
         if (node) {
             for (auto& root_expression : node->node_expressions) {
