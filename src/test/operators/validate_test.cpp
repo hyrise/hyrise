@@ -107,7 +107,7 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
-  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto validate1 = std::make_shared<Validate>(_gt);
   validate1->set_transaction_context(t1_context);
@@ -117,7 +117,7 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
   EXPECT_EQ(validate1->get_output()->row_count(), 8);
   t1_context->commit();
 
-  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   // Select one row for deletion
   auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "13");

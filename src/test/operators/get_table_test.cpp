@@ -78,7 +78,7 @@ TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
   auto get_table_1 = std::make_shared<opossum::GetTable>("int_int_float");
   get_table_1->execute();
 
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto table_scan = create_table_scan(get_table_1, ColumnID{0}, PredicateCondition::GreaterThan, 9);
   table_scan->execute();

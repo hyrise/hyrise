@@ -86,7 +86,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -108,7 +108,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_transaction_context(context).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -122,7 +122,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   // No transaction context
   EXPECT_NO_THROW(

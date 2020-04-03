@@ -12,7 +12,7 @@ class TransactionHandlingTest : public BaseTest {
 TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
   const std::string query = "BEGIN; CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1); COMMIT;";
 
-  const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto [execution_information, transaction_context] =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
@@ -31,7 +31,7 @@ TEST_F(TransactionHandlingTest, RollbackTransaction) {
       "BEGIN; INSERT INTO users(id) VALUES (3);"
       "ROLLBACK; SELECT * FROM users;";
 
-  const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto [execution_information, transaction_context] =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
@@ -47,7 +47,7 @@ TEST_F(TransactionHandlingTest, RollbackTransaction) {
 TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
   std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
 
-  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto execution_info_transaction_context_pair =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
@@ -96,7 +96,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
 TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
   std::string query = "CREATE TABLE users (id INT); INSERT INTO users(id) VALUES (1);";
 
-  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto execution_info_transaction_context_pair =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
@@ -116,7 +116,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
   // meanwhile user B checks all elements in that table
   std::string query_2 = "SELECT * FROM users;";
 
-  auto transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto execution_info_transaction_context_pair_2 =
       QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, transaction_ctx_2);
@@ -138,7 +138,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
   // user B checks all elements in that table again
   query_2 = "SELECT * FROM users;";
 
-  transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context();
+  transaction_ctx_2 = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   execution_info_transaction_context_pair_2 =
       QueryHandler::execute_pipeline(query_2, SendExecutionInfo::Yes, transaction_ctx_2);

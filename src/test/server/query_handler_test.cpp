@@ -15,7 +15,7 @@ class QueryHandlerTest : public BaseTest {
 TEST_F(QueryHandlerTest, ExecutePipeline) {
   const std::string query = "SELECT 1;";
 
-  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
   const auto [execution_information, transaction_context] =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
 
@@ -45,7 +45,7 @@ TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
   const auto specification = PreparedStatementDetails{"test_statement", "", {123}};
   const auto pqp = QueryHandler::bind_prepared_plan(specification);
 
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
   pqp->set_transaction_context_recursively(transaction_context);
 
   const auto& result_table = QueryHandler::execute_prepared_plan(pqp);
@@ -65,7 +65,7 @@ TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
 
   // Simple queries invalidate an existing plan as well
   const std::string query = "SELECT 1;";
-  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
   QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
 
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
