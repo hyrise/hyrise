@@ -115,9 +115,26 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
+    vector<LQPColumnExpression> column_expressions;
+
+    visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
+      if (node) {
+          for (auto& root_expression : node->node_expressions) {
+              visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
+                  if (expression->type == ExpressionType::LQPColumnExpression) {
+                    auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+                    column_expressions.push_back(column_expression);
+                  }
+                  return ExpressionVisitation::VisitArguments;
+              });
+            }
+          }
+          return LQPVisitation::VisitInputs;
+    });
+
     bool contains_uniform_distribution = true;
 
-    visit_lqp(unoptimized_lqp, [&contains_uniform_distribution](const auto& node) {
+    visit_lqp(unoptimized_lqp, [&contains_uniform_distribution, &column_expressions](const auto& node) {
       if (node) {
         const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
         if (table_node) {
@@ -125,7 +142,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
           const auto table = Hyrise::get().storage_manager.get_table(table_name);
           const auto &table_statistics = table->table_statistics();
 
-          for (auto &expression: table_node->column_expressions()) {
+          for (auto &expression: column_expressions) {
             const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
             assert(column_expression);
             //const auto column_id = column_expression->column_reference.original_column_id();
@@ -149,7 +166,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       return LQPVisitation::VisitInputs;
     });
 
-    std::cout << " " << contains_uniform_distribution;
+    std::cout << " " << contains_uniform_distribution << std::endl;
 
     const auto done_uniform_check = std::chrono::high_resolution_clock::now();
     _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
