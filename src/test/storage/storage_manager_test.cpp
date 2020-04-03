@@ -69,6 +69,9 @@ TEST_F(StorageManagerTest, DropTable) {
   sm.drop_table("first_table");
   EXPECT_THROW(sm.get_table("first_table"), std::exception);
   EXPECT_THROW(sm.drop_table("first_table"), std::exception);
+
+  sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
+  EXPECT_TRUE(sm.has_table("first_table"));
 }
 
 TEST_F(StorageManagerTest, DoesNotHaveTable) {
@@ -102,6 +105,11 @@ TEST_F(StorageManagerTest, DropView) {
   sm.drop_view("first_view");
   EXPECT_THROW(sm.get_view("first_view"), std::exception);
   EXPECT_THROW(sm.drop_view("first_view"), std::exception);
+
+  const auto v1_lqp = StoredTableNode::make("first_table");
+  const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
+  sm.add_view("first_view", v1);
+  EXPECT_TRUE(sm.has_view("first_view"));
 }
 
 TEST_F(StorageManagerTest, ResetView) {
