@@ -175,8 +175,8 @@ const boost::bimap<TableType, std::string> table_type_to_string =
     make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
 const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string =
-    make_bimap<SetOperationMode, std::string>({{SetOperationMode::Unique, "SetOperationUnique"},
-                                               {SetOperationMode::All, "SetOperationAll"},
+    make_bimap<SetOperationMode, std::string>({{SetOperationMode::Unique, "Unique"},
+                                               {SetOperationMode::All, "All"},
                                                {SetOperationMode::Positions, "Positions"}});
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {

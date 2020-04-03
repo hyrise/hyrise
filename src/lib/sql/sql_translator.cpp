@@ -292,10 +292,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   if (select.setOperations) {
     for (const auto set_operator : *select.setOperations) {
-      // We remove the Union Operation here because we cannot make it fail during the lqp-translation, since the
-      // the Operator is used for other queries.
+      // Currently, only the SQL translation of intersect and except is implemented.
       AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported");
       _translate_set_operation(*set_operator);
+
+      // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
       if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
       if (set_operator->resultLimit) _translate_limit(*set_operator->resultLimit);
     }
@@ -310,7 +311,8 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 
   // Save mappings: ColumnID -> ColumnName
   std::unordered_map<ColumnID, std::string> column_names;
-  for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+  const auto column_expressions = lqp->column_expressions();
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
     for (const auto& identifier : with_translator._inflated_select_list_elements[column_id].identifiers) {
       column_names.insert_or_assign(column_id, identifier.column_name);
     }
@@ -575,8 +577,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         lqp = lqp_view->lqp;
 
         // Add all named columns to the IdentifierContext
-        for (auto column_id = ColumnID{0}; column_id < lqp_view->lqp->column_expressions().size(); ++column_id) {
-          const auto column_expression = lqp_view->lqp->column_expressions()[column_id];
+        const auto column_expressions = lqp_view->lqp->column_expressions();
+        for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+          const auto column_expression = column_expressions[column_id];
 
           const auto column_name_iter = lqp_view->column_names.find(column_id);
           if (column_name_iter != lqp_view->column_names.end()) {
@@ -598,8 +601,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         /**
          * Add all named columns from the view to the IdentifierContext
          */
-        for (auto column_id = ColumnID{0}; column_id < view->lqp->column_expressions().size(); ++column_id) {
-          const auto column_expression = view->lqp->column_expressions()[column_id];
+        const auto column_expressions = view->lqp->column_expressions();
+        for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+          const auto column_expression = column_expressions[column_id];
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
@@ -633,11 +637,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       for (const auto& element : subquery_translator._inflated_select_list_elements) {
         identifiers.emplace_back(element.identifiers);
       }
-      Assert(identifiers.size() == lqp->column_expressions().size(),
+
+      const auto column_expressions = lqp->column_expressions();
+      Assert(identifiers.size() == column_expressions.size(),
              "There have to be as many identifier lists as column expressions");
-      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size();
+      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < column_expressions.size();
            ++select_list_element_idx) {
-        const auto subquery_expression = lqp->column_expressions()[select_list_element_idx];
+        const auto subquery_expression = column_expressions[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -1134,31 +1140,35 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
   const auto& left_input_lqp = _current_lqp;
+  const auto left_column_expressions = left_input_lqp->column_expressions();
 
-  // Create a nested SQL-Translator for the right hand site of the Set-Statement to not make changes in the current one
+  // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
+  // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
                                       _with_descriptions, _meta_tables};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
+  const auto right_column_expressions = right_input_lqp->column_expressions();
 
-  AssertInput(left_input_lqp->column_expressions().size() == right_input_lqp->column_expressions().size(),
-              "The size of tables connected via set operators needs to match");
+  AssertInput(left_column_expressions.size() == right_column_expressions.size(),
+              "Mismatching number of input columns for set operation");
 
-  // Check to see if both input lqps use the same data-type for each column
-  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_input_lqp->column_expressions().size();
+  // Check to see if both input LQPs use the same data type for each column
+  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_column_expressions.size();
        ++column_expression_idx) {
-    const auto& left_expression = left_input_lqp->column_expressions()[column_expression_idx];
-    const auto& right_expression = right_input_lqp->column_expressions()[column_expression_idx];
+    const auto& left_expression = left_column_expressions[column_expression_idx];
+    const auto& right_expression = right_column_expressions[column_expression_idx];
 
     AssertInput(left_expression->data_type() == right_expression->data_type(),
-                "The data type of both columns needs to match");
+                "Mismatching input data types for left and right side of set operation");
   }
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
-  // Check to see, if distinct values are filtered. More about the options can be seen in types.cpp
+  // Choose the set operation mode. SQL only knows UNION and UNION ALL; the Positions mode is only used for internal
+  // LQP optimizations and should not be needed in the SQLTranslator.
   auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Unique;
 
-  // Create corresponding SetNode depending on the SetType
+  // Create corresponding node depending on the SetType
   switch (set_operator.setType) {
     case hsql::kSetExcept:
       lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
@@ -1169,9 +1179,8 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
     case hsql::kSetUnion:
       lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
-    default:
-      FailInput("Unknown Set Type");
   }
+  Fail("Invalid enum value");
 
   _current_lqp = lqp;
 }
@@ -1195,8 +1204,9 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   _current_lqp = SortNode::make(expressions, order_by_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
-  if (input_lqp->column_expressions().size() != _current_lqp->column_expressions().size()) {
-    _current_lqp = ProjectionNode::make(input_lqp->column_expressions(), _current_lqp);
+  const auto input_column_expressions = input_lqp->column_expressions();
+  if (input_column_expressions.size() != _current_lqp->column_expressions().size()) {
+    _current_lqp = ProjectionNode::make(input_column_expressions, _current_lqp);
   }
 }
 
@@ -1239,19 +1249,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsql::CreateStatement& create_statement) {
   auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
+  const auto column_expressions = lqp->column_expressions();
 
   std::unordered_map<ColumnID, std::string> column_names;
 
   if (create_statement.viewColumns) {
     // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-    AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
+    AssertInput(create_statement.viewColumns->size() == column_expressions.size(),
                 "Number of Columns in CREATE VIEW does not match SELECT statement");
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
       column_names.insert_or_assign(column_id, (*create_statement.viewColumns)[column_id]);
     }
   } else {
-    for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
       for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
         column_names.insert_or_assign(column_id, identifier.column_name);
       }
