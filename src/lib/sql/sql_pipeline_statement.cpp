@@ -115,7 +115,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
-    vector<LQPColumnExpression> column_expressions;
+    std::vector<LQPColumnExpression> column_expressions;
 
     visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
       if (node) {
