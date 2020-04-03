@@ -13,6 +13,8 @@
 #include "hyrise.hpp"
 #include "magic_enum.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
@@ -219,6 +221,59 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
     EXPECT_TRUE(staged_performance_data.get_stage_runtime(*magic_enum::enum_index(stage)).count() > 0);
   }
 }
+
+TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
+  const auto table_name = "table_a";
+  const auto table = load_table("resources/test_data/tbl/int_float.tbl");
+
+  // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
+  Hyrise::get().storage_manager.add_table(table_name, table);
+
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
+  auto table_scan_1 = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "123");
+  auto table_scan_2 = create_table_scan(gt, ColumnID{0}, PredicateCondition::LessThan, "0");
+
+  table_scan_1->execute();
+  table_scan_2->execute();
+
+  auto delete_op = std::make_shared<Delete>(table_scan_1);
+  delete_op->set_transaction_context(transaction_context);
+
+  delete_op->execute();
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  {
+    const auto& performance_data = delete_op->performance_data;
+    EXPECT_TRUE(performance_data->executed);
+    EXPECT_GT(performance_data->walltime.count(), 0);
+    EXPECT_FALSE(performance_data->has_output);
+  }
+
+  {
+    const auto& performance_data = table_scan_1->performance_data;
+    EXPECT_TRUE(performance_data->executed);
+    EXPECT_GT(performance_data->walltime.count(), 0);
+    EXPECT_TRUE(performance_data->has_output);
+    EXPECT_EQ(performance_data->output_row_count, 1);
+    EXPECT_EQ(performance_data->output_chunk_count, 1);
+  }
+
+  {
+    const auto& performance_data = table_scan_2->performance_data;
+    EXPECT_TRUE(performance_data->executed);
+    EXPECT_GT(performance_data->walltime.count(), 0);
+    EXPECT_TRUE(performance_data->has_output);
+    EXPECT_EQ(performance_data->output_row_count, 0);
+    EXPECT_EQ(performance_data->output_chunk_count, 0);
+  }
+
+  // Committing to avoid error "Has registered operators but has neither been committed nor rolled back."
+  transaction_context->commit();
+} 
 
 // Ensure that only non-zero runtimes are listed but at the same time assume that stages might be skipped and thus zero
 // runtimes can occur in between non-zero runtimes.
