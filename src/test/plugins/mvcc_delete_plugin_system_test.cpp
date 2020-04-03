@@ -68,7 +68,8 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+    const auto transaction_context =
+        Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
     const auto gt = std::make_shared<GetTable>(_t_name_test);
     gt->set_transaction_context(transaction_context);
@@ -101,7 +102,8 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * Checks the table configuration by summing up all integer values
    */
   void validate_table() {
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+    const auto transaction_context =
+        Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
     const auto gt = std::make_shared<GetTable>(_t_name_test);
     gt->set_transaction_context(transaction_context);
@@ -147,7 +149,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (3) Create a blocker for the physical delete of chunk 2
   // The following context is older than all invalidations following with (4).
   // While it exists, no physical delete should be performed because the context might operate on old rows.
-  auto blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto blocker_transaction_context =
+      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   // (4) Prepare clean-up of chunk 2
   // (4.1) Create and run a thread that invalidates and reinserts rows of chunk 2 and 3

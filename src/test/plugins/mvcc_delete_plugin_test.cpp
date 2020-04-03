@@ -167,7 +167,8 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
   EXPECT_EQ(table->get_chunk(ChunkID{1})->invalid_row_count(), 3);
 
   // Force rollback of logical delete transaction
-  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  const auto transaction_context =
+      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   {
     const auto conflicting_sql = "DELETE FROM " + _table_name + " WHERE a < 4";

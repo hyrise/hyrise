@@ -29,8 +29,7 @@
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           const UseMvcc use_mvcc,
-                                           const std::shared_ptr<Optimizer>& optimizer,
+                                           const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                                            const CleanupTemporaries cleanup_temporaries)

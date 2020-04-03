@@ -135,7 +135,8 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 }
 
 TEST_F(OperatorsDeleteTest, EmptyDelete) {
-  auto tx_context_modification = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto tx_context_modification =
+      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto gt = std::make_shared<GetTable>(_table_name);
   gt->execute();
@@ -157,7 +158,8 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   tx_context_modification->commit();
 
   // Get validated table which should be the original one
-  auto tx_context_verification = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto tx_context_verification =
+      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   auto gt_post_delete = std::make_shared<GetTable>(_table_name);
   gt_post_delete->execute();

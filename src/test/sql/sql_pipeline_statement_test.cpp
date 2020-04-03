@@ -520,7 +520,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutputNoReexecution) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
-  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  const auto transaction_context =
+      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
   {
     const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
