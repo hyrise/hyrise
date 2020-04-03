@@ -1164,6 +1164,8 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
   auto lqp = std::shared_ptr<AbstractLQPNode>();
 
+  // Choose the set operation mode. SQL only knows UNION and UNION ALL; the Positions mode is only used for internal
+  // LQP optimizations and should not be needed in the SQLTranslator.
   auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Unique;
 
   // Create corresponding node depending on the SetType
