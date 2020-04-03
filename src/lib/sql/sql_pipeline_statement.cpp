@@ -115,7 +115,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
     const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
-    bool contains_uniform_distribution = false;
+    bool contains_uniform_distribution = true;
 
     visit_lqp(unoptimized_lqp, [&contains_uniform_distribution](const auto& node) {
       if (node) {
@@ -138,7 +138,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
                 using ColumnDataType = typename decltype(type)::type;
 
                 std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-                contains_uniform_distribution = statistics->histogram->is_uniformly_distributed(100);
+                if (!statistics->histogram->is_uniformly_distributed(100)) {
+                  contains_uniform_distribution = false;
+                }
               });
             }
           }
