@@ -133,7 +133,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _probe_pos_list->reserve(pos_list_size_to_reserve);
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
-  auto& perf = static_cast<PerformanceData&>(*performance_data);
+  auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
   Timer timer;
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
@@ -184,17 +184,17 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                                        reference_segment_pos_list);
             });
           }
-          perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
-          perf.chunks_scanned_with_index++;
+          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
+          join_index_performance_data.chunks_scanned_with_index++;
         } else {
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
-          perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
         }
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
@@ -223,12 +223,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
         }
-        perf.chunks_scanned_with_index++;
-        perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
+        join_index_performance_data.chunks_scanned_with_index++;
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
       }
     }
 
@@ -252,13 +252,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   }
 
-  if (perf.chunks_scanned_with_index < perf.chunks_scanned_without_index) {
+  if (join_index_performance_data.chunks_scanned_with_index < join_index_performance_data.chunks_scanned_without_index) {
     PerformanceWarning(
-        std::string("Only ") + std::to_string(perf.chunks_scanned_with_index) + " of " +
-        std::to_string(perf.chunks_scanned_with_index + perf.chunks_scanned_without_index) +
+        std::string("Only ") + std::to_string(join_index_performance_data.chunks_scanned_with_index) + " of " +
+        std::to_string(join_index_performance_data.chunks_scanned_with_index + join_index_performance_data.chunks_scanned_without_index) +
         " chunks processed using an index.");
   }
-  perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
+  join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
 
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }
@@ -267,7 +267,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
   PerformanceWarning("Fallback nested loop used.");
-  auto& perf = static_cast<PerformanceData&>(*performance_data);
+  auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
 
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
   Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -296,7 +296,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
   const auto& count_index_positions = index_pos_list_size_post_fallback - index_pos_list_size_pre_fallback;
   std::fill_n(std::back_inserter(_index_pos_dereferenced), count_index_positions, false);
-  perf.chunks_scanned_without_index++;
+  join_index_performance_data.chunks_scanned_without_index++;
 }
 
 // join loop that joins two segments of two columns using an iterator for the probe side,
@@ -559,7 +559,6 @@ void JoinIndex::_on_cleanup() {
 }
 
 void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-  OperatorPerformanceData::output_to_stream(stream, description_mode);
   StagedOperatorPerformanceData::output_to_stream(stream, description_mode);
 
   stream << (description_mode == DescriptionMode::SingleLine ? " - " : "\n");

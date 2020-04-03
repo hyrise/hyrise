@@ -29,8 +29,7 @@ struct VizGraphInfo {
 
 struct VizVertexInfo {
   uintptr_t id;
-  std::string plain_label;
-  std::vector<std::string> formatted_labels;
+  std::string label;
   std::string color = "white";
   std::string font_color = "white";
   std::string shape = "rectangle";
@@ -76,7 +75,7 @@ class AbstractVisualizer {
     // Add vertex properties
     _add_property("node_id", &VizVertexInfo::id);
     _add_property("color", &VizVertexInfo::color);
-    _add_property("label", &VizVertexInfo::plain_label);
+    _add_property("label", &VizVertexInfo::label);
     _add_property("shape", &VizVertexInfo::shape);
     _add_property("fontcolor", &VizVertexInfo::font_color);
     _add_property("penwidth", &VizVertexInfo::pen_width);
@@ -101,17 +100,17 @@ class AbstractVisualizer {
   //   }
   // };
 
-  template <class Label>
-  class label_writer {
-  public:
-    label_writer(Label _label) : label(_label) {}
-    template <class VertexOrEdge>
-    void operator()(std::ostream& out, const VertexOrEdge& v) const {
-      out << "[label=\"" << v << "\"]";
-    }
-  private:
-    Label label;
-  };
+  // template <class Label>
+  // class label_writer {
+  // public:
+  //   label_writer(Label _label) : label(_label) {}
+  //   template <class VertexOrEdge>
+  //   void operator()(std::ostream& out, const VertexOrEdge& v) const {
+  //     out << "[label=\"" << v << "\"]";
+  //   }
+  // private:
+  //   Label label;
+  // };
 
   template <typename T>
   static std::string escape_pqp_node_string(const T& obj) {
@@ -121,27 +120,22 @@ class AbstractVisualizer {
     if (regex_match(s, valid_unquoted_id)) {
       return s;
     } else {
-      // Escape HTML characters as we use the "HTML-like" output of graphviz. Otherise, descriptions such as
-      // `shipdate <= 1990-11-17` are parsed as HTML tags.
-      std::cout  << s << std::endl;
-      boost::algorithm::replace_all(s, "<", "&lt;");
-      std::cout  << s << std::endl;
-      boost::algorithm::replace_all(s, ">", "&gt;");
-      boost::algorithm::replace_all(s, "&", "&amp;");
-      boost::algorithm::replace_all(s, "\"", "&quot;");
-      boost::algorithm::replace_all(s, "'", "&apos;");
-      
-      // Change \n to html tag for line break
-      boost::algorithm::replace_all(s, "\n", "<BR/>");
-      boost::algorithm::replace_all(s, "\\n", "<BR/>");
+      if (s.starts_with("[formatted]")) {
+        std::cout << "FORMATTED: " << s << std::endl;
+        s = s.substr(11);
 
-      // Rewrite markup-like notation to HTML-like for graphviz
-      boost::algorithm::replace_all(s, "=TITLE=", "<B><FONT POINT-SIZE=\"17\">");
-      boost::algorithm::replace_all(s, "=/TITLE=", "</FONT></B>");
-      boost::algorithm::replace_all(s, "=DESC=", "<FONT POINT-SIZE=\"10\">");
-      boost::algorithm::replace_all(s, "=/DESC=", "</FONT>");
+        // // Rewrite markup-like notation to HTML-like for graphviz
+        // boost::algorithm::replace_all(s, "[pqp_title]", "<B><FONT POINT-SIZE=\"17\">");
+        // boost::algorithm::replace_all(s, "[/pqp_title]", "</FONT></B>");
+        // boost::algorithm::replace_all(s, "=DESC=", "<FONT POINT-SIZE=\"10\">");
+        // boost::algorithm::replace_all(s, "=/DESC=", "</FONT>");
 
-      return "<" + s + ">";
+        // return "\"" + s + "\"";
+        return "<" + s + ">";
+      }
+
+      std::cout << "UNFORMATTED: " << s << std::endl;
+      return "\"" + s + "\"";
     }
   }
 
@@ -176,22 +170,22 @@ class AbstractVisualizer {
     const std::string* node_id;
   };
 
-  template < class Label >
-  label_writer<Label>
-  make_label_writer(Label l);
+  // template < class Label >
+  // label_writer<Label>
+  // make_label_writer(Label l);
 
-  static std::string calc_color(std::string input) {
-    std::ostringstream oss;
-    oss << "<" << input << ">";
-    return oss.str();
-  }
+  // static std::string calc_color(std::string input) {
+  //   std::ostringstream oss;
+  //   oss << "<" << input << ">";
+  //   return oss.str();
+  // }
 
-  struct enable_to_style { 
-    template <class VertexOrEdge>
-    std::string operator()(const VertexOrEdge& v) const { 
-     return "[label=<" + v + ">]";
-    } 
-  };
+  // struct enable_to_style { 
+  //   template <class VertexOrEdge>
+  //   std::string operator()(const VertexOrEdge& v) const { 
+  //    return "[label=<" + v + ">]";
+  //   } 
+  // };
 
   void visualize(const GraphBase& graph_base, const std::string& img_filename) {
     _build_graph(graph_base);
@@ -281,7 +275,7 @@ class AbstractVisualizer {
   void _add_vertex(const T& vertex, const std::string& label = "", const WrapLabel wrap_label = WrapLabel::On) {
     VizVertexInfo info = _default_vertex;
     info.id = _get_id(vertex);
-    info.plain_label = label;
+    info.label = label;
     _add_vertex(vertex, info, wrap_label);
   }
 
@@ -295,7 +289,7 @@ class AbstractVisualizer {
     }
 
     vertex_info.id = vertex_id;
-    if (wrap_label == WrapLabel::On) vertex_info.plain_label = _wrap_label(vertex_info.plain_label);
+    if (wrap_label == WrapLabel::On) vertex_info.label = _wrap_label(vertex_info.label);
     boost::add_vertex(vertex_info, _graph);
   }
 
@@ -342,7 +336,7 @@ class AbstractVisualizer {
     for (const auto& word : label_words) {
       auto word_length = word.length() + 1;  // include whitespace
 
-      if (current_line_length + word_length > MAX_LABEL_WIDTH) {
+      if (current_line_length + word_length > MAX_LABEL_WIDTH && !label.starts_with("[formatted]")) { // TODO: wrapping as expected?
         wrapped_label << "\\n";
         current_line_length = 0u;
       }

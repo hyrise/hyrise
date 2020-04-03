@@ -27,8 +27,6 @@ std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& pe
 }
 
 void StagedOperatorPerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-  OperatorPerformanceData::output_to_stream(stream, description_mode);
-
 	// As we do not know the number of stages of the operator at this point, we search for the first zero value and
 	// assume that the position index equals the number of stages of the operator.
 	auto stage_count = std::distance(
@@ -36,12 +34,12 @@ void StagedOperatorPerformanceData::output_to_stream(std::ostream& stream, Descr
                                          [](const auto& value) { return value == std::chrono::nanoseconds::zero(); }));
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  stream << separator << "Stages:" << separator;
+  stream << separator << "Stages: ";
 	for (auto stage = 0; stage < stage_count; ++stage) {
 	  stream << format_duration(stage_runtimes[stage]);
 	  if (stage < stage_count - 1) stream << " | ";
 	}
-  stream << separator;
+  stream << separator << ". ";
 }
 
 std::ostream& operator<<(std::ostream& stream, const StagedOperatorPerformanceData& performance_data) {

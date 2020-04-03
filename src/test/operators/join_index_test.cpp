@@ -131,22 +131,6 @@ typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIn
 
 TYPED_TEST_SUITE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(JoinIndexTest, Desc) {
-  if constexpr (!std::is_same_v<TypeParam, GroupKeyIndex>) {
-    return;  // CompositeGroupKeyIndex is currently not null-aware (#1818)
-  }
-  auto join = std::make_shared<JoinIndex>(this->_table_wrapper_a, this->_table_wrapper_a, JoinMode::Inner,
-                                          OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                                          std::vector<OperatorJoinPredicate>{}, IndexSide::Right);
-
-  std::cout << join->description(DescriptionMode::SingleLine) << std::endl;
-
-  std::cout << join->description(DescriptionMode::MultiLine) << std::endl;
-  join->execute();
-
-  std::cout << join->description(DescriptionMode::MultiLine) << std::endl;
-}
-
 TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,

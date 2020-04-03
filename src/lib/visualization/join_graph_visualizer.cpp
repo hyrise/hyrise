@@ -26,7 +26,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
       }
 
       VizVertexInfo vertex_info = _default_vertex;
-      vertex_info.plain_label = layout.to_label_string();
+      vertex_info.label = layout.to_label_string();
       vertex_info.shape = "record";
 
       // Don't wrap the label, we're using the record layout, which has internal formatting. Randomly inserted newlines
@@ -75,7 +75,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
         }
 
         VizVertexInfo vertex_info = _default_vertex;
-        vertex_info.plain_label = vertex_label_stream.str();
+        vertex_info.label = vertex_label_stream.str();
         vertex_info.color = _random_color();
         vertex_info.font_color = vertex_info.color;
         vertex_info.shape = "diamond";
