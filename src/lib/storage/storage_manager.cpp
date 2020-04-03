@@ -38,25 +38,26 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   table->set_table_statistics(TableStatistics::from_table(*table));
   generate_chunk_pruning_statistics(table);
 
-  if (table_iter == _tables.end())
-    _tables.emplace(name, std::move(table));
-  else
-    _tables[name] = std::move(table);
+  _tables[name] = std::move(table);
 }
 
 void StorageManager::drop_table(const std::string& name) {
   const auto table_iter = _tables.find(name);
   Assert(table_iter != _tables.end() && table_iter->second, "Error deleting table. No such table named '" + name + "'");
 
-  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply replace the table.
+  // The concurrent_unordered_map does not support concurrency-safe erasure. Thus, we simply reset the table pointer.
   _tables[name] = nullptr;
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
   const auto table_iter = _tables.find(name);
-  Assert(table_iter != _tables.end() && table_iter->second, "No such table named '" + name + "'");
+  Assert(table_iter != _tables.end(), "No such table named '" + name + "'");
 
-  return table_iter->second;
+  const auto table = table_iter->second;
+  Assert(table,
+         "Nullptr found when accessing table named '" + name + "'. This can happen if a dropped table is accessed.");
+
+  return table;
 }
 
 bool StorageManager::has_table(const std::string& name) const {
@@ -89,10 +90,7 @@ void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQP
   Assert(view_iter == _views.end() || !view_iter->second,
          "Cannot add view " + name + " - a view with the same name already exists");
 
-  if (view_iter == _views.end())
-    _views.emplace(name, std::move(view));
-  else
-    _views[name] = std::move(view);
+  _views[name] = view;
 }
 
 void StorageManager::drop_view(const std::string& name) {
@@ -104,9 +102,13 @@ void StorageManager::drop_view(const std::string& name) {
 
 std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
   const auto view_iter = _views.find(name);
-  Assert(view_iter != _views.end() && view_iter->second, "No such view named '" + name + "'");
+  Assert(view_iter != _views.end(), "No such view named '" + name + "'");
 
-  return view_iter->second->deep_copy();
+  const auto view = view_iter->second;
+  Assert(view,
+         "Nullptr found when accessing view named '" + name + "'. This can happen if a dropped view is accessed.");
+
+  return view->deep_copy();
 }
 
 bool StorageManager::has_view(const std::string& name) const {
@@ -136,17 +138,18 @@ void StorageManager::add_prepared_plan(const std::string& name, const std::share
   Assert(iter == _prepared_plans.end() || !iter->second,
          "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
 
-  if (iter == _prepared_plans.end())
-    _prepared_plans.emplace(name, std::move(prepared_plan));
-  else
-    _prepared_plans[name] = std::move(prepared_plan);
+  _prepared_plans[name] = prepared_plan;
 }
 
 std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::string& name) const {
   const auto iter = _prepared_plans.find(name);
-  Assert(iter != _prepared_plans.end() && iter->second, "No such prepared plan named '" + name + "'");
+  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
 
-  return iter->second;
+  const auto prepared_plan = iter->second;
+  Assert(prepared_plan, "Nullptr found when accessing prepared plan named '" + name +
+                            "'. This can happen if a dropped prepared plan is accessed.");
+
+  return prepared_plan;
 }
 
 bool StorageManager::has_prepared_plan(const std::string& name) const {
