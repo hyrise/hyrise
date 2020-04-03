@@ -161,8 +161,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
         _optimized_logical_plan = (*cached_plan)->instantiate(values);
+        auto olqp = _optimized_logical_plan->deep_copy();
         _metrics->query_plan_cache_hit = true;
-        _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
+        _optimized_logical_plan = _pruning_optimizer->optimize(std::move(olqp));
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration =
             std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
@@ -177,7 +178,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _unoptimized_logical_plan = nullptr;
 
   auto ulqp = unoptimized_lqp->deep_copy();
-
+  
   const auto done_preoptimization_cache = std::chrono::high_resolution_clock::now();
   const auto started_optimize = std::chrono::high_resolution_clock::now();
 
@@ -199,8 +200,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   _optimized_logical_plan = prepared_plan->instantiate(values);
+  auto olqp = _optimized_logical_plan->deep_copy();
 
-  _optimized_logical_plan = _pruning_optimizer->optimize(std::move(_optimized_logical_plan));
+  _optimized_logical_plan = _pruning_optimizer->optimize(std::move(olqp));
 
   const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
   _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
