@@ -212,8 +212,6 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
 
   auto g_test = 2 * sum;
 
-  std::cout << " G:" << fabs(g_test);
-
   return fabs(g_test) < distribution_threshold;
 }
 
