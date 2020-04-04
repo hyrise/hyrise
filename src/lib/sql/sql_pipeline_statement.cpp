@@ -109,7 +109,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
-bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_threshold) const {
+bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_threshold) {
   auto& unoptimized_lqp = get_unoptimized_logical_plan();
 
   const auto started_uniform_check = std::chrono::high_resolution_clock::now();
@@ -134,7 +134,7 @@ bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_thr
   bool contains_uniform_distribution = true;
 
   // find used tables and check if used columns are uniformly distributed
-  visit_lqp(unoptimized_lqp, [&contains_uniform_distribution, &column_expressions](const auto& node) {
+  visit_lqp(unoptimized_lqp, [&contains_uniform_distribution, &column_expressions, &distribution_threshold](const auto& node) {
     if (node) {
       const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
       if (table_node) {
