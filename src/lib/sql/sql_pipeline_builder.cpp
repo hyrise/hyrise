@@ -53,8 +53,8 @@ SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
   auto pruning_optimizer = _pruning_optimizer ? _pruning_optimizer : Optimizer::create_pruning_optimizer();
 
-  return {_sql,       std::move(parsed_sql), _use_mvcc, _transaction_context, optimizer, pruning_optimizer, _pqp_cache,
-          _lqp_cache};
+  return {_sql,      std::move(parsed_sql), _use_mvcc,  _transaction_context,
+          optimizer, pruning_optimizer,     _pqp_cache, _lqp_cache};
 }
 
 }  // namespace opossum
