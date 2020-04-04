@@ -10,9 +10,9 @@ namespace opossum {
 
 enum TableFeatureExportType { TABLE, COLUMN, SEGMENT };
 
-class TableFeatureExport {
+class TableFeatureExporter {
  public:
-  explicit TableFeatureExport(const std::string& path_to_dir);
+  explicit TableFeatureExporter(const std::string& path_to_dir);
 
   void export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
 

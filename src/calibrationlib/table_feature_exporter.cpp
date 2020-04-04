@@ -3,18 +3,18 @@
 
 #include <storage/base_encoded_segment.hpp>
 #include "storage/vector_compression/compressed_vector_type.hpp"
-#include "table_feature_export.hpp"
+#include "table_feature_exporter.hpp"
 
 namespace opossum {
-TableFeatureExport::TableFeatureExport(const std::string& path_to_dir) : _path_to_dir(path_to_dir) {}
+TableFeatureExporter::TableFeatureExporter(const std::string& path_to_dir) : _path_to_dir(path_to_dir) {}
 
-void TableFeatureExport::export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
+void TableFeatureExporter::export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
   _export_table_data(table_wrapper);
   _export_column_data(table_wrapper);
   _export_segment_data(table_wrapper);
 }
 
-void TableFeatureExport::_export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
+void TableFeatureExporter::_export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
   const auto table_name = table_wrapper->get_name();
   const auto row_count = table_wrapper->get_table()->row_count();
   const auto chunk_size = table_wrapper->get_table()->target_chunk_size();
@@ -26,7 +26,7 @@ void TableFeatureExport::_export_table_data(std::shared_ptr<const CalibrationTab
   _table_csv_writer.write_row();
 }
 
-void TableFeatureExport::_export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
+void TableFeatureExporter::_export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
   auto const table = table_wrapper->get_table();
   int column_count = table->column_count();
   const auto column_names = table->column_names();
@@ -44,7 +44,7 @@ void TableFeatureExport::_export_column_data(std::shared_ptr<const CalibrationTa
   }
 }
 
-void TableFeatureExport::_export_segment_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
+void TableFeatureExporter::_export_segment_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
   const auto table = table_wrapper->get_table();
   const auto table_name = table_wrapper->get_name();
   const auto chunk_count = table->chunk_count();

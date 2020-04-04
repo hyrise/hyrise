@@ -7,7 +7,7 @@ namespace opossum {
 
 class CalibrationTableWrapper {
   /*
- * Wraps a table and holds in addition the information about the data distribution
+ * Wraps a table and holds the information about the data distribution
  * Intended for communication from the CalibrationTableGenerator to the CalibrationLQPGenerator.
  */
  public:

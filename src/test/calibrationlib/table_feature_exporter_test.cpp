@@ -2,11 +2,11 @@
 #include <boost/algorithm/string.hpp>
 #include "base_test.hpp"
 #include "calibration_table_generator.hpp"
-#include "table_feature_export.hpp"
+#include "table_feature_exporter.hpp"
 
 namespace opossum {
 
-class TableFeatureExportTest : public BaseTest {
+class TableFeatureExporterTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_config = std::make_shared<TableGeneratorConfig>(
@@ -20,7 +20,7 @@ class TableFeatureExportTest : public BaseTest {
     const auto table_generator = CalibrationTableGenerator(_table_config);
     _tables = table_generator.generate();
 
-    TableFeatureExport feature_exporter = TableFeatureExport(_dir_path);
+    TableFeatureExporter feature_exporter = TableFeatureExporter(_dir_path);
 
     // Export data of table
     for (const auto& table : _tables) {
@@ -62,13 +62,13 @@ class TableFeatureExportTest : public BaseTest {
 
 // Following tests validate the header and the number of entries per file.
 
-TEST_F(TableFeatureExportTest, TableSegment) {
+TEST_F(TableFeatureExporterTest, TableSegment) {
   const auto headers = std::vector<std::string>({"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"});
   const auto expected_row_count = _tables.size();
   validate_file(_dir_path + "/table_meta.csv", headers, expected_row_count);
 }
 
-TEST_F(TableFeatureExportTest, ColumnExport) {
+TEST_F(TableFeatureExporterTest, ColumnExport) {
   const auto headers = std::vector<std::string>({"TABLE_NAME", "COLUMN_NAME", "COLUMN_DATA_TYPE"});
 
   const auto table_count = _table_config->chunk_sizes.size() * _table_config->row_counts.size();
@@ -78,7 +78,7 @@ TEST_F(TableFeatureExportTest, ColumnExport) {
   validate_file(_dir_path + "/column_meta.csv", headers, expected_row_count);
 }
 
-TEST_F(TableFeatureExportTest, SegmentExport) {
+TEST_F(TableFeatureExporterTest, SegmentExport) {
   const auto headers =
       std::vector<std::string>({"TABLE_NAME", "COLUMN_NAME", "CHUNK_ID", "ENCODING_TYPE", "COMPRESSION_TYPE"});
   uint64_t expected_row_count = 0;

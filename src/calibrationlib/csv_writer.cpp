@@ -11,16 +11,16 @@
 namespace opossum {
 
 CSVWriter::CSVWriter(
-    std::string file_path,
+    const std::string file_path,
     const std::vector<std::string>
         headers,  // headers for csv file, if the file for file_path already exists, it must have equal headers
-    const char delimiter, bool replace_file)
-    : _headers(headers), _file_path(std::move(file_path)), _delimiter(delimiter) {
+    bool override_file)
+    : _headers(headers), _file_path(std::move(file_path)) {
   // Get path from string
-  std::filesystem::path boost_path(_file_path);
+  std::filesystem::path path_to_csv(_file_path);
 
   // Extract directory path from file
-  const auto directory_path = boost_path.parent_path();
+  const auto directory_path = path_to_csv.parent_path();
 
   // Check if directory already exists, if not create the directory
   if (!std::filesystem::exists(directory_path)) {
@@ -31,8 +31,8 @@ CSVWriter::CSVWriter(
   // If we do not create the directory, we cannot be sure if the provided path is valid
   DebugAssert(std::filesystem::is_directory(directory_path), directory_path.string() + " is not a directory.");
 
-  // If we want to replace the existing file, create a new one and insert headers.
-  if (replace_file) {
+  // If we want to override the existing file, create a new one and insert headers.
+  if (override_file) {
     _create_file_with_headers();
   }
 
@@ -47,7 +47,7 @@ CSVWriter::CSVWriter(
                 getline(check_file, first_line);
                 {
                   std::vector<std::string> to_test_headers;
-                  boost::split(to_test_headers, first_line, [delimiter](char c) { return c == delimiter; });
+                  boost::split(to_test_headers, first_line, [&](char c) { return c == _delimiter; });
 
                   if (to_test_headers == _headers) {
                     correct_header = true;

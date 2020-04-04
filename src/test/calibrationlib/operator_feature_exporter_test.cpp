@@ -1,15 +1,15 @@
-
 #include <fstream>
+
 #include <boost/algorithm/string.hpp>
 #include "base_test.hpp"
 #include "calibration_lqp_generator.hpp"
 #include "calibration_table_generator.hpp"
-#include "operator_feature_export.hpp"
+#include "operator_feature_exporter.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
-class OperatorFeatureExportTest : public BaseTest {
+class OperatorFeatureExporterTest : public BaseTest {
  protected:
   void SetUp() override {
     auto table_config = std::make_shared<TableGeneratorConfig>(
@@ -24,7 +24,7 @@ class OperatorFeatureExportTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_table->get_name(), _table->get_table());
   }
 
-  ~OperatorFeatureExportTest() override {
+  ~OperatorFeatureExporterTest() override {
     Hyrise::get().storage_manager.drop_table(_table->get_name());
     std::filesystem::remove_all(_dir_path);
   }
@@ -41,12 +41,12 @@ class OperatorFeatureExportTest : public BaseTest {
   std::shared_ptr<const CalibrationTableWrapper> _table;
 
   std::string _dir_path = (std::filesystem::temp_directory_path() / "calibrationTest").string();
-  OperatorFeatureExport _feature_exporter = OperatorFeatureExport(_dir_path);
+  OperatorFeatureExporter _feature_exporter = OperatorFeatureExporter(_dir_path);
 };
 
 // Check if performance data is added to csv.
 // This does not check if the export of specific table_scan implementations works. (e.g. Table)
-TEST_F(OperatorFeatureExportTest, TableScanExport) {
+TEST_F(OperatorFeatureExporterTest, TableScanExport) {
   const auto headers = std::vector<std::string>({"INPUT_ROWS_LEFT", "OUTPUT_ROWS", "RUNTIME_NS", "SCAN_TYPE",
                                                  "TABLE_NAME", "COLUMN_NAME", "SCAN_IMPLEMENTATION"});
 

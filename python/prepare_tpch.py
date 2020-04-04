@@ -28,6 +28,3 @@ def import_test_data(tpch):
 
     return joined_data
 
-
-def main():
-    pass

@@ -10,10 +10,9 @@ namespace opossum {
 
 class CSVWriter {
  public:
-  CSVWriter(std::string file_path, const std::vector<std::string> headers, const char delimiter = ',',
-            const bool replace_file = true);
+  CSVWriter(const std::string file_path, const std::vector<std::string> headers, const bool override_file = true);
 
-  static constexpr std::string_view NA = "null";
+  static constexpr std::string_view NA = "NULL";
 
   template <class T>
   void set_value(const std::string& key, const T& value) {

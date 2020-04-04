@@ -15,10 +15,10 @@ set(
     csv_writer.hpp
     calibration_lqp_generator.cpp
     calibration_lqp_generator.hpp
-    operator_feature_export.cpp
-    operator_feature_export.hpp
-    table_feature_export.cpp
-    table_feature_export.hpp
+    operator_feature_exporter.cpp
+    operator_feature_exporter.hpp
+    table_feature_exporter.cpp
+    table_feature_exporter.hpp
     calibration_table_generator.cpp
     calibration_table_generator.hpp
 )

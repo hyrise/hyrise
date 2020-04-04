@@ -15,7 +15,7 @@ struct TableGeneratorConfig {
   std::set<DataType> data_types;
   std::set<EncodingType> encoding_types;
   std::vector<ColumnDataDistribution> column_data_distributions;
-  std::set<int> chunk_sizes;
+  std::set<ChunkOffset> chunk_sizes;
   std::set<int> row_counts;
 };
 
@@ -25,9 +25,8 @@ class CalibrationTableGenerator {
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> generate() const;
 
  private:
-  std::vector<ColumnDataDistribution> _column_data_distribution_collection;
-  std::vector<int> _chunk_sizes;
-  std::vector<int> _row_counts;
+  std::shared_ptr<TableGeneratorConfig> _config;
+  std::vector<ColumnDataDistribution> _column_data_distributions;
   std::vector<ColumnSpecification> _column_specs;
 };
 

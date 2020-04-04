@@ -42,4 +42,7 @@ cmake-build-*
 default.profdata
 default.profraw
 
+tpcds_cached_tables/
+
+# Ignore python notebook saves
 *.ipynb_checkpoints
