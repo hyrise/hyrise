@@ -110,63 +110,63 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 }
 
 bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_threshold) const {
-    auto& unoptimized_lqp = get_unoptimized_logical_plan();
+  auto& unoptimized_lqp = get_unoptimized_logical_plan();
 
-    const auto started_uniform_check = std::chrono::high_resolution_clock::now();
+  const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
-    // find used columns
-    std::vector<std::shared_ptr<LQPColumnExpression>> column_expressions;
-    visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
-        if (node) {
-            for (auto& root_expression : node->node_expressions) {
-                visit_expression(root_expression, [&column_expressions](auto& expression) {
-                    if (expression->type == ExpressionType::LQPColumn) {
-                        auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                        column_expressions.push_back(column_expression);
-                    }
-                    return ExpressionVisitation::VisitArguments;
-                });
-            }
-        }
-        return LQPVisitation::VisitInputs;
-    });
+  // find used columns
+  std::vector<std::shared_ptr<LQPColumnExpression>> column_expressions;
+  visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
+    if (node) {
+      for (auto& root_expression : node->node_expressions) {
+        visit_expression(root_expression, [&column_expressions](auto& expression) {
+          if (expression->type == ExpressionType::LQPColumn) {
+            auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+            column_expressions.push_back(column_expression);
+          }
+          return ExpressionVisitation::VisitArguments;
+        });
+      }
+    }
+    return LQPVisitation::VisitInputs;
+  });
 
-    bool contains_uniform_distribution = true;
+  bool contains_uniform_distribution = true;
 
-    // find used tables and check if used columns are uniformly distributed
-    visit_lqp(unoptimized_lqp, [&contains_uniform_distribution, &column_expressions](const auto& node) {
-        if (node) {
-            const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-            if (table_node) {
-                const std::string table_name = table_node->table_name;
-                const auto table = Hyrise::get().storage_manager.get_table(table_name);
-                const auto &table_statistics = table->table_statistics();
+  // find used tables and check if used columns are uniformly distributed
+  visit_lqp(unoptimized_lqp, [&contains_uniform_distribution, &column_expressions](const auto& node) {
+    if (node) {
+      const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+      if (table_node) {
+        const std::string table_name = table_node->table_name;
+        const auto table = Hyrise::get().storage_manager.get_table(table_name);
+        const auto &table_statistics = table->table_statistics();
 
-                for (auto &expression: column_expressions) {
-                    const auto column_id = node->find_column_id(*expression);
-                    if (column_id) {
-                        std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
+        for (auto &expression: column_expressions) {
+          const auto column_id = node->find_column_id(*expression);
+          if (column_id) {
+            std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
 
-                        auto data_type = table->column_data_type(*column_id);
-                        resolve_data_type(data_type, [&] (auto type) {
-                            using ColumnDataType = typename decltype(type)::type;
+              auto data_type = table->column_data_type(*column_id);
+              resolve_data_type(data_type, [&] (auto type) {
+                using ColumnDataType = typename decltype(type)::type;
 
-                            std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-                            if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
-                                contains_uniform_distribution = false;
-                            }
-                        });
-                    }
+                std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+                if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
+                    contains_uniform_distribution = false;
                 }
-            }
+              });
+          }
         }
-        return LQPVisitation::VisitInputs;
-    });
+      }
+    }
+    return LQPVisitation::VisitInputs;
+  });
 
-    const auto done_uniform_check = std::chrono::high_resolution_clock::now();
-    _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
+  const auto done_uniform_check = std::chrono::high_resolution_clock::now();
+  _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
 
-    return contains_uniform_distribution;
+  return contains_uniform_distribution;
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(

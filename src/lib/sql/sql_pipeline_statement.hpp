@@ -103,6 +103,8 @@ class SQLPipelineStatement : public Noncopyable {
   // Throws an InvalidInputException if an invalid PQP is detected.
   static void _precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp);
 
+  bool is_uniformly_distributed(const float distribution_threshold) const;
+
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
 
