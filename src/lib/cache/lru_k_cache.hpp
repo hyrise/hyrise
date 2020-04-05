@@ -14,7 +14,8 @@ namespace opossum {
 // When an item should be evicted the item with the largest backward k-distance is evicted.
 // This is the item whose k-th most recent access is the furthest in the past.
 // Note: This implementation is not thread-safe.
-template <size_t K, typename Key, typename Value, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+template <size_t K, typename Key, typename Value, typename Hash = std::hash<Key>,
+          typename KeyEqual = std::equal_to<Key>>
 class LRUKCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
  public:
   // Entries within the LRU-K cache.

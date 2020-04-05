@@ -4,8 +4,8 @@
 #include <string>
 
 #include "cache/cache.hpp"
-#include "storage/prepared_plan.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "storage/prepared_plan.hpp"
 
 namespace opossum {
 
@@ -15,9 +15,7 @@ class AbstractLQPNode;
 namespace cache_types {
 class Hash {
  public:
-  size_t operator()(const std::shared_ptr<AbstractLQPNode>& key) const {
-    return key->hash();
-  }
+  size_t operator()(const std::shared_ptr<AbstractLQPNode>& key) const { return key->hash(); }
 };
 class DeepEquality {
  public:
@@ -28,7 +26,7 @@ class DeepEquality {
 
 using SQLPhysicalPlanCache = Cache<std::shared_ptr<AbstractOperator>, std::string>;
 using SQLLogicalPlanCache = Cache<std::shared_ptr<PreparedPlan>, std::shared_ptr<AbstractLQPNode>, Hash, DeepEquality>;
-}
-using cache_types::SQLPhysicalPlanCache;
+}  // namespace cache_types
 using cache_types::SQLLogicalPlanCache;
+using cache_types::SQLPhysicalPlanCache;
 }  // namespace opossum
