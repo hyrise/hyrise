@@ -674,7 +674,7 @@ TEST_P(JoinTestRunner, TestJoin) {
 
     for (ChunkID chunk_id{0}; index_table->chunk_count(); ++chunk_id) {
       const auto& chunk = index_table->get_chunk(chunk_id);
-      const auto& indexes = chunk->get_indexes({index_side_column_id});
+      const auto& indexes = chunk->get_indexes(std::vector<ColumnID>{index_side_column_id});
 
       if (indexes.empty()) {
         continue;
