@@ -178,7 +178,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}  // TODO(Julian)
+}
 
 // Test that the plan stays the same (no alias, no projection) for a table with a primary key but no removable columns
 TEST_F(DependentGroupByReductionRuleTest, AggregteButNoChanges) {
