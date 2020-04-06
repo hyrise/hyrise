@@ -278,7 +278,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), input_table->type(),
                                                             std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
 
-    // all sort operator on single-chunk table
+    // sort whole table by sorting a single-chunk table
     auto input_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
     auto output_sorted_by = input_sorted_by;
     for (const auto& column_id : _groupby_column_ids) {
