@@ -117,6 +117,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
