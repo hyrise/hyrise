@@ -13,7 +13,7 @@ DataType TypedPlaceholderExpression::data_type() const { return _data_type; }
 
 std::string TypedPlaceholderExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "Typed Placeholder[id=" << std::to_string(parameter_id) << ", type=" << _data_type << "]";
+  stream << "Typed Placeholder[id=" << std::to_string(parameter_id) << "]";
   return stream.str();
 }
 
