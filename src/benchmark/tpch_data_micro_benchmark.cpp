@@ -213,7 +213,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::St
   const auto table_scan_output = sorted_line_item->get_output();
   const ColumnID group_by_column = l_orderkey_id;
   const std::vector<ColumnID> group_by = {l_orderkey_id};
-  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{max_(pqp_column_(
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{count_(pqp_column_(
       group_by_column, table_scan_output->column_data_type(group_by_column),
       table_scan_output->column_is_nullable(group_by_column), table_scan_output->column_name(group_by_column)))};
   for (auto _ : state) {
