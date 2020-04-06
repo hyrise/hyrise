@@ -1164,14 +1164,21 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
-  // Verify that the sorted_by flag is set when it's present in left input.
-  // This is an implementation dependent invariant. Other implementations might not preserve sortedness.
+  /* In the current implementation, scans on tables that do not contain ReferenceSegments
+   * are executed chunk-by-chunk. As such, they maintain the ordering that was initially
+   * set in the original setting and forward the ordered_by flag. 
+   * This is not an inherent property of each and every possible scan operator but is the
+   * case for the current implementation.
+  */
+
   scan_and_check_sorted_by(get_int_sorted_op());
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlagReferencing) {
-  // Verify that the sorted_by flag is set when it's present in left input (referencing table).
-  // This is an implementation dependent invariant. Other implementations might not preserve sortedness.
+  /* Tables with ReferenceSegments are first separated by the ChunkID
+   * (see AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) 
+   * and the order may be disturbed.
+  */
   const auto table = get_int_sorted_op()->table;
 
   auto referencing_table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
