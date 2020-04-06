@@ -313,9 +313,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     for(const auto& fd_right : fds_right) {
       bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
           [&fd_right](const auto& fd_left) {
-            if (fd_left.first.size() != fd_right.first.size() || fd_left.second.size() != fd_right.second.size()
-            || fd_left.first != fd_right.first || fd_left.second != fd_right.second) return false;
-            else return true;
+            return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size()
+            && fd_left.first == fd_right.first && fd_left.second == fd_right.second);
           });
       if(!duplicate) {
         fds_in.push_back(fd_right);
@@ -326,18 +325,22 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 
   // Currently, we do not support FDs in conjunction with null values.
   // Since previous operators like outer joins might have added null values, we have to check columns for nullability.
-  // Only FDs with non-nullable columns will be returned by this function.
+  // FDs which are based on at least one nullable column do not get forwarded.
   auto fds_out = std::vector<FunctionalDependency>();
+  const auto node_column_expressions_vec = this->column_expressions();
+  const auto node_column_expressions_set = ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
+
   for(const auto& fd : fds_in) {
     // For convenience, create a new container with all expressions
     auto fd_expressions = fd.first;
     fd_expressions.insert(fd.second.begin(), fd.second.end());
 
-    if(std::any_of(fd_expressions.cbegin(), fd_expressions.cend(), [this](const auto& expression) {
-      return expression->is_nullable_on_lqp(*this);
+    if(std::any_of(fd_expressions.cbegin(), fd_expressions.cend(), [this, &node_column_expressions_set](const auto& expression) {
+      // Check for nullability, if possible.
+      return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
     })) continue;
     else {
-      // All FD's expressions are non-nullable. Therefore, it stays valid.
+      // All FD's expressions that are part of this node's column_expressions are non-nullable.
       fds_out.push_back(fd);
     }
   }
