@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "base_segment.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -22,13 +22,13 @@ class ReferenceSegment : public BaseSegment {
   // creates a reference segment
   // the parameters specify the positions and the referenced column
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
-                   const std::shared_ptr<const PosList>& pos);
+                   const std::shared_ptr<const AbstractPosList>& pos);
 
   AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   ChunkOffset size() const final;
 
-  const std::shared_ptr<const PosList>& pos_list() const;
+  const std::shared_ptr<const AbstractPosList>& pos_list() const;
   const std::shared_ptr<const Table>& referenced_table() const;
 
   ColumnID referenced_column_id() const;
@@ -45,7 +45,7 @@ class ReferenceSegment : public BaseSegment {
   const ColumnID _referenced_column_id;
 
   // The position list can be shared amongst multiple segments
-  const std::shared_ptr<const PosList> _pos_list;
+  const std::shared_ptr<const AbstractPosList> _pos_list;
 };
 
 }  // namespace opossum
