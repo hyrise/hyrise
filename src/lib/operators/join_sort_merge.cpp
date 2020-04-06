@@ -984,6 +984,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     const auto chunk_count = result_table->chunk_count();
     for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = result_table->get_chunk(chunk_id);
+      // Chunks have already been finalized if their ordered_by attribute was set. 
+      // Here, we finalize all remaining chunks.
       if (chunk->is_mutable()) {
         chunk->finalize();
       }
