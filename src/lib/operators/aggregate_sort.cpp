@@ -286,7 +286,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
       // Skip already sorted columns
       if (input_order_by) {
         for (const auto& ordered_by : *input_order_by) {
-          if (ordered_by.first == column_id) {
+          if (ordered_by.column == column_id) {
             skip_sorting = true;
             break;
           }
@@ -301,7 +301,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
             std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
         sort->execute();
         single_chunk_table = sort->get_output();
-        output_order_by = {std::pair<ColumnID, OrderByMode>(std::make_pair(column_id, OrderByMode::Ascending))};
+        output_order_by = {SortColumnDefinition{column_id, OrderByMode::Ascending}};
       }
     }
 
@@ -463,7 +463,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       }
       // If the last column is sorted here, it needs to be set accordingly.
       // This overrides order_by on purpose (only the last order prevails).
-      last_chunk->set_ordered_by(std::make_pair(_groupby_column_ids.back(), OrderByMode::Ascending));
+      last_chunk->set_ordered_by(SortColumnDefinition{_groupby_column_ids.back(), OrderByMode::Ascending});
     }
   }
 

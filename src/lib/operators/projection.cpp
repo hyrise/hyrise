@@ -240,11 +240,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     // Forward ordered_by flags, mapping column ids
     const auto ordered_by = input_chunk->ordered_by();
     if (ordered_by) {
-      std::vector<std::pair<ColumnID, OrderByMode>> transformed;
+      std::vector<SortColumnDefinition> transformed;
       for (auto& [column_id, mode] : *ordered_by) {
         if (!column_id_to_expression.count(column_id)) continue;  // column is not present
         const auto new_column_id = column_id_to_expression[column_id];
-        transformed.push_back(std::make_pair(new_column_id, mode));
+        transformed.push_back(SortColumnDefinition{new_column_id, mode});
       }
       chunk->set_ordered_by(transformed);
     }

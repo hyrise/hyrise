@@ -13,19 +13,6 @@
 #include "types.hpp"
 
 namespace opossum {
-
-/**
- * Defines in which order a certain column should be sorted.
- */
-struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID& init_column,
-                                const OrderByMode init_order_by_mode = OrderByMode::Ascending)
-      : column(init_column), order_by_mode(init_order_by_mode) {}
-
-  const ColumnID column;
-  const OrderByMode order_by_mode;
-};
-
 /**
  * Operator to sort a table by one or multiple columns. This implements a stable sort, i.e., rows that share the same
  * value will maintain their relative order.

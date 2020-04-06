@@ -15,7 +15,6 @@
 #include "all_type_variant.hpp"
 #include "index/segment_index_type.hpp"
 #include "mvcc_data.hpp"
-#include "operators/sort.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
