@@ -715,8 +715,6 @@ TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   sql_pipeline.get_result_table();
 
   EXPECT_EQ(_lqp_cache->size(), 0u);
-  EXPECT_FALSE(_lqp_cache->has(meta_table_query));
-
   EXPECT_EQ(_pqp_cache->size(), 0u);
   EXPECT_FALSE(_pqp_cache->has(meta_table_query));
 }
