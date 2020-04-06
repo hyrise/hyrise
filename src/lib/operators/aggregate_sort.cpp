@@ -276,6 +276,7 @@ std::shared_ptr<Table> AggregateSort::_sort_within_chunks(const std::shared_ptr<
     std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {chunk};
     auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), input_table->type(),
                                                             std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+    std::shared_ptr<const Table> single_chunk_table_sorted;
 
     // sort whole table by sorting a single-chunk table
     auto input_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
@@ -299,7 +300,7 @@ std::shared_ptr<Table> AggregateSort::_sort_within_chunks(const std::shared_ptr<
         auto sort =
             std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
         sort->execute();
-        single_chunk_table = sort->get_output();
+        single_chunk_table_sorted = sort->get_output();
         output_sorted_by = {SortColumnDefinition{column_id, SortMode::Ascending}};
       }
     }
@@ -307,7 +308,7 @@ std::shared_ptr<Table> AggregateSort::_sort_within_chunks(const std::shared_ptr<
     // add sorted chunk to output table
     // Note: We do not forward MVCC information,
     // meaning that tables have to be validated before this operator is executed
-    sorted_table->append_chunk(_get_segments_of_chunk(single_chunk_table, ChunkID{0}));
+    sorted_table->append_chunk(_get_segments_of_chunk(single_chunk_table_sorted, ChunkID{0}));
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->finalize();
     added_chunk->set_sorted_by(*output_sorted_by);
