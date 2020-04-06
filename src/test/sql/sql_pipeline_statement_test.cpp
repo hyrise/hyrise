@@ -708,13 +708,14 @@ TEST_F(SQLPipelineStatementTest, PrecheckDDLOperators) {
 TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   const auto meta_table_query = "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables";
 
-  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}  // .with_lqp_cache(_lqp_cache)
+  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}
+                          .with_lqp_cache(_lqp_cache)
                           .with_pqp_cache(_pqp_cache)
                           .create_pipeline_statement();
   sql_pipeline.get_result_table();
 
-  // EXPECT_EQ(_lqp_cache->size(), 0u);
-  // EXPECT_FALSE(_lqp_cache->has(meta_table_query));
+  EXPECT_EQ(_lqp_cache->size(), 0u);
+  EXPECT_FALSE(_lqp_cache->has(meta_table_query));
 
   EXPECT_EQ(_pqp_cache->size(), 0u);
   EXPECT_FALSE(_pqp_cache->has(meta_table_query));
