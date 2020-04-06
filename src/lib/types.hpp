@@ -258,7 +258,7 @@ using BoolAsByteType = uint8_t;
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID& init_column,
+  explicit SortColumnDefinition(const ColumnID init_column,
                                 const SortMode init_sort_mode = SortMode::Ascending)
       : column(init_column), sort_mode(init_sort_mode) {}
 
