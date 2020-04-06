@@ -29,7 +29,8 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
     : _benchmark_config(benchmark_config) {}
 
 void AbstractTableGenerator::generate_and_store() {
-  if (Hyrise::get().storage_manager.has_table("lineitem")) {
+  if (Hyrise::get().storage_manager.has_table("lineitem")
+        || Hyrise::get().storage_manager.has_table("customer_demographics")) {
     return;
   }
 

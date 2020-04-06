@@ -31,7 +31,7 @@ def run_benchmark(benchmark, config_name, chunk_size):
   # if a second benchmark does not provide new clustering columns, the old clustering will be loaded and preserved from the table cache.
   # this might influence subsequent benchmarks (e.g. via pruning)
   p = Popen(
-            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
+            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--runs", str(benchmark.max_runs()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
             env=process_env,
             stdout=sys.stdout,
             stdin=sys.stdin,
@@ -65,15 +65,16 @@ def main():
   for benchmark in benchmarks:
     benchmark_name = benchmark.name()
     print(f"Running benchmarks for {benchmark_name.upper()}")
+    num_benchmarks = len(benchmark.sort_orders())
+    print(f"Found {num_benchmarks} configurations for {len(benchmark.chunk_sizes())} chunk size(s)")
     for chunk_size in benchmark.chunk_sizes():
       
-
       # using cached tables is deactivated for now
       # different chunk sizes need different caches, hidden behind symlinks      
       #os.system(f"rm -f {benchmark_name}_cached_tables")
-      #os.system(f"ln -s {benchmark_name}_cached_tables_cs{chunk_size} {benchmark_name}_cached_tables")
-      
-      for config_name in benchmark.sort_orders():            
+      #os.system(f"ln -s {benchmark_name}_cached_tables_cs{chunk_size} {benchmark_name}_cached_tables")      
+      for run_id, config_name in enumerate(benchmark.sort_orders()):
+        print(f"Running benchmark {run_id + 1} out of {num_benchmarks}")           
         run_benchmark(benchmark, config_name, chunk_size)
 
 

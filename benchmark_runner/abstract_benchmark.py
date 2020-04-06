@@ -10,6 +10,9 @@ class AbstractBenchmark:
   def result_path(self):
     raise NotImplementedError()
 
+  def max_runs(self):
+    return NotImplementedError()
+
   def time(self):
     raise NotImplementedError()
 

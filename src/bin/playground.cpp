@@ -1,7 +1,7 @@
 #include "hyrise.hpp"
 #include "utils/plugin_manager.hpp"
 
-
+#include <cstdio>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
@@ -27,6 +27,29 @@
 #include "SQLParserResult.h"
 
 using namespace opossum;  // NOLINT
+
+
+
+// Shamelessly copied from tpcds_benchmark.cpp
+const std::set<std::string> tpcds_filename_whitelist() {
+  auto filename_whitelist = std::set<std::string>{};
+  const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
+  std::ifstream blacklist_file(blacklist_file_path);
+
+  if (!blacklist_file) {
+    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  } else {
+    std::string filename;
+    while (std::getline(blacklist_file, filename)) {
+      if (filename.size() > 0 && filename.at(0) == '#') {
+        filename_whitelist.emplace(filename.substr(1));
+      }
+    }
+    blacklist_file.close();
+  }
+  return filename_whitelist;
+}
+
 
 const nlohmann::json _read_clustering_config(const std::string& filename) {
   if (!std::filesystem::exists(filename)) {
@@ -173,7 +196,7 @@ void _append_additional_statistics(const std::string& result_file_path) {
       final_result_file.close();
 }
 
-void _merge_result_files(const std::string& merge_result_file_name, const std::vector<std::string>& merge_input_file_names) {
+void _merge_result_files(const std::string& merge_result_file_name, const std::vector<std::string>& merge_input_file_names, bool delete_files=true) {
   Assert(!merge_input_file_names.empty(), "you have to provide file names to merge");
   nlohmann::json merge_result_json;
 
@@ -186,7 +209,6 @@ void _merge_result_files(const std::string& merge_result_file_name, const std::v
     Assert(pruning_stats_count == 1, "expected " + file_name + " file containing exactly pruning stats for just one query, but it contains " + std::to_string(pruning_stats_count));
 
     if (merge_result_json.empty()) {
-      std::cout << "merge result is empty" << std::endl;
       merge_result_json = benchmark_result_json;
     } else {
       const auto benchmark = benchmark_result_json["benchmarks"].at(0);
@@ -196,6 +218,13 @@ void _merge_result_files(const std::string& merge_result_file_name, const std::v
       merge_result_json["skipped_chunk_stats"][query_name] = benchmark_result_json["skipped_chunk_stats"][query_name];
     }
   }
+
+  if (delete_files) {
+    for (const auto& path : merge_input_file_names) {
+      Assert(!std::remove(path.c_str()), "could not remove " + path.c_str());
+    }
+  }
+
   // write results back
   std::ofstream final_result_file(merge_result_file_name);
   final_result_file << merge_result_json.dump(2) << std::endl;
@@ -237,7 +266,6 @@ int main(int argc, char* argv[]) {
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
   auto config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
-  config->max_runs = -1;
   config->cache_binary_tables = false;
   config->sql_metrics = true;
   config->enable_visualization = false;
@@ -264,8 +292,6 @@ int main(int argc, char* argv[]) {
           *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), BenchmarkRunner::create_context(*config));
       Hyrise::get().benchmark_runner = benchmark_runner;
 
-      Assert(!Hyrise::get().storage_manager.get_table("orders")->get_soft_unique_constraints().empty(), "unique constraint lost");
-
       if (!plugin_loaded) {
         const std::string plugin_filename = argv[1];
         const std::filesystem::path plugin_path(plugin_filename);
@@ -280,25 +306,43 @@ int main(int argc, char* argv[]) {
 
       // after the benchmark was executed, add more interesting statistics to the json.
       // we could also modify the benchmark to directly export this information, but that feels hacky.
-      _append_additional_statistics(*config->output_file_path);
+      if (!config->enable_visualization) _append_additional_statistics(*config->output_file_path);
     }
 
-    _merge_result_files(output_file_path, result_file_names);
+    if (!config->enable_visualization) _merge_result_files(output_file_path, result_file_names);
   } else if (BENCHMARK == "tpcds") {
-    const std::string query_path = "hyrise/resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification";
+    const std::string query_path = "resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification/";
     const auto scale_factor = cli_parse_result["scale"].as<float>();
-    std::cout << "- scale factor is " << scale_factor << std::endl;
+    std::cout << "- Scale factor is " << scale_factor << std::endl;
+    auto query_files = tpcds_filename_whitelist();
+    std::vector<std::string> result_file_names{};
 
-    auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, std::unordered_set<std::string>{});
-    auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
-    auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(query_generator), std::move(table_generator),
+
+    for (const auto& query_file : query_files) {
+      config->output_file_path = output_file_path + "." + query_file;
+      result_file_names.push_back(*config->output_file_path);
+
+      auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path + query_file, std::unordered_set<std::string>{});
+      auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
+      auto benchmark_runner = std::make_shared<BenchmarkRunner>(*config, std::move(query_generator), std::move(table_generator),
                                                               opossum::BenchmarkRunner::create_context(*config));
-    Hyrise::get().benchmark_runner = benchmark_runner;
+      Hyrise::get().benchmark_runner = benchmark_runner;
 
-    // actually run the benchmark
-    benchmark_runner->run();
+      if (!plugin_loaded) {
+        const std::string plugin_filename = argv[1];
+        const std::filesystem::path plugin_path(plugin_filename);
+        Hyrise::get().plugin_manager.load_plugin(plugin_path);
+        plugin_loaded = true;
+      }
 
-    _append_additional_statistics(*config->output_file_path);
+      // actually run the benchmark
+      benchmark_runner->run();
+
+      // after the benchmark was executed, add more interesting statistics to the json.
+      // we could also modify the benchmark to directly export this information, but that feels hacky.
+      if (!config->enable_visualization) _append_additional_statistics(*config->output_file_path);
+    }
+    if (!config->enable_visualization) _merge_result_files(output_file_path, result_file_names);
   } else if (BENCHMARK == "job") {
     const auto table_path = "hyrise/imdb_data";
     const auto query_path = "hyrise/third_party/join-order-benchmark";
