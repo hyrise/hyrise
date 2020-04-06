@@ -229,6 +229,16 @@ enum class AutoCommit : bool { Yes = true, No = false };
 // AnySegmentIterators that use virtual method calls.
 enum class EraseTypes { OnlyInDebugBuild, Always };
 
+// Defines in which order a certain column should be or is sorted.
+struct SortColumnDefinition final {
+  explicit SortColumnDefinition(const ColumnID init_column,
+                                const SortMode init_sort_mode = SortMode::Ascending)
+      : column(init_column), sort_mode(init_sort_mode) {}
+
+  const ColumnID column;
+  const SortMode sort_mode;
+};
+
 class Noncopyable {
  protected:
   Noncopyable() = default;
@@ -255,16 +265,6 @@ std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
 using BoolAsByteType = uint8_t;
-
-// Defines in which order a certain column should be or is sorted.
-struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID init_column,
-                                const SortMode init_sort_mode = SortMode::Ascending)
-      : column(init_column), sort_mode(init_sort_mode) {}
-
-  const ColumnID column;
-  const SortMode sort_mode;
-};
 
 }  // namespace opossum
 

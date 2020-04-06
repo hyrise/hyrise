@@ -301,7 +301,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
             std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
         sort->execute();
         single_chunk_table = sort->get_output();
-        output_sorted_by = std::vector<opossum::SortColumnDefinition>{SortColumnDefinition(column_id, SortMode::Ascending)};
+        output_sorted_by = {SortColumnDefinition{column_id, SortMode::Ascending}};
       }
     }
 

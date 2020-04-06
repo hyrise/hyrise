@@ -85,7 +85,7 @@ void AbstractTableGenerator::generate_and_store() {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          table->get_chunk(chunk_id)->set_sorted_by({sort_column_id, sort_mode});
+          table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition{sort_column_id, sorted_by_mode});
         }
 
         continue;
@@ -120,7 +120,7 @@ void AbstractTableGenerator::generate_and_store() {
         }
         table->append_chunk(segments, mvcc_data);
         table->get_chunk(chunk_id)->finalize();
-        table->get_chunk(chunk_id)->set_sorted_by({sort_column_id, sort_mode});
+        table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition{sort_column_id, sorted_by_mode});
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
