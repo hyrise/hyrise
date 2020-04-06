@@ -305,48 +305,48 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   auto fds_in = std::vector<FunctionalDependency>();
-  if (fds_right.empty()) fds_in = fds_left;
-}
-else {
-  // Remove duplicate FDs that might result from e.g. self-joins
-  for (const auto& fd_right : fds_right) {
-    bool duplicate = std::any_of(fds_left.begin(), fds_left.end(), [&fd_right](const auto& fd_left) {
-      return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size() &&
-              fd_left.first == fd_right.first && fd_left.second == fd_right.second);
-    });
-    if (!duplicate) {
-      fds_in.push_back(fd_right);
+  if (fds_right.empty()) {
+    fds_in = fds_left;
+  } else {
+    // Remove duplicate FDs that might result from e.g. self-joins
+    for (const auto& fd_right : fds_right) {
+      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(), [&fd_right](const auto& fd_left) {
+        return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size() &&
+                fd_left.first == fd_right.first && fd_left.second == fd_right.second);
+      });
+      if (!duplicate) {
+        fds_in.push_back(fd_right);
+      }
+    }
+    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
+  }
+
+  // Currently, we do not support FDs in conjunction with null values.
+  // Since previous operators like outer joins might have added null values, we have to check columns for nullability.
+  // FDs which are based on at least one nullable column do not get forwarded.
+  auto fds_out = std::vector<FunctionalDependency>();
+  const auto node_column_expressions_vec = this->column_expressions();
+  const auto node_column_expressions_set =
+      ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
+
+  for (const auto& fd : fds_in) {
+    // For convenience, create a new container with all expressions
+    auto fd_expressions = fd.first;
+    fd_expressions.insert(fd.second.begin(), fd.second.end());
+
+    if (std::any_of(fd_expressions.cbegin(), fd_expressions.cend(),
+                    [this, &node_column_expressions_set](const auto& expression) {
+                      // Check for nullability, if possible.
+                      return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
+                    })) {
+      continue;
+    } else {
+      // All FD's expressions that are part of this node's column_expressions are non-nullable.
+      fds_out.push_back(fd);
     }
   }
-  std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
-}
 
-// Currently, we do not support FDs in conjunction with null values.
-// Since previous operators like outer joins might have added null values, we have to check columns for nullability.
-// FDs which are based on at least one nullable column do not get forwarded.
-auto fds_out = std::vector<FunctionalDependency>();
-const auto node_column_expressions_vec = this -> column_expressions();
-const auto node_column_expressions_set =
-    ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
-
-for (const auto& fd : fds_in) {
-  // For convenience, create a new container with all expressions
-  auto fd_expressions = fd.first;
-  fd_expressions.insert(fd.second.begin(), fd.second.end());
-
-  if (std::any_of(fd_expressions.cbegin(), fd_expressions.cend(),
-                  [this, &node_column_expressions_set](const auto& expression) {
-                    // Check for nullability, if possible.
-                    return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
-                  })) {
-    continue;
-  } else {
-    // All FD's expressions that are part of this node's column_expressions are non-nullable.
-    fds_out.push_back(fd);
-  }
-}
-
-return fds_out;
+  return fds_out;
 }  // namespace opossum
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
