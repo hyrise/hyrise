@@ -84,7 +84,8 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> AggregateNode::constrain
   // The set of group-by columns forms a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
   ExpressionUnorderedSet group_by_columns(group_by_columns_count);
-  std::copy_n(node_expressions.begin(), group_by_columns_count , std::inserter(group_by_columns, group_by_columns.begin()));
+  std::copy_n(node_expressions.begin(), group_by_columns_count,
+              std::inserter(group_by_columns, group_by_columns.begin()));
 
   // Create ExpressionsConstraintDefinition from column expressions
   aggregate_lqp_constraints->emplace(group_by_columns);
@@ -94,17 +95,17 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> AggregateNode::constrain
   // We call column_expressions() to avoid the (intermediate) ANY() aggregates
   // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
   const auto column_expressions_vec = column_expressions();
-  const auto column_expressions_set = ExpressionUnorderedSet{column_expressions_vec.cbegin(), column_expressions_vec.cend()};
+  const auto column_expressions_set =
+      ExpressionUnorderedSet{column_expressions_vec.cbegin(), column_expressions_vec.cend()};
 
   // Check each constraint for applicability
   auto input_lqp_constraints = left_input()->constraints();
   for (const auto& input_constraint : *input_lqp_constraints) {
     // Ensure that we do not produce any duplicate constraints
-    bool constraint_already_exists = std::any_of(aggregate_lqp_constraints->cbegin(), aggregate_lqp_constraints->cend(),
-                                      [&input_constraint](const auto& existing_constraint) {
-                                        return input_constraint == existing_constraint;
-                                      });
-    if(constraint_already_exists) continue;
+    bool constraint_already_exists = std::any_of(
+        aggregate_lqp_constraints->cbegin(), aggregate_lqp_constraints->cend(),
+        [&input_constraint](const auto& existing_constraint) { return input_constraint == existing_constraint; });
+    if (constraint_already_exists) continue;
 
     // Check, whether involved column expressions are part of the AggregateNode's output expressions
     bool found_all_column_expressions =

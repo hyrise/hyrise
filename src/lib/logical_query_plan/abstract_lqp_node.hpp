@@ -155,7 +155,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::optional<const std::shared_ptr<LQPColumnExpression>> find_column_expression(const ColumnID column_id) const;
 
-
   /**
    * @return whether the output column at @param column_id is nullable
    */

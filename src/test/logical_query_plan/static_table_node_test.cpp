@@ -61,7 +61,8 @@ TEST_F(StaticTableNodeTest, Constraints) {
   dummy_table->add_soft_unique_constraint(constraint1);
   dummy_table->add_soft_unique_constraint(constraint2);
   // Verify
-  check_table_constraint_representation(TableConstraintDefinitions{constraint1, constraint2}, static_table_node->constraints());
+  check_table_constraint_representation(TableConstraintDefinitions{constraint1, constraint2},
+                                        static_table_node->constraints());
 }
 
 }  // namespace opossum

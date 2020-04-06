@@ -54,7 +54,7 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   auto table = sm.get_table("table");
   auto table_nullable = sm.get_table("table_nullable");
 
-  // TODO Update test: Invalid because the constraint contains duplicated columns.
+  // TODO(Julian) Update test: Invalid because the constraint contains duplicated columns.
   //  auto count_before = table->get_soft_unique_constraints().size();
   //  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{1}, ColumnID{1}}, IsPrimaryKey::No});
   //  EXPECT_EQ(table->get_soft_unique_constraints().size(), count_before + 1);

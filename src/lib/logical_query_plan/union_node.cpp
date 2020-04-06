@@ -36,7 +36,8 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints()
     case UnionMode::All:
       // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.
       // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
-      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous nodes.
+      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous
+      // nodes.
       return std::make_shared<ExpressionsConstraintDefinitions>();
   }
 

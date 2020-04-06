@@ -11,13 +11,12 @@ namespace opossum {
 // Defines a unique constraint on a set of abstract expressions.
 
 struct ExpressionsConstraintDefinition final {
-  ExpressionsConstraintDefinition(ExpressionUnorderedSet init_column_expressions)
+  explicit ExpressionsConstraintDefinition(ExpressionUnorderedSet init_column_expressions)
       : column_expressions(std::move(init_column_expressions)) {}
 
   bool operator==(const ExpressionsConstraintDefinition& rhs) const {
-    if(column_expressions.size() != rhs.column_expressions.size()) return false;
-    return std::all_of(column_expressions.cbegin(), column_expressions.cend(),
-        [&rhs](const auto column_expression) {
+    if (column_expressions.size() != rhs.column_expressions.size()) return false;
+    return std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&rhs](const auto column_expression) {
       return rhs.column_expressions.contains(column_expression);
     });
   }
@@ -43,4 +42,4 @@ struct hash<opossum::ExpressionsConstraintDefinition> {
   }
 };
 
-} // namespace std
+}  // namespace std

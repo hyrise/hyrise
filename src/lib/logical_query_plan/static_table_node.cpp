@@ -46,19 +46,19 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::column_express
 const std::shared_ptr<ExpressionsConstraintDefinitions> StaticTableNode::constraints() const {
   auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
 
-  for(const auto& table_constraint : table->get_soft_unique_constraints()) {
-      // Search for column expressions representing the table_constraint's ColumnIDs
-      auto constraint_column_expressions = ExpressionUnorderedSet{};
+  for (const auto& table_constraint : table->get_soft_unique_constraints()) {
+    // Search for column expressions representing the table_constraint's ColumnIDs
+    auto constraint_column_expressions = ExpressionUnorderedSet{};
 
-      for (const auto& column_id : table_constraint.columns) {
-        const auto column_expr_opt = find_column_expression(column_id);
-        Assert(column_expr_opt, "Did not find column expression in LQPNode");
+    for (const auto& column_id : table_constraint.columns) {
+      const auto column_expr_opt = find_column_expression(column_id);
+      Assert(column_expr_opt, "Did not find column expression in LQPNode");
 
-        constraint_column_expressions.insert(*column_expr_opt);
-      }
+      constraint_column_expressions.insert(*column_expr_opt);
+    }
 
-      // Create ExpressionsConstraintDefinition
-      lqp_constraints->emplace(constraint_column_expressions);
+    // Create ExpressionsConstraintDefinition
+    lqp_constraints->emplace(constraint_column_expressions);
   }
 
   return lqp_constraints;

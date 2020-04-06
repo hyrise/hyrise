@@ -238,7 +238,8 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_column_expression(const ColumnID column_id) const {
+std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_column_expression(
+    const ColumnID column_id) const {
   for (auto expr : this->column_expressions()) {
     const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
     if (column_expr && column_expr->column_reference.original_column_id() == column_id) {
@@ -276,16 +277,14 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::forward
 
 bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
   const auto lqp_constraints = constraints();
-  if(lqp_constraints->empty()) return false;
+  if (lqp_constraints->empty()) return false;
 
   // Look for a constraint that is solely based on the given column expressions
-  for(const auto& constraint : *lqp_constraints) {
-    if(constraint.column_expressions.size() == column_expressions.size() &&
-       std::all_of(column_expressions.cbegin(), column_expressions.cend(),
-                   [&](const auto column_expression) {
-                     return constraint.column_expressions.contains(column_expression);
-                   }))
-    {
+  for (const auto& constraint : *lqp_constraints) {
+    if (constraint.column_expressions.size() == column_expressions.size() &&
+        std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&](const auto column_expression) {
+          return constraint.column_expressions.contains(column_expression);
+        })) {
       // Found match
       return true;
     }
@@ -295,7 +294,6 @@ bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expres
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-
   // Gather input FDs
   auto fds_left = std::vector<FunctionalDependency>();
   auto fds_right = std::vector<FunctionalDependency>();
@@ -307,46 +305,49 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   auto fds_in = std::vector<FunctionalDependency>();
-  if(fds_right.empty()) fds_in = fds_left;
-  else {
-    // Remove duplicate FDs that might result from e.g. self-joins
-    for(const auto& fd_right : fds_right) {
-      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
-          [&fd_right](const auto& fd_left) {
-            return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size()
-            && fd_left.first == fd_right.first && fd_left.second == fd_right.second);
-          });
-      if(!duplicate) {
-        fds_in.push_back(fd_right);
-      }
-    }
-    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
-  }
-
-  // Currently, we do not support FDs in conjunction with null values.
-  // Since previous operators like outer joins might have added null values, we have to check columns for nullability.
-  // FDs which are based on at least one nullable column do not get forwarded.
-  auto fds_out = std::vector<FunctionalDependency>();
-  const auto node_column_expressions_vec = this->column_expressions();
-  const auto node_column_expressions_set = ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
-
-  for(const auto& fd : fds_in) {
-    // For convenience, create a new container with all expressions
-    auto fd_expressions = fd.first;
-    fd_expressions.insert(fd.second.begin(), fd.second.end());
-
-    if(std::any_of(fd_expressions.cbegin(), fd_expressions.cend(), [this, &node_column_expressions_set](const auto& expression) {
-      // Check for nullability, if possible.
-      return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
-    })) continue;
-    else {
-      // All FD's expressions that are part of this node's column_expressions are non-nullable.
-      fds_out.push_back(fd);
-    }
-  }
-
-  return fds_out;
+  if (fds_right.empty()) fds_in = fds_left;
 }
+else {
+  // Remove duplicate FDs that might result from e.g. self-joins
+  for (const auto& fd_right : fds_right) {
+    bool duplicate = std::any_of(fds_left.begin(), fds_left.end(), [&fd_right](const auto& fd_left) {
+      return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size() &&
+              fd_left.first == fd_right.first && fd_left.second == fd_right.second);
+    });
+    if (!duplicate) {
+      fds_in.push_back(fd_right);
+    }
+  }
+  std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
+}
+
+// Currently, we do not support FDs in conjunction with null values.
+// Since previous operators like outer joins might have added null values, we have to check columns for nullability.
+// FDs which are based on at least one nullable column do not get forwarded.
+auto fds_out = std::vector<FunctionalDependency>();
+const auto node_column_expressions_vec = this -> column_expressions();
+const auto node_column_expressions_set =
+    ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
+
+for (const auto& fd : fds_in) {
+  // For convenience, create a new container with all expressions
+  auto fd_expressions = fd.first;
+  fd_expressions.insert(fd.second.begin(), fd.second.end());
+
+  if (std::any_of(fd_expressions.cbegin(), fd_expressions.cend(),
+                  [this, &node_column_expressions_set](const auto& expression) {
+                    // Check for nullability, if possible.
+                    return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
+                  })) {
+    continue;
+  } else {
+    // All FD's expressions that are part of this node's column_expressions are non-nullable.
+    fds_out.push_back(fd);
+  }
+}
+
+return fds_out;
+}  // namespace opossum
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;

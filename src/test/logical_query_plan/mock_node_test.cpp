@@ -83,8 +83,7 @@ TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions
 TEST_F(MockNodeTest, Constraints) {
   // Add constraints to MockNode
   // Primary Key: a, b
-  const auto table_constraint1 =
-      TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}};
+  const auto table_constraint1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}};
   // Unique: c
   const auto table_constraint2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{2}}};
   const auto table_constraints = TableConstraintDefinitions{table_constraint1, table_constraint2};
@@ -107,6 +106,6 @@ TEST_F(MockNodeTest, Constraints) {
   }
 }
 
-//TEST_F(MockNodeTest, ConstraintsPrunedColumns) {}
+// TEST_F(MockNodeTest, ConstraintsPrunedColumns) {} // TODO(Julian)
 
 }  // namespace opossum

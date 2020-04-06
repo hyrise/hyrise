@@ -3,9 +3,9 @@
 
 #include "base_test.hpp"
 
-#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -211,9 +211,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
   // In case of self-joins, the implementation has to ensure that FDs are not outputted twice.
 
   // Create a table of 3 columns (a, b, c)
-  TableColumnDefinitions column_definitions{{"a", DataType::Int, false},
-      {"b", DataType::Int, false},
-      {"c", DataType::Int, false}};
+  TableColumnDefinitions column_definitions{
+      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
   const auto table_name = "table";
   Hyrise::get().storage_manager.add_table(table_name, table);
@@ -233,7 +232,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
   // clang-format on
 
   // Prerequisite
-  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2); // a => (b,c) and (a,b) => c
+  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2);  // a => (b,c) and (a,b) => c
 
   // Actual test
   EXPECT_EQ(self_join_node->functional_dependencies().size(), 2);
@@ -275,8 +274,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // clang-format on
 
   // Prerequisite
-  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 1); // a => b
-  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 1); // x => y
+  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 1);  // a => b
+  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 1);  // x => y
 
   // Actual tests
   EXPECT_EQ(inner_join_node->functional_dependencies().size(), 2);
@@ -289,7 +288,7 @@ TEST_F(JoinNodeTest, ConstraintsSemiAndAntiJoins) {
   _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
   _mock_node_b->set_table_constraints({_unique_constraint_x});
 
-  for(const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     // clang-format off
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
                              _mock_node_a,
@@ -304,7 +303,7 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
   // TODO(Julian) Test that...
 
   // Prepare join nodes
-  for(const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     // clang-format off
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
                           _mock_node_a,
@@ -341,8 +340,8 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
     // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
     join_constraints = join_node->constraints();
     EXPECT_EQ(join_constraints->size(), 4);
-    check_table_constraint_representation({_unique_constraint_a, _unique_constraint_b_c, _unique_constraint_x,
-                                              _unique_constraint_y}, join_constraints);
+    check_table_constraint_representation(
+        {_unique_constraint_a, _unique_constraint_b_c, _unique_constraint_x, _unique_constraint_y}, join_constraints);
   }
 }
 

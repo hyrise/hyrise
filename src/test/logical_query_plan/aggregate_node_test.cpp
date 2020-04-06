@@ -99,10 +99,10 @@ TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
 
   const auto aggregate1 = sum_(add_(_a, _b));
   const auto aggregate2 = sum_(add_(_a, _c));
-  const auto agg_node_a = AggregateNode::make(expression_vector(_a),
-                                        expression_vector(aggregate1, aggregate2), _mock_node);
-  const auto agg_node_b = AggregateNode::make(expression_vector(_a, _b),
-                                        expression_vector(aggregate1, aggregate2), _mock_node);
+  const auto agg_node_a =
+      AggregateNode::make(expression_vector(_a), expression_vector(aggregate1, aggregate2), _mock_node);
+  const auto agg_node_b =
+      AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate1, aggregate2), _mock_node);
 
   // Check, whether AggregateNode adds a new constraint for its group-by column(s)
   EXPECT_EQ(agg_node_a->constraints()->size(), 1);
@@ -124,8 +124,7 @@ TEST_F(AggregateNodeTest, ConstraintsForwarding) {
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   const auto aggregate = sum_(_c);
-  _aggregate_node = AggregateNode::make(expression_vector(_a, _b),
-                                        expression_vector(aggregate), _mock_node);
+  _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate), _mock_node);
 
   // Since _b is part of the group-by columns, table_constraint1 remains valid.
   // As _c becomes aggregated, table_constraint2 has to be discarded
@@ -140,8 +139,7 @@ TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
   EXPECT_EQ(_mock_node->constraints()->size(), 1);
 
   const auto aggregate = sum_(_b);
-  _aggregate_node = AggregateNode::make(expression_vector(_a),
-                                        expression_vector(aggregate), _mock_node);
+  _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate), _mock_node);
 
   // The AggregateNode should create a new unique constraint based on column _a
   // However, table_constraint is equivalent and eligible for forwarding.
@@ -150,6 +148,5 @@ TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
   const auto constraint = *_aggregate_node->constraints()->cbegin();
   EXPECT_TRUE(constraint.column_expressions.contains(lqp_column_(_a)));
 }
-
 
 }  // namespace opossum

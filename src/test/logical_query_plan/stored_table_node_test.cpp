@@ -207,8 +207,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
   // Constraint across all columns => No more columns available to create a functional dependency from
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(TableConstraintDefinition{
-      {_a.original_column_id(), _b.original_column_id(), _c.original_column_id()}});
+  table->add_soft_unique_constraint(
+      TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id(), _c.original_column_id()}});
 
   EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
 }
@@ -218,7 +218,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
 
   const auto& fds = _stored_table_node->functional_dependencies();
-  EXPECT_TRUE(fds.size() == 1);
+  EXPECT_EQ(fds.size(), 1);
   const auto fd = fds.at(0);
 
   // Check left
@@ -226,20 +226,18 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   EXPECT_TRUE(fd.first.contains(lqp_column_(_a)));
 
   // Check right
-  EXPECT_TRUE(fd.second.size() == 2);
+  EXPECT_EQ(fd.second.size(), 2);
   EXPECT_TRUE(fd.second.contains(lqp_column_(_b)));
   EXPECT_TRUE(fd.second.contains(lqp_column_(_c)));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(TableConstraintDefinition{{
-    _a.original_column_id()}});
-  table->add_soft_unique_constraint(TableConstraintDefinition{{
-    _a.original_column_id(), _b.original_column_id()}});
+  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
+  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id()}});
 
   const auto& fds = _stored_table_node->functional_dependencies();
-  EXPECT_TRUE(fds.size() == 2);
+  EXPECT_EQ(fds.size(), 2);
   const auto fd1 = fds.at(0);
   const auto fd2 = fds.at(1);
 
@@ -264,9 +262,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   // Create a tables of 3 columns (a, b, c) where the last column of which is nullable (c)
-  TableColumnDefinitions column_definitions{{"a", DataType::Int, false},
-      {"b", DataType::Int, false},
-      {"c", DataType::Int, true}};
+  TableColumnDefinitions column_definitions{
+      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
   const auto table_a = std::make_shared<Table>(column_definitions, TableType::Data);
   const auto table_b = std::make_shared<Table>(column_definitions, TableType::Data);
   Hyrise::get().storage_manager.add_table("t_a_nullable", table_a);
@@ -281,8 +278,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   const auto stored_table_node_b = StoredTableNode::make("t_b_nullable");
   const auto& fds_a = stored_table_node_a->functional_dependencies();
   const auto& fds_b = stored_table_node_b->functional_dependencies();
-  EXPECT_EQ(fds_a.size(), 0); // without nullability we should get 2 FDs: a => (b,c) and (a,b) => c
-  EXPECT_EQ(fds_b.size(), 0); // without nullability we should get 1 FDs: c => (a,b)
+  EXPECT_EQ(fds_a.size(), 0);  // without nullability we should get 2 FDs: a => (b,c) and (a,b) => c
+  EXPECT_EQ(fds_b.size(), 0);  // without nullability we should get 1 FDs: c => (a,b)
 }
 
 }  // namespace opossum

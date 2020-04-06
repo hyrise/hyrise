@@ -24,21 +24,21 @@ using namespace opossum;  // NOLINT
  *
  * @returns   Boolean value denoting whether at the group-by list of @param aggregate_node changed.
  */
-bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd,const ExpressionUnorderedSet& group_by_columns,
-    AggregateNode& aggregate_node) {
+bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd, const ExpressionUnorderedSet& group_by_columns,
+                                    AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's  columns have to be part of the group-by list
-  if(!std::all_of(fd.first.cbegin(), fd.first.cend(), [&group_by_columns](std::shared_ptr<AbstractExpression> constraint_col_expr) {
-    return group_by_columns.contains(constraint_col_expr);
-  })) {
+  if (!std::all_of(fd.first.cbegin(), fd.first.cend(),
+                   [&group_by_columns](std::shared_ptr<AbstractExpression> constraint_col_expr) {
+                     return group_by_columns.contains(constraint_col_expr);
+                   })) {
     return false;
   }
 
   // Every column that is functionally dependent gets moved from
   // the group-by list to the aggregate list. For this purpose it is wrapped in an ANY() expression.
   for (const auto& group_by_column : group_by_columns) {
-
     if (fd.second.contains(group_by_column)) {
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
@@ -55,8 +55,8 @@ bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd,const Express
                            return false;
                          }),
           aggregate_node.node_expressions.end());
-      Assert(aggregate_node.aggregate_expressions_begin_idx
-             < begin_idx_before, "Failed to remove column from group-by list.");
+      Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before,
+             "Failed to remove column from group-by list.");
 
       // Add the ANY() aggregate to the list of aggregate columns.
       const auto aggregate_any_expression = any_(group_by_column);
@@ -80,7 +80,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
     // Early exit: If there are no functional dependencies, we can skip this rule.
     auto fds = aggregate_node.functional_dependencies();
-    if(fds.empty()) return LQPVisitation::VisitInputs;
+    if (fds.empty()) return LQPVisitation::VisitInputs;
 
     // --- Preparation ---
     // Store a copy of the root's column expressions before applying the rule
@@ -96,18 +96,17 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
     std::sort(fds.begin(), fds.end(),
-              [](const auto& fd_left, const auto& fd_right) {
-                return fd_left.first.size() < fd_right.first.size();
-    });
+              [](const auto& fd_left, const auto& fd_right) { return fd_left.first.size() < fd_right.first.size(); });
 
     // --- Main ---
     // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
     // constraints might result in different group-by lists (depending on the number of columns of the constraint).
-    // We stop as soon as one constraint successfully reduced the group-by list. There is no advantage in a second reduction if the first reduction was successful, because no further columns will be removed. Hence, as soon as one reduction took
-    // place, we can ignore the remaining constraints.
+    // We stop as soon as one constraint successfully reduced the group-by list. There is no advantage in a second
+    // reduction if the first reduction was successful, because no further columns will be removed. Hence, as soon as
+    // one reduction took place, we can ignore the remaining constraints.
     auto group_by_list_changed = false;
-    for(const auto& fd : fds) {
-      group_by_list_changed |= reduce_group_by_columns_for_fd(fd, group_by_columns,aggregate_node);
+    for (const auto& fd : fds) {
+      group_by_list_changed |= reduce_group_by_columns_for_fd(fd, group_by_columns, aggregate_node);
       if (group_by_list_changed) break;
     }
 

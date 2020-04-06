@@ -135,25 +135,23 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
   const auto unique_constraints = this->constraints();
   const auto column_expressions = this->column_expressions();
 
-  for(auto& constraint : *unique_constraints) {
-
+  for (auto& constraint : *unique_constraints) {
     // We support FDs for non-nullable columns only
-    if(std::any_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(), [this](const auto column_expression) {
-      return column_expression->is_nullable_on_lqp(*this);
-    })) continue;
+    if (std::any_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
+                    [this](const auto column_expression) { return column_expression->is_nullable_on_lqp(*this); }))
+      continue;
 
     auto left = constraint.column_expressions;
     auto right = ExpressionUnorderedSet{};
 
     // Find column expressions that are functionally dependent
-    std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()), [&left](std::shared_ptr<AbstractExpression> column_expr) {
-      return !(left.contains(column_expr));
-    });
+    std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()),
+                 [&left](std::shared_ptr<AbstractExpression> column_expr) { return !(left.contains(column_expr)); });
 
     // Create functional dependency
-    if(!right.empty() && std::all_of(right.cbegin(), right.cend(), [this](const auto& right_column_expr){
-      return !right_column_expr->is_nullable_on_lqp(*this);
-    })) {
+    if (!right.empty() && std::all_of(right.cbegin(), right.cend(), [this](const auto& right_column_expr) {
+          return !right_column_expr->is_nullable_on_lqp(*this);
+        })) {
       fds.emplace_back(left, right);
     }
   }

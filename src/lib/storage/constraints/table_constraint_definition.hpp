@@ -8,13 +8,14 @@ namespace opossum {
 
 enum class IsPrimaryKey : bool { Yes = true, No = false };
 
-// Defines a unique constraint on a set of column ids. Can optionally be a PRIMARY KEY, requiring the column(s) to be non-NULL.
-// For tables, constraints are currently NOT enforced.
+// Defines a unique constraint on a set of column ids. Can optionally be a PRIMARY KEY, requiring the column(s) to be
+// non-NULL. For tables, constraints are currently NOT enforced.
 
 struct TableConstraintDefinition final {
   TableConstraintDefinition() = default;
 
-  TableConstraintDefinition(std::unordered_set<ColumnID> column_ids, const IsPrimaryKey init_is_primary_key = IsPrimaryKey::No)
+  TableConstraintDefinition(std::unordered_set<ColumnID> column_ids,
+                            const IsPrimaryKey init_is_primary_key = IsPrimaryKey::No)
       : columns(std::move(column_ids)), is_primary_key(init_is_primary_key) {}
 
   bool operator==(const TableConstraintDefinition& rhs) const {
@@ -44,4 +45,3 @@ struct hash<opossum::TableConstraintDefinition> {
 };
 
 }  // namespace std
-
