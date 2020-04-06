@@ -93,7 +93,7 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   }
 
   // Verify that the sorted_by flag is set when it's present in left input.
-  const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
+  const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0})});
   sort->execute();
 
   const auto difference_sorted = std::make_shared<Difference>(sort, _table_wrapper_b);
@@ -104,8 +104,7 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
     ASSERT_TRUE(sorted_by);
-    const auto sorted_by_vector =
-        std::vector<std::pair<ColumnID, SortMode>>{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+    const auto sorted_by_vector = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0})};
     EXPECT_EQ(sorted_by, sorted_by_vector);
   }
 }

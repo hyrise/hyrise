@@ -260,7 +260,7 @@ TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = sorted_table->get_chunk(chunk_id);
     if (!chunk) continue;
-    chunk->set_sorted_by(std::make_pair(ColumnID(0), SortMode::Ascending));
+    chunk->set_sorted_by(SortColumnDefinition(ColumnID(0), SortMode::Ascending));
   }
   const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
   sorted_table_wrapper->execute();
@@ -275,7 +275,7 @@ TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
     const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
     ASSERT_TRUE(sorted_by);
     const auto sorted_by_vector =
-        std::vector<std::pair<ColumnID, SortMode>>{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+        std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
     EXPECT_EQ(sorted_by, sorted_by_vector);
   }
 }

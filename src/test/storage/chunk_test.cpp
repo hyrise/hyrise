@@ -219,19 +219,19 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 
 TEST_F(StorageChunkTest, OrderedBy) {
   EXPECT_EQ(chunk->sorted_by(), std::nullopt);
-  auto sorted_by_vector = std::vector{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+  auto sorted_by_vector = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
   chunk->finalize();
   chunk->set_sorted_by(sorted_by_vector);
   EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
 
-  sorted_by_vector = {std::make_pair(ColumnID{0}, SortMode::Ascending),
-                       std::make_pair(ColumnID{1}, SortMode::Descending)};
+  sorted_by_vector = {SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
+                      SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
   chunk->set_sorted_by(sorted_by_vector);
   EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
 
-  const auto sorted_by_pair = std::make_pair(ColumnID{0}, SortMode::Ascending);
-  chunk->set_sorted_by(sorted_by_pair);
-  sorted_by_vector = std::vector{sorted_by_pair};
+  const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
+  chunk->set_sorted_by(sort_column_definition);
+  sorted_by_vector = std::vector{sort_column_definition};
   EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
 }
 

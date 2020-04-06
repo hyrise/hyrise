@@ -231,13 +231,18 @@ enum class EraseTypes { OnlyInDebugBuild, Always };
 
 // Defines in which order a certain column should be or is sorted.
 struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID init_column,
-                                const SortMode init_sort_mode = SortMode::Ascending)
+  explicit SortColumnDefinition(ColumnID init_column,
+                                SortMode init_sort_mode = SortMode::Ascending)
       : column(init_column), sort_mode(init_sort_mode) {}
 
-  const ColumnID column;
-  const SortMode sort_mode;
+  ColumnID column;
+  SortMode sort_mode;
 };
+
+inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefinition& rhs){
+  return lhs.column == rhs.column &&
+         lhs.sort_mode == rhs.sort_mode;
+}
 
 class Noncopyable {
  protected:

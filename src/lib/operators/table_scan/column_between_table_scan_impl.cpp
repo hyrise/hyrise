@@ -38,10 +38,10 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   bool sorted_segment_scanned = false;
-  const auto sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
+  const auto chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
-  if (sorted_by) {
-    for (const auto& sorted_by : *sorted_by) {
+  if (chunk_sorted_by) {
+    for (const auto& sorted_by : *chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
         sorted_segment_scanned = true;

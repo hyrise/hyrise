@@ -187,17 +187,17 @@ class AggregateSortedTest : public BaseTest {
       const auto sorted_by_vector = chunk->sorted_by();
       if (sorted_by_vector) {
         const auto sorted_by = sorted_by_vector->front();
-        const auto ordered_segment = chunk->get_segment(sorted_by.first);
+        const auto ordered_segment = chunk->get_segment(sorted_by.column);
         segment_with_iterators(*ordered_segment, [&](auto it, auto end) {
           it++;
           auto prev_iterator = --it;
-          if (sorted_by.second == SortMode::Ascending || sorted_by.second == SortMode::AscendingNullsLast) {
+          if (sorted_by.sort_mode == SortMode::Ascending || sorted_by.sort_mode == SortMode::AscendingNullsLast) {
             while (it != end) {
               EXPECT_TRUE(it->value() >= prev_iterator->value());
               ++it;
             }
-          } else if (sorted_by.second == SortMode::Descending ||
-                     sorted_by.second == SortMode::DescendingNullsLast) {
+          } else if (sorted_by.sort_mode == SortMode::Descending ||
+                     sorted_by.sort_mode == SortMode::DescendingNullsLast) {
             while (it != end) {
               EXPECT_TRUE(it->value() <= prev_iterator->value());
               ++it;
@@ -967,7 +967,7 @@ TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
   const auto chunk_count = aggregate->get_output()->chunk_count();
 
   // Chunks are ordered by groupby_column_ids. Default SortMode is Ascending
-  const auto expected_sorted_by = std::make_pair(ColumnID{2}, SortMode::Ascending);
+  const auto expected_sorted_by = SortColumnDefinition(ColumnID{2}, SortMode::Ascending);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = aggregate->get_output()->get_chunk(chunk_id);

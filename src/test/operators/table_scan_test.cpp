@@ -53,7 +53,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> load_and_encode_table(
       const std::string& path, const ChunkOffset chunk_size = 2,
-      const std::optional<std::vector<std::pair<ColumnID, SortMode>>> sorted_by = std::nullopt) {
+      const std::optional<std::vector<SortColumnDefinition>> sorted_by = std::nullopt) {
     const auto table = load_table(path, chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{};
@@ -89,12 +89,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
     return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 4,
-                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), SortMode::Ascending)}));
+                                 std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
     return load_and_encode_table("resources/test_data/tbl/int_only_null.tbl", 4,
-                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), SortMode::Ascending)}));
+                                 std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {
@@ -260,7 +260,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
       ASSERT_TRUE(sorted_by);
       const auto sorted_by_vector =
-          std::vector<std::pair<ColumnID, SortMode>>{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+          std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
       EXPECT_EQ(sorted_by, sorted_by_vector);
     }
   }
@@ -679,7 +679,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::Ascending));
+  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -693,7 +693,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsLast) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_nulls_last_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::AscendingNullsLast));
+  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsLast));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -707,7 +707,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsL
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::Descending));
+  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -721,7 +721,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegmentsNullsLast) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_nulls_last_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::DescendingNullsLast));
+  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsLast));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
