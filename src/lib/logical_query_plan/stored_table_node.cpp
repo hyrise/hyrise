@@ -146,12 +146,14 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     auto right = ExpressionUnorderedSet{};
 
     // Find column expressions that are functionally dependent
-    std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()), [this, &left](std::shared_ptr<AbstractExpression> column_expr) {
-      return !(left.contains(column_expr)) && !column_expr->is_nullable_on_lqp(*this);
+    std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()), [&left](std::shared_ptr<AbstractExpression> column_expr) {
+      return !(left.contains(column_expr));
     });
 
     // Create functional dependency
-    if(!right.empty()) {
+    if(!right.empty() && std::all_of(right.cbegin(), right.cend(), [this](const auto& right_column_expr){
+      return !right_column_expr->is_nullable_on_lqp(*this);
+    })) {
       fds.emplace_back(left, right);
     }
   }

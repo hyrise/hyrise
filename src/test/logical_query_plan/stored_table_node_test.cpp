@@ -262,4 +262,27 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   EXPECT_TRUE(fd2.second.contains(lqp_column_(_c)));
 }
 
+TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
+  // Create a tables of 3 columns (a, b, c) where the last column of which is nullable (c)
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, false},
+      {"b", DataType::Int, false},
+      {"c", DataType::Int, true}};
+  const auto table_a = std::make_shared<Table>(column_definitions, TableType::Data);
+  const auto table_b = std::make_shared<Table>(column_definitions, TableType::Data);
+  Hyrise::get().storage_manager.add_table("t_a_nullable", table_a);
+  Hyrise::get().storage_manager.add_table("t_b_nullable", table_b);
+
+  // Add unique constraints
+  table_a->add_soft_unique_constraint({{ColumnID{0}}});
+  table_a->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
+  table_b->add_soft_unique_constraint({{ColumnID{2}}});
+
+  const auto stored_table_node_a = StoredTableNode::make("t_a_nullable");
+  const auto stored_table_node_b = StoredTableNode::make("t_b_nullable");
+  const auto& fds_a = stored_table_node_a->functional_dependencies();
+  const auto& fds_b = stored_table_node_b->functional_dependencies();
+  EXPECT_EQ(fds_a.size(), 0); // without nullability we should get 2 FDs (a => b, c), (a,b => c)
+  EXPECT_EQ(fds_b.size(), 0); // without nullability we should get 1 FDs (c => a, b)
+}
+
 }  // namespace opossum

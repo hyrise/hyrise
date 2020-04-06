@@ -329,6 +329,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // Only FDs with non-nullable columns will be returned by this function.
   auto fds_out = std::vector<FunctionalDependency>();
   for(const auto& fd : fds_in) {
+    // For convenience, create a new container with all expressions
     auto fd_expressions = fd.first;
     fd_expressions.insert(fd.second.begin(), fd.second.end());
 
@@ -336,6 +337,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
       return expression->is_nullable_on_lqp(*this);
     })) continue;
     else {
+      // All FD's expressions are non-nullable. Therefore, it stays valid.
       fds_out.push_back(fd);
     }
   }
