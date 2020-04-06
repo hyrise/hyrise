@@ -54,7 +54,8 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
 
   std::vector<ColumnID> groupby = {};
 
-  const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
+  const auto sort =
+      std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
@@ -92,7 +93,8 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
 
   std::vector<ColumnID> groupby = {ColumnID{1}};
 
-  const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
+  const auto sort =
+      std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
@@ -130,7 +132,8 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
 
   std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{1}};
 
-  const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
+  const auto sort =
+      std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{1})});
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());

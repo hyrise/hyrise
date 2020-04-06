@@ -206,7 +206,8 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
 
   // Verify that the sorted_by flag is set when it's present in left input.
   // sorting on column a (ColumnID 0)
-  const auto sort = std::make_shared<Sort>(table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
+  const auto sort =
+      std::make_shared<Sort>(table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
   sort->execute();
 
   const auto projection_b_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a));
@@ -218,8 +219,7 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
     const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
     ASSERT_TRUE(sorted_by);
     // Expect sort to be column a, now with ColumnID 1
-    const auto expected_sorted_by =
-        std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};
+    const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};
     EXPECT_EQ(sorted_by, expected_sorted_by);
   }
 }

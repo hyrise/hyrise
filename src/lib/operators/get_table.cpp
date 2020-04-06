@@ -194,7 +194,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
           for (const auto& sorted_by : *current_chunk_order) {
             if (sorted_by.column == stored_column_id) {
               const auto columns_pruned_so_far = std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter);
-              const auto new_sort_column = ColumnID{static_cast<uint16_t>(static_cast<size_t>(stored_column_id) - columns_pruned_so_far)};
+              const auto new_sort_column =
+                  ColumnID{static_cast<uint16_t>(static_cast<size_t>(stored_column_id) - columns_pruned_so_far)};
               adapted_chunk_order = SortColumnDefinition(new_sort_column, sorted_by.sort_mode);
             }
           }

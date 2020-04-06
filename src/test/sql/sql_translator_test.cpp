@@ -1181,8 +1181,7 @@ TEST_F(SQLTranslatorTest, SubquerySelectList) {
 TEST_F(SQLTranslatorTest, OrderByTest) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
 
-  const auto sort_modes =
-      std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
 
   // clang-format off
   const auto expected_lqp =

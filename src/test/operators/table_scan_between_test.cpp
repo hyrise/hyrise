@@ -35,8 +35,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
 
-    const bool descending =
-        sort_mode == SortMode::Descending || sort_mode == SortMode::DescendingNullsLast;
+    const bool descending = sort_mode == SortMode::Descending || sort_mode == SortMode::DescendingNullsLast;
     const bool nulls_first = sort_mode == SortMode::Ascending || sort_mode == SortMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     const int number_of_nulls_last = (nullable && !nulls_first) ? 3 : 0;
@@ -110,10 +109,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
-    const bool descending =
-        sort_mode == SortMode::Descending || sort_mode == SortMode::DescendingNullsLast;
-    const bool ascending =
-        sort_mode == SortMode::Ascending || sort_mode == SortMode::AscendingNullsLast;
+    const bool descending = sort_mode == SortMode::Descending || sort_mode == SortMode::DescendingNullsLast;
+    const bool ascending = sort_mode == SortMode::Ascending || sort_mode == SortMode::AscendingNullsLast;
     const bool nulls_first = sort_mode == SortMode::Ascending || sort_mode == SortMode::Descending;
     const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
     std::ignore = encoding;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <boost/hana/for_each.hpp>
 #include <optional>
+#include <boost/hana/for_each.hpp>
 
 #include "base_test.hpp"
 #include "constant_mappings.hpp"
@@ -19,8 +19,7 @@ class TypedOperatorBaseTest
     const auto& [data_type, encoding, order_mode, nullable] = info.param;
 
     return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
-           (order_mode ? sort_mode_to_string.left.at(*order_mode) : "Unordered") + (nullable ? "" : "Not") +
-           "Nullable";
+           (order_mode ? sort_mode_to_string.left.at(*order_mode) : "Unordered") + (nullable ? "" : "Not") + "Nullable";
   }
 };
 
@@ -34,8 +33,7 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
          ++encoding_it) {
       const auto& encoding = encoding_it->left;
       if (!encoding_supports_data_type(encoding, data_type)) continue;
-      for (auto sorted_by_it = sort_mode_to_string.begin(); sorted_by_it != sort_mode_to_string.end();
-           ++sorted_by_it) {
+      for (auto sorted_by_it = sort_mode_to_string.begin(); sorted_by_it != sort_mode_to_string.end(); ++sorted_by_it) {
         const auto& sort_mode = sorted_by_it->left;
         pairs.emplace_back(data_type, encoding, sort_mode, true);
         pairs.emplace_back(data_type, encoding, sort_mode, false);

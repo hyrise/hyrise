@@ -88,13 +88,15 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
-    return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 4,
-                                 std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
+    return load_and_encode_table(
+        "resources/test_data/tbl/int_sorted.tbl", 4,
+        std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
-    return load_and_encode_table("resources/test_data/tbl/int_only_null.tbl", 4,
-                                 std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
+    return load_and_encode_table(
+        "resources/test_data/tbl/int_only_null.tbl", 4,
+        std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {

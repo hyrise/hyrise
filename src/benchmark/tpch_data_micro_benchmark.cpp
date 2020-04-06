@@ -207,8 +207,8 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::St
   const auto l_orderkey_id = ColumnID{0};
   const auto l_shipmode_id = ColumnID{10};
 
-  const auto sorted_line_item = std::make_shared<Sort>(line_item,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
+  const auto sorted_line_item =
+      std::make_shared<Sort>(line_item, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
   sorted_line_item->execute();
   const auto table_scan_output = sorted_line_item->get_output();
   const ColumnID group_by_column = l_orderkey_id;

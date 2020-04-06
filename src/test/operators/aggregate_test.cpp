@@ -884,7 +884,8 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
 
 TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    const auto sort = std::make_shared<Sort>(this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl",
@@ -894,7 +895,8 @@ TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
 
 TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    const auto sort = std::make_shared<Sort>(this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl",
@@ -904,7 +906,8 @@ TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
 
 TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    const auto sort = std::make_shared<Sort>(this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl",
@@ -914,7 +917,8 @@ TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
 
 TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
   for (ColumnID sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
-    const auto sort = std::make_shared<Sort>(this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
+    const auto sort = std::make_shared<Sort>(
+        this->_table_wrapper_1_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl",
@@ -927,7 +931,9 @@ TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
   const auto input_table = this->_table_wrapper_multi_columns->get_output();
   const auto column_count = input_table->column_count();
   for (ColumnID sorted_by_column_id = ColumnID{0}; sorted_by_column_id < column_count; ++sorted_by_column_id) {
-    const auto sort = std::make_shared<Sort>(this->_table_wrapper_multi_columns, std::vector<SortColumnDefinition>{SortColumnDefinition{sorted_by_column_id}});
+    const auto sort =
+        std::make_shared<Sort>(this->_table_wrapper_multi_columns,
+                               std::vector<SortColumnDefinition>{SortColumnDefinition{sorted_by_column_id}});
     sort->execute();
     // Group and aggregate by every column combination.
     for (ColumnID group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {
@@ -951,7 +957,8 @@ TEST_F(AggregateSortedTest, AggregateMaxMultiColumnSorted) {
 }
 
 TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
-  const auto sort = std::make_shared<Sort>(this->_table_wrapper_multi_columns, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}});
+  const auto sort = std::make_shared<Sort>(this->_table_wrapper_multi_columns,
+                                           std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}});
   sort->execute();
   auto table = sort->get_output();
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
