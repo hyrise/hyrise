@@ -1165,11 +1165,13 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
   // Verify that the sorted_by flag is set when it's present in left input.
+  // This is an implementation dependent invariant. Other implementations might not preserve sortedness.
   scan_and_check_sorted_by(get_int_sorted_op());
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlagReferencing) {
   // Verify that the sorted_by flag is set when it's present in left input (referencing table).
+  // This is an implementation dependent invariant. Other implementations might not preserve sortedness.
   const auto table = get_int_sorted_op()->table;
 
   auto referencing_table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
