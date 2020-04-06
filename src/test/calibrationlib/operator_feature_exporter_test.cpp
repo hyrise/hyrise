@@ -12,22 +12,17 @@ namespace opossum {
 class OperatorFeatureExporterTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto table_config = std::make_shared<TableGeneratorConfig>(
-        TableGeneratorConfig{{DataType::Int, DataType::String},
-                             {EncodingType::Dictionary},
-                             {ColumnDataDistribution::make_uniform_config(0.0, 100.0)},
-                             {100000},
-                             {100}});
+    const auto table = load_table("resources/test_data/tbl/float_int.tbl", 2);
 
-    const auto table_generator = CalibrationTableGenerator(table_config);
-    _table = table_generator.generate().at(0);
+    _table = std::make_shared<CalibrationTableWrapper>(
+        table, "float_int",
+        std::vector<ColumnDataDistribution>{ColumnDataDistribution::make_uniform_config(0, 1000),
+                                            ColumnDataDistribution::make_uniform_config(0, 1000)});
+
     Hyrise::get().storage_manager.add_table(_table->get_name(), _table->get_table());
   }
 
-  ~OperatorFeatureExporterTest() override {
-    Hyrise::get().storage_manager.drop_table(_table->get_name());
-    std::filesystem::remove_all(_dir_path);
-  }
+  ~OperatorFeatureExporterTest() override { std::filesystem::remove_all(_dir_path); }
 
   void execute_and_export_pqps(std::vector<std::shared_ptr<AbstractLQPNode>> lqps) {
     for (const std::shared_ptr<AbstractLQPNode>& lqp : lqps) {
@@ -66,7 +61,7 @@ TEST_F(OperatorFeatureExporterTest, TableScanExport) {
 
   // Check if we inserted the correct headers
   const auto num_headers = headers.size();
-  for (u_int64_t header_index = 0; header_index < num_headers; ++header_index) {
+  for (size_t header_index = 0; header_index < num_headers; ++header_index) {
     EXPECT_EQ(headers.at(header_index), row_values.at(header_index));
   }
 

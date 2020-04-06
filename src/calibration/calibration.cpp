@@ -14,38 +14,40 @@ using namespace opossum;  // NOLINT
 
 int main() {
   // Export directories
-  constexpr auto path_train = "./data/train";
-  constexpr auto path_test = "./data/test";
+  constexpr auto PATH_TRAIN = "./data/train";
+  constexpr auto PATH_TEST = "./data/test";
 
   // table generation settings
-  const std::set<DataType> table_data_types = {DataType::Double, DataType::Float,  DataType::Int,
+  const std::set<DataType> TABLE_DATA_TYPES = {DataType::Double, DataType::Float,  DataType::Int,
                                                DataType::Long,   DataType::String, DataType::Null};
-  const std::set<EncodingType> column_encoding_types = {EncodingType::Dictionary};
-  const std::vector<ColumnDataDistribution> column_data_distributions = {
+  const std::set<EncodingType> COLUMN_ENCODING_TYPES = {EncodingType::Dictionary};
+  const std::vector<ColumnDataDistribution> COLUMN_DATA_DISTRIBUTIONS = {
       ColumnDataDistribution::make_uniform_config(0.0, 1000.0)};
-  const std::set<ChunkOffset> chunk_sizes = {Chunk::DEFAULT_SIZE};
-  const std::set<int> row_counts = {1500, 3000, 6000, 10000, 20000, 30000, 60175, 25, 15000, 2000, 8000, 5, 100};
+  const std::set<ChunkOffset> CHUNK_SIZES = {Chunk::DEFAULT_SIZE};
+  const std::set<int> ROW_COUNTS = {1500, 3000, 6000, 10000, 20000, 30000, 60175, 25, 15000, 2000, 8000, 5, 100};
 
   // test data generation settings
-  constexpr bool generate_test_data = true;
-  constexpr BenchmarkType benchmark_type = BenchmarkType::TCPH;
-  constexpr float scale_factor = 0.01f;
-  constexpr int number_benchmark_executions = 1;
+  constexpr bool GENERATE_TEST_DATA = true;
+  constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
+  constexpr float SCALE_FACTOR = 0.01f;
+  constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
+
+  // Execute calibration
 
   auto table_config = std::make_shared<TableGeneratorConfig>(TableGeneratorConfig{
-      table_data_types, column_encoding_types, column_data_distributions, chunk_sizes, row_counts});
+      TABLE_DATA_TYPES, COLUMN_ENCODING_TYPES, COLUMN_DATA_DISTRIBUTIONS, CHUNK_SIZES, ROW_COUNTS});
 
   auto table_generator = CalibrationTableGenerator(table_config);
   const auto tables = table_generator.generate();
 
-  if (generate_test_data) {
-    auto benchmark_runner = CalibrationBenchmarkRunner(path_test);
-    benchmark_runner.run_benchmark(benchmark_type, scale_factor, number_benchmark_executions);
+  if (GENERATE_TEST_DATA) {
+    auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
+    benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
   }
 
-  const auto feature_exporter = OperatorFeatureExporter(path_train);
+  const auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
   auto lqp_generator = CalibrationLQPGenerator();
-  auto table_exporter = TableFeatureExporter(path_train);
+  auto table_exporter = TableFeatureExporter(PATH_TRAIN);
 
   for (const auto& table : tables) {
     Hyrise::get().storage_manager.add_table(table->get_name(), table->get_table());
@@ -60,7 +62,7 @@ int main() {
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
-    // Export LQP directly after generation
+    // Export PQP directly after generation
     feature_exporter.export_to_csv(pqp);
   }
 

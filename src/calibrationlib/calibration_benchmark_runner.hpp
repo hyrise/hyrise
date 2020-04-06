@@ -8,7 +8,7 @@
 #include "table_feature_exporter.hpp"
 
 namespace opossum {
-enum BenchmarkType { TCPH, TCPDS };
+enum BenchmarkType { TCPH };
 
 class CalibrationBenchmarkRunner {
  public:
@@ -24,6 +24,5 @@ class CalibrationBenchmarkRunner {
   std::shared_ptr<BenchmarkConfig> _config;
 
   std::shared_ptr<BenchmarkRunner> _build_tcph(const float scale_factor) const;
-  std::shared_ptr<BenchmarkRunner> _build_tcpds(const float scale_factor) const;
 };
 }  // namespace opossum
