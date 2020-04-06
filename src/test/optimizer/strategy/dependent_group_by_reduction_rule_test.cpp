@@ -101,21 +101,41 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   }
 }
 
-// Test that a removable column is removed when the single primary key column is present.
-// Check for the restored colum order.
+// Test that a removable column is removed when single primary key column is present.
+// Check for the restored column order.
 TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   // clang-format off
-  auto lqp =
-  AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)), stored_table_node_a);  // NOLINT
+  {
+    auto lqp =
+      AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_2)),
+        stored_table_node_a);  // NOLINT
 
-  const auto actual_lqp = apply_rule(rule, lqp);
+    const auto actual_lqp = apply_rule(rule, lqp);
 
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)),
-    AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)), stored_table_node_a));  // NOLINT
+    const auto expected_lqp =
+      ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_2)),
+      AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_2), any_(column_a_1)),
+        stored_table_node_a));  // NOLINT
+
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    auto lqp =
+      AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0),
+                                                sum_(column_a_1), sum_(column_a_2)), stored_table_node_a);  // NOLINT
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+
+    const auto expected_lqp =
+      ProjectionNode::make(
+      expression_vector(column_a_0, column_a_1, sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)),
+        AggregateNode::make(expression_vector(column_a_0),
+                          expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)),
+         stored_table_node_a));  // NOLINT
+
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
   // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 // Test that a non-primary-key column is not removed if the full unique constraint is not present in the group by list.

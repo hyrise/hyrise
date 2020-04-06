@@ -39,6 +39,7 @@ bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd, const Expres
   // Every column that is functionally dependent gets moved from
   // the group-by list to the aggregate list. For this purpose it is wrapped in an ANY() expression.
   for (const auto& group_by_column : group_by_columns) {
+    DebugAssert(std::dynamic_pointer_cast<LQPColumnExpression>(group_by_column), "Unexpected group-by-column type.");
     if (fd.second.contains(group_by_column)) {
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
@@ -91,7 +92,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // Gather group-by columns
     ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
     auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
-    std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx + 1,
+    std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx,
               std::inserter(group_by_columns, group_by_columns.end()));
 
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
