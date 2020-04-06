@@ -25,7 +25,4 @@ class NodePointerDeepEquality {
 
 using SQLPhysicalPlanCache = Cache<std::shared_ptr<AbstractOperator>, std::string>;
 using SQLLogicalPlanCache = Cache<std::shared_ptr<PreparedPlan>, std::shared_ptr<AbstractLQPNode>, NodePointerHash, NodePointerDeepEquality>;
-
-using cache_types::SQLLogicalPlanCache;
-using cache_types::SQLPhysicalPlanCache;
 }  // namespace opossum
