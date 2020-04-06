@@ -102,6 +102,28 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
+void SQLPipelineStatement::split_expression(std::shared_ptr<AbstractExpression> &expression,
+                                            std::vector<std::shared_ptr<AbstractExpression>>& values,
+                                            size_t next_parameter_id) {
+  if (expression->type == ExpressionType::Value) {
+    if (expression->replaced_by) {
+      const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
+      expression = expression->replaced_by;
+    } else {
+      const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
+      if (valexp->data_type() != DataType::Null) {
+        assert(expression->arguments.empty());
+        values.push_back(expression);
+        auto new_expression =
+            std::make_shared<TypedPlaceholderExpression>(next_parameter_id, expression->data_type());
+        expression->replaced_by = new_expression;
+        expression = new_expression;
+        next_parameter_id++;
+      }
+    }
+  }
+}
+
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(
     std::vector<std::shared_ptr<AbstractExpression>>& values) {
   auto& unoptimized_lqp = get_unoptimized_logical_plan();
@@ -113,23 +135,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       if (node) {
         for (auto& root_expression : node->node_expressions) {
           visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-            if (expression->type == ExpressionType::Value) {
-              if (expression->replaced_by) {
-                const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                expression = expression->replaced_by;
-              } else {
-                const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
-                if (valexp->data_type() != DataType::Null) {
-                  assert(expression->arguments.empty());
-                  values.push_back(expression);
-                  auto new_expression =
-                      std::make_shared<TypedPlaceholderExpression>(parameter_id, expression->data_type());
-                  expression->replaced_by = new_expression;
-                  expression = new_expression;
-                  parameter_id++;
-                }
-              }
-            }
+            SQLsplit_expression(expression, values);
             return ExpressionVisitation::VisitArguments;
           });
         }
