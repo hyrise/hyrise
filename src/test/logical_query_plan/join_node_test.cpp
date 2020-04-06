@@ -222,18 +222,16 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
   table->add_soft_unique_constraint({{ColumnID{0}}});
   table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
 
-  const auto stored_table_node_a = StoredTableNode::make(table_name);
-  const auto stored_table_node_b = StoredTableNode::make(table_name);
-  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 2); // a => (b,c) and (a,b) => c
-  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 2); // a => (b,c) and (a,b) => c
-  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node_a, ColumnID{0}));
-  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node_b, ColumnID{1}));
+  const auto stored_table_node = StoredTableNode::make(table_name);
+  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2); // a => (b,c) and (a,b) => c
+  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{0}));
+  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{1}));
 
   // Create JoinNode
   // clang-format off
-  const auto join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
-                                          stored_table_node_a,
-                                            stored_table_node_b);
+  const auto join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_a),
+                                          stored_table_node,
+                                            stored_table_node);
   // clang-format on
 
   EXPECT_EQ(join_node->functional_dependencies().size(), 2);
