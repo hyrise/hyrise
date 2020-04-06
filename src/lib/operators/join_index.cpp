@@ -477,16 +477,30 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   // We use `_probe_matches` to determine whether a tuple from the probe side found a match.
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+    if(_index_side == IndexSide::Right) {
+      const auto chunk_count = _probe_input_table->chunk_count();
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = _probe_input_table->get_chunk(chunk_id);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    const auto chunk_count = _probe_input_table->chunk_count();
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = _probe_input_table->get_chunk(chunk_id);
-      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+        const auto chunk_size = chunk->size();
+        for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+          if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
+            _probe_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+          }
+        }
+      }
+    } else { // INDEX SIDE LEFT
+      const auto chunk_count = _index_input_table->chunk_count();
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = _index_input_table->get_chunk(chunk_id);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-      const auto chunk_size = chunk->size();
-      for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
-          _probe_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+        const auto chunk_size = chunk->size();
+        for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+          if (_index_matches[chunk_id][chunk_offset] ^ invert) {
+            _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+          }
         }
       }
     }
