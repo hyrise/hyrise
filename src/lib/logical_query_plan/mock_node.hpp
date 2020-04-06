@@ -8,7 +8,6 @@
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
 #include "lqp_column_reference.hpp"
-#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "storage/constraints/table_constraint_definition.hpp"
 
 namespace opossum {
@@ -35,7 +34,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.

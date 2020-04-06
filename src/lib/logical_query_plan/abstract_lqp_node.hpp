@@ -7,7 +7,6 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -161,18 +160,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
-   * TODO(Julian)
-   * @return
-   */
-  [[nodiscard]] virtual const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const;
-
-  /**
-   * TODO(Julian)
-   * @return
-   */
-  [[nodiscard]] bool has_unique_constraint(ExpressionUnorderedSet column_expressions) const;
-
-  /**
    * @return The functional dependencies valid for this node
    */
   [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
@@ -216,7 +203,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
-  const std::shared_ptr<ExpressionsConstraintDefinitions> forward_constraints() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

@@ -77,52 +77,6 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressio
   return column_expressions;
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> AggregateNode::constraints() const {
-  auto aggregate_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
-
-  // (1) Create a unique constraint covering the group-by column(s).
-  // The set of group-by columns forms a candidate key for the output relation.
-  const auto group_by_columns_count = aggregate_expressions_begin_idx;
-  ExpressionUnorderedSet group_by_columns(group_by_columns_count);
-  std::copy_n(node_expressions.begin(), group_by_columns_count,
-              std::inserter(group_by_columns, group_by_columns.begin()));
-
-  // Create ExpressionsConstraintDefinition from column expressions
-  aggregate_lqp_constraints->emplace(group_by_columns);
-  // TODO(anyone) We also have a functional dependency here. Use it? (group_by_columns) => (aggregate_columns)
-
-  // (2) Check incoming constraints for validity and forward if applicable
-  // We call column_expressions() to avoid the (intermediate) ANY() aggregates
-  // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
-  const auto column_expressions_vec = column_expressions();
-  const auto column_expressions_set =
-      ExpressionUnorderedSet{column_expressions_vec.cbegin(), column_expressions_vec.cend()};
-
-  // Check each constraint for applicability
-  auto input_lqp_constraints = left_input()->constraints();
-  for (const auto& input_constraint : *input_lqp_constraints) {
-    // Ensure that we do not produce any duplicate constraints
-    bool constraint_already_exists = std::any_of(
-        aggregate_lqp_constraints->cbegin(), aggregate_lqp_constraints->cend(),
-        [&input_constraint](const auto& existing_constraint) { return input_constraint == existing_constraint; });
-    if (constraint_already_exists) continue;
-
-    // Check, whether involved column expressions are part of the AggregateNode's output expressions
-    bool found_all_column_expressions =
-        std::all_of(input_constraint.column_expressions.cbegin(), input_constraint.column_expressions.cend(),
-                    [&column_expressions_set](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-                      return column_expressions_set.contains(constraint_column_expr);
-                    });
-
-    if (found_all_column_expressions) {
-      // Forward constraint
-      aggregate_lqp_constraints->insert(input_constraint);
-    }
-  }
-
-  return aggregate_lqp_constraints;
-}
-
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
   Assert(left_input(), "Need left input to determine nullability");

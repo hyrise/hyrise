@@ -28,10 +28,6 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> PredicateNode::constraints() const {
-  return forward_constraints();
-}
-
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
 
 size_t PredicateNode::_on_shallow_hash() const { return boost::hash_value(scan_type); }
