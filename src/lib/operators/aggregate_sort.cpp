@@ -265,9 +265,8 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
   return segments;
 }
 
-std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
-    const std::shared_ptr<const Table>& input_table,
-    const std::optional<std::vector<ColumnID>>& table_value_clustered_by) {
+std::shared_ptr<Table> AggregateSort::_sort_within_chunks(const std::shared_ptr<const Table>& input_table,
+                                                          const std::vector<ColumnID>& groupby_column_ids) {
   auto sorted_table =
       std::make_shared<Table>(input_table->column_definitions(), input_table->type(), std::nullopt, UseMvcc::No);
 
@@ -281,7 +280,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     // sort whole table by sorting a single-chunk table
     auto input_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
     auto output_sorted_by = input_sorted_by;
-    for (const auto& column_id : _groupby_column_ids) {
+    for (const auto& column_id : groupby_column_ids) {
       auto skip_sorting = false;
       // Skip already sorted columns
       if (input_sorted_by) {
@@ -446,7 +445,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     if (table_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(),
                                               *(table_value_clustered_by->begin())) != _groupby_column_ids.end()) {
       // Sort input table chunk_wise consecutively by the group by columns (stable sort)
-      sorted_table = _sort_table_chunk_wise(input_table, table_value_clustered_by);
+      sorted_table = _sort_within_chunks(input_table, _groupby_column_ids);
     } else {
       // sort input table in whole consecutively by the group by columns
       for (const auto& column_id : _groupby_column_ids) {
