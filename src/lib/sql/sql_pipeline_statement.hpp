@@ -94,7 +94,8 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
   static void split_expression(std::shared_ptr<AbstractExpression> &expression,
-                               std::vector<std::shared_ptr<AbstractExpression>>& values);
+                               std::vector<std::shared_ptr<AbstractExpression>>& values,
+                               ParameterID &next_parameter_id);
   const std::shared_ptr<AbstractLQPNode>& get_split_unoptimized_logical_plan(
       std::vector<std::shared_ptr<AbstractExpression>>& values);
 

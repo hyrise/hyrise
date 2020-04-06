@@ -104,7 +104,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
 void SQLPipelineStatement::split_expression(std::shared_ptr<AbstractExpression> &expression,
                                             std::vector<std::shared_ptr<AbstractExpression>>& values,
-                                            size_t next_parameter_id) {
+                                            ParameterID &next_parameter_id) {
   if (expression->type == ExpressionType::Value) {
     if (expression->replaced_by) {
       const auto valexp = std::dynamic_pointer_cast<ValueExpression>(expression);
@@ -128,14 +128,14 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
     std::vector<std::shared_ptr<AbstractExpression>>& values) {
   auto& unoptimized_lqp = get_unoptimized_logical_plan();
 
-  ParameterID parameter_id(0);
+  ParameterID next_parameter_id(0);
 
   if (_translation_info.cacheable) {
-    visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+    visit_lqp(unoptimized_lqp, [&values, &next_parameter_id](const auto& node) {
       if (node) {
         for (auto& root_expression : node->node_expressions) {
-          visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-            SQLsplit_expression(expression, values);
+          visit_expression(root_expression, [&values, &next_parameter_id](auto& expression) {
+            split_expression(expression, values, next_parameter_id);
             return ExpressionVisitation::VisitArguments;
           });
         }
