@@ -92,7 +92,7 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
 
-  // optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>()); // TODO(Julian)
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
