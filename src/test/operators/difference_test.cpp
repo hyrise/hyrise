@@ -81,18 +81,18 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
 }
 
 TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
-  // Verify that the order_by flag is not set when it's not present in left input.
+  // Verify that the sorted_by flag is not set when it's not present in left input.
   const auto difference_unsorted = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference_unsorted->execute();
 
   const auto result_table_unsorted = difference_unsorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
-    EXPECT_FALSE(ordered_by);
+    const auto sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_FALSE(sorted_by);
   }
 
-  // Verify that the order_by flag is set when it's present in left input.
+  // Verify that the sorted_by flag is set when it's present in left input.
   const auto sort = std::make_shared<Sort>(_table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
   sort->execute();
 
@@ -102,11 +102,11 @@ TEST_F(OperatorsDifferenceTest, ForwardOrderByFlag) {
   const auto result_table_sorted = difference_sorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
-    ASSERT_TRUE(ordered_by);
-    const auto order_by_vector =
-        std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
-    EXPECT_EQ(ordered_by, order_by_vector);
+    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    ASSERT_TRUE(sorted_by);
+    const auto sorted_by_vector =
+        std::vector<std::pair<ColumnID, SortMode>>{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+    EXPECT_EQ(sorted_by, sorted_by_vector);
   }
 }
 

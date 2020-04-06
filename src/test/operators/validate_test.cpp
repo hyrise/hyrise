@@ -249,18 +249,18 @@ TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
   const auto result_table_unsorted = validate_unsorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
-    EXPECT_FALSE(ordered_by);
+    const auto sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_FALSE(sorted_by);
   }
 
-  // Verify that the order_by flag is set when it's present in left input.
+  // Verify that the sorted_by flag is set when it's present in left input.
   // Since Validate can not be executed after Sort, we need to load a sorted table.
   const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", 2);
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = sorted_table->get_chunk(chunk_id);
     if (!chunk) continue;
-    chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
+    chunk->set_sorted_by(std::make_pair(ColumnID(0), SortMode::Ascending));
   }
   const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
   sorted_table_wrapper->execute();
@@ -272,11 +272,11 @@ TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
   const auto result_table_sorted = validate_sorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
-    ASSERT_TRUE(ordered_by);
-    const auto order_by_vector =
-        std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
-    EXPECT_EQ(ordered_by, order_by_vector);
+    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    ASSERT_TRUE(sorted_by);
+    const auto sorted_by_vector =
+        std::vector<std::pair<ColumnID, SortMode>>{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+    EXPECT_EQ(sorted_by, sorted_by_vector);
   }
 }
 

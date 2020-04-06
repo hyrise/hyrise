@@ -145,10 +145,10 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // If the chunk was ordered before the difference operation
       // it also is afterwards
       const auto chunk = std::make_shared<Chunk>(output_segments);
-      const auto ordered_by = in_chunk->ordered_by();
-      if (ordered_by) {
+      const auto sorted_by = in_chunk->sorted_by();
+      if (sorted_by) {
         chunk->finalize();
-        chunk->set_ordered_by(*ordered_by);
+        chunk->set_sorted_by(*sorted_by);
       }
       output_chunks.emplace_back(chunk);
     }

@@ -117,7 +117,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
   Hyrise::get()
       .storage_manager.get_table("int_int")
       ->get_chunk(ChunkID{0})
-      ->set_ordered_by({ColumnID{1}, OrderByMode::Ascending});
+      ->set_sorted_by({ColumnID{1}, SortMode::Ascending});
 
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
   const auto meta_table = generate_meta_table(GetParam());

@@ -33,11 +33,11 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
   if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
     _scan_value_segment(*value_segment, chunk_id, *matches);
   } else {
-    const auto ordered_by = chunk->ordered_by();
-    if (ordered_by) {
-      for (const auto& order_by : *ordered_by) {
-        if (order_by.first == _column_id) {
-          _scan_generic_ordered_segment(*segment, chunk_id, *matches, order_by.second);
+    const auto sorted_by = chunk->sorted_by();
+    if (sorted_by) {
+      for (const auto& sorted_by : *sorted_by) {
+        if (sorted_by.column == _column_id) {
+          _scan_generic_ordered_segment(*segment, chunk_id, *matches, sorted_by.sort_mode);
           return matches;
         }
       }
@@ -60,8 +60,8 @@ void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment
 }
 
 void ColumnIsNullTableScanImpl::_scan_generic_ordered_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                              RowIDPosList& matches, const OrderByMode order_by) const {
-  const bool is_nulls_first = order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending;
+                                                              RowIDPosList& matches, const SortMode sorted_by) const {
+  const bool is_nulls_first = sorted_by == SortMode::Ascending || sorted_by == SortMode::Descending;
   const bool predicate_is_null = _predicate_condition == PredicateCondition::IsNull;
   segment_with_iterators(segment, [&](auto begin, auto end) {
     if (is_nulls_first) {

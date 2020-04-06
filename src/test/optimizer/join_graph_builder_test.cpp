@@ -41,7 +41,7 @@ TEST_F(JoinGraphBuilderTest, None) {
 
   // clang-format off
   const auto lqp =
-  SortNode::make(expression_vector(a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+  SortNode::make(expression_vector(a_a), std::vector<SortMode>{SortMode::Ascending},
     PredicateNode::make(equals_(a_a, b_a),
       JoinNode::make(JoinMode::Inner, greater_than_(b_b, a_b),
         node_a,
@@ -55,7 +55,7 @@ TEST_F(JoinGraphBuilderTest, None) {
 TEST_F(JoinGraphBuilderTest, Basic) {
   // clang-format off
   const auto sort_node =
-  SortNode::make(expression_vector(a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+  SortNode::make(expression_vector(a_a), std::vector<SortMode>{SortMode::Ascending},
     node_a);
 
   const auto lqp =

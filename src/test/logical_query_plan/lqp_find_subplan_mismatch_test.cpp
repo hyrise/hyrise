@@ -77,7 +77,7 @@ class LQPFindSubplanMismatchTest : public BaseTest {
         AggregateNode::make(expression_vector(query_nodes.table_c_b), expression_vector(sum_(query_nodes.table_c_a)));
 
     query_nodes.sort_node =
-        SortNode::make(expression_vector(query_nodes.table_c_b), std::vector<OrderByMode>{OrderByMode::Ascending});
+        SortNode::make(expression_vector(query_nodes.table_c_b), std::vector<SortMode>{SortMode::Ascending});
     query_nodes.projection_node = ProjectionNode::make(expression_vector(query_nodes.table_a_a));
   }
 

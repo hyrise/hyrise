@@ -154,7 +154,7 @@ class SQLTranslator final {
   void _translate_select_groupby_having(const hsql::SelectStatement& select,
                                         const std::vector<SelectListElement>& select_list_elements);
 
-  void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
+  void _translate_sorted_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
 
   std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);

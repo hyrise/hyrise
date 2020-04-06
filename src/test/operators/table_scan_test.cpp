@@ -53,7 +53,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> load_and_encode_table(
       const std::string& path, const ChunkOffset chunk_size = 2,
-      const std::optional<std::vector<std::pair<ColumnID, OrderByMode>>> ordered_by = std::nullopt) {
+      const std::optional<std::vector<std::pair<ColumnID, SortMode>>> sorted_by = std::nullopt) {
     const auto table = load_table(path, chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{};
@@ -67,13 +67,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
 
-    if (ordered_by) {
+    if (sorted_by) {
       const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
         if (!chunk) continue;
 
-        chunk->set_ordered_by(ordered_by.value());
+        chunk->set_sorted_by(sorted_by.value());
       }
     }
 
@@ -89,12 +89,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
     return load_and_encode_table("resources/test_data/tbl/int_sorted.tbl", 4,
-                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), OrderByMode::Ascending)}));
+                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
     return load_and_encode_table("resources/test_data/tbl/int_only_null.tbl", 4,
-                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), OrderByMode::Ascending)}));
+                                 std::make_optional(std::vector{std::make_pair(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_string_op() {
@@ -251,17 +251,17 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  void scan_and_check_order_by(const std::shared_ptr<TableWrapper> table_wrapper) const {
+  void scan_and_check_sorted_by(const std::shared_ptr<TableWrapper> table_wrapper) const {
     const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
     scan_sorted->execute();
     const auto result_table_sorted = scan_sorted->get_output();
 
     for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-      const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
-      ASSERT_TRUE(ordered_by);
-      const auto order_by_vector =
-          std::vector<std::pair<ColumnID, OrderByMode>>{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
-      EXPECT_EQ(ordered_by, order_by_vector);
+      const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+      ASSERT_TRUE(sorted_by);
+      const auto sorted_by_vector =
+          std::vector<std::pair<ColumnID, SortMode>>{std::make_pair(ColumnID{0}, SortMode::Ascending)};
+      EXPECT_EQ(sorted_by, sorted_by_vector);
     }
   }
 
@@ -679,7 +679,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Ascending));
+  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::Ascending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -693,7 +693,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsLast) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_nulls_last_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::AscendingNullsLast));
+  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::AscendingNullsLast));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -707,7 +707,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsL
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::Descending));
+  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::Descending));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -721,7 +721,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegmentsNullsLast) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_nulls_last_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_ordered_by(std::make_pair(ColumnID{1}, OrderByMode::DescendingNullsLast));
+  table->get_chunk(ChunkID{0})->set_sorted_by(std::make_pair(ColumnID{1}, SortMode::DescendingNullsLast));
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -1143,14 +1143,14 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
 }
 
 /**
- * Tests for ordered_by flag forwarding by sort operators
+ * Tests for sorted_by flag forwarding by sort operators
  *
  * Not all operators forward the sorted flag.
  * Note that sortedness being forwarded by table scan is implementation defined.
  * Not all operators forward sortedness and end up with results that are unsorted.
  */
 TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
-  // Verify that the order_by flag is not set when it's not present in left input.
+  // Verify that the sorted_by flag is not set when it's not present in left input.
   const auto scan_unsorted =
       create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_unsorted->execute();
@@ -1158,24 +1158,24 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
   const auto result_table_unsorted = scan_unsorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
-    EXPECT_FALSE(ordered_by);
+    const auto sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_FALSE(sorted_by);
   }
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
-  // Verify that the order_by flag is set when it's present in left input.
-  scan_and_check_order_by(get_int_sorted_op());
+  // Verify that the sorted_by flag is set when it's present in left input.
+  scan_and_check_sorted_by(get_int_sorted_op());
 }
 
 TEST_P(OperatorsTableScanTest, ForwardOrderByFlagReferencing) {
-  // Verify that the order_by flag is set when it's present in left input (referencing table).
+  // Verify that the sorted_by flag is set when it's present in left input (referencing table).
   const auto table = get_int_sorted_op()->table;
 
   auto referencing_table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   referencing_table_wrapper->execute();
 
-  scan_and_check_order_by(referencing_table_wrapper);
+  scan_and_check_sorted_by(referencing_table_wrapper);
 }
 
 }  // namespace opossum

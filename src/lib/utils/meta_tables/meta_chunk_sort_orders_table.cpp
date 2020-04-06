@@ -27,13 +27,13 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      const auto& ordered_by = chunk->ordered_by();
-      if (ordered_by) {
-        for (const auto& [ordered_by_column_id, ordered_by_mode] : *ordered_by) {
-          std::stringstream order_by_mode_stream;
-          order_by_mode_stream << ordered_by_mode;
+      const auto& sorted_by = chunk->sorted_by();
+      if (sorted_by) {
+        for (const auto& [sorted_by_column_id, sort_mode] : *sorted_by) {
+          std::stringstream sort_mode_stream;
+          sort_mode_stream << sort_mode;
           output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id),
-                                static_cast<int32_t>(ordered_by_column_id), pmr_string{order_by_mode_stream.str()}});
+                                static_cast<int32_t>(sorted_by_column_id), pmr_string{sort_mode_stream.str()}});
         }
       }
     }

@@ -15,7 +15,6 @@
 #include "all_type_variant.hpp"
 #include "index/segment_index_type.hpp"
 #include "mvcc_data.hpp"
-#include "operators/sort.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
@@ -146,15 +145,15 @@ class Chunk : private Noncopyable {
    * the ColumnIDs of the segments by which it is sorted will be returned.
    *
    * In a chunk, multiple segments may be ordered independently. For example, in a table storing ordered,
-   * both the order id and date of incoming orders have incrementing values. In this case, ordered_by
+   * both the order id and date of incoming orders have incrementing values. In this case, sorted_by
    * has two entries. However, for cases where the data is first orderered by one column, then by another
    * (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
    *
    * This is currently taken advantage of in, e.g., the ColumnVsValueScan. See #1519 for more details.
    */
-  const std::optional<std::vector<SortColumnDefinition>>& ordered_by() const;
-  void set_ordered_by(const SortColumnDefinition& ordered_by);
-  void set_ordered_by(const std::vector<SortColumnDefinition>& ordered_by);
+  const std::optional<std::vector<SortColumnDefinition>>& sorted_by() const;
+  void set_sorted_by(const SortColumnDefinition& sorted_by);
+  void set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by);
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
@@ -196,7 +195,7 @@ class Chunk : private Noncopyable {
   Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
-  std::optional<std::vector<SortColumnDefinition>> _ordered_by;
+  std::optional<std::vector<SortColumnDefinition>> _sorted_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
   // Default value of zero means "not set"

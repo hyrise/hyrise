@@ -180,24 +180,24 @@ class AggregateSortedTest : public BaseTest {
   }
 
  protected:
-  void test_ordered_by_flag_set_correctly(const std::shared_ptr<Table> test_table) {
+  void test_sorted_by_flag_set_correctly(const std::shared_ptr<Table> test_table) {
     const auto chunk_count = test_table->chunk_count();
     for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = test_table->get_chunk(chunk_id);
-      const auto ordered_by_vector = chunk->ordered_by();
-      if (ordered_by_vector) {
-        const auto ordered_by = ordered_by_vector->front();
-        const auto ordered_segment = chunk->get_segment(ordered_by.first);
+      const auto sorted_by_vector = chunk->sorted_by();
+      if (sorted_by_vector) {
+        const auto sorted_by = sorted_by_vector->front();
+        const auto ordered_segment = chunk->get_segment(sorted_by.first);
         segment_with_iterators(*ordered_segment, [&](auto it, auto end) {
           it++;
           auto prev_iterator = --it;
-          if (ordered_by.second == OrderByMode::Ascending || ordered_by.second == OrderByMode::AscendingNullsLast) {
+          if (sorted_by.second == SortMode::Ascending || sorted_by.second == SortMode::AscendingNullsLast) {
             while (it != end) {
               EXPECT_TRUE(it->value() >= prev_iterator->value());
               ++it;
             }
-          } else if (ordered_by.second == OrderByMode::Descending ||
-                     ordered_by.second == OrderByMode::DescendingNullsLast) {
+          } else if (sorted_by.second == SortMode::Descending ||
+                     sorted_by.second == SortMode::DescendingNullsLast) {
             while (it != end) {
               EXPECT_TRUE(it->value() <= prev_iterator->value());
               ++it;
@@ -966,15 +966,15 @@ TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
 
   const auto chunk_count = aggregate->get_output()->chunk_count();
 
-  // Chunks are ordered by groupby_column_ids. Default OrderByMode is Ascending
-  const auto expected_ordered_by = std::make_pair(ColumnID{2}, OrderByMode::Ascending);
+  // Chunks are ordered by groupby_column_ids. Default SortMode is Ascending
+  const auto expected_sorted_by = std::make_pair(ColumnID{2}, SortMode::Ascending);
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = aggregate->get_output()->get_chunk(chunk_id);
-    const auto ordered_by = chunk->ordered_by();
+    const auto sorted_by = chunk->sorted_by();
 
-    for (auto& order : *ordered_by) {
-      EXPECT_EQ(order, expected_ordered_by);
+    for (auto& order : *sorted_by) {
+      EXPECT_EQ(order, expected_sorted_by);
     }
   }
 }

@@ -63,7 +63,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
-      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}}, 2u);
+      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -79,7 +79,7 @@ TEST_P(OperatorsSortTest, AscendingSortOFilteredColumn) {
   scan->execute();
 
   auto sort = std::make_shared<Sort>(
-      scan, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}}, 2u);
+      scan, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -89,7 +89,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
-      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}});
+      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}});
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -99,12 +99,12 @@ TEST_P(OperatorsSortTest, DoubleSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort1 = std::make_shared<Sort>(
-      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}},
+      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Descending}},
       2u);
   sort1->execute();
 
   auto sort2 = std::make_shared<Sort>(
-      sort1, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}}, 2u);
+      sort1, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}}, 2u);
   sort2->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort2->get_output(), expected_result);
@@ -114,7 +114,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
-      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}},
+      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Descending}},
       2u);
   sort->execute();
 
@@ -128,8 +128,8 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStable) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float2_sorted.tbl", 2);
 
   auto sort_definitions =
-      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
-                                         SortColumnDefinition{ColumnID{1}, OrderByMode::Ascending}}};
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},
+                                         SortColumnDefinition{ColumnID{1}, SortMode::Ascending}}};
   auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
   sort->execute();
 
@@ -143,8 +143,8 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float2_sorted_mixed.tbl", 2);
 
   auto sort_definitions =
-      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
-                                         SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
+      std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},
+                                         SortColumnDefinition{ColumnID{1}, SortMode::Descending}}};
   auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, 2u);
   sort->execute();
 
@@ -155,7 +155,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
-      _table_wrapper_null, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}},
+      _table_wrapper_null, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},
       2u);
   sort->execute();
 
@@ -167,7 +167,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
 
   auto sort = std::make_shared<Sort>(
       _table_wrapper_null,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}, 2u);
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Descending}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -179,7 +179,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
 
   auto sort = std::make_shared<Sort>(
       _table_wrapper_null,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::AscendingNullsLast}}, 2u);
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::AscendingNullsLast}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -191,7 +191,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
 
   auto sort = std::make_shared<Sort>(
       _table_wrapper_null,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::DescendingNullsLast}}, 2u);
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::DescendingNullsLast}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -202,7 +202,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegmentWithNull) {
 
   auto sort = std::make_shared<Sort>(
       _table_wrapper_null_dict,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}}, 2u);
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -213,7 +213,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegmentWithNull) {
 
   auto sort = std::make_shared<Sort>(
       _table_wrapper_null_dict,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}, 2u);
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Descending}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -223,7 +223,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
-      _table_wrapper_dict, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}},
+      _table_wrapper_dict, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},
       2u);
   sort->execute();
 
@@ -235,7 +235,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
 
   auto sort = std::make_shared<Sort>(
       _table_wrapper_dict,
-      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}, 2u);
+      std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Descending}}, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
@@ -248,7 +248,7 @@ TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
   join->execute();
 
   auto sort = std::make_shared<Sort>(
-      join, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}});
+      join, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}});
   sort->execute();
 
   std::shared_ptr<Table> expected_result =

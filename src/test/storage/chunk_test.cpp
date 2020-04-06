@@ -218,21 +218,21 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 }
 
 TEST_F(StorageChunkTest, OrderedBy) {
-  EXPECT_EQ(chunk->ordered_by(), std::nullopt);
-  auto ordered_by_vector = std::vector{std::make_pair(ColumnID{0}, OrderByMode::Ascending)};
+  EXPECT_EQ(chunk->sorted_by(), std::nullopt);
+  auto sorted_by_vector = std::vector{std::make_pair(ColumnID{0}, SortMode::Ascending)};
   chunk->finalize();
-  chunk->set_ordered_by(ordered_by_vector);
-  EXPECT_EQ(chunk->ordered_by(), ordered_by_vector);
+  chunk->set_sorted_by(sorted_by_vector);
+  EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
 
-  ordered_by_vector = {std::make_pair(ColumnID{0}, OrderByMode::Ascending),
-                       std::make_pair(ColumnID{1}, OrderByMode::Descending)};
-  chunk->set_ordered_by(ordered_by_vector);
-  EXPECT_EQ(chunk->ordered_by(), ordered_by_vector);
+  sorted_by_vector = {std::make_pair(ColumnID{0}, SortMode::Ascending),
+                       std::make_pair(ColumnID{1}, SortMode::Descending)};
+  chunk->set_sorted_by(sorted_by_vector);
+  EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
 
-  const auto ordered_by_pair = std::make_pair(ColumnID{0}, OrderByMode::Ascending);
-  chunk->set_ordered_by(ordered_by_pair);
-  ordered_by_vector = std::vector{ordered_by_pair};
-  EXPECT_EQ(chunk->ordered_by(), ordered_by_vector);
+  const auto sorted_by_pair = std::make_pair(ColumnID{0}, SortMode::Ascending);
+  chunk->set_sorted_by(sorted_by_pair);
+  sorted_by_vector = std::vector{sorted_by_pair};
+  EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
 }
 
 }  // namespace opossum

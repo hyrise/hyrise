@@ -193,18 +193,18 @@ TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
 }
 
 TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
-  // Verify that the order_by flag is not set when it's not present in left input.
+  // Verify that the sorted_by flag is not set when it's not present in left input.
   const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
   projection_a_unsorted->execute();
 
   const auto result_table_unsorted = projection_a_unsorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_unsorted->get_chunk(chunk_id)->ordered_by();
-    EXPECT_FALSE(ordered_by);
+    const auto sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_FALSE(sorted_by);
   }
 
-  // Verify that the order_by flag is set when it's present in left input.
+  // Verify that the sorted_by flag is set when it's present in left input.
   // sorting on column a (ColumnID 0)
   const auto sort = std::make_shared<Sort>(table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
   sort->execute();
@@ -215,12 +215,12 @@ TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
   const auto result_table_sorted = projection_b_a_sorted->get_output();
 
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto ordered_by = result_table_sorted->get_chunk(chunk_id)->ordered_by();
-    ASSERT_TRUE(ordered_by);
+    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    ASSERT_TRUE(sorted_by);
     // Expect sort to be column a, now with ColumnID 1
-    const auto expected_order_by =
+    const auto expected_sorted_by =
         std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};
-    EXPECT_EQ(ordered_by, expected_order_by);
+    EXPECT_EQ(sorted_by, expected_sorted_by);
   }
 }
 

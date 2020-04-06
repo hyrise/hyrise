@@ -216,15 +216,15 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
-const std::optional<std::vector<SortColumnDefinition>>& Chunk::ordered_by() const { return _ordered_by; }
+const std::optional<std::vector<SortColumnDefinition>>& Chunk::sorted_by() const { return _sorted_by; }
 
-void Chunk::set_ordered_by(const SortColumnDefinition& ordered_by) {
-  set_ordered_by(std::vector<SortColumnDefinition>{ordered_by});
+void Chunk::set_sorted_by(const SortColumnDefinition& sorted_by) {
+  set_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
 }
 
-void Chunk::set_ordered_by(const std::vector<SortColumnDefinition>& ordered_by) {
-  Assert(!is_mutable(), "Cannot set ordered_by on mutable chunks.");
-  _ordered_by = ordered_by;
+void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
+  Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
+  _sorted_by = sorted_by;
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {

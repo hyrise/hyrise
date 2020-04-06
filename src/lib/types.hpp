@@ -208,7 +208,7 @@ enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue
 
 enum class UnionMode { Positions, All };
 
-enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
+enum class SortMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
 
@@ -243,18 +243,28 @@ class Noncopyable {
 struct Null {};
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<OrderByMode, std::string> order_by_mode_to_string;
+extern const boost::bimap<SortMode, std::string> sort_mode_to_string;
 extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
 extern const boost::bimap<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
-std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
+std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
 std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
 using BoolAsByteType = uint8_t;
+
+// Defines in which order a certain column should be or is sorted.
+struct SortColumnDefinition final {
+  explicit SortColumnDefinition(const ColumnID& init_column,
+                                const SortMode init_sort_mode = SortMode::Ascending)
+      : column(init_column), sort_mode(init_sort_mode) {}
+
+  const ColumnID column;
+  const SortMode sort_mode;
+};
 
 }  // namespace opossum
 

@@ -18,7 +18,7 @@ namespace opossum {
 template <typename IteratorType, typename SearchValueType>
 class SortedSegmentSearch {
  public:
-  SortedSegmentSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by, const bool nullable,
+  SortedSegmentSearch(IteratorType begin, IteratorType end, const SortMode& sorted_by, const bool nullable,
                       const PredicateCondition& predicate_condition, const SearchValueType& search_value)
       : _begin{begin},
         _end{end},
@@ -26,11 +26,11 @@ class SortedSegmentSearch {
         _first_search_value{search_value},
         _second_search_value{std::nullopt},
         _nullable{nullable},
-        _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
+        _is_ascending{sorted_by == SortMode::Ascending || sorted_by == SortMode::AscendingNullsLast},
+        _is_nulls_first{sorted_by == SortMode::Ascending || sorted_by == SortMode::Descending} {}
 
   // For SortedSegmentBetweenSearch
-  SortedSegmentSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by, const bool nullable,
+  SortedSegmentSearch(IteratorType begin, IteratorType end, const SortMode& sorted_by, const bool nullable,
                       const PredicateCondition& predicate_condition, const SearchValueType& left_value,
                       const SearchValueType& right_value)
       : _begin{begin},
@@ -39,8 +39,8 @@ class SortedSegmentSearch {
         _first_search_value{left_value},
         _second_search_value{right_value},
         _nullable{nullable},
-        _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
+        _is_ascending{sorted_by == SortMode::Ascending || sorted_by == SortMode::AscendingNullsLast},
+        _is_nulls_first{sorted_by == SortMode::Ascending || sorted_by == SortMode::Descending} {}
 
  private:
   /**

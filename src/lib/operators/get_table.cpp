@@ -172,8 +172,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
     // pruned and will be set on the output chunk.
-    const auto& current_chunk_order = stored_chunk->ordered_by();
-    std::optional<std::pair<ColumnID, OrderByMode>> adapted_chunk_order;
+    const auto& current_chunk_order = stored_chunk->sorted_by();
+    std::optional<SortColumnDefinition> adapted_chunk_order;
 
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
@@ -191,11 +191,11 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         if (current_chunk_order) {
-          for (const auto& ordered_by : *current_chunk_order) {
-            if (ordered_by.first == stored_column_id) {
+          for (const auto& sorted_by : *current_chunk_order) {
+            if (sorted_by.column == stored_column_id) {
               const auto columns_pruned_so_far = std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter);
-              adapted_chunk_order = {ColumnID{static_cast<uint16_t>(stored_column_id - columns_pruned_so_far)},
-                                     ordered_by.second};
+              adapted_chunk_order = SortColumnDefinition(ColumnID{static_cast<uint16_t>(stored_column_id - columns_pruned_so_far)},
+                                                         sorted_by.sort_mode);
             }
           }
         }
@@ -215,7 +215,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         // Finalizing the output chunk here is safe because this path is only taken for
         // a sorted chunk. Chunks should never be sorted when they are still mutable
         (*output_chunks_iter)->finalize();
-        (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
+        (*output_chunks_iter)->set_sorted_by(*adapted_chunk_order);
       }
 
       // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this

@@ -953,8 +953,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
             _secondary_join_predicates.empty()) {
           output_chunk->finalize();
           // The join columns are sorted ascending (ensured by radix_cluster_sort)
-          output_chunk->set_ordered_by({std::make_pair(first_join_column, OrderByMode::Ascending),
-                                        std::make_pair(second_join_column, OrderByMode::Ascending)});
+          output_chunk->set_sorted_by({SortColumnDefinition(first_join_column, SortMode::Ascending),
+                                       SortColumnDefinition(second_join_column, SortMode::Ascending)});
         }
         output_chunks[pos_list_id] = output_chunk;
       };

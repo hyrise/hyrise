@@ -279,14 +279,14 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
                                                             std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
 
     // all sort operator on single-chunk table
-    auto input_order_by = input_table->get_chunk(chunk_id)->ordered_by();
-    auto output_order_by = input_order_by;
+    auto input_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
+    auto output_sorted_by = input_sorted_by;
     for (const auto& column_id : _groupby_column_ids) {
       auto skip_sorting = false;
       // Skip already sorted columns
-      if (input_order_by) {
-        for (const auto& ordered_by : *input_order_by) {
-          if (ordered_by.first == column_id) {
+      if (input_sorted_by) {
+        for (const auto& sorted_by : *input_sorted_by) {
+          if (sorted_by.column == column_id) {
             skip_sorting = true;
             break;
           }
@@ -301,7 +301,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
             std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
         sort->execute();
         single_chunk_table = sort->get_output();
-        output_order_by = {std::pair<ColumnID, OrderByMode>(std::make_pair(column_id, OrderByMode::Ascending))};
+        output_sorted_by = std::vector<opossum::SortColumnDefinition>{SortColumnDefinition(column_id, SortMode::Ascending)};
       }
     }
 
@@ -311,7 +311,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(
     sorted_table->append_chunk(_get_segments_of_chunk(single_chunk_table, ChunkID{0}));
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->finalize();
-    added_chunk->set_ordered_by(*output_order_by);
+    added_chunk->set_sorted_by(*output_sorted_by);
   }
 
   return sorted_table;
@@ -462,8 +462,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         last_chunk->finalize();
       }
       // If the last column is sorted here, it needs to be set accordingly.
-      // This overrides order_by on purpose (only the last order prevails).
-      last_chunk->set_ordered_by(std::make_pair(_groupby_column_ids.back(), OrderByMode::Ascending));
+      // This overrides sorted_by on purpose (only the last order prevails).
+      last_chunk->set_sorted_by(SortColumnDefinition(_groupby_column_ids.back(), SortMode::Ascending));
     }
   }
 
@@ -674,10 +674,10 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   result_table->append_chunk(_output_segments);
 
   const auto chunk = result_table->last_chunk();
-  auto order_by = sorted_table->get_chunk(ChunkID{0})->ordered_by();
-  if (order_by) {
+  auto sorted_by = sorted_table->get_chunk(ChunkID{0})->sorted_by();
+  if (sorted_by) {
     chunk->finalize();
-    chunk->set_ordered_by(*order_by);
+    chunk->set_sorted_by(*sorted_by);
   }
 
   return result_table;
