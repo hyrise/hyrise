@@ -3,6 +3,7 @@
 
 #include "base_test.hpp"
 
+#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -205,6 +206,45 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{3}));
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
+
+TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
+  // In case of e.g. self-joins there might be FD duplicates, which have to be sorted out correctly.
+
+  // Create a tables of 3 columns (a, b, c) where the last column of which is nullable (c)
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, false},
+      {"b", DataType::Int, false},
+      {"c", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  const auto table_name = "table";
+  Hyrise::get().storage_manager.add_table(table_name, table);
+
+  // Add unique constraints
+  table->add_soft_unique_constraint({{ColumnID{0}}});
+  table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
+
+  const auto stored_table_node_a = StoredTableNode::make(table_name);
+  const auto stored_table_node_b = StoredTableNode::make(table_name);
+  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 2); // a => (b,c) and (a,b) => c
+  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 2); // a => (b,c) and (a,b) => c
+  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node_a, ColumnID{0}));
+  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node_b, ColumnID{1}));
+
+  // Create JoinNode
+  // clang-format off
+  const auto join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
+                                          stored_table_node_a,
+                                            stored_table_node_b);
+  // clang-format on
+
+  EXPECT_EQ(join_node->functional_dependencies().size(), 2);
+}
+
+TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
+
+
+}
+
+
 
 TEST_F(JoinNodeTest, ConstraintsSemiAndAntiJoins) {
   _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
