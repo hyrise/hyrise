@@ -13,13 +13,17 @@ target_link_libraries(
 add_executable(
     hyrisePlayground
 
+    clustering/util.cpp
+    clustering/util.hpp
     playground.cpp
 )
 
 target_link_libraries(
     hyrisePlayground
+
     hyrise
     hyriseBenchmarkLib
+    nlohmann_json::nlohmann_json
 )
 
 # Configure client
