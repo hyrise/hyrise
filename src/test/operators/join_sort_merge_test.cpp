@@ -91,7 +91,7 @@ TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
   const auto test_input = std::make_shared<TableWrapper>(test_table);
 
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals};
-  const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Left, primary_predicate);
+  const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Inner, primary_predicate);
 
   test_input->execute();
   join_operator->execute();
