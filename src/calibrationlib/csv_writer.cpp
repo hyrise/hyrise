@@ -57,7 +57,7 @@ CSVWriter::CSVWriter(
                 return correct_header;
               })(),
               "\nCSV Writer ERROR: Provided headers for file '" + _file_path +
-                  "' does not match with existing headers. \n" + "Please validate headers for this CSVFile.");
+                  "' does not match with existing headers. \n" + "Please validate the provided headers.");
 }
 
 void CSVWriter::write_row() {

@@ -6,7 +6,8 @@ CalibrationTableWrapper::CalibrationTableWrapper(
     const std::shared_ptr<Table> table, const std::string& table_name,
     const std::vector<ColumnDataDistribution> column_data_distribution_collection)
     : _table(table), _name(table_name), _column_data_distribution_collection(column_data_distribution_collection) {
-  assert(table->column_count() == column_data_distribution_collection.size());
+  Assert(table->column_count() == column_data_distribution_collection.size(),
+         "Number of column data distributions must equal the number of columns.");
 }
 
 CalibrationTableWrapper::CalibrationTableWrapper(const std::shared_ptr<Table> table, const std::string& table_name)
