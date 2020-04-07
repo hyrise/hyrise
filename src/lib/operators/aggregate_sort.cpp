@@ -443,29 +443,44 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
      * to achieve the value clustering we need.
      */
-    if (table_value_clustered_by && std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(),
-                                              *(table_value_clustered_by->begin())) != _groupby_column_ids.end()) {
-      // Sort input table chunk_wise consecutively by the group by columns (stable sort)
-      sorted_table = _sort_within_chunks(input_table, _groupby_column_ids);
-    } else {
-      // sort input table in whole consecutively by the group by columns
-      for (const auto& column_id : _groupby_column_ids) {
-        auto table_wrapper = std::make_shared<TableWrapper>(sorted_table);
-        table_wrapper->execute();
-        auto sort =
-            std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
-        sort->execute();
-        sorted_table = sort->get_output();
+
+    bool is_grouped_by_all_value_clustered_segments = false;
+    if (table_value_clustered_by) {
+
+      for (auto& value_clustered_by : *table_value_clustered_by) {
+        if (std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+                      value_clustered_by) != _groupby_column_ids.end()) {
+          is_grouped_by_all_value_clustered_segments = true;
+        } else {
+          is_grouped_by_all_value_clustered_segments = false;
+          break;
+        }
       }
-      auto last_chunk = sorted_table->last_chunk();
-      if (last_chunk->is_mutable()) {
-        last_chunk->finalize();
+
+      if (is_grouped_by_all_value_clustered_segments) {
+        // Sort input table chunk_wise consecutively by the group by columns (stable sort)
+        sorted_table = _sort_within_chunks(input_table, _groupby_column_ids);
       }
-      // If the last column is sorted here, it needs to be set accordingly.
-      // This overrides sorted_by on purpose (only the last order prevails).
-      last_chunk->set_sorted_by(SortColumnDefinition(_groupby_column_ids.back(), SortMode::Ascending));
     }
-  }
+    if (!table_value_clustered_by || !is_grouped_by_all_value_clustered_segments) {
+        // sort input table in whole consecutively by the group by columns
+        for (const auto& column_id : _groupby_column_ids) {
+          auto table_wrapper = std::make_shared<TableWrapper>(sorted_table);
+          table_wrapper->execute();
+          auto sort =
+              std::make_shared<Sort>(table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
+          sort->execute();
+          sorted_table = sort->get_output();
+        }
+        auto last_chunk = sorted_table->last_chunk();
+        if (last_chunk->is_mutable()) {
+          last_chunk->finalize();
+        }
+        // If the last column is sorted here, it needs to be set accordingly.
+        // This overrides sorted_by on purpose (only the last order prevails).
+        last_chunk->set_sorted_by(SortColumnDefinition(_groupby_column_ids.back(), SortMode::Ascending));
+      }
+    }
 
   _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
 
