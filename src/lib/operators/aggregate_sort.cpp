@@ -128,7 +128,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
     auto group_boundary_iter = group_boundaries.cbegin();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto segment = sorted_table->get_chunk(chunk_id)->get_segment(input_column_id);
-      segment_iterate<ColumnType>(*segment, [&](const auto& position) {
+      segment_iterate<ColumnType>(*segment, [&](const auto position) {
         const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
         const auto is_new_group = group_boundary_iter != group_boundaries.cend() && row_id == *group_boundary_iter;
         const auto& new_value = position.value();
@@ -431,7 +431,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       // Iterate over all chunks and insert RowIDs when values change
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
-        segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+        segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
           if (previous_value.has_value() == position.is_null() ||
               (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
             group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});

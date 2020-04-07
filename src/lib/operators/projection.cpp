@@ -167,7 +167,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                 input_table.column_is_nullable(pqp_column_expression->column_id) ? segment->size() : 0);
 
             auto chunk_offset = ChunkOffset{0};
-            segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
+            segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
               if (position.is_null()) {
                 DebugAssert(!null_values.empty(), "Mismatching NULL information");
                 has_null = true;
