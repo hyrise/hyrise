@@ -106,6 +106,9 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
+
+  // AccessCounters rely on segment implementation.
+  // meta_segments*.tbl is expected to become outdated on segment changes.
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
