@@ -12,12 +12,9 @@ class StaticTableNodeTest : public BaseTest {
   void SetUp() override {
     column_definitions.emplace_back("a", DataType::Int, false);
     column_definitions.emplace_back("b", DataType::Float, true);
-    dummy_table = Table::create_dummy_table(column_definitions);
-
-    static_table_node = StaticTableNode::make(dummy_table);
+    static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   }
 
-  std::shared_ptr<Table> dummy_table;
   TableColumnDefinitions column_definitions;
   std::shared_ptr<StaticTableNode> static_table_node;
 };
