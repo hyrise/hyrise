@@ -114,7 +114,7 @@ int64_t MetaSystemUtilizationTable::_get_total_time() {
   }
 
   const auto total_ns = time_spec.tv_sec * std::nano::den + time_spec.tv_nsec;
-  
+
   return total_ns;
 #endif
 
@@ -130,10 +130,12 @@ int64_t MetaSystemUtilizationTable::_get_total_time() {
 }
 
 /*
- * Returns the time in ns that ALL processes have spend on the CPU 
- * since an arbitrary point in the past. 
+ * Returns the time in ns that ALL processes have spend on the CPU
+ * since an arbitrary point in the past.
 */
 int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
+// The amount of time is measured in units of clock ticks.
+// sysconf(_SC_CLK_TCK) can be used to obtain the right value.
 #ifdef __linux__
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
@@ -145,9 +147,6 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   std::string cpu_line;
   std::getline(stat_file, cpu_line);
   stat_file.close();
-
-  // The amount of time is measured in units of USER_HZ (clock ticks).
-  // sysconf(_SC_CLK_TCK) can be used to obtain the right value.
 
   const auto cpu_ticks = _get_values(cpu_line);
 
@@ -176,24 +175,12 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     Fail("Unable to access host_statistics");
   }
 
-  int64_t total_ticks = 0;
-  for (int cpu_state = 0; cpu_state <= CPU_STATE_MAX; ++cpu_state) {
-    total_ticks += cpu_info.cpu_ticks[cpu_state];
-  }
-  const auto idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
-  const auto active_ticks = total_ticks - idle_ticks;
+  const auto active_ticks = cpu_info.cpu_ticks[CPU_STATE_SYSTEM] +
+                            cpu_info.cpu_ticks[CPU_STATE_USER] +
+                            cpu_info.cpu_ticks[CPU_STATE_NICE];
 
-  // The amount of time is measured in clock ticks.
-  // mach_timebase_info provides the conversion factor to ns.
+  const auto active_ns = active_ticks * std::nano::den / (sysconf(_SC_CLK_TCK) * _get_cpu_count());
 
-  mach_timebase_info_data_t info;
-  const auto ret = mach_timebase_info(&info);
-  if (ret != KERN_SUCCESS) {
-    Fail("Unable to retrieve mach timebase info")
-  }
-
-  const auto active_ns = active_ticks * info.numer / info.denom; 
-  
   return active_ns;
 #endif
 
@@ -201,8 +188,8 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 }
 
 /*
- * Returns the time in ns that THIS process has spend on the CPU 
- * since an arbitrary point in the past. 
+ * Returns the time in ns that THIS process has spend on the CPU
+ * since an arbitrary point in the past.
 */
 int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
@@ -210,7 +197,7 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #ifdef __linux__
   struct timespec time_spec;
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
-  
+
   if (ret == -1) {
     Fail("An error occured while fetching the time");
   }
@@ -234,7 +221,7 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
     Fail("An error occured while fetching the time");
   }
 
-  return active_ns;
+  return active_ns / _get_cpu_count();
 #endif
 
   Fail("Method not implemented for this platform");
@@ -243,7 +230,7 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 /*
  * Returns a struct that contains the avaiable and free memory size in bytes.
  * - Free memory is unallocated memory.
- * - Availlable memory includes free memory and currently allocated memory that 
+ * - Availlable memory includes free memory and currently allocated memory that
  *   could be made available (e.g. buffers, caches ...)
 */
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
