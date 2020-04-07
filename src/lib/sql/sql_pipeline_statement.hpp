@@ -130,7 +130,8 @@ class SQLPipelineStatement : public Noncopyable {
   // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;
 
-  // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
+  // Might be the statement's own transaction context (if in auto-commit mode), or the one shared by all statements in
+  // a pipeline.
   std::shared_ptr<TransactionContext> _transaction_context = nullptr;
 };
 
