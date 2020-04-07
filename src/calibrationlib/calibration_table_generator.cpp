@@ -5,10 +5,10 @@ namespace opossum {
 
 CalibrationTableGenerator::CalibrationTableGenerator(std::shared_ptr<TableGeneratorConfig> config) {
   // Generate all possible permutations of column types
-  for (DataType data_type : config->data_types) {
-    for (EncodingType encoding_type : config->encoding_types) {
+  for (const auto data_type : config->data_types) {
+    for (const auto encoding_type : config->encoding_types) {
       if (encoding_supports_data_type(encoding_type, data_type)) {
-        for (ColumnDataDistribution column_data_distribution : config->column_data_distributions) {
+        for (const auto& column_data_distribution : config->column_data_distributions) {
           std::stringstream column_name_stringstream;
           column_name_stringstream << data_type << "_" << encoding_type << "_" << column_data_distribution;
 
@@ -31,8 +31,8 @@ std::vector<std::shared_ptr<const CalibrationTableWrapper>> CalibrationTableGene
 
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
-  for (int chunk_size : _config->chunk_sizes) {
-    for (int row_count : _config->row_counts) {
+  for (const auto chunk_size : _config->chunk_sizes) {
+    for (const auto row_count : _config->row_counts) {
       const auto table = table_generator->generate_table(_column_specs, row_count, chunk_size, UseMvcc::Yes);
 
       const std::string table_name = std::to_string(chunk_size) + "_" + std::to_string(row_count);
