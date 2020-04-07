@@ -11,17 +11,12 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name,
-                   const TableConstraintDefinitions& constraints)
-    : AbstractLQPNode(LQPNodeType::Mock),
-      name(init_name),
-      _column_definitions(column_definitions),
-      _table_constraints(constraints) {
-  // Maybe TODO(Julian) Check the validity of given constraints
-}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
+    : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
 
 LQPColumnReference MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
+
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     if (column_definitions[column_id].second == column_name) return LQPColumnReference{shared_from_this(), column_id};
   }
@@ -100,10 +95,6 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-void MockNode::set_table_constraints(const TableConstraintDefinitions& table_constraints) {
-  _table_constraints = table_constraints;
-}
-
 size_t MockNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(_table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
@@ -122,6 +113,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }
+
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
   return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&
