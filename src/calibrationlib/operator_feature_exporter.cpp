@@ -86,6 +86,8 @@ void OperatorFeatureExporter::_export_table_scan(std::shared_ptr<const AbstractO
           // Split the description by " " and extract the word with index 2
           std::vector<std::string> description_values;
           boost::split(description_values, description, boost::is_any_of(" "));
+
+          Assert(description_values[1] == "Impl:", "Did not find implementation type in string.");
           csv_writer->set_value("SCAN_IMPLEMENTATION", description_values[2]);
 
           csv_writer->write_row();
