@@ -354,10 +354,6 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
   }
 }
 
-void SQLPipelineStatement::set_warning_message(std::string warning_message) { _warning_message = warning_message; }
-
-std::optional<std::string> SQLPipelineStatement::warning_message() { return _warning_message; }
-
 bool SQLPipelineStatement::is_transaction_statement() {
   return get_parsed_sql_statement()->getStatements().front()->isType(hsql::kStmtTransaction);
 }

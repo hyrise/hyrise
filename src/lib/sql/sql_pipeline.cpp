@@ -241,9 +241,6 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
       return {SQLPipelineStatus::Failure, _result_tables};
     }
 
-    if (pipeline_statement->warning_message())
-      _warning_messages.emplace_back(pipeline_statement->warning_message().value());
-
     DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
     _result_tables.emplace_back(table);
@@ -281,8 +278,6 @@ std::shared_ptr<SQLPipelineStatement> SQLPipeline::failed_pipeline_statement() c
 size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.size(); }
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
-
-std::vector<std::string> SQLPipeline::warning_messages() { return _warning_messages; }
 
 SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {

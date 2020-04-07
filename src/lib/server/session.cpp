@@ -113,13 +113,6 @@ void Session::_handle_simple_query() {
     _postgres_protocol_handler->send_error_message(execution_information.error_message);
   } else {
     uint64_t row_count = 0;
-
-    if (!execution_information.warning_messages.empty()) {
-      for (const auto& warning_message : execution_information.warning_messages) {
-        _postgres_protocol_handler->send_warning_message(warning_message);
-      }
-    }
-
     // If there is no result table, e.g. after an INSERT command, we cannot send row data. Otherwise, the result table
     // of the last statement will be send back.
     if (execution_information.result_table) {

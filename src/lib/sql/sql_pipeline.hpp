@@ -94,8 +94,6 @@ class SQLPipeline : public Noncopyable {
   const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
-  std::vector<std::string> warning_messages();
-
  private:
   std::string _sql;
 
@@ -124,8 +122,6 @@ class SQLPipeline : public Noncopyable {
   SQLPipelineMetrics _metrics{};
 
   std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
-
-  std::vector<std::string> _warning_messages;
 };
 
 }  // namespace opossum

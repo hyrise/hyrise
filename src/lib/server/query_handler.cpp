@@ -18,8 +18,6 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
 
-  execution_info.warning_messages = sql_pipeline.warning_messages();
-
   if (pipeline_status == SQLPipelineStatus::Success) {
     execution_info.result_table = result_table;
     execution_info.root_operator_type = sql_pipeline.get_physical_plans().back()->type();

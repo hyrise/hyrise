@@ -99,9 +99,6 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
-  void set_warning_message(std::string);
-  std::optional<std::string> warning_message();
-
  private:
   bool is_transaction_statement();
 
@@ -132,8 +129,6 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;
-
-  std::optional<std::string> _warning_message = std::nullopt;
 
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context = nullptr;
