@@ -49,10 +49,13 @@ struct LQPOutputRelation {
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
 /**
- * Models a functional dependency (FD) which consists out of two sets of column expressions (left and right set).
+ * Models a functional dependency (FD) which consists out of two sets of column expressions
+ * (left and right set).
  * Concrete values for the left set of columns lead to concrete values for the right set of columns.
  * In other words, the left side unambigiously identifies the right side of values. (Left => Right)
- * Currently, column expressions are required to be non-nullable to be involved in FDs. As there are strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might change in the future.
+ * Currently, column expressions are required to be non-nullable to be involved in FDs. As there are
+ * strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might
+ * change in the future.
  */
 using FunctionalDependency = std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>;
 

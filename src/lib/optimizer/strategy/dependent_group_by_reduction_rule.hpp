@@ -30,7 +30,7 @@ class StoredTableNode;
  * 		Aggregate: Grouping = [ c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment],
  * 				   Aggregates = [ sum(l_extendedprice * (1 - l_discount)) ]
  *
- *      >>>>
+ *          >>>
  *
  * 		Aggregate: Grouping = [ c_custkey, c_acctbal, c_phone, n_name, c_address, c_comment],
  * 				   Aggregates = [ SUM(l_extendedprice * (1 - l_discount)), ANY(c_name) ]
