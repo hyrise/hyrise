@@ -34,7 +34,6 @@ class JoinNodeTest : public BaseTest {
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -48,10 +47,6 @@ class JoinNodeTest : public BaseTest {
   LQPColumnReference _t_a_c;
   LQPColumnReference _t_b_x;
   LQPColumnReference _t_b_y;
-  TableConstraintDefinition _unique_constraint_a;
-  TableConstraintDefinition _unique_constraint_b_c;
-  TableConstraintDefinition _unique_constraint_x;
-  TableConstraintDefinition _unique_constraint_y;
 };
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross"); }
@@ -212,8 +207,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
   Hyrise::get().storage_manager.add_table(table_name, table);
 
   // Add unique constraints
-  table->add_soft_unique_constraint({{ColumnID{0}}});
-  table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
+  table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
 
   // Prepare Self-JoinNode
   const auto stored_table_node = StoredTableNode::make(table_name);
@@ -244,8 +239,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   Hyrise::get().storage_manager.add_table(table_name_b, table_b);
 
   // Add unique constraints
-  table_a->add_soft_unique_constraint({{ColumnID{0}}});
-  table_b->add_soft_unique_constraint({{ColumnID{0}}});
+  table_a->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+  table_b->add_soft_unique_constraint({{ColumnID{0}}}, IsPrimaryKey::No);
 
   // Prepare JoinNodes
   const auto stored_table_node_a = StoredTableNode::make(table_name_a);

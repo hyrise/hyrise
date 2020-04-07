@@ -109,10 +109,13 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     // Gather column expressions for constraint's column ids
     for (const auto& expression : column_expressions) {
       const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (constraint.columns.contains(lqp_column->column_reference.original_column_id())) {
+      if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
+                      [&lqp_column](const auto constraint_column_id) {
+                        return constraint_column_id == lqp_column->column_reference.original_column_id();
+                      }))
         left.insert(lqp_column);
-      }
     }
+
     Assert(left.size() == constraint.columns.size(),
            "Failed to collect all column expressions for constraint's column ids");
 

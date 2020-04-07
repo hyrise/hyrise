@@ -151,15 +151,15 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
   // Constraint across all columns => No more columns available to create a functional dependency from
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(
-      TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id(), _c.original_column_id()}});
+  table->add_soft_unique_constraint({_a.original_column_id(), _b.original_column_id(), _c.original_column_id()},
+                                    IsPrimaryKey::No);
 
   EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
+  table->add_soft_unique_constraint({_a.original_column_id()}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 1);
@@ -177,13 +177,13 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
-  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id()}});
+  table->add_soft_unique_constraint({_a.original_column_id()}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({_a.original_column_id(), _b.original_column_id()}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 2);
-  const auto fd1 = fds.at(1);
-  const auto fd2 = fds.at(0);
+  const auto fd1 = fds.at(0);
+  const auto fd2 = fds.at(1);
 
   // Check left of fd1
   EXPECT_EQ(fd1.first.size(), 1);
@@ -214,9 +214,9 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   Hyrise::get().storage_manager.add_table("t_b_nullable", table_b);
 
   // Add unique constraints
-  table_a->add_soft_unique_constraint({{ColumnID{0}}});
-  table_a->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
-  table_b->add_soft_unique_constraint({{ColumnID{2}}});
+  table_a->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+  table_a->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
+  table_b->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
 
   const auto stored_table_node_a = StoredTableNode::make("t_a_nullable");
   const auto stored_table_node_b = StoredTableNode::make("t_b_nullable");
