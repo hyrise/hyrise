@@ -11,7 +11,7 @@ class OperatorFeatureExporter {
  public:
   explicit OperatorFeatureExporter(const std::string& path_to_dir);
 
-  void export_to_csv(std::shared_ptr<const AbstractOperator> op) const;
+  void export_to_csv(const std::shared_ptr<const AbstractOperator> op) const;
   const std::map<OperatorType, std::vector<std::string>> headers = {
       {OperatorType::TableScan, std::vector<std::string>({"INPUT_ROWS_LEFT", "OUTPUT_ROWS", "RUNTIME_NS", "SCAN_TYPE",
                                                           "TABLE_NAME", "COLUMN_NAME", "SCAN_IMPLEMENTATION"})}};
@@ -37,8 +37,8 @@ class OperatorFeatureExporter {
     return csv_writers_per_operator;
   }();
 
-  void _export_typed_operator(std::shared_ptr<const AbstractOperator> op) const;
-  void _export_table_scan(std::shared_ptr<const AbstractOperator> op) const;
+  void _export_typed_operator(const std::shared_ptr<const AbstractOperator> op) const;
+  void _export_table_scan(const std::shared_ptr<const AbstractOperator> op) const;
 
   // TODO(Bouncner): use magic_enum.name when available
   const std::string _map_operator_type(const OperatorType op_type) {

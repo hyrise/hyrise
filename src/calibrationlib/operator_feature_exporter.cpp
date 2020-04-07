@@ -12,7 +12,7 @@ namespace opossum {
 
 OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir) : _path_to_dir(path_to_dir) {}
 
-void OperatorFeatureExporter::export_to_csv(std::shared_ptr<const AbstractOperator> op) const {
+void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op) const {
   if (op) {
     // Export current operator
     _export_typed_operator(op);
@@ -22,7 +22,7 @@ void OperatorFeatureExporter::export_to_csv(std::shared_ptr<const AbstractOperat
   }
 }
 
-void OperatorFeatureExporter::_export_typed_operator(std::shared_ptr<const AbstractOperator> op) const {
+void OperatorFeatureExporter::_export_typed_operator(const std::shared_ptr<const AbstractOperator> op) const {
   switch (op->type()) {
     case OperatorType::TableScan:
       _export_table_scan(op);
@@ -33,7 +33,7 @@ void OperatorFeatureExporter::_export_typed_operator(std::shared_ptr<const Abstr
 }
 
 // Export features of a table scan operator
-void OperatorFeatureExporter::_export_table_scan(std::shared_ptr<const AbstractOperator> op) const {
+void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const AbstractOperator> op) const {
   DebugAssert(op->type() == OperatorType::TableScan, "Expected operator of type: TableScan but got another one");
 
   auto csv_writer = _csv_writers.at(op->type());
