@@ -959,7 +959,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           } else {
             output_chunk->set_sorted_by({SortColumnDefinition(first_join_column, SortMode::Ascending),
                                          SortColumnDefinition(second_join_column, SortMode::Ascending)});
-         }
+          }
         }
         output_chunks[pos_list_id] = output_chunk;
       };
