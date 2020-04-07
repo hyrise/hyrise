@@ -22,7 +22,8 @@ template <typename T>
 class FixedStringDictionarySegment : public BaseDictionarySegment {
  public:
   explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
-                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                                        const bool segment_contains_null_values = false);
 
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
@@ -67,12 +68,15 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   ValueID null_value_id() const final;
 
+  bool is_nullable() const final;
+
   /**@}*/
 
  protected:
   const std::shared_ptr<const FixedStringVector> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  const bool _contains_null_values;
 };
 
 }  // namespace opossum
