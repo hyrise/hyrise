@@ -182,8 +182,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
 
   const auto& fds = _stored_table_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 2);
-  const auto fd1 = fds.at(0);
-  const auto fd2 = fds.at(1);
+  const auto fd1 = fds.at(1);
+  const auto fd2 = fds.at(0);
 
   // Check left of fd1
   EXPECT_EQ(fd1.first.size(), 1);
