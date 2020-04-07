@@ -8,15 +8,6 @@
 #ifdef __APPLE__
 
 #include <mach/mach.h>
-#include <mach/mach_error.h>
-#include <mach/mach_host.h>
-#include <mach/mach_init.h>
-#include <mach/mach_time.h>
-#include <mach/vm_map.h>
-#include <mach/vm_statistics.h>
-#include <sys/resource.h>
-#include <sys/sysctl.h>
-#include <time.h>
 
 #endif
 

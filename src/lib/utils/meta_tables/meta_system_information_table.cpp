@@ -6,13 +6,6 @@
 
 #endif
 
-#ifdef __APPLE__
-
-#include <sys/sysctl.h>
-#include <sys/types.h>
-
-#endif
-
 #include "meta_system_information_table.hpp"
 
 namespace opossum {
