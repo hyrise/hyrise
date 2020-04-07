@@ -24,19 +24,10 @@ class ProjectionNodeTest : public BaseTest {
     _b = _mock_node->get_column("b");
     _c = _mock_node->get_column("c");
 
-    // SELECT c, a, b, b+c AS some_addition, a+c [...]
+    // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
-
-    // Constraints for later use
-    // Primary Key: a, b
-    _table_constraint_1 =
-        TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
-    // Unique: b
-    _table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
   }
 
-  TableConstraintDefinition _table_constraint_1;
-  TableConstraintDefinition _table_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
   LQPColumnReference _a, _b, _c;
