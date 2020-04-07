@@ -2,6 +2,7 @@
 
 #include <numa.h>
 #include <sys/sysinfo.h>
+#include <fstream>
 
 #endif
 
@@ -12,12 +13,7 @@
 
 #endif
 
-#include <fstream>
-#include <iostream>
-
 #include "meta_system_information_table.hpp"
-
-#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -32,7 +28,7 @@ const std::string& MetaSystemInformationTable::name() const {
   return name;
 }
 
-std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
+std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   const auto cpus = _get_cpu_count();
@@ -47,7 +43,10 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() {
   int64_t ram;
 #ifdef __linux__
   struct sysinfo memory_info {};
-  sysinfo(&memory_info);
+  const auto ret = sysinfo(&memory_info);
+  if (ret != 0) {
+    Fail("Could not gather sysinfo.");
+  }
 
   ram = memory_info.totalram * memory_info.mem_unit;
 #endif
@@ -71,6 +70,10 @@ pmr_string MetaSystemInformationTable::_cpu_model() {
   std::ifstream cpuinfo_file;
   cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
 
+  if (!cpuinfo_file.is_open()) {
+    Fail("Unable to open /proc/cpuinfo");
+  }
+
   std::string cpuinfo_line;
   while (std::getline(cpuinfo_file, cpuinfo_line)) {
     if (cpuinfo_line.rfind("model name", 0) == 0) {
@@ -79,11 +82,10 @@ pmr_string MetaSystemInformationTable::_cpu_model() {
       return pmr_string{cpuinfo_line};
     }
   }
-  return "No CPU Model";
+  Fail("Could not read CPU model.");
 #endif
 
 #ifdef __APPLE__
-
   size_t buffer_size = 256;
   char buffer[256];
   if (sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0) != 0) {

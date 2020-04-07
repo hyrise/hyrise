@@ -1,10 +1,7 @@
 #ifdef __linux__
 
 #include <numa.h>
-#include <sys/sysinfo.h>
-#include <sys/times.h>
 #include <fstream>
-#include <sstream>
 
 #endif
 
@@ -23,20 +20,14 @@
 
 #endif
 
-#include <sys/types.h>
-
-#include <chrono>
-
 #include "meta_system_utilization_table.hpp"
-
-#include "hyrise.hpp"
 
 namespace opossum {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
-    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_ticks", DataType::Long, false},
-                                                     {"cpu_process_ticks", DataType::Long, false},
-                                                     {"total_ticks", DataType::Long, false},
+    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_time", DataType::Long, false},
+                                                     {"cpu_process_time", DataType::Long, false},
+                                                     {"total_time", DataType::Long, false},
                                                      {"load_average_1_min", DataType::Float, false},
                                                      {"load_average_5_min", DataType::Float, false},
                                                      {"load_average_15_min", DataType::Float, false},
@@ -50,12 +41,12 @@ const std::string& MetaSystemUtilizationTable::name() const {
   return name;
 }
 
-std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() {
+std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  const auto system_cpu_ticks = _get_system_cpu_ticks();
-  const auto process_cpu_ticks = _get_process_cpu_ticks();
-  const auto total_ticks = _get_total_ticks();
+  const auto system_cpu_ticks = _get_system_cpu_time();
+  const auto process_cpu_ticks = _get_process_cpu_time();
+  const auto total_ticks = _get_total_time();
   const auto load_avg = _get_load_avg();
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
@@ -74,6 +65,10 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 #ifdef __linux__
   std::ifstream load_avg_file;
   load_avg_file.open("/proc/loadavg", std::ifstream::in);
+
+  if (!load_avg_file.is_open()) {
+    Fail("Unable to open /proc/loadavg");
+  }
 
   std::string load_avg_value;
   std::vector<float> load_avg_values;
@@ -102,32 +97,57 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 }
 
 /*
-  * Returns the number of clock ticks since an arbitrary point in the past.
+  * Returns the time in ns since an arbitrary point in the past.
 */
-int64_t MetaSystemUtilizationTable::_get_total_ticks() {
+int64_t MetaSystemUtilizationTable::_get_total_time() {
+/* CLOCK_MONOTONIC_RAW:
+ * Similar to CLOCK_MONOTONIC, but provides access to a raw hard‐
+ * ware-based time that is not subject to NTP adjustments or the
+ * incremental adjustments performed by adjtime(3).  This clock
+ * does not count time that the system is suspended.
+*/
 #ifdef __linux__
-  struct tms time_sample {};
-  return times(&time_sample);
+  struct timespec time_spec;
+  const auto ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time_spec);
+  if (ret == -1) {
+    Fail("An error occured while fetching the time");
+  }
+
+  const auto total_ns = time_spec.tv_sec * std::nano::den + time_spec.tv_nsec;
+  
+  return total_ns;
 #endif
 
 #ifdef __APPLE__
-  return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+  const auto total_ns = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
+  if (total_ns == 0) {
+    Fail("An error occured while fetching the time");
+  }
+  return total_ns;
 #endif
 
   Fail("Method not implemented for this platform");
 }
 
 /*
- * Returns the number of clock ticks that ALL processes have spend on the CPU 
+ * Returns the time in ns that ALL processes have spend on the CPU 
  * since an arbitrary point in the past. 
 */
-int64_t MetaSystemUtilizationTable::_get_system_cpu_ticks() {
+int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
+
+  if (!stat_file.is_open()) {
+    Fail("Unable to open /proc/stat");
+  }
+
   std::string cpu_line;
   std::getline(stat_file, cpu_line);
   stat_file.close();
+
+  // The amount of time is measured in units of USER_HZ (clock ticks).
+  // sysconf(_SC_CLK_TCK) can be used to obtain the right value.
 
   const auto cpu_ticks = _get_values(cpu_line);
 
@@ -143,7 +163,9 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_ticks() {
     cpu_count = _get_cpu_count();
   }
 
-  return active_ticks / cpu_count;
+  const auto active_ns = (active_ticks * std::nano::den) / (sysconf(_SC_CLK_TCK) * cpu_count);
+
+  return active_ns;
 #endif
 
 #ifdef __APPLE__
@@ -161,26 +183,38 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_ticks() {
   const auto idle_ticks = cpu_info.cpu_ticks[CPU_STATE_IDLE];
   const auto active_ticks = total_ticks - idle_ticks;
 
-  // TODO(j-tr): make this ns not ticks
-  return active_ticks;
+  // The amount of time is measured in clock ticks.
+  // mach_timebase_info provides the conversion factor to ns.
+
+  mach_timebase_info_data_t info;
+  const auto ret = mach_timebase_info(&info);
+  if (ret != KERN_SUCCESS) {
+    Fail("Unable to retrieve mach timebase info")
+  }
+
+  const auto active_ns = active_ticks * info.numer / info.denom; 
+  
+  return active_ns;
 #endif
 
   Fail("Method not implemented for this platform");
 }
 
 /*
- * Returns the number of clock ticks that THIS process has spend on the CPU 
+ * Returns the time in ns that THIS process has spend on the CPU 
  * since an arbitrary point in the past. 
 */
-int64_t MetaSystemUtilizationTable::_get_process_cpu_ticks() {
+int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
+  // CLOCK_PROCESS_CPUTIME_ID:
+  // Per-process CPU-time clock (measures CPU time consumed by all threads in the process).
 #ifdef __linux__
-  struct tms time_sample {};
-  times(&time_sample);
+  struct timespec time_spec;
+  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
+  
+  if (ret == -1) {
+    Fail("An error occured while fetching the time");
+  }
 
-  const auto kernel_ticks = time_sample.tms_stime;
-  const auto user_ticks = time_sample.tms_utime;
-
-  const auto active_ticks = user_ticks + kernel_ticks;
   int cpu_count;
   if (numa_available() != -1) {
     cpu_count = numa_num_task_cpus();
@@ -188,13 +222,19 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_ticks() {
     cpu_count = _get_cpu_count();
   }
 
-  return active_ticks / cpu_count;
+  const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec) / cpu_count;
+
+  return active_ns;
 #endif
 
 #ifdef __APPLE__
-  const auto active_time = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
+  const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
 
-  return active_time;
+  if (active_ns == 0) {
+    Fail("An error occured while fetching the time");
+  }
+
+  return active_ns;
 #endif
 
   Fail("Method not implemented for this platform");
@@ -210,6 +250,10 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #ifdef __linux__
   std::ifstream meminfo_file;
   meminfo_file.open("/proc/meminfo", std::ifstream::in);
+
+  if (!meminfo_file.is_open()) {
+    Fail("Unable to open /proc/meminfo");
+  }
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
   std::string meminfo_line;
@@ -260,6 +304,10 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __linux__
   std::ifstream self_status_file;
   self_status_file.open("/proc/self/status", std::ifstream::in);
+
+  if (!self_status_file.is_open()) {
+    Fail("Unable to open /proc/self/status");
+  }
 
   MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage{};
   std::string self_status_line;

@@ -14,7 +14,7 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   const std::string& name() const final;
 
  protected:
-  std::shared_ptr<Table> _on_generate();
+  std::shared_ptr<Table> _on_generate() const final;
 
   struct LoadAvg {
     float load_1_min;
@@ -33,9 +33,9 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   };
 
   static LoadAvg _get_load_avg();
-  static int64_t _get_total_ticks();
-  static int64_t _get_system_cpu_ticks();
-  static int64_t _get_process_cpu_ticks();
+  static int64_t _get_total_time();
+  static int64_t _get_system_cpu_time();
+  static int64_t _get_process_cpu_time();
   static SystemMemoryUsage _get_system_memory_usage();
   static std::vector<int64_t> _get_values(std::string& input_string);
   static ProcessMemoryUsage _get_process_memory_usage();

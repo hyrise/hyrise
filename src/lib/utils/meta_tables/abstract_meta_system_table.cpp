@@ -1,4 +1,8 @@
+#ifdef __linux__
+
 #include <fstream>
+
+#endif
 
 #ifdef __APPLE__
 
@@ -7,8 +11,6 @@
 #endif
 
 #include "utils/meta_tables/abstract_meta_system_table.hpp"
-
-#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -20,6 +22,10 @@ int AbstractMetaSystemTable::_get_cpu_count() {
 
   std::ifstream cpu_info_file;
   cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
+
+  if (!cpu_info_file.is_open()) {
+    Fail("Unable to open /proc/cpuinfo");
+  }
 
   uint32_t processors = 0;
   std::string cpu_info_line;
