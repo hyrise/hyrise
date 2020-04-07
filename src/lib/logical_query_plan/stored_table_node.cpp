@@ -94,17 +94,27 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 
 std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
-  const auto unique_constraints = this->constraints();
-  const auto column_expressions = this->column_expressions();
+  const auto& unique_constraints = Hyrise::get().storage_manager.get_table(table_name)->get_soft_unique_constraints();
+  const auto& column_expressions = this->column_expressions();
 
-  for (auto& constraint : *unique_constraints) {
+  for (auto& constraint : unique_constraints) {
     // We support FDs for non-nullable columns only
-    if (std::any_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
-                    [this](const auto column_expression) { return column_expression->is_nullable_on_lqp(*this); }))
+    if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
+                    [this](const auto column_id) { return this->is_column_nullable(column_id); }))
       continue;
 
-    auto left = constraint.column_expressions;
+    auto left = ExpressionUnorderedSet{};
     auto right = ExpressionUnorderedSet{};
+
+    // Gather column expressions for constraint's column ids
+    for (const auto& expression : column_expressions) {
+      const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      if (constraint.columns.contains(lqp_column->column_reference.original_column_id())) {
+        left.insert(lqp_column);
+      }
+    }
+    Assert(left.size() == constraint.columns.size(),
+           "Failed to collect all column expressions for constraint's column ids");
 
     // Find column expressions that are functionally dependent
     std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()),
