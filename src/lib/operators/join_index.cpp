@@ -477,7 +477,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   // We use `_probe_matches` to determine whether a tuple from the probe side found a match.
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
-    if(_index_side == IndexSide::Right) {
+    if (_index_side == IndexSide::Right) {
       const auto chunk_count = _probe_input_table->chunk_count();
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = _probe_input_table->get_chunk(chunk_id);
@@ -490,7 +490,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
           }
         }
       }
-    } else { // INDEX SIDE LEFT
+    } else {  // INDEX SIDE LEFT
       const auto chunk_count = _index_input_table->chunk_count();
       for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = _index_input_table->get_chunk(chunk_id);

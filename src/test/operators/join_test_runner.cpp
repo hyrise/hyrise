@@ -202,6 +202,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
      */
     const auto build_join_type_specific_variations = [&](const auto& configuration) {
       if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
+        // Currently the Index Join cannot deal with configurations where the join column
+        // data types are different, see Issue #2077
+        if (configuration.data_type_left != configuration.data_type_right) {
+          return std::vector<JoinTestConfiguration>{};
+        }
+
         // For the JoinIndex, two additional parameters influence its execution behavior.
         // These are the index side and the availability of indexes on that index side.
         // Based on the input configuration, two configurations are generated for each possible
