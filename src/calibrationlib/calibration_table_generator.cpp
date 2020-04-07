@@ -8,15 +8,18 @@ CalibrationTableGenerator::CalibrationTableGenerator(std::shared_ptr<TableGenera
   for (const auto data_type : config->data_types) {
     for (const auto encoding_type : config->encoding_types) {
       if (encoding_supports_data_type(encoding_type, data_type)) {
+        auto column_count = 0;  // Needed to make column names unique
         for (const auto& column_data_distribution : config->column_data_distributions) {
           std::stringstream column_name_stringstream;
-          column_name_stringstream << data_type << "_" << encoding_type << "_" << column_data_distribution;
+          column_name_stringstream << data_type << "_" << encoding_type << "_" << column_count;
 
           auto column_name = column_name_stringstream.str();
 
           _column_data_distributions.emplace_back(column_data_distribution);
           _column_specs.emplace_back(
               ColumnSpecification(column_data_distribution, data_type, encoding_type, column_name));
+
+          column_count++;
         }
       }  // if encoding is supported
     }
