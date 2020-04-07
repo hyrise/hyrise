@@ -1,4 +1,5 @@
 #include <fstream>
+
 #include <boost/algorithm/string.hpp>
 #include "base_test.hpp"
 #include "calibration_table_generator.hpp"
@@ -22,16 +23,15 @@ class TableFeatureExporterTest : public BaseTest {
             load_table("resources/test_data/tbl/float_float_float.tbl", CHUNK_SIZE), "float_float_float"),
     });
 
-    TableFeatureExporter feature_exporter = TableFeatureExporter(_dir_path);
-
     // Export data of table
     for (const auto& table : _tables) {
-      feature_exporter.export_table(table);
+      _feature_exporter.export_table(table);
     }
   }
 
   std::vector<std::shared_ptr<const CalibrationTableWrapper>> _tables;
   const std::string _dir_path = (std::filesystem::temp_directory_path() / "calibrationTest").string();
+  TableFeatureExporter _feature_exporter = TableFeatureExporter(_dir_path);
 
   bool equal_headers(std::string line, std::vector<std::string> expected_headers) {
     std::vector<std::string> row_values;
@@ -64,13 +64,13 @@ class TableFeatureExporterTest : public BaseTest {
 // Following tests validate the header and the number of entries per file.
 
 TEST_F(TableFeatureExporterTest, TableSegment) {
-  const auto headers = std::vector<std::string>({"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"});
+  const auto headers = _feature_exporter.headers.at(TableFeatureExportType::TABLE);
   const auto expected_row_count = _tables.size();
   validate_file(_dir_path + "/table_meta.csv", headers, expected_row_count);
 }
 
 TEST_F(TableFeatureExporterTest, ColumnExport) {
-  const auto headers = std::vector<std::string>({"TABLE_NAME", "COLUMN_NAME", "COLUMN_DATA_TYPE"});
+  const auto headers = _feature_exporter.headers.at(TableFeatureExportType::COLUMN);
 
   const auto table_count = _tables.size();
   const auto columns_per_table = _tables.at(0)->get_table()->column_count();  // all tables have same columns;
@@ -80,8 +80,7 @@ TEST_F(TableFeatureExporterTest, ColumnExport) {
 }
 
 TEST_F(TableFeatureExporterTest, SegmentExport) {
-  const auto headers =
-      std::vector<std::string>({"TABLE_NAME", "COLUMN_NAME", "CHUNK_ID", "ENCODING_TYPE", "COMPRESSION_TYPE"});
+  const auto headers = _feature_exporter.headers.at(TableFeatureExportType::SEGMENT);
   uint64_t expected_row_count = 0;
   for (const auto& wrapped_table : _tables) {
     const auto chunk_count = wrapped_table->get_table()->chunk_count();

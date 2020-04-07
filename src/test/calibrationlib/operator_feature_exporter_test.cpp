@@ -42,8 +42,7 @@ class OperatorFeatureExporterTest : public BaseTest {
 // Check if performance data is added to csv.
 // This does not check if the export of specific table_scan implementations works. (e.g. Table)
 TEST_F(OperatorFeatureExporterTest, TableScanExport) {
-  const auto headers = std::vector<std::string>({"INPUT_ROWS_LEFT", "OUTPUT_ROWS", "RUNTIME_NS", "SCAN_TYPE",
-                                                 "TABLE_NAME", "COLUMN_NAME", "SCAN_IMPLEMENTATION"});
+  const auto headers = _feature_exporter.headers.at(OperatorType::TableScan);
 
   // Generate LQPs to export
   auto lqp_generator = CalibrationLQPGenerator();
