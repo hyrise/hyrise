@@ -215,29 +215,19 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
   auto* transaction_statement = dynamic_cast<hsql::TransactionStatement*>(statements.front());
   switch (transaction_statement->command) {
     case hsql::kBeginTransaction:
+      AssertInput(_transaction_context && _transaction_context->is_auto_commit(),
+                  "Cannot begin transaction inside an active transaction.");
       return {std::make_shared<JobTask>([this] {
-        if (!_transaction_context || !_transaction_context->is_auto_commit()) {
-          this->set_warning_message(std::string("WARNING: Cannot begin transaction inside an active transaction."));
-        } else {
-          _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
-        }
+        _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
       })};
     case hsql::kCommitTransaction:
-      return {std::make_shared<JobTask>([this] {
-        if (!_transaction_context || _transaction_context->is_auto_commit()) {
-          this->set_warning_message(std::string("WARNING: Cannot commit since there is no active transaction."));
-        } else {
-          _transaction_context->commit();
-        }
-      })};
+      AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
+                  "Cannot commit since there is no active transaction.");
+      return {std::make_shared<JobTask>([this] { _transaction_context->commit(); })};
     case hsql::kRollbackTransaction:
-      return {std::make_shared<JobTask>([this] {
-        if (!_transaction_context || _transaction_context->is_auto_commit()) {
-          this->set_warning_message(std::string("WARNING: Cannot rollback since there is no active transaction."));
-        } else {
-          _transaction_context->rollback(RollBackReason::RollBackByUser);
-        }
-      })};
+      AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),
+                  "Cannot rollback since there is no active transaction.");
+      return {std::make_shared<JobTask>([this] { _transaction_context->rollback(RollBackReason::RollBackByUser); })};
     default:
       Fail("Unexpected transaction command!");
   }
