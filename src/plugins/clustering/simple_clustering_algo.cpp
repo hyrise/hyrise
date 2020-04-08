@@ -16,6 +16,9 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
+
+#define VERBOSE false
+
 namespace opossum {
 
 SimpleClusteringAlgo::SimpleClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering) : AbstractClusteringAlgo(storage_manager, clustering) {}
@@ -103,13 +106,14 @@ void SimpleClusteringAlgo::run() {
   Timer timer;
 
   if (!clustering_by_table.empty()) {
-    std::cout << "- Sorting tables" << std::endl;
+    std::cout << "[" << description() << "] " << "Clustering tables" << std::endl;
 
     for (const auto& [table_name, clustering_columns] : clustering_by_table) {
       Assert(clustering_columns.size() >= 1, "you have to specify at least one clustering dimension, otherwise just leave out the table entry");
 
       Assert(storage_manager.has_table(table_name), "clustering contains an entry for " + table_name + ", but no such table exists");
       const auto original_table = storage_manager.get_table(table_name);
+      std::cout << "[" << description() << "] " << " Clustering " << table_name << std::endl;
 
       uint64_t expected_final_chunk_count = 1;
       for (const auto& [column_name, num_groups] : clustering_columns) {
@@ -119,7 +123,7 @@ void SimpleClusteringAlgo::run() {
       constexpr auto MIN_REASONABLE_CHUNK_SIZE = 5;
       Assert(MIN_REASONABLE_CHUNK_SIZE * expected_final_chunk_count < original_table->row_count(), "chunks in " + table_name + " will have less than " + std::to_string(MIN_REASONABLE_CHUNK_SIZE) + " rows");
 
-      std::cout << "initial table size of " << table_name << " is: " << original_table->row_count() << std::endl;
+      const auto initial_table_size = original_table->row_count();
       Timer per_clustering_timer;
 
       // Idea: We start with "1" chunk (whole table).
@@ -129,8 +133,9 @@ void SimpleClusteringAlgo::run() {
 
       // first clustering column
       const auto& first_column_name = clustering_columns[0].first;
-      const auto first_column_chunksize = static_cast<ChunkOffset>(std::ceil(1.0 * original_table->row_count() / clustering_columns[0].second));
-      std::cout << "-  Clustering '" << table_name << "' by '" << first_column_name << "', split up is " << first_column_chunksize  << " " << std::flush;
+      const auto first_column_desired_chunk_count = clustering_columns[0].second;
+      const auto first_column_chunksize = static_cast<ChunkOffset>(std::ceil(1.0 * original_table->row_count() / first_column_desired_chunk_count));
+      std::cout << "[" << description() << "] " << "  Clustering '" << table_name << "' by '" << first_column_name << "', split up is " << first_column_desired_chunk_count  << " " << std::flush;
 
       auto mutable_sorted_table = _sort_table_mutable(original_table, first_column_name, first_column_chunksize);
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
@@ -142,37 +147,40 @@ void SimpleClusteringAlgo::run() {
         const auto desired_chunk_count = clustering_columns[clustering_column_index].second;
 
         if (desired_chunk_count == 1) {
-          std::cout << "-  Sorting '" << table_name << "' on chunk level by '" << column_name << "' " << std::flush;
+          std::cout << "[" << description() << "] " << "  Sorting '" << table_name << "' on chunk level by '" << column_name << "' " << std::flush;
         } else {
-          std::cout << "-  Clustering '" << table_name << "' by '" << column_name << "', split up is " << desired_chunk_count << " " << std::flush;
+          std::cout << "[" << description() << "] " << "  Clustering '" << table_name << "' by '" << column_name << "', split up is " << desired_chunk_count << " " << std::flush;
         }
 
         mutable_sorted_table = _sort_table_chunkwise(mutable_sorted_table, column_name, desired_chunk_count);
         std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
       }
 
-      // TODO
-      // metrics.chunk_order_by_table = chunk_order_by_table;
-
 
       // copy constraints, TPCHBenchmarkItemRunner complains otherwise
+      std::cout << "[" << description() << "] " << "  Adding unique constraints to " << table_name << " " << std::flush;
       for (const auto &constraint : original_table->get_soft_unique_constraints()) {
         mutable_sorted_table->add_soft_unique_constraint(constraint.columns, constraint.is_primary_key);
       }
-
+      std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
       // finalize all chunks, then perform encoding (currently fixed to Dictionary)
+      std::cout << "[" << description() << "] " << "  Applying Dictionary encoding to " << table_name << " " << std::flush;
       for (auto chunk_id = ChunkID{0}; chunk_id < mutable_sorted_table->chunk_count(); ++chunk_id) {
         const auto chunk = mutable_sorted_table->get_chunk(chunk_id);
         if (chunk->is_mutable()) chunk->finalize();
       }
       ChunkEncoder::encode_all_chunks(mutable_sorted_table, EncodingType::Dictionary);
+      std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
       // add table
+      std::cout << "[" << description() << "] " << "  Adding " << table_name << " again " << std::flush;
       storage_manager.drop_table(table_name);
       storage_manager.add_table(table_name, mutable_sorted_table);
+      std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 
-      std::cout << "final table size of " << table_name << " is: " << mutable_sorted_table->row_count() << std::endl;
+      const auto final_table_size = mutable_sorted_table->row_count();
+      Assert(initial_table_size == final_table_size, "Size of table " + table_name + " changed during clustering");
     }
     // TODO
     // metrics.sort_duration = timer.lap();
@@ -185,6 +193,8 @@ void SimpleClusteringAlgo::run() {
 
 void SimpleClusteringAlgo::_run_assertions() const {
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
+    if (VERBOSE) std::cout << "[" << description() << "] " << "- Running assertions for table " << table_name << std::endl;
+
     const auto table = Hyrise::get().storage_manager.get_table(table_name);
     Assert(table, "table named \"" + table_name + "\" disappeared");
 
@@ -207,7 +217,7 @@ void SimpleClusteringAlgo::_run_assertions() const {
       auto sorted_column_name = clustering_columns.back().first;
       ordered_by_column_id = table->column_id_by_name(sorted_column_name);
     }
-    std::cout << "[" << description() << "] " << "- Chunk count is correct" << " for table " << table_name << std::endl;
+    if (VERBOSE) std::cout << "[" << description() << "] " << "-  Chunk count is correct" << " for table " << table_name << std::endl;
 
     // Determine the target chunk size.
     // TODO this is hacky, but this class does not know about benchmark_config->chunk_size, and not sure if it should
@@ -235,7 +245,7 @@ void SimpleClusteringAlgo::_run_assertions() const {
       } else {
         Assert(!chunk->ordered_by(), "chunk should be unordered, but is ordered by " + table->column_name((*chunk->ordered_by()).first));
       }
-      std::cout << "[" << description() << "] " << "- Ordering information is correct" << " for table " << table_name << std::endl;
+      if (VERBOSE) std::cout << "[" << description() << "] " << "-  Ordering information is correct" << " for table " << table_name << std::endl;
 
       // ... chunks are actually ordered according to the ordering information
       if (ordered_by_column_id) {
@@ -272,7 +282,7 @@ void SimpleClusteringAlgo::_run_assertions() const {
         });
 
         Assert(is_sorted, "segment should be sorted by " + table->column_name(sort_column_id) + ", but it isn't");
-        std::cout << "[" << description() << "] " << "- Segments are actually sorted" << " for table " << table_name << std::endl;
+        if (VERBOSE) std::cout << "[" << description() << "] " << "-  Segments are actually sorted" << " for table " << table_name << std::endl;
       }
 
       // ... all segments should have DictionaryEncoding
@@ -282,12 +292,12 @@ void SimpleClusteringAlgo::_run_assertions() const {
         const auto encoding_spec = get_segment_encoding_spec(segment);
         Assert(encoding_spec.encoding_type == EncodingType::Dictionary, "segment is not dictionary-encoded");
       }
-      std::cout << "[" << description() << "] " << "- All segments are DictionarySegments" << std::endl;
+      if (VERBOSE) std::cout << "[" << description() << "] " << "-  All segments are DictionarySegments" << " for table " << table_name << std::endl;
 
       // ... chunks have at most the target chunk size
       Assert(chunk->size() <= target_chunk_size, "chunk size should be <= " + std::to_string(target_chunk_size)
         + ", but is " + std::to_string(chunk->size()));
-      std::cout << "[" << description() << "] " << "- All chunks have about the expected size" << " for table " << table_name << std::endl;
+      if (VERBOSE) std::cout << "[" << description() << "] " << "-  All chunks have about the expected size" << " for table " << table_name << std::endl;
     }
   }
 }
