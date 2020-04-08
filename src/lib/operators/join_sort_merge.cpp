@@ -950,16 +950,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
         auto output_chunk = std::make_shared<Chunk>(std::move(segments));
         if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
-            (_mode == JoinMode::Inner || _mode == JoinMode::Semi || _mode == JoinMode::Cross) &&
-            _secondary_join_predicates.empty()) {
+            (_mode == JoinMode::Inner || _mode == JoinMode::Cross) && _secondary_join_predicates.empty()) {
           output_chunk->finalize();
           // The join columns are sorted ascending (ensured by radix_cluster_sort)
-          if (_mode == JoinMode::Semi) {
-            output_chunk->set_sorted_by(SortColumnDefinition(first_join_column, SortMode::Ascending));
-          } else {
-            output_chunk->set_sorted_by({SortColumnDefinition(first_join_column, SortMode::Ascending),
-                                         SortColumnDefinition(second_join_column, SortMode::Ascending)});
-          }
+          output_chunk->set_sorted_by({SortColumnDefinition(first_join_column, SortMode::Ascending),
+                                       SortColumnDefinition(second_join_column, SortMode::Ascending)});
         }
         output_chunks[pos_list_id] = output_chunk;
       };
