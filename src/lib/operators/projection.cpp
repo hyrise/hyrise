@@ -210,22 +210,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
 
-  // TODO(cg):
-  // for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
-  //      const auto& expression = expressions[column_id];
-  //
-  //      if (expression->type == ExpressionType::PQPColumn) {
-  //       forward information
-  //      }
-  // }
-
   // Collect information about which input table columns correspond to the expression (output) columns.
-  auto column_id_to_expression = std::unordered_map<ColumnID, ColumnID>{};
+  auto column_id_to_expression_id = std::unordered_map<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
     const auto& expression = expressions[expression_id];
     if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
       const auto& original_id = pqp_column_expression->column_id;
-      column_id_to_expression[original_id] = expression_id;
+      column_id_to_expression_id[original_id] = expression_id;
     }
   }
 
@@ -244,9 +235,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     if (sorted_by) {
       std::vector<SortColumnDefinition> transformed;
       for (auto& [column_id, mode] : *sorted_by) {
-        if (!column_id_to_expression.count(column_id)) continue;  // column is not present
-        const auto new_column_id = column_id_to_expression.at(column_id);
-        transformed.push_back(SortColumnDefinition(new_column_id, mode));
+        if (!column_id_to_expression_id.count(column_id)) continue;  // column is not present in output expression list
+        const auto projected_column_id = column_id_to_expression_id.at(column_id);
+        transformed.push_back(SortColumnDefinition(projected_column_id, mode));
       }
       chunk->set_sorted_by(transformed);
     }
