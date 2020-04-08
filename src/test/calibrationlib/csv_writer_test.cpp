@@ -70,40 +70,6 @@ TEST_F(CSVWriterTest, HeaderRemainsAfterValueAddition) {
   EXPECT_EQ(line, "10,5,5000,ColumnScan");
 }
 
-TEST_F(CSVWriterTest, AppendToExistingFileIfFileIsNotReplaced) {
-  auto csv_writer = default_writer();
-
-  csv_writer.set_value("INPUT_ROWS", 10);
-  csv_writer.set_value("OUTPUT_ROWS", 5);
-  csv_writer.set_value("RUNTIME_NS", 5000);
-  csv_writer.set_value("SCAN_TYPE", "ColumnScan");
-
-  csv_writer.write_row();
-
-  auto new_csv_writer = CSVWriter(_file_path, _headers, false);
-
-  csv_writer.set_value("INPUT_ROWS", 30);
-  csv_writer.set_value("OUTPUT_ROWS", 20);
-  csv_writer.set_value("RUNTIME_NS", 10000);
-  csv_writer.set_value("SCAN_TYPE", "ReferenceScan");
-
-  csv_writer.write_row();
-
-  std::string line;
-  std::ifstream f(_file_path);
-  std::getline(f, line);
-  // Check if header is still untouched
-  EXPECT_EQ(line, "INPUT_ROWS,OUTPUT_ROWS,RUNTIME_NS,SCAN_TYPE");
-
-  // Check if row was added
-  std::getline(f, line);
-  EXPECT_EQ(line, "10,5,5000,ColumnScan");
-
-  // Check if row was added
-  std::getline(f, line);
-  EXPECT_EQ(line, "30,20,10000,ReferenceScan");
-}
-
 TEST_F(CSVWriterTest, ThrowIfValueForHeaderIsAddedTwice) {
   auto csv_writer = default_writer();
 
@@ -126,7 +92,7 @@ TEST_F(CSVWriterTest, WriteMultipleRowsToFile) {
   auto const scan_type = std::vector<std::string>({"ReferenceScan", "ReferenceScan", "ColumnScan", "ReferenceScan",
                                                    "ColumnScan", "ColumnScan", "ColumnScan", "ReferenceScan"});
 
-  auto csv_writer = CSVWriter(_file_path, _headers, true);
+  auto csv_writer = CSVWriter(_file_path, _headers);
   constexpr auto delimiter = ',';
 
   uint64_t num_entries = input_rows.size();
@@ -159,7 +125,7 @@ TEST_F(CSVWriterTest, ReplaceExistingFileIfFlagIsSet) {
   const auto csv_writer = default_writer();  // create an file with headers
 
   const auto new_headers = std::vector<std::string>({"COLUMN_1", "COLUMN_2", "COLUMN_3", "COLUMN_4"});
-  const auto new_csv_writer = CSVWriter(_file_path, new_headers, true);
+  const auto new_csv_writer = CSVWriter(_file_path, new_headers);
 
   std::string line;
   std::ifstream f(_file_path);
@@ -168,14 +134,8 @@ TEST_F(CSVWriterTest, ReplaceExistingFileIfFlagIsSet) {
   EXPECT_EQ(line, "COLUMN_1,COLUMN_2,COLUMN_3,COLUMN_4");  // first line must be the new header
 }
 
-TEST_F(CSVWriterTest, ThrowIfCreateNewFileWithDifferentHeaders) {
-  const auto csv_writer = default_writer();
-  const auto new_headers = std::vector<std::string>({"COLUMN_1", "COLUMN_2", "COLUMN_3", "COLUMN_4"});
-  EXPECT_ANY_THROW(CSVWriter(_file_path, new_headers, false));
-}
-
 TEST_F(CSVWriterTest, ThrowIfDelimiterInValue) {
-  auto csv_writer = CSVWriter(_file_path, _headers, true);
+  auto csv_writer = CSVWriter(_file_path, _headers);
   EXPECT_ANY_THROW(csv_writer.set_value("INPUT_ROWS", "434,123"));
   EXPECT_ANY_THROW(csv_writer.set_value("OUTPUT_ROWS", "39213213,"));
   EXPECT_ANY_THROW(csv_writer.set_value("RUNTIME_NS", ",434123"));

@@ -10,7 +10,7 @@ namespace opossum {
 
 class CSVWriter {
  public:
-  CSVWriter(const std::string file_path, const std::vector<std::string> headers, const bool override_file = true);
+  CSVWriter(const std::string file_path, const std::vector<std::string> headers);
 
   static constexpr std::string_view NA = "NULL";
 
