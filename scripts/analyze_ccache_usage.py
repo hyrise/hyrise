@@ -28,8 +28,7 @@ for filename in Path('src').rglob('*.ccache-log'):
 
 if len(files) == 0:
   print("No *.ccache-log files found. Did you compile with ccache and the environment variable CCACHE_DEBUG=1?")
-  # ToDo(anyone): change back to `sys.exit(1)` as soon as our ccache problem is resolved
-  sys.exit(0)
+  sys.exit(1)
 
 common_path_prefix = os.path.commonprefix(list(files.keys()))
 files_shortened = {}
