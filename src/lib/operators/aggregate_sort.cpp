@@ -434,15 +434,15 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   std::shared_ptr<const Table> sorted_table = input_table;
   if (!_groupby_column_ids.empty()) {
     /**
-     * Table-wide sortedness is not tracked yet.
-     * Thus it is checked if the value clustering matches the columns we are grouping by
-     * (these are the columns we would need to sort by to achieve value clustering).
-     * If the input is already value clustered according to our needs, this means that values that would end up
-     * in the same cluster are already in the same chunk.
-     * Thus, we can execute all remaining sorts on a per-chunks basis.
-     * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
-     * to achieve the value clustering we need.
-     */
+    * If there is a value clustering for a column, it means that all tuples with the same value in that column
+    * are in the same chunk.
+    * Therefore, if one of the value clustering columns is part of the group by vector, we can skip
+    * sorting the whole table and sort on a per-chunk basis instead. Values that would end up in the same cluster
+    * are already in the same chunk.
+    *
+    * If the value clustering doesn't match the columns we group by, we need to re-sort the whole table
+    * to achieve the value clustering we need (table-wide sort information is not tracked yet).
+    */
 
     auto is_value_clustered_by_groupby_column = false;
 
