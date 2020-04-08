@@ -290,16 +290,14 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
                     [this, &node_column_expressions_set](const auto& expression) {
                       // Check for nullability, if possible.
                       return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
-                    })) {
-      continue;
-    } else {
-      // All FD's expressions that are part of this node's column_expressions are non-nullable.
-      fds_out.push_back(fd);
-    }
+                    })) continue;
+
+    // All FD's expressions that are part of this node's column_expressions are non-nullable.
+    fds_out.push_back(fd);
   }
 
   return fds_out;
-}  // namespace opossum
+}
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;

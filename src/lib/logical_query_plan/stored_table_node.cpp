@@ -97,7 +97,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
   const auto& unique_constraints = Hyrise::get().storage_manager.get_table(table_name)->get_soft_unique_constraints();
   const auto& column_expressions = this->column_expressions();
 
-  for (auto& constraint : unique_constraints) {
+  for (const auto& constraint : unique_constraints) {
     // We support FDs for non-nullable columns only
     if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
                     [this](const auto column_id) { return this->is_column_nullable(column_id); }))

@@ -28,7 +28,7 @@ bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd, const Expres
                                     AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
 
-  // To benefit from this rule, the FD's  columns have to be part of the group-by list
+  // To benefit from this rule, the FD's columns have to be part of the group-by list
   if (!std::all_of(fd.first.cbegin(), fd.first.cend(),
                    [&group_by_columns](std::shared_ptr<AbstractExpression> constraint_col_expr) {
                      return group_by_columns.contains(constraint_col_expr);
