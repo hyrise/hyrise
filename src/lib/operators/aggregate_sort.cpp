@@ -444,24 +444,20 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * to achieve the value clustering we need.
      */
 
-    bool is_grouped_by_all_value_clustered_segments = false;
+    auto is_value_clustered_by_all_groupby_columns = false;
+
     if (table_value_clustered_by) {
-      for (auto& value_clustered_by : *table_value_clustered_by) {
-        if (std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), value_clustered_by) !=
-            _groupby_column_ids.end()) {
-          is_grouped_by_all_value_clustered_segments = true;
-        } else {
-          is_grouped_by_all_value_clustered_segments = false;
-          break;
-        }
+      for (const auto& value_clustered_by : *table_value_clustered_by) {
+        is_value_clustered_by_all_groupby_columns |= std::find(_groupby_column_ids.begin(),
+            _groupby_column_ids.end(), value_clustered_by) != _groupby_column_ids.end();
       }
 
-      if (is_grouped_by_all_value_clustered_segments) {
+      if (is_value_clustered_by_all_groupby_columns) {
         // Sort input table chunk_wise consecutively by the group by columns (stable sort)
         sorted_table = _sort_within_chunks(input_table, _groupby_column_ids);
       }
     }
-    if (!table_value_clustered_by || !is_grouped_by_all_value_clustered_segments) {
+    if (!table_value_clustered_by || !is_value_clustered_by_all_groupby_columns) {
       // sort input table in whole consecutively by the group by columns
       for (const auto& column_id : _groupby_column_ids) {
         auto table_wrapper = std::make_shared<TableWrapper>(sorted_table);
