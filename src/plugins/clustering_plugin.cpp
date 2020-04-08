@@ -41,17 +41,3 @@ const ClusteringByTable ClusteringPlugin::_read_clustering_config(const std::str
 EXPORT_PLUGIN(ClusteringPlugin)
 
 }  // namespace opossum
-/*
-
-todos:
-- methode zum neuclustern (grob)
-- config aus json lesen statt umgebungsvariable
-- tabellen aus SM nehmen, neuschreiben, zurückpacken
-
-
-unklares:
-- bester Weg um config ins benchmark.json mitzugeben
-- wie kriege ich das clustering ausgeführt, bevor das benchmark startet?
-- generell: wie verknüpfe ich benchmark und plugin?
-
-*/
