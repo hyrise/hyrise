@@ -197,7 +197,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
-        const auto& chunk_indexes = stored_chunk->chunk_indexes();
+        const auto& chunk_indexes = stored_chunk->indexes();
 
         // TODO: include covering indexes. Right now, only single column indexes are forwarded
         const auto index_iter = chunk_indexes->find({stored_column_id});

@@ -6,16 +6,15 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
-
 #include "types.hpp"
 
 namespace {
-opossum::VariableLengthKey create_key(uint16_t value) {
+opossum::VariableLengthKey create_key(const uint16_t value) {
   auto result = opossum::VariableLengthKey(sizeof(uint16_t));
   result |= value;
   return result;

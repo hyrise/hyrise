@@ -1,13 +1,10 @@
 #pragma once
 
-#include <boost/asio.hpp>
-
 #include "ring_buffer_iterator.hpp"
+#include "server_types.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-using Socket = boost::asio::ip::tcp::socket;
 
 // Dedicated buffer for read operations. In contrast to the WriteBuffer integer types are converted from network to
 // host byte order and data will only be read from the network device.

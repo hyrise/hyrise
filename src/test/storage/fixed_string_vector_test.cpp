@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
 

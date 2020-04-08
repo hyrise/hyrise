@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
@@ -112,11 +111,11 @@ TEST_F(StorageChunkTest, GetIndexByColumnID) {
   auto index_str = chunk->create_index<GroupKeyIndex>({ColumnID{1}});
   auto index_int_str = chunk->create_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}});
 
-  const auto& chunk_indexes = chunk->chunk_indexes();
-  EXPECT_EQ(chunk_indexes->at({ColumnID{0}}), index_int);
-  // EXPECT_EQ(chunk_indexes->at({ColumnID{0}}), index_int_str); // TODO: covering searches?
-  EXPECT_EQ(chunk_indexes->at({ColumnID{0}, ColumnID{1}}), index_int_str);
-  EXPECT_EQ(chunk_indexes->at({ColumnID{1}}), index_str);
+  const auto& indexes = chunk->indexes();
+  EXPECT_EQ(indexes->at({ColumnID{0}}), index_int);
+  // EXPECT_EQ(indexes->at({ColumnID{0}}), index_int_str); // TODO: covering searches?
+  EXPECT_EQ(indexes->at({ColumnID{0}, ColumnID{1}}), index_int_str);
+  EXPECT_EQ(indexes->at({ColumnID{1}}), index_str);
 }
 
 TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {
@@ -125,24 +124,12 @@ TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {
   auto index_str = chunk->create_index<GroupKeyIndex>({ColumnID{1}});
   auto index_int_str = chunk->create_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}});
 
-  const auto& chunk_indexes = chunk->chunk_indexes();
-  EXPECT_EQ(chunk_indexes->at({ColumnID{0}}), index_int);
-  // Make sure it finds both the single-column index as well as the multi-column index
-  // TODO: removed covering searches
-  // EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
-  //           indexes_for_segment_0.cend());
-  // EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
-  //           indexes_for_segment_0.cend());
-
-  EXPECT_EQ(chunk_indexes->at({ColumnID{1}}), index_str);
-  EXPECT_EQ(chunk_indexes->at({ColumnID{0}, ColumnID{1}}), index_int_str);
-  EXPECT_THROW(chunk_indexes->at({ColumnID{1}, ColumnID{0}}), std::logic_error);
-  // Make sure it only finds the single-column index
-  // TODO: removed covering searches
-  // EXPECT_NE(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_str),
-  //           indexes_for_segment_1.cend());
-  // EXPECT_EQ(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_int_str),
-  //           indexes_for_segment_1.cend());
+  const auto& indexes = chunk->indexes();
+  EXPECT_EQ(indexes->size(), 3);
+  EXPECT_EQ(indexes->at({ColumnID{0}}), index_int);
+  EXPECT_EQ(indexes->at({ColumnID{1}}), index_str);
+  EXPECT_EQ(indexes->at({ColumnID{0}, ColumnID{1}}), index_int_str);
+  EXPECT_THROW(indexes->at({ColumnID{1}, ColumnID{0}}), std::logic_error);
 }
 
 TEST_F(StorageChunkTest, RemoveIndex) {
@@ -151,11 +138,11 @@ TEST_F(StorageChunkTest, RemoveIndex) {
   auto index_str = chunk->create_index<GroupKeyIndex>({ColumnID{1}});
   auto index_int_str = chunk->create_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}});
 
-  const auto& chunk_indexes = chunk->chunk_indexes();
+  const auto& indexes = chunk->indexes();
 
-  EXPECT_EQ(chunk_indexes->at({ColumnID{0}}), index_int);
+  EXPECT_EQ(indexes->at({ColumnID{0}}), index_int);
   chunk->remove_index(index_int);
-  EXPECT_THROW(chunk_indexes->at({ColumnID{0}}), std::logic_error);
+  EXPECT_THROW(indexes->at({ColumnID{0}}), std::logic_error);
   // TODO: removed covering searches
   // EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
   //           indexes_for_segment_0.cend());
@@ -164,14 +151,14 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 
   // chunk->remove_index(index_int_str);
   // indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
-  // EXPECT_THROW(chunk_indexes->at({ColumnID{0}}), std::logic_error);
+  // EXPECT_THROW(indexes->at({ColumnID{0}}), std::logic_error);
   // TODO: removed covering searches
   // EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
   //           indexes_for_segment_0.cend());
 
-  EXPECT_EQ(chunk_indexes->at({ColumnID{1}}), index_str);
+  EXPECT_EQ(indexes->at({ColumnID{1}}), index_str);
   chunk->remove_index(index_str);
-  EXPECT_THROW(chunk_indexes->at({ColumnID{1}}), std::logic_error);
+  EXPECT_THROW(indexes->at({ColumnID{1}}), std::logic_error);
   // TODO: removed covering searches
   // EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_str),
   //           indexes_for_segment_0.cend());

@@ -71,6 +71,8 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   // Retrieves the value cached at the key.
   Value& get(const Key& key) {
     auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "key not present");
+
     return _list[it->second].second;
   }
 

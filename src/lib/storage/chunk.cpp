@@ -19,8 +19,8 @@ namespace opossum {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<IndexesByColumnIDsMap> chunk_indexes)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _chunk_indexes(chunk_indexes) {
+             std::shared_ptr<IndexesByColumnIDsMap> indexes)
+    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(indexes) {
   DebugAssert(!_segments.empty(),
               "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
@@ -67,7 +67,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
+std::shared_ptr<BaseSegment> Chunk::get_segment(const ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
@@ -104,23 +104,33 @@ void Chunk::finalize() {
   }
 }
 
-const std::shared_ptr<IndexesByColumnIDsMap>& Chunk::chunk_indexes() const { return _chunk_indexes; }
+const std::shared_ptr<IndexesByColumnIDsMap>& Chunk::indexes() const { return _indexes; }
 
-const std::shared_ptr<std::vector<AbstractIndex>>& Chunk::covering_indexes(const std::vector<ColumnID> column_ids) {
-  for (const auto& [index_column_ids, index] : _chunk_indexes) {
-    if (std::search(index_column_ids.begin(), index_column_ids.end(), col))
+const std::vector<std::shared_ptr<AbstractIndex>> Chunk::applicable_indexes(const std::vector<const ColumnID> column_ids) {
+  const auto search_columns_set = std::set<const ColumnID>(column_ids.cbegin(), column_ids.cend());
+
+  std::vector<std::shared_ptr<AbstractIndex>> applicable_indexes{};
+  for (const auto& [index_column_ids, index] : *_indexes) {
+    std::vector<const ColumnID> index_intersection(column_ids.size());
+    std::set_intersection(column_ids.cbegin(), column_ids.cend(),
+                          search_columns_set.cbegin(), search_columns_set.cend(),
+                          std::back_inserter(index_intersection));
+    if (index_intersection.size () == search_columns_set.size()) {
+      applicable_indexes.emplace_back(index);
+    }
   }
-};
+  return applicable_indexes;
+}
 
 void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
   // We do not expect remove_index to be often called or called on critical paths. Hence, iterating to delete an index
   // should be acceptable.
-  auto indexes_map_iter = std::find_if(_chunk_indexes->cbegin(), _chunk_indexes->cend(),
+  auto indexes_map_iter = std::find_if(_indexes->cbegin(), _indexes->cend(),
                                        [&](const auto& map_index) { return index == map_index.second; });
 
-  DebugAssert(indexes_map_iter != _chunk_indexes->cend(), "Trying to remove a non-existing index");
-  if (indexes_map_iter != _chunk_indexes->cend()) {
-    _chunk_indexes->erase(indexes_map_iter);
+  DebugAssert(indexes_map_iter != _indexes->cend(), "Trying to remove a non-existing index");
+  if (indexes_map_iter != _indexes->cend()) {
+    _indexes->erase(indexes_map_iter);
   }
 }
 
@@ -146,7 +156,7 @@ bool Chunk::references_exactly_one_table() const {
 
 void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   // Migrating chunks with indexes is not implemented yet.
-  if (!_chunk_indexes->empty()) {
+  if (!_indexes->empty()) {
     Fail("Cannot migrate Chunk with Indexes.");
   }
 
@@ -160,14 +170,16 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
 
 const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
 
-size_t Chunk::estimate_memory_usage() const {
+size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
 
   for (const auto& segment : _segments) {
-    bytes += segment->estimate_memory_usage();
+    bytes += segment->memory_usage(mode);
   }
 
-  // TODO(anybody) Index memory usage missing
+  for (const auto& [_, index] : *_indexes) {
+    bytes += index->memory_consumption();
+  }
 
   if (_mvcc_data) {
     bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);

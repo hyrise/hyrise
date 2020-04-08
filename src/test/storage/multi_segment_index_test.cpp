@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
@@ -49,8 +48,8 @@ class MultiSegmentIndexTest : public BaseTest {
 };
 
 // List of indexes to test
-typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndexes;
-TYPED_TEST_SUITE(MultiSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
+typedef ::testing::Types<CompositeGroupKeyIndex> MultiSegmentIndexTypes;
+TYPED_TEST_SUITE(MultiSegmentIndexTest, MultiSegmentIndexTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
@@ -186,11 +185,11 @@ TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   chunk->create_index<TypeParam>({ColumnID{0}});
   chunk->create_index<TypeParam>({ColumnID{0}, ColumnID{1}});
 
-  const auto& chunk_indexes = chunk->chunk_indexes();
-  EXPECT_NO_THROW(chunk_indexes->at({ColumnID{0}}));
-  EXPECT_NO_THROW(chunk_indexes->at({ColumnID{0}, ColumnID{1}}));
-  EXPECT_THROW(chunk_indexes->at({ColumnID{1}, ColumnID{0}}), std::logic_error);
-  EXPECT_THROW(chunk_indexes->at({ColumnID{1}}), std::logic_error);
+  const auto& indexes = chunk->indexes();
+  EXPECT_NO_THROW(indexes->at({ColumnID{0}}));
+  EXPECT_NO_THROW(indexes->at({ColumnID{0}, ColumnID{1}}));
+  EXPECT_THROW(indexes->at({ColumnID{1}, ColumnID{0}}), std::logic_error);
+  EXPECT_THROW(indexes->at({ColumnID{1}}), std::logic_error);
 
   // TODO: We through out a test which gets indexes for columnid=0 and that received two indexes.
   // Right now, we expect the caller to handle these cases and manually. Shall we create a "get_covering_indexes" method?

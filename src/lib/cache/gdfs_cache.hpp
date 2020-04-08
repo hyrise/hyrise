@@ -6,6 +6,7 @@
 
 #include "abstract_cache_impl.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -95,6 +96,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
   Value& get(const Key& key) {
     auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "key not present");
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;

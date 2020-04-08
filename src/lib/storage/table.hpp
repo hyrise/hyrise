@@ -140,7 +140,7 @@ class Table : private Noncopyable {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
       if (!chunk) continue;
 
-      size_t current_size = chunk->size();
+      const size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
         return boost::get<T>(
@@ -203,7 +203,7 @@ class Table : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
  protected:
   const TableColumnDefinitions _column_definitions;

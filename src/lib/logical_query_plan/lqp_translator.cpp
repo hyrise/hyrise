@@ -25,6 +25,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
+#include "import_node.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -32,6 +33,7 @@
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
@@ -126,6 +128,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
+    case LQPNodeType::Import:             return _translate_import_node(node);
     case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
       // clang-format on
 
@@ -190,7 +193,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     value2_variant = value_expression->value;
   }
 
-  const std::vector<ColumnID> column_ids = {column_id};
   const std::vector<AllTypeVariant> right_values = {value_variant};
   std::vector<AllTypeVariant> right_values2 = {};
   if (value2_variant) right_values2.emplace_back(*value2_variant);
@@ -203,16 +205,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    const auto& chunk_indexes = chunk->chunk_indexes();
-    const auto chunk_index_iter = chunk_indexes->find(column_ids);
-    if (chunk_index_iter != chunk_indexes->cend() && chunk_index_iter->second->type() == SegmentIndexType::GroupKey) {
-      indexed_chunks.emplace_back(chunk_id);
+    const auto& chunk_indexes = chunk->indexes();
+    for (const auto& [column_ids, index] : *chunk_indexes) {
+      if (column_ids.front() == column_id) {
+        indexed_chunks.emplace_back(chunk_id);
+      }
     }
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, std::initializer_list<ColumnID>{column_id},
                                                 predicate->predicate_condition, right_values, right_values2);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
@@ -484,6 +487,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
+  return std::make_shared<Import>(import_node->filename, import_node->tablename, Chunk::DEFAULT_SIZE,
+                                  import_node->filetype);
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.

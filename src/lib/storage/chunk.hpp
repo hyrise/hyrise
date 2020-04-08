@@ -27,7 +27,6 @@ class BaseSegment;
 class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
-using Indexes = pmr_vector<std::shared_ptr<AbstractIndex>>;
 using IndexesByColumnIDsMap = std::map<std::vector<ColumnID>, std::shared_ptr<AbstractIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
@@ -48,9 +47,12 @@ class Chunk : private Noncopyable {
   // segments do not use the table's max_chunk_size at all.
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
+  // Index vector is a shared ptr to a vector as we need to ensure that the list of vectors is not destroyed during
+  // query execution. We cannot pass references here, FOR TODO reason
+  // TODO:
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-        const std::shared_ptr<IndexesByColumnIDsMap> chunk_indexes = std::make_shared<IndexesByColumnIDsMap>());
+        std::shared_ptr<IndexesByColumnIDsMap> indexes = std::make_shared<IndexesByColumnIDsMap>());
 
   // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
   bool is_mutable() const;
@@ -78,7 +80,7 @@ class Chunk : private Noncopyable {
    *       However, if you call get_segment again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
+  std::shared_ptr<BaseSegment> get_segment(const ColumnID column_id) const;
 
   bool has_mvcc_data() const;
 
@@ -95,9 +97,26 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
-  const std::shared_ptr<IndexesByColumnIDsMap>& chunk_indexes() const;
+  const std::shared_ptr<IndexesByColumnIDsMap>& indexes() const;
 
-  const std::shared_ptr<std::vector<AbstractIndex>>& covering_indexes(const std::vector<ColumnID> column_ids) const;
+  /**
+   * With the current status of indexes in Hyrise, we have either single column indexes (trivially to handle) and
+   * multi-column indexes which make certain assumptions. E.g., they have to accessed with the the same order of
+   * columns as they store internally. Further, while not all indexed columns of the index have to be accessed for
+   * searches, the accessed ones have to be all in the front of the covered columns of the index.
+
+   * We store indexes per chunk in a vector of pairs with the covered column IDs and an abstract index shared pointer.
+
+   * Performance: we do not use maps or other data structures here. The reasons are, first, that they are not of much
+   * help for multi-index searches (multi-maps with intersections are possible but expensive) and, second, we expect
+   * the number of indexes and the number of covered columns in multi-column indexes to be rather small (i.e.,
+   * usually not more than half a dozen). Iterating vectors and iteratively checking their applicability is thus
+   * sufficiently fast that a worst case complexity of m*n.
+   *
+   * We only return indexes whose columns cover all requested columns, even though it can make sense to use a more
+   * narrow index and apply the remaining column filter in a following table scan.
+   */
+  const std::vector<std::shared_ptr<AbstractIndex>> applicable_indexes(const std::vector<const ColumnID> column_ids);
 
   // TODO: move this method into createIndex(columnIDs)
   template <typename Index>
@@ -117,10 +136,10 @@ class Chunk : private Noncopyable {
   }
 
   template <typename Index>
-  std::shared_ptr<AbstractIndex> create_index(const std::vector<ColumnID>& column_ids) {
+  std::shared_ptr<AbstractIndex> create_index(const std::vector<ColumnID> column_ids) {
     const auto segments = _get_segments_for_ids(column_ids);
     const auto index = create_index<Index>(segments);
-    _chunk_indexes->emplace(column_ids, index);
+    _indexes->emplace(std::move(column_ids), index);
     return index;
   }
 
@@ -143,7 +162,7 @@ class Chunk : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
@@ -195,8 +214,8 @@ class Chunk : private Noncopyable {
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
-  // std::map over std::unordered_map as we do not need to implement hashing of vectors the map is expected to be small
-  std::shared_ptr<IndexesByColumnIDsMap> _chunk_indexes;
+  // std::map over std::unordered_map as we do not need to implement hashing of vectors the map is expected to be small.
+  std::shared_ptr<IndexesByColumnIDsMap> _indexes;
 
   // Default value of zero means "not set"
   std::atomic<CommitID> _cleanup_commit_id{0};

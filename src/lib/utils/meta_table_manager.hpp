@@ -21,9 +21,11 @@ class MetaTableManager : public Noncopyable {
 
   // Generator methods for the different meta tables
   static std::shared_ptr<Table> generate_chunks_table();
+  static std::shared_ptr<Table> generate_chunk_sort_orders_table();
   static std::shared_ptr<Table> generate_columns_table();
   static std::shared_ptr<Table> generate_indexes_table();
   static std::shared_ptr<Table> generate_segments_table();
+  static std::shared_ptr<Table> generate_accurate_segments_table();
   static std::shared_ptr<Table> generate_tables_table();
 
   // Returns name.starts_with(META_PREFIX) as stdlibc++ does not support starts_with yet.
