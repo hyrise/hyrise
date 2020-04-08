@@ -9,6 +9,15 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+
+
+
+
+
+
+
+#include "storage/create_iterable_from_segment.hpp"
+
 namespace opossum {
 
 class SegmentAccessorTest : public BaseTest {
@@ -65,6 +74,7 @@ TEST_F(SegmentAccessorTest, TestValueSegmentInt) {
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 6);
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), 3);
   EXPECT_FALSE(vc_int_base_accessor->access(ChunkOffset{3}));
+  EXPECT_TRUE((dynamic_cast<SegmentAccessor<int, ValueSegment<int>>*>(vc_int_base_accessor.get()) != nullptr));
 }
 
 TEST_F(SegmentAccessorTest, TestValueSegmentString) {
@@ -74,6 +84,7 @@ TEST_F(SegmentAccessorTest, TestValueSegmentString) {
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{1}), "world");
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{2}), "!");
   EXPECT_FALSE(vc_str_accessor->access(ChunkOffset{3}));
+  EXPECT_TRUE((dynamic_cast<SegmentAccessor<pmr_string, ValueSegment<pmr_string>>*>(vc_str_accessor.get()) != nullptr));
 }
 
 TEST_F(SegmentAccessorTest, TestDictionarySegmentInt) {
@@ -83,6 +94,7 @@ TEST_F(SegmentAccessorTest, TestDictionarySegmentInt) {
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{1}), 6);
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{2}), 3);
   EXPECT_FALSE(dc_int_accessor->access(ChunkOffset{3}));
+  EXPECT_TRUE((dynamic_cast<SegmentAccessor<int, DictionarySegment<int>>*>(dc_int_accessor.get()) != nullptr));
 }
 
 TEST_F(SegmentAccessorTest, TestDictionarySegmentString) {
@@ -92,6 +104,7 @@ TEST_F(SegmentAccessorTest, TestDictionarySegmentString) {
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{1}), "world");
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{2}), "!");
   EXPECT_FALSE(dc_str_accessor->access(ChunkOffset{3}));
+  EXPECT_TRUE((dynamic_cast<SegmentAccessor<pmr_string, DictionarySegment<pmr_string>>*>(dc_str_accessor.get()) != nullptr));
 }
 
 TEST_F(SegmentAccessorTest, TestReferenceSegmentToValueSegmentInt) {
@@ -102,6 +115,8 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToValueSegmentInt) {
   EXPECT_EQ(rc_int_accessor->access(ChunkOffset{2}), 4);
   EXPECT_FALSE(rc_int_accessor->access(ChunkOffset{3}));
   EXPECT_FALSE(rc_int_accessor->access(ChunkOffset{4}));
+
+  EXPECT_TRUE((dynamic_cast<MultipleChunkReferenceSegmentAccessor<int>*>(rc_int_accessor.get()) != nullptr));
 }
 
 TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
@@ -112,6 +127,58 @@ TEST_F(SegmentAccessorTest, TestReferenceSegmentToDictionarySegmentString) {
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{2}), "Hello,");
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{3}));
   EXPECT_FALSE(rc_str_accessor->access(ChunkOffset{4}));
+  EXPECT_TRUE((dynamic_cast<MultipleChunkReferenceSegmentAccessor<pmr_string>*>(rc_str_accessor.get()) != nullptr));
 }
+
+TEST_F(SegmentAccessorTest, TestMultipleChunkReferenceSegmentAccessor) {
+  // dc_int = encode_and_compress_segment(vc_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
+  //   dc_str = encode_and_compress_segment(vc_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
+
+  //   tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int, false},
+  //                                                        TableColumnDefinition{"dc_str", DataType::String, false}},
+  //                                 TableType::Data);
+  //   tbl->append_chunk({vc_int, dc_str});
+  //   tbl->append_chunk({vc_int, dc_str});
+
+  //   pos_list = std::make_shared<PosList>(PosList{{
+  //       RowID{ChunkID{0}, ChunkOffset{1}},
+  //       RowID{ChunkID{0}, ChunkOffset{2}},
+  //       RowID{ChunkID{0}, ChunkOffset{0}},
+  //       RowID{ChunkID{0}, ChunkOffset{3}},
+ 
+  //       RowID{ChunkID{1}, ChunkOffset{2}},
+
+  //       NULL_ROW_ID,
+  //   }});
+
+  //   rc_int = std::make_shared<ReferenceSegment>(tbl, ColumnID{0}, pos_list);
+  //   rc_str = std::make_shared<ReferenceSegment>(tbl, ColumnID{1}, pos_list);
+  // }
+
+  // pos_list->guarantee_single_chunk();
+  // EXPECT_TRUE(pos_list->references_single_chunk());
+  // EXPECT_TRUE((dynamic_cast<SingleChunkReferenceSegmentAccessor<int, ReferenceSegment>*>(rc_int_accessor.get()) != nullptr));
+}
+
+// auto test(ValueSegmentIterable<int> iterable) {
+//   iterable.with_iterators([&](auto begin, const auto end) {
+//     while (begin != end) {
+//       std::cout << begin->value() << std::endl;
+//       co_yield begin->value();
+//       ++begin;
+//     }
+//   });
+// }
+
+// TEST_F (SegmentAccessorTest, BUMMS) {
+//   const auto iterable = create_iterable_from_segment<int, false>(*dynamic_cast<ValueSegment<int>*>(vc_int.get()));
+
+//   auto t = test(iterable);
+
+//   for (const auto&& a : t) {
+//     std::cout << a << std::endl;
+//   }
+
+// }
 
 }  // namespace opossum
