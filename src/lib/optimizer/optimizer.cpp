@@ -91,8 +91,8 @@ namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
-  //optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
-  //optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+  optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
