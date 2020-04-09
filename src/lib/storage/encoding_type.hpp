@@ -62,13 +62,19 @@ bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type)
 
 struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}  // NOLINT
-  constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
-      : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
+  constexpr SegmentEncodingSpec(EncodingType init_encoding_type) : encoding_type{init_encoding_type} {}  // NOLINT
+  constexpr SegmentEncodingSpec(EncodingType init_encoding_type,
+                                std::optional<VectorCompressionType> init_vector_compression_type)
+      : encoding_type{init_encoding_type}, vector_compression_type{init_vector_compression_type} {}
 
   EncodingType encoding_type;
   std::optional<VectorCompressionType> vector_compression_type;
 };
+
+inline bool operator==(const SegmentEncodingSpec& lhs, const SegmentEncodingSpec& rhs) {
+  return std::tie(lhs.encoding_type, lhs.vector_compression_type) ==
+         std::tie(rhs.encoding_type, rhs.vector_compression_type);
+}
 
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 

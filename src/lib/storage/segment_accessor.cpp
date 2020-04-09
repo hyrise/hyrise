@@ -49,7 +49,7 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
 
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
-    const std::shared_ptr<const BaseSegment>& segment, const std::shared_ptr<const PosList>& pos_list) {
+    const std::shared_ptr<const BaseSegment>& segment, const std::shared_ptr<const RowIDPosList>& pos_list) {
   std::unique_ptr<AbstractSegmentAccessor<T>> accessor;
   resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
     using SegmentType = std::decay_t<decltype(typed_segment)>;
@@ -62,7 +62,6 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
         // i.e., the accessors representation of NULL values.
         // Note that this is independent of the row being pointed to holding a NULL value.
         if ((*ref_pos_list)[ChunkOffset{0}].is_null()) {
-          std::cout << "null" << std::endl;
           accessor = std::make_unique<NullAccessor<T>>();
         } else {
           auto chunk_id = (*ref_pos_list)[ChunkOffset{0}].chunk_id;

@@ -29,146 +29,171 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto referenced_table = _segment.referenced_table();
     const auto referenced_column_id = _segment.referenced_column_id();
 
-    const auto& pos_list = _segment.pos_list();
+    const auto& position_filter = _segment.pos_list();
 
-    const auto begin_it = pos_list->cbegin();
+    resolve_pos_list_type(position_filter, [&functor, &referenced_table, &referenced_column_id](const auto& pos_list) {
+      const auto begin_it = pos_list->cbegin();
+      const auto end_it = pos_list->cend();
 
-    // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some optimizations.
-    // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
-    // virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID. Therefore, we skip this case.
+      // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some
+      // optimizations. For example, we can use a single, non-virtual segment accessor instead of having
+      // to keep multiple and using virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID.
+      // Therefore, we skip this case.
 
-    if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
-      // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
-      // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
-      // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
-      // PosList has no NULL values. However, once we have a `has_null_values` flag in a smarter PosList, we should
-      // use it here.
+      if (pos_list->references_single_chunk() && pos_list->size() > 0 && !begin_it->is_null()) {
+        // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
+        // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
+        // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
+        // PosList has no NULL values. However, once we have a `has_null_values` flag in a smarter PosList, we should
+        // use it here.
 
-      auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
+        auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
 
-      bool functor_was_called = false;
+        bool functor_was_called = false;
 
-      if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
-        resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
-          using SegmentType = std::decay_t<decltype(typed_segment)>;
+        if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
+          resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
+            using SegmentType = std::decay_t<decltype(typed_segment)>;
 
-          // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
-          // compile time during development. While new segment types should be added here,
+            // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
+            // compile time during development. While new segment types should be added here,
 #ifdef HYRISE_ERASE_DICTIONARY
-          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
+            if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
 #endif
 
 #ifdef HYRISE_ERASE_RUNLENGTH
-          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
+            if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
 #endif
 
 #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
+            if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
 #endif
 
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-          if constexpr (std::is_same_v<T, int32_t>) {
-            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
-          }
+            if constexpr (std::is_same_v<T, int32_t>) {
+              if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
+            }
 #endif
 
-          // Always erase LZ4Segment accessors
-          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
+            // Always erase LZ4Segment accessors
+            if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
 
-          if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
-            const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+            if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
+              const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
+              segment_iterable.with_iterators(pos_list, functor);
 
-            segment_iterable.with_iterators(pos_list, functor);
-
-            functor_was_called = true;
-          } else {
-            Fail("Found ReferenceSegment pointing to ReferenceSegment");
-          }
-        });
-
-        if (!functor_was_called) {
-          PerformanceWarning("ReferenceSegmentIterable for referenced segment type erased by compile-time setting");
-        }
-
-      } else {
-        PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
-      }
-
-      if (functor_was_called) return;
-
-      // The functor was not called yet, because we did not instantiate specialized code for the segment type.
-
-      const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
-      segment_iterable.with_iterators(pos_list, functor);
-    } else {
-
-      std::cout << "Here we go ..." << std::endl;
-      // Gather referenced positions for iterables
-      std::vector<std::shared_ptr<PosList>> pos_lists_per_segment(8);
-      std::vector<SegmentPosition<T>> segment_positions;
-      segment_positions.reserve(pos_list->size());
-
-      auto max_chunk_id = ChunkID{0};
-      for (const auto& position : *pos_list) {
-        const auto chunk_id = position.chunk_id;
-        if (chunk_id == INVALID_CHUNK_ID) continue;
-
-        max_chunk_id = std::max(chunk_id, max_chunk_id);
-        if (static_cast<size_t>(chunk_id) >= pos_lists_per_segment.size()) {
-          std::cout << "we are growing from " << pos_lists_per_segment.capacity() << " to " << chunk_id * 2 << std::endl;
-          pos_lists_per_segment.resize(chunk_id * 2);  // grow fast, don't care about a little bit of oversizing here.
-        }
-
-        if (!pos_lists_per_segment[chunk_id]) {
-          pos_lists_per_segment[chunk_id] = std::make_shared<PosList>();
-          pos_lists_per_segment[chunk_id]->reserve(64);
-        }
-        pos_lists_per_segment[chunk_id]->emplace_back(position);
-      }
-
-      std::vector<std::vector<SegmentPosition<T>>> segment_positions_per_segment{max_chunk_id + 1};
-      for (auto chunk_id = ChunkID{0}; chunk_id < pos_lists_per_segment.size() - 1; ++chunk_id) {
-        const auto& iterable_pos_list = pos_lists_per_segment[chunk_id];
-        if (!iterable_pos_list) {
-          continue;
-        }
-        iterable_pos_list->guarantee_single_chunk();
-
-        auto& single_chunk_segment_positions = segment_positions_per_segment[chunk_id];
-        single_chunk_segment_positions.reserve(iterable_pos_list->size());
-
-        const auto SEGMENT_TEST = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
-        resolve_segment_type<T>(*SEGMENT_TEST, [&](const auto& typed_segment) {
-          const auto iterable = create_iterable_from_segment<T>(typed_segment);
-          iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
-            while (it != end) {
-              single_chunk_segment_positions.emplace_back(SegmentPosition<T>{it->value(), it->is_null(), it->chunk_offset()});
-              ++it;
+              functor_was_called = true;
+            } else {
+              Fail("Found ReferenceSegment pointing to ReferenceSegment");
             }
           });
-        });
-      }
 
-      std::vector<size_t> segment_position_list_offsets(max_chunk_id + 1, 0ul);
-      for (const auto& position : *pos_list) {
-        std::cout << position << std::endl;
-        const auto chunk_id = position.chunk_id;
-        if (chunk_id == INVALID_CHUNK_ID) {
-          segment_positions.emplace_back(SegmentPosition<T>{T{}, true, position.chunk_offset});
-          continue;
+          if (!functor_was_called) {
+            PerformanceWarning("ReferenceSegmentIterable for referenced segment type erased by compile-time setting");
+          }
+
+        } else {
+          PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
         }
 
-        const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
-        segment_positions.emplace_back(SegmentPosition<T>{segment_position.value(), segment_position.is_null(), segment_position.chunk_offset()});
+        if (functor_was_called) return;
 
-        ++segment_position_list_offsets[chunk_id];
+        // The functor was not called yet, because we did not instantiate specialized code for the segment type.
+
+        const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
+        segment_iterable.with_iterators(pos_list, functor);
+      } else {
+        // Gather referenced positions for iterables
+        std::vector<std::shared_ptr<RowIDPosList>> pos_lists_per_segment(8);
+        std::vector<SegmentPosition<T>> segment_positions;
+        segment_positions.reserve(pos_list->size());
+
+        auto max_chunk_id = ChunkID{0};
+        for (auto iter = begin_it; iter != end_it; ++iter) {
+          const auto& position = *iter;
+          const auto chunk_id = position.chunk_id;
+          if (chunk_id == INVALID_CHUNK_ID) {
+            continue;
+          }
+
+          max_chunk_id = std::max(chunk_id, max_chunk_id);
+          if (static_cast<size_t>(chunk_id) >= pos_lists_per_segment.size()) {
+            pos_lists_per_segment.resize(chunk_id * 2);  // grow fast, don't care about a little bit of oversizing here.
+          }
+
+          if (!pos_lists_per_segment[chunk_id]) {
+            pos_lists_per_segment[chunk_id] = std::make_shared<RowIDPosList>();
+            pos_lists_per_segment[chunk_id]->reserve(64);
+          }
+          pos_lists_per_segment[chunk_id]->emplace_back(position);
+        }
+
+        std::vector<std::vector<SegmentPosition<T>>> segment_positions_per_segment{max_chunk_id + 1};
+        for (auto chunk_id = ChunkID{0}; chunk_id < pos_lists_per_segment.size(); ++chunk_id) {
+          const auto& iterable_pos_list = pos_lists_per_segment[chunk_id];
+          if (!iterable_pos_list) {
+            continue;
+          }
+          iterable_pos_list->guarantee_single_chunk();
+
+          auto& single_chunk_segment_positions = segment_positions_per_segment[chunk_id];
+          single_chunk_segment_positions.reserve(iterable_pos_list->size());
+
+          const auto& base_segment = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
+          resolve_segment_type<T>(*base_segment, [&](const auto& typed_segment) {
+            const auto iterable = create_iterable_from_segment<T>(typed_segment);
+            // for (const auto& p : *iterable_pos_list) {
+            //   std::cout << " | " << p;
+            // }
+            // std::cout << std::endl;
+            // auto pos_list_it = iterable_pos_list->cbegin();
+            iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
+              while (it != end) {
+                single_chunk_segment_positions.emplace_back(*it);
+                // std::cout << " | " <<  chunk_id << "," << pos_list_it->chunk_offset;
+                ++it;
+                // ++pos_list_it;
+              }
+              std::cout << std::endl;
+            });
+          });
+        }
+
+        auto chunk_offset = 0;
+        std::vector<size_t> segment_position_list_offsets(max_chunk_id + 1, 0ul);
+        for (auto iter = begin_it; iter != end_it; ++iter) {
+          const auto& position = *iter;
+          if (position == NULL_ROW_ID) {
+            segment_positions.emplace_back(T{}, true, chunk_offset);
+            ++chunk_offset;
+            continue;
+          }
+
+          const auto chunk_id = position.chunk_id;
+          DebugAssert(position.chunk_offset != INVALID_CHUNK_OFFSET, "Unexpected NULL");
+          DebugAssert(segment_position_list_offsets[chunk_id] < segment_positions_per_segment[chunk_id].size(), "Vector access out of bounds.");
+
+          const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
+          segment_positions.emplace_back(segment_position.value(), segment_position.is_null(), chunk_offset);
+
+          ++segment_position_list_offsets[chunk_id];
+          ++chunk_offset;
+        }
+
+        DebugAssert(segment_positions.size() == pos_list->size(), "Sizes do not match");
+        // for (auto iter = begin_it; iter != end_it; ++iter) {
+        //   std::cout << " | " << *iter;
+        // } std::cout << std::endl;
+        // for (const auto& el : segment_positions) {
+        //   std::cout << " | (" << el.value() << "," << el.is_null() << "," << el.chunk_offset() << ")";
+        // } std::cout << std::endl;
+
+        auto begin = SegmentPositionVectorIterator{&segment_positions, ChunkOffset{0}};
+        auto end = SegmentPositionVectorIterator{&segment_positions, static_cast<ChunkOffset>(pos_list->size())};
+
+        functor(begin, end);
       }
-
-      auto begin = SegmentPositionVectorIterator{&segment_positions, ChunkOffset{0}};
-      auto end = SegmentPositionVectorIterator{&segment_positions, static_cast<ChunkOffset>(pos_list->size())};
-
-      functor(begin, end);
-    }
+    });
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -183,11 +208,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = PosList::const_iterator;
+    using PosListIteratorType = AbstractPosList::PosListIterator<>;
 
    public:
-    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor, const PosListIterator& begin_pos_list_it,
-                                 const PosListIterator& pos_list_it)
+    explicit SingleChunkIterator(const std::shared_ptr<Accessor>& accessor,
+                                 const PosListIteratorType& begin_pos_list_it, const PosListIteratorType& pos_list_it)
         : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
 
    private:
@@ -204,7 +229,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::ptrdiff_t distance_to(const SingleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     SegmentPosition<T> dereference() const {
-      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
@@ -220,23 +245,24 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
    private:
-    PosListIterator _begin_pos_list_it;
-    PosListIterator _pos_list_it;
+    PosListIteratorType _begin_pos_list_it;
+    PosListIteratorType _pos_list_it;
     std::shared_ptr<Accessor> _accessor;
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
-  class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentPosition<T>> {
+  template <typename PosListIteratorType>
+  class MultipleChunkIterator
+      : public BaseSegmentIterator<MultipleChunkIterator<PosListIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = PosList::const_iterator;
 
    public:
     explicit MultipleChunkIterator(
         const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
         const std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>>& accessors,
-        const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
+        const PosListIteratorType& begin_pos_list_it, const PosListIteratorType& pos_list_it)
         : _referenced_table{referenced_table},
           _referenced_column_id{referenced_column_id},
           _begin_pos_list_it{begin_pos_list_it},
@@ -258,16 +284,18 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
-      const auto pos_list_offset = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
       if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
 
       const auto chunk_id = _pos_list_it->chunk_id;
-      const auto& chunk_offset = _pos_list_it->chunk_offset;
 
       if (!(*_accessors)[chunk_id]) {
         _create_accessor(chunk_id);
       }
+
+      const auto chunk_offset = _pos_list_it->chunk_offset;
+
       const auto typed_value = (*_accessors)[chunk_id]->access(chunk_offset);
 
       if (typed_value) {
@@ -287,8 +315,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::shared_ptr<const Table> _referenced_table;
     ColumnID _referenced_column_id;
 
-    PosListIterator _begin_pos_list_it;
-    PosListIterator _pos_list_it;
+    PosListIteratorType _begin_pos_list_it;
+    PosListIteratorType _pos_list_it;
 
     // PointAccessIterators share vector with one Accessor per Chunk
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
@@ -300,7 +328,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     using ValueType = T;
     // using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
-    using PosListIterator = PosList::const_iterator;
 
    public:
     explicit SegmentPositionVectorIterator(std::vector<SegmentPosition<T>>* segment_positions, const ChunkOffset chunk_offset)
@@ -323,12 +350,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
     SegmentPosition<T> dereference() const {
+      // std::cout << "dereference() >> " << (*_segment_positions)[_chunk_offset].chunk_offset() << " & " <<  _chunk_offset << std::endl;
+      DebugAssert((*_segment_positions)[_chunk_offset].chunk_offset() == _chunk_offset, "Unexpected chunk offset.");
       return (*_segment_positions)[_chunk_offset];
     }
 
    private:
     const std::vector<SegmentPosition<T>>* _segment_positions;
-
     ChunkOffset _chunk_offset;
   };
 };

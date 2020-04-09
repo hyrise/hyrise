@@ -879,7 +879,7 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
 
   auto result_values = std::vector<pmr_string>{};
   for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
-    result_values.emplace_back(result->template get_value<pmr_string>(ColumnID{0}, row_number));
+    result_values.emplace_back(*result->template get_value<pmr_string>(ColumnID{0}, row_number));
   }
 
   const auto values_sorted = std::set<pmr_string>(values.begin(), values.end());

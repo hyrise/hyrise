@@ -22,7 +22,7 @@ template <typename T>
 class CreateSegmentAccessor {
  public:
   static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const BaseSegment>& segment);
-  static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const BaseSegment>& segment, const std::shared_ptr<const PosList>& pos_list);
+  static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const BaseSegment>& segment, const std::shared_ptr<const RowIDPosList>& pos_list);
 };
 
 }  // namespace detail
@@ -35,7 +35,7 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
   return opossum::detail::CreateSegmentAccessor<T>::create(segment);
 }
 template <typename T>
-std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment, const std::shared_ptr<const PosList>& pos_list) {
+std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment, const std::shared_ptr<const RowIDPosList>& pos_list) {
   return opossum::detail::CreateSegmentAccessor<T>::create(segment, pos_list);
 }
 
@@ -64,16 +64,18 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   mutable uint64_t _accesses{0};
   const Segment& _segment;
 };
+
 template <typename T, typename Segment, typename Iterable>
 class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SegmentAccessor2(const Segment& segment, const std::shared_ptr<const PosList>& pos_list) :
+  explicit SegmentAccessor2(const Segment& segment, const std::shared_ptr<const AbstractPosList>& pos_list) :
     AbstractSegmentAccessor<T>{}, _segment{segment}, _pos_list{pos_list} {
+      std::cout << "SegmentAccessor2" << std::endl;
       // Gather referenced positions for iterables
-      std::vector<std::shared_ptr<PosList>> pos_lists_per_segment{8};
+      std::vector<std::shared_ptr<RowIDPosList>> pos_lists_per_segment{8};
 
       auto max_chunk_id = ChunkID{0};
-      for (const auto& position : *pos_list) {
+      for (const auto position : *pos_list) { // TODO: back to auto& ????
         const auto chunk_id = position.chunk_id;
         max_chunk_id = std::max(chunk_id, max_chunk_id);
         if (static_cast<size_t>(chunk_id) >= pos_lists_per_segment.size()) {
@@ -81,7 +83,7 @@ class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
         }
 
         if (!pos_lists_per_segment[chunk_id]) {
-          pos_lists_per_segment[chunk_id] = std::make_shared<PosList>();
+          pos_lists_per_segment[chunk_id] = std::make_shared<RowIDPosList>();
           pos_lists_per_segment[chunk_id]->reserve(64);
         }
         pos_lists_per_segment[chunk_id]->emplace_back(position);
@@ -109,8 +111,7 @@ class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
 
       _segment_positions.reserve(pos_list->size());
       std::vector<size_t> segment_position_list_offsets(max_chunk_id + 1, 0ul);
-      for (const auto& position : *pos_list) {
-        std::cout << position << std::endl;
+      for (const auto position : *pos_list) {
         const auto chunk_id = position.chunk_id;
 
         const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
@@ -147,7 +148,7 @@ class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
  protected:
   mutable uint64_t _accesses{0};  // TODO: remove once iterators are properly used.
   const Segment& _segment;
-  const std::shared_ptr<const PosList>& _pos_list;
+  const std::shared_ptr<const AbstractPosList>& _pos_list;
 
   std::unordered_map<size_t, size_t> _tmp_pos_list_offset_mapping;
 
@@ -167,7 +168,6 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
       : _segment{segment}, _table{segment.referenced_table()}, _accessors{8} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    std::cout << _segment.pos_list()->size() << " & " << offset << std::endl;
     const auto& row_id = (*_segment.pos_list())[offset];
     if (row_id.is_null()) {
       return std::nullopt;
@@ -199,7 +199,7 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
+  explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id, const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {
       }
 
@@ -214,8 +214,8 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
  protected:
-  mutable uint64_t _accesses;
-  const PosList& _pos_list;
+  mutable uint64_t _accesses{0};
+  const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
 };
@@ -224,8 +224,9 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
 template <typename T, typename Segment, typename Iterable>
 class SingleChunkReferenceSegmentAccessor2 final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor2(const std::shared_ptr<const PosList>& pos_list, const ChunkID chunk_id, const Segment& segment)
+  explicit SingleChunkReferenceSegmentAccessor2(const std::shared_ptr<const AbstractPosList>& pos_list, const ChunkID chunk_id, const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _iterable{create_iterable_from_segment<T>(segment)} {
+        std::cout << "SingleChunkReferenceSegmentAccessor2" << std::endl;
         _segment_positions.reserve(pos_list->size());
 
         _iterable.with_iterators(pos_list, [&](auto it, const auto end) {
@@ -259,7 +260,7 @@ class SingleChunkReferenceSegmentAccessor2 final : public AbstractSegmentAccesso
 
  protected:
   mutable uint64_t _accesses{0};
-  const std::shared_ptr<const PosList>& _pos_list;
+  const std::shared_ptr<const AbstractPosList>& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
   const Iterable _iterable;

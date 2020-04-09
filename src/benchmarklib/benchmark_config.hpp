@@ -16,7 +16,6 @@ enum class BenchmarkMode { Ordered, Shuffled };
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
-// View BenchmarkConfig::description to see format of the JSON-version
 class BenchmarkConfig {
  public:
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const ChunkOffset chunk_size,
@@ -43,8 +42,6 @@ class BenchmarkConfig {
   bool verify = false;
   bool cache_binary_tables = false;  // Defaults to false for internal use, but the CLI sets it to true by default
   bool sql_metrics = false;
-
-  static const char* description;
 
  private:
   BenchmarkConfig() = default;

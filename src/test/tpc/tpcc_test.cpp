@@ -138,8 +138,8 @@ TEST_F(TPCCTest, Delivery) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
-      old_c_balance = table->get_value<float>("C_BALANCE", 0);
-      old_c_delivery_cnt = table->get_value<int32_t>("C_DELIVERY_CNT", 0);
+      old_c_balance = *table->get_value<float>("C_BALANCE", 0);
+      old_c_delivery_cnt = *table->get_value<int32_t>("C_DELIVERY_CNT", 0);
     }
     expected_c_balance = old_c_balance;
 
@@ -165,9 +165,9 @@ TEST_F(TPCCTest, Delivery) {
       EXPECT_TRUE(table);
       // Ten rows because each district gets 3000 orders at startup (compare 4.3.3.1)
       EXPECT_EQ(table->row_count(), 10);
-      EXPECT_EQ(table->get_value<int32_t>("O_CARRIER_ID", d_id - 1), delivery.o_carrier_id);
+      EXPECT_EQ(*table->get_value<int32_t>("O_CARRIER_ID", d_id - 1), delivery.o_carrier_id);
 
-      c_id = table->get_value<int32_t>(ColumnID{3}, d_id - 1);
+      c_id = *table->get_value<int32_t>(ColumnID{3}, d_id - 1);
     }
 
     // Check for delivery dates being set in ORDER_LINE:
@@ -180,11 +180,11 @@ TEST_F(TPCCTest, Delivery) {
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), num_order_lines);
       for (auto ol_number = uint64_t{1}; ol_number <= num_order_lines; ++ol_number) {
-        EXPECT_EQ(table->get_value<int32_t>("OL_NUMBER", ol_number - 1), ol_number);
-        EXPECT_GE(table->get_value<int32_t>("OL_DELIVERY_D", ol_number - 1), old_time);
+        EXPECT_EQ(*table->get_value<int32_t>("OL_NUMBER", ol_number - 1), ol_number);
+        EXPECT_GE(*table->get_value<int32_t>("OL_DELIVERY_D", ol_number - 1), old_time);
 
         // Add the amount of the order, which was not seen by old_transaction_context above, to expected_c_balance
-        expected_c_balance += table->get_value<float>(ColumnID{8}, ol_number - 1);
+        expected_c_balance += *table->get_value<float>(ColumnID{8}, ol_number - 1);
       }
     }
 
@@ -197,8 +197,8 @@ TEST_F(TPCCTest, Delivery) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
-      EXPECT_FLOAT_EQ(table->get_value<float>("C_BALANCE", 0), expected_c_balance);
-      EXPECT_EQ(table->get_value<int32_t>("C_DELIVERY_CNT", 0), old_c_delivery_cnt + 1);
+      EXPECT_FLOAT_EQ(*table->get_value<float>("C_BALANCE", 0), expected_c_balance);
+      EXPECT_EQ(*table->get_value<int32_t>("C_DELIVERY_CNT", 0), old_c_delivery_cnt + 1);
     }
   }
 }
@@ -236,7 +236,7 @@ TEST_F(TPCCTest, NewOrder) {
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
-    old_d_next_o_id = table->get_value<int32_t>("D_NEXT_O_ID", 0);
+    old_d_next_o_id = *table->get_value<int32_t>("D_NEXT_O_ID", 0);
   }
 
   {
@@ -247,7 +247,7 @@ TEST_F(TPCCTest, NewOrder) {
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
-    EXPECT_EQ(table->get_value<int32_t>("D_NEXT_O_ID", 0), old_d_next_o_id + 1);
+    EXPECT_EQ(*table->get_value<int32_t>("D_NEXT_O_ID", 0), old_d_next_o_id + 1);
   }
 
   auto new_sizes = initial_sizes;
@@ -264,13 +264,12 @@ TEST_F(TPCCTest, NewOrder) {
 
   // Verify ORDER entry
   const auto order_row = Hyrise::get().storage_manager.get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
-  EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});     // O_ID
-  EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});                  // O_D_ID
-  EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});                  // O_W_ID
-  EXPECT_EQ(order_row[3], AllTypeVariant{new_order.c_id});                  // O_C_ID
-  EXPECT_GE(order_row[4], AllTypeVariant{static_cast<int32_t>(old_time)});  // O_ENTRY_D
-  // TODO(anyone): Replace with actual NULL for O_CARRIER_ID
-  EXPECT_EQ(order_row[5], AllTypeVariant{-1});                                        // O_CARRIER_ID
+  EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});               // O_ID
+  EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});                            // O_D_ID
+  EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});                            // O_W_ID
+  EXPECT_EQ(order_row[3], AllTypeVariant{new_order.c_id});                            // O_C_ID
+  EXPECT_GE(order_row[4], AllTypeVariant{static_cast<int32_t>(old_time)});            // O_ENTRY_D
+  EXPECT_TRUE(variant_is_null(order_row[5]));                                         // O_CARRIER_ID
   EXPECT_EQ(order_row[6], AllTypeVariant{static_cast<int32_t>(order_lines.size())});  // O_OL_CNT
   EXPECT_EQ(order_row[7], AllTypeVariant{0});                                         // O_ALL_LOCAL
 
@@ -288,7 +287,7 @@ TEST_F(TPCCTest, NewOrder) {
     EXPECT_LE(order_lines[line_idx].ol_i_id, NUM_ITEMS);
     EXPECT_LE(order_line_row[5], AllTypeVariant{NUM_WAREHOUSES});  // OL_SUPPLY_W_ID
     const auto ol_supply_w_id = boost::get<int32_t>(order_line_row[5]);
-    EXPECT_EQ(order_line_row[6], AllTypeVariant{-1});                                 // OL_DELIVERY_D
+    EXPECT_TRUE(variant_is_null(order_line_row[6]));                                  // OL_DELIVERY_D
     EXPECT_EQ(order_line_row[7], AllTypeVariant{order_lines[line_idx].ol_quantity});  // OL_QUANTITY
 
     // verify OL_AMOUNT
@@ -299,7 +298,7 @@ TEST_F(TPCCTest, NewOrder) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
-      const auto i_price = table->get_value<float>("I_PRICE", 0);
+      const auto i_price = *table->get_value<float>("I_PRICE", 0);
 
       const auto expected_ol_amount = i_price * order_lines[line_idx].ol_quantity;
       EXPECT_EQ(order_line_row[8], AllTypeVariant{expected_ol_amount});  // OL_AMOUNT
@@ -315,7 +314,7 @@ TEST_F(TPCCTest, NewOrder) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
-      const auto s_dist = table->get_value<pmr_string>(ColumnID{0}, 0);
+      const auto s_dist = *table->get_value<pmr_string>(ColumnID{0}, 0);
 
       EXPECT_EQ(order_line_row[9], AllTypeVariant{s_dist});  // OL_DIST_INFO
     }
@@ -374,8 +373,8 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // As all warehouses start with W_YTD = 300'000, this should be the first and only change
-    EXPECT_FLOAT_EQ(table->get_value<float>("W_YTD", 0), 300'000.0f + payment.h_amount);
-    w_name = table->get_value<pmr_string>("W_NAME", 0);
+    EXPECT_FLOAT_EQ(*table->get_value<float>("W_YTD", 0), 300'000.0f + payment.h_amount);
+    w_name = *table->get_value<pmr_string>("W_NAME", 0);
   }
 
   // Verify that D_YTD is updated
@@ -388,8 +387,8 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // As all districts start with D_YTD = 30'000, this should be the first and only change
-    EXPECT_FLOAT_EQ(table->get_value<float>("D_YTD", 0), 30'000.0f + payment.h_amount);
-    d_name = table->get_value<pmr_string>("D_NAME", 0);
+    EXPECT_FLOAT_EQ(*table->get_value<float>("D_YTD", 0), 30'000.0f + payment.h_amount);
+    d_name = *table->get_value<pmr_string>("D_NAME", 0);
   }
 
   // Verify that the customer is updated
@@ -403,9 +402,9 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // Customers start with C_BALANCE = -10, C_YTD_PAYMENT = 10, C_PAYMENT_CNT = 1
-    EXPECT_FLOAT_EQ(table->get_value<float>("C_BALANCE", 0), -10.0f - payment.h_amount);
-    EXPECT_FLOAT_EQ(table->get_value<float>("C_YTD_PAYMENT", 0), 10.0f + payment.h_amount);
-    EXPECT_FLOAT_EQ(table->get_value<int32_t>("C_PAYMENT_CNT", 0), 2);
+    EXPECT_FLOAT_EQ(*table->get_value<float>("C_BALANCE", 0), -10.0f - payment.h_amount);
+    EXPECT_FLOAT_EQ(*table->get_value<float>("C_YTD_PAYMENT", 0), 10.0f + payment.h_amount);
+    EXPECT_FLOAT_EQ(*table->get_value<int32_t>("C_PAYMENT_CNT", 0), 2);
   }
 
   // We do not test for C_DATA
@@ -423,9 +422,9 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_GT(table->row_count(), 0);
 
     const auto row = table->row_count() - 1;
-    EXPECT_GE(table->get_value<int32_t>("H_DATE", row), old_time);
-    EXPECT_FLOAT_EQ(table->get_value<float>("H_AMOUNT", row), payment.h_amount);
-    EXPECT_EQ(table->get_value<pmr_string>("H_DATA", row), w_name + "    " + d_name);
+    EXPECT_GE(*table->get_value<int32_t>("H_DATE", row), old_time);
+    EXPECT_FLOAT_EQ(*table->get_value<float>("H_AMOUNT", row), payment.h_amount);
+    EXPECT_EQ(*table->get_value<pmr_string>("H_DATA", row), w_name + "    " + d_name);
   }
 }
 
@@ -449,9 +448,13 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
   order_status.customer = new_order.c_id;
   EXPECT_TRUE(order_status.execute());
 
+  EXPECT_NE(order_status.o_id, -1);
   EXPECT_EQ(order_status.o_id, new_order.o_id);
+
+  EXPECT_NE(order_status.o_entry_d, -1);
   EXPECT_EQ(order_status.o_entry_d, new_order.o_entry_d);
-  EXPECT_EQ(order_status.o_carrier_id, -1);
+
+  EXPECT_FALSE(order_status.o_carrier_id);
 
   int32_t ol_quantity_sum = 0;
   for (const auto& order_line : new_order.order_lines) {

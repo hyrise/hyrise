@@ -9,7 +9,7 @@
 #include <boost/hana/type.hpp>
 
 #include "base_encoded_segment.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
