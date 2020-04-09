@@ -106,10 +106,10 @@ void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<Abstr
                                             std::vector<std::shared_ptr<AbstractExpression>>& values,
                                             ParameterID &next_parameter_id) {
   if (expression->type == ExpressionType::Value) {
-    //if (expression->replaced_by) {
-    //  const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
-    //  expression = expression->replaced_by;
-    //} else {
+    if (expression->replaced_by) {
+      const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
+      expression = expression->replaced_by;
+    } else {
       const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
       if (value_expression->data_type() != DataType::Null) {
         Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
@@ -120,7 +120,7 @@ void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<Abstr
         expression = new_expression;
         next_parameter_id++;
       }
-    //}
+    }
   }
 }
 
