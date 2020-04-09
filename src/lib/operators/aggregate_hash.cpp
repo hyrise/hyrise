@@ -357,7 +357,7 @@ void AggregateHash::_aggregate() {
 
                 ++chunk_offset;
               });
-              most_distinct_values = std::max(most_distinct_values, id_counter);
+              most_distinct_values = std::max(static_cast<uint64_t>(most_distinct_values), id_counter);
             }
           }
         });
