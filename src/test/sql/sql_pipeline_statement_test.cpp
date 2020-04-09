@@ -719,4 +719,90 @@ TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   EXPECT_FALSE(_pqp_cache->has(meta_table_query));
 }
 
+TEST_F(SQLPipelineStatementTest, ViewNoCaching) {
+  std::array<std::string, 4> queries = {
+    "CREATE table test (a int, b int, c int)",
+    "CREATE VIEW abc AS SELECT * FROM test",
+    "SELECT * FROM abc",
+    "DROP VIEW abc"
+  };
+
+  for (const auto &query: queries) {
+    auto sql_pipeline = SQLPipelineBuilder{query}
+                            .with_lqp_cache(_lqp_cache)
+                            .with_pqp_cache(_pqp_cache)
+                            .create_pipeline_statement();
+    sql_pipeline.get_result_table();
+  }
+
+  EXPECT_EQ(_lqp_cache->size(), 3u);
+  EXPECT_EQ(_pqp_cache->size(), 3u);
+}
+
+TEST_F(SQLPipelineStatementTest, ParameterizationOnUniformDistribution) {
+  Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl"));
+
+  const auto query1 = "SELECT * FROM table WHERE equal = 3;";
+  const auto query2 = "SELECT * FROM table WHERE equal = 4;";
+
+  auto sql_pipeline1 = SQLPipelineBuilder{query1}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+      .create_pipeline_statement();
+  sql_pipeline1.get_result_table();
+
+  auto sql_pipeline2 = SQLPipelineBuilder{query2}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+      .create_pipeline_statement();
+  sql_pipeline2.get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 1u);
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+}
+
+TEST_F(SQLPipelineStatementTest, NoParameterizationOnNonUniformDistribution) {
+  Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl"));
+
+  const auto query1 = "SELECT * FROM table WHERE nonequal = 3;";
+  const auto query2 = "SELECT * FROM table WHERE nonequal = 4;";
+
+  auto sql_pipeline1 = SQLPipelineBuilder{query1}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+      .create_pipeline_statement();
+  sql_pipeline1.get_result_table();
+
+  auto sql_pipeline2 = SQLPipelineBuilder{query2}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+      .create_pipeline_statement();
+  sql_pipeline2.get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 0u);
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+}
+
+TEST_F(SQLPipelineStatementTest, NoParameterizationOnMixedUniformDistribution) {
+  Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl"));
+
+  const auto query1 = "SELECT * FROM table WHERE nonequal = 3 AND equal = 3;";
+  const auto query2 = "SELECT * FROM table WHERE nonequal = 4 AND equal = 4;";
+
+  auto sql_pipeline1 = SQLPipelineBuilder{query1}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+      .create_pipeline_statement();
+  sql_pipeline1.get_result_table();
+
+  auto sql_pipeline2 = SQLPipelineBuilder{query2}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+      .create_pipeline_statement();
+  sql_pipeline2.get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 0u);
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+}
+
 }  // namespace opossum
