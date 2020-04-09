@@ -127,26 +127,33 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
 
             const auto& column_reference = column_expression->column_reference;
             auto node = column_reference.original_node();
-            auto table_node = std::dynamic_pointer_cast<const StoredTableNode>(node);
 
-            const std::string table_name = table_node->table_name;
-            const auto table = Hyrise::get().storage_manager.get_table(table_name);
-            const auto& table_statistics = table->table_statistics();
+            // could also be DummyTable
+            if (node->type == LQPNodeType::StoredTable) {
+              auto table_node = std::dynamic_pointer_cast<const StoredTableNode>(node);
 
-            const auto column_id = column_reference.original_column_id();
+              const std::string table_name = table_node->table_name;
+              const auto table = Hyrise::get().storage_manager.get_table(table_name);
+              const auto& table_statistics = table->table_statistics();
 
-            std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
+              const auto column_id = column_reference.original_column_id();
 
-            auto data_type = table->column_data_type(column_id);
-            resolve_data_type(data_type, [&](auto type) {
-              using ColumnDataType = typename decltype(type)::type;
+              // generated for COUNT(*)
+              if (column_id != INVALID_COLUMN_ID) {
+                std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
 
-              std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics =
-                  std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-              if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
-                columns_distributed_uniformly = false;
+                auto data_type = table->column_data_type(column_id);
+                resolve_data_type(data_type, [&](auto type) {
+                  using ColumnDataType = typename decltype(type)::type;
+
+                  std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics =
+                      std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+                  if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
+                    columns_distributed_uniformly = false;
+                  }
+                });
               }
-            });
+            }
           }
           return ExpressionVisitation::VisitArguments;
         });
