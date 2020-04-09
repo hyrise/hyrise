@@ -202,15 +202,15 @@ float AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value
 template <typename T>
 bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_threshold) const {
   // https://en.wikipedia.org/wiki/G-test
-  auto expected_value = total_count() / total_distinct_count();
+  const auto expected_value = total_count() / total_distinct_count();
 
   HistogramCountType sum = 0;
   for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
-    auto observed_count = bin_height(bin_id) / bin_distinct_count(bin_id);
+    const auto observed_count = bin_height(bin_id) / bin_distinct_count(bin_id);
     sum += (observed_count * log(observed_count / expected_value));
   }
 
-  auto g_test = 2 * sum;
+  const auto g_test = 2 * sum;
 
   return std::abs(g_test) < distribution_threshold;
 }
