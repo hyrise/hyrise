@@ -205,14 +205,14 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
   auto expected_value = total_count() / total_distinct_count();
 
   HistogramCountType sum = 0;
-  for (BinID bin_id = BinID(1); bin_id < bin_count(); bin_id++) {
+  for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
     auto observed_count = bin_height(bin_id) / bin_distinct_count(bin_id);
     sum += (observed_count * log(observed_count / expected_value));
   }
 
   auto g_test = 2 * sum;
 
-  return fabs(g_test) < distribution_threshold;
+  return std::abs(g_test) < distribution_threshold;
 }
 
 template <typename T>
