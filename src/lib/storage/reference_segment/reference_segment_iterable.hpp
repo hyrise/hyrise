@@ -47,7 +47,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         // PosList has no NULL values. However, once we have a `has_null_values` flag in a smarter PosList, we should
         // use it here.
 
-        auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
+        const auto& referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
 
         bool functor_was_called = false;
 
@@ -141,6 +141,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
           const auto& base_segment = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
           resolve_segment_type<T>(*base_segment, [&](const auto& typed_segment) {
+            using SegmentType = std::decay_t<decltype(typed_segment)>;
+            if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
+              Fail("Unexpected iterable for reference segment.");
+            }
             const auto iterable = create_iterable_from_segment<T>(typed_segment);
             // for (const auto& p : *iterable_pos_list) {
             //   std::cout << " | " << p;
@@ -156,7 +160,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
                 ++it;
                 // ++pos_list_it;
               }
-              std::cout << std::endl;
             });
           });
         }
