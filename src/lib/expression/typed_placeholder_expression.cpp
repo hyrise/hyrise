@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID init_parameter_id, DataType init_data_type)
+TypedPlaceholderExpression::TypedPlaceholderExpression(const ParameterID init_parameter_id, const DataType init_data_type)
     : PlaceholderExpression(init_parameter_id), _data_type{init_data_type} {
-  /* This type of placeholder is used for cache paramitrization, where null values should not be replaced by
+  /* This type of placeholder is used for cache parameterization, where null values should not be replaced by
    * placeholers. */
   assert(_data_type != DataType::Null);
 }
@@ -14,7 +14,6 @@ DataType TypedPlaceholderExpression::data_type() const { return _data_type; }
 std::string TypedPlaceholderExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "Typed Placeholder[id=" << std::to_string(parameter_id) << "]";
-  //   stream << "Typed Placeholder[id=" << std::to_string(parameter_id) << ", type=" << _data_type << "]";
   return stream.str();
 }
 
