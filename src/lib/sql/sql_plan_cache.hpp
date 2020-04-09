@@ -12,7 +12,7 @@ namespace opossum {
 class AbstractOperator;
 class AbstractLQPNode;
 
-class NodePointerHash {
+class LQPNodePointerHash {
  public:
   size_t operator()(const std::shared_ptr<AbstractLQPNode>& key) const { return key->hash(); }
 };
