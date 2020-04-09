@@ -120,7 +120,7 @@ void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<Abstr
         expression = new_expression;
         next_parameter_id++;
       }
-    }
+    //}
   }
 }
 
