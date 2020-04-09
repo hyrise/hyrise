@@ -109,7 +109,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
-bool SQLPipelineStatement::check_column_ditributions(const float distribution_threshold) {
+bool SQLPipelineStatement::check_column_distributions(const float distribution_threshold) {
   auto& unoptimized_lqp = get_unoptimized_logical_plan();
 
   const auto started_uniform_check = std::chrono::high_resolution_clock::now();
@@ -144,6 +144,7 @@ bool SQLPipelineStatement::check_column_ditributions(const float distribution_th
       const auto &table_statistics = table->table_statistics();
 
       for (auto &expression: column_expressions) {
+
         const auto column_id = node->find_column_id(*expression);
         if (column_id) {
           std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
@@ -212,7 +213,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   // views and non-uniformly distributed tables can not be cached
-  if(!_translation_info.cacheable || !check_column_ditributions(100)) {
+  if(!_translation_info.cacheable || !check_column_distributions(100)) {
     const auto started = std::chrono::high_resolution_clock::now();
 
     // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
