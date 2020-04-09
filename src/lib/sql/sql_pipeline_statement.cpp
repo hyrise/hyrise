@@ -205,7 +205,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     lqp_cache->set(unoptimized_lqp, prepared_plan);
   }
 
-  _optimized_logical_plan = prepared_plan->instantiate(values);
+  _optimized_logical_plan = prepared_plan->instantiate(optimized_without_values);
   auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
 
   _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
