@@ -144,8 +144,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             using SegmentType = std::decay_t<decltype(typed_segment)>;
             if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
               Fail("Unexpected iterable for reference segment.");
+              return;
             }
-            const auto iterable = create_iterable_from_segment<T>(typed_segment);
+            const auto iterable = create_any_segment_iterable<T>(typed_segment);
+            using IterableType = std::decay_t<decltype(iterable)>;
+            if constexpr (std::is_same_v<IterableType, ReferenceSegmentIterable>) {
+              Fail("Unexpected iterable for reference segment.");
+              return;
+            }
             // for (const auto& p : *iterable_pos_list) {
             //   std::cout << " | " << p;
             // }
@@ -199,6 +205,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         functor(begin, end);
       }
     });
+  }
+
+  template <typename Functor>
+  void _on_with_iterators(const std::shared_ptr<AbstractPosList>& position_filter, const Functor& functor) const {
+    Fail("Whooot?");
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -332,7 +343,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   class SegmentPositionVectorIterator : public BaseSegmentIterator<SegmentPositionVectorIterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
-    // using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
+    using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
 
    public:
     explicit SegmentPositionVectorIterator(std::vector<SegmentPosition<T>>* segment_positions, const ChunkOffset chunk_offset)

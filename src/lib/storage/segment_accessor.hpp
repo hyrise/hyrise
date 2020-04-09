@@ -116,8 +116,7 @@ class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
 
         const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
         _segment_positions.emplace_back(SegmentPosition<T>{segment_position.value(), segment_position.is_null(), segment_position.chunk_offset()});
-        const auto insert = _tmp_pos_list_offset_mapping.emplace(position.chunk_offset, _segment_positions.size() - 1);
-        DebugAssert(insert.second, "Inserted chunk offset " + std::to_string(position.chunk_offset) + " twice");
+        _tmp_pos_list_offset_mapping.emplace(position.chunk_offset, _segment_positions.size() - 1);
 
         ++segment_position_list_offsets[chunk_id];
       }
