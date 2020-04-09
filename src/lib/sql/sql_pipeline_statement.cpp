@@ -109,7 +109,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
-bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_threshold) {
+bool SQLPipelineStatement::check_column_ditributions(const float distribution_threshold) {
   auto& unoptimized_lqp = get_unoptimized_logical_plan();
 
   const auto started_uniform_check = std::chrono::high_resolution_clock::now();
@@ -131,32 +131,32 @@ bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_thr
     return LQPVisitation::VisitInputs;
   });
 
-  bool contains_uniform_distribution = true;
+  // Data in all used columns is uniformly distributed. Set to false once a non-uniform distribution is found
+  bool columns_distributed_uniformly = true;
 
   // find used tables and check if used columns are uniformly distributed
-  visit_lqp(unoptimized_lqp, [&contains_uniform_distribution, &column_expressions, &distribution_threshold](const auto& node) {
-    if (node) {
+  visit_lqp(unoptimized_lqp, [&columns_distributed_uniformly, &column_expressions, &distribution_threshold](const auto& node) {
+    if (node && node->type == LQPNodeType::StoredTable) {
       const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-      if (table_node) {
-        const std::string table_name = table_node->table_name;
-        const auto table = Hyrise::get().storage_manager.get_table(table_name);
-        const auto &table_statistics = table->table_statistics();
 
-        for (auto &expression: column_expressions) {
-          const auto column_id = node->find_column_id(*expression);
-          if (column_id) {
-            std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
+      const std::string table_name = table_node->table_name;
+      const auto table = Hyrise::get().storage_manager.get_table(table_name);
+      const auto &table_statistics = table->table_statistics();
 
-              auto data_type = table->column_data_type(*column_id);
-              resolve_data_type(data_type, [&] (auto type) {
-                using ColumnDataType = typename decltype(type)::type;
+      for (auto &expression: column_expressions) {
+        const auto column_id = node->find_column_id(*expression);
+        if (column_id) {
+          std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
 
-                std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-                if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
-                    contains_uniform_distribution = false;
-                }
-              });
-          }
+          auto data_type = table->column_data_type(*column_id);
+          resolve_data_type(data_type, [&] (auto type) {
+            using ColumnDataType = typename decltype(type)::type;
+
+            std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+            if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
+              columns_distributed_uniformly = false;
+            }
+          });
         }
       }
     }
@@ -166,7 +166,7 @@ bool SQLPipelineStatement::is_uniformly_distributed(const float distribution_thr
   const auto done_uniform_check = std::chrono::high_resolution_clock::now();
   _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
 
-  return contains_uniform_distribution;
+  return columns_distributed_uniformly;
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(
@@ -212,7 +212,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   // views and non-uniformly distributed tables can not be cached
-  if(!_translation_info.cacheable || !is_uniformly_distributed(100)) {
+  if(!_translation_info.cacheable || !check_column_ditributions(100)) {
     const auto started = std::chrono::high_resolution_clock::now();
 
     // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
