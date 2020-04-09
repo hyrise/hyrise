@@ -149,7 +149,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             // auto pos_list_it = iterable_pos_list->cbegin();
             iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
               while (it != end) {
-                single_chunk_segment_positions.emplace_back(*it);
+                // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
+                // we don't want to use a list of AbstractSegmentPositions.
+                single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
                 // std::cout << " | " <<  chunk_id << "," << pos_list_it->chunk_offset;
                 ++it;
                 // ++pos_list_it;
