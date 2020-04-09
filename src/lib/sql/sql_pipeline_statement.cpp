@@ -128,7 +128,6 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
             const auto& column_reference = column_expression->column_reference;
             auto node = column_reference.original_node();
             auto table_node = std::dynamic_pointer_cast<const StoredTableNode>(node);
-            assert(table_node);
 
             const std::string table_name = table_node->table_name;
             const auto table = Hyrise::get().storage_manager.get_table(table_name);
@@ -155,6 +154,12 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
     }
     return LQPVisitation::VisitInputs;
   });
+
+  const auto done_uniform_check = std::chrono::high_resolution_clock::now();
+  _metrics->uniform_check_duration =
+    std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
+  return columns_distributed_uniformly;
+}
 
 void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression> &expression,
                                             std::vector<std::shared_ptr<AbstractExpression>>& values,
@@ -184,14 +189,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 
   ParameterID next_parameter_id(0);
 
-  visit_lqp(unoptimized_lqp, [&values, &parameter_id](const auto& node) {
+  visit_lqp(unoptimized_lqp, [&values, &next_parameter_id](const auto& node) {
     if (node) {
       for (auto& root_expression : node->node_expressions) {
-        visit_expression(root_expression, [&values, &parameter_id](auto& expression) {
-           expression_parameter_extraction(expression, values, next_parameter_id);
-            return ExpressionVisitation::VisitArguments;
-          });
-        }
+        visit_expression(root_expression, [&values, &next_parameter_id](auto& expression) {
+          expression_parameter_extraction(expression, values, next_parameter_id);
+          return ExpressionVisitation::VisitArguments;
+        });
       }
     }
     return LQPVisitation::VisitInputs;
