@@ -100,7 +100,7 @@ class Sort::SortImplMaterializeOutput {
               finish_segment();
             }
           }
-          finish_segment();
+          if (!pos_list.empty()) finish_segment();
         }
 
         const auto output_chunk_count = output_segments_by_column_id[0].size();
@@ -135,7 +135,7 @@ class Sort::SortImplMaterializeOutput {
               finish_segment();
             }
           }
-          finish_segment();
+          if (!pos_list.empty()) finish_segment();
         }
 
         const auto output_chunk_count = output_segments_by_column_id[0].size();
