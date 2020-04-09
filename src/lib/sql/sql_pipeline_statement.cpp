@@ -114,51 +114,44 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
 
   const auto started_uniform_check = std::chrono::high_resolution_clock::now();
 
-  // find used columns
-  std::vector<std::shared_ptr<LQPColumnExpression>> column_expressions;
-  visit_lqp(unoptimized_lqp, [&column_expressions](const auto& node) {
-    if (node) {
-      for (auto& root_expression : node->node_expressions) {
-        visit_expression(root_expression, [&column_expressions](auto& expression) {
-          if (expression->type == ExpressionType::LQPColumn) {
-            auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-            column_expressions.push_back(column_expression);
-          }
-          return ExpressionVisitation::VisitArguments;
-        });
-      }
-    }
-    return LQPVisitation::VisitInputs;
-  });
-
   // Data in all used columns is uniformly distributed. Set to false once a non-uniform distribution is found
   bool columns_distributed_uniformly = true;
 
-  // find used tables and check if used columns are uniformly distributed
-  visit_lqp(unoptimized_lqp, [&columns_distributed_uniformly, &column_expressions, &distribution_threshold](const auto& node) {
-    if (node && node->type == LQPNodeType::StoredTable) {
-      const auto &table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+  // check used columns
+  visit_lqp(unoptimized_lqp, [&columns_distributed_uniformly, &distribution_threshold](const auto& node) {
+    if (node) {
+      for (auto& root_expression : node->node_expressions) {
+        visit_expression(root_expression, [&columns_distributed_uniformly, &distribution_threshold](auto& expression) {
+          if (expression->type == ExpressionType::LQPColumn) {
+            auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
 
-      const std::string table_name = table_node->table_name;
-      const auto table = Hyrise::get().storage_manager.get_table(table_name);
-      const auto &table_statistics = table->table_statistics();
+            const auto &column_reference = column_expression->column_reference;
+            auto node = column_reference.original_node();
+            auto table_node = std::dynamic_pointer_cast<const StoredTableNode>(node);
+            assert(table_node);
 
-      for (auto &expression: column_expressions) {
+            const std::string table_name = table_node->table_name;
+            const auto table = Hyrise::get().storage_manager.get_table(table_name);
+            const auto &table_statistics = table->table_statistics();
 
-        const auto column_id = node->find_column_id(*expression);
-        if (column_id) {
-          std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[*column_id];
+            const auto column_id = column_reference.original_column_id();
 
-          auto data_type = table->column_data_type(*column_id);
-          resolve_data_type(data_type, [&] (auto type) {
-            using ColumnDataType = typename decltype(type)::type;
+            std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
 
-            std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
-            if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
-              columns_distributed_uniformly = false;
-            }
-          });
-        }
+            auto data_type = table->column_data_type(column_id);
+            resolve_data_type(data_type, [&] (auto type) {
+              using ColumnDataType = typename decltype(type)::type;
+
+              std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+              if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
+                columns_distributed_uniformly = false;
+              }
+            });
+
+
+          }
+          return ExpressionVisitation::VisitArguments;
+        });
       }
     }
     return LQPVisitation::VisitInputs;
