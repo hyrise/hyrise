@@ -34,7 +34,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<Optimizer>& optimizer,
-                                           const std::shared_ptr<Optimizer>& pruning_optimizer,
+                                           const std::shared_ptr<Optimizer>& post_caching_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
     : pqp_cache(init_pqp_cache),
@@ -44,7 +44,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
       _optimizer(optimizer),
-      _pruning_optimizer(pruning_optimizer),
+      _post_caching_optimizer(post_caching_optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
@@ -169,7 +169,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         _optimized_logical_plan = cached_plan->instantiate(values);
         auto olqp = _optimized_logical_plan->deep_copy();
         _metrics->query_plan_cache_hit = true;
-        _optimized_logical_plan = _pruning_optimizer->optimize(std::move(olqp));
+        _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(olqp));
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration =
             std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
@@ -208,7 +208,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = prepared_plan->instantiate(values);
   auto olqp = _optimized_logical_plan->deep_copy();
 
-  _optimized_logical_plan = _pruning_optimizer->optimize(std::move(olqp));
+  _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(olqp));
 
   const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
   _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
