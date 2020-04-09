@@ -201,8 +201,12 @@ float AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value
 
 template <typename T>
 bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_threshold) const {
-  // https://en.wikipedia.org/wiki/G-test
-  const auto expected_value = total_count() / total_distinct_count();
+  // The G-test is used in statistics to check whether the frequencies of
+  // different categories are random or whether there is a certain distribution.
+  // We check here whether there is a uniform distribution and therefore expect
+  // the same number of entries in each category.
+  // More information: https://en.wikipedia.org/wiki/G-test
+  auto expected_value = total_count() / total_distinct_count();
 
   HistogramCountType sum = 0;
   for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
@@ -212,6 +216,7 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
 
   const auto g_test = 2 * sum;
 
+  // The perfect uniform distribution returns 0 for g_test.
   return std::abs(g_test) < distribution_threshold;
 }
 
