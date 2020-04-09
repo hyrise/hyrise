@@ -1185,7 +1185,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
     } break;
 
     case ExpressionType::Placeholder:
-      Fail("Found the placeholder");
+      Fail("Found a placeholder while evaluating expressions.");
 
     default:
       Fail("Expression type cannot be evaluated to PosList");
