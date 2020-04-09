@@ -196,7 +196,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   const auto started_postoptimization_cache = std::chrono::high_resolution_clock::now();
 
-  std::vector<ParameterID> all_parameter_ids(values.size());
+  std::vector<ParameterID> all_parameter_ids(optimized_without_values.size());
   std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
   auto prepared_plan = std::make_shared<PreparedPlan>(optimized_without_values, all_parameter_ids);
 
