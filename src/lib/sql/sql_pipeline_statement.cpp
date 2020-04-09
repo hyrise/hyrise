@@ -135,8 +135,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
       if (node) {
         for (auto& root_expression : node->node_expressions) {
           visit_expression(root_expression, [&values, &next_parameter_id](auto& expression) {
-            expression_parameter_extraction
-          (expression, values, next_parameter_id);
+            expression_parameter_extraction(expression, values, next_parameter_id);
             return ExpressionVisitation::VisitArguments;
           });
         }
