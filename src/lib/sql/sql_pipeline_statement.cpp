@@ -16,8 +16,8 @@
 #include "expression/typed_placeholder_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/export.hpp"
 #include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -27,11 +27,11 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
 #include "resolve_type.hpp"
-#include "statistics/table_statistics.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
@@ -125,30 +125,29 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
           if (expression->type == ExpressionType::LQPColumn) {
             auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
 
-            const auto &column_reference = column_expression->column_reference;
+            const auto& column_reference = column_expression->column_reference;
             auto node = column_reference.original_node();
             auto table_node = std::dynamic_pointer_cast<const StoredTableNode>(node);
             assert(table_node);
 
             const std::string table_name = table_node->table_name;
             const auto table = Hyrise::get().storage_manager.get_table(table_name);
-            const auto &table_statistics = table->table_statistics();
+            const auto& table_statistics = table->table_statistics();
 
             const auto column_id = column_reference.original_column_id();
 
             std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
 
             auto data_type = table->column_data_type(column_id);
-            resolve_data_type(data_type, [&] (auto type) {
+            resolve_data_type(data_type, [&](auto type) {
               using ColumnDataType = typename decltype(type)::type;
 
-              std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
+              std::shared_ptr<AttributeStatistics<ColumnDataType>> statistics =
+                  std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics);
               if (!statistics->histogram->is_uniformly_distributed(distribution_threshold)) {
                 columns_distributed_uniformly = false;
               }
             });
-
-
           }
           return ExpressionVisitation::VisitArguments;
         });
@@ -158,7 +157,8 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
   });
 
   const auto done_uniform_check = std::chrono::high_resolution_clock::now();
-  _metrics->uniform_check_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
+  _metrics->uniform_check_duration =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(done_uniform_check - started_uniform_check);
 
   return columns_distributed_uniformly;
 }
@@ -206,7 +206,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   // views and non-uniformly distributed tables can not be cached
-  if(!_translation_info.cacheable || !check_column_distributions(100)) {
+  if (!_translation_info.cacheable || !check_column_distributions(100)) {
     const auto started = std::chrono::high_resolution_clock::now();
 
     // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
