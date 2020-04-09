@@ -467,7 +467,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   }
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
-  hash_tables[0]->shrink_to_fit();
+  if (!hash_tables.empty() && radix_bits == 0) hash_tables[0]->shrink_to_fit();
 
   return hash_tables;
 }
@@ -475,12 +475,6 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
-  if constexpr (retain_null_values) {
-    Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),
-                "partition_by_radix() called with NULL consideration but radix container does not store any NULL "
-                "value information");
-  }
-
   const std::hash<HashedType> hash_function;
 
   const auto input_partition_count = radix_container.size();
@@ -494,7 +488,14 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   auto output = RadixContainer<T>(output_partition_count);
 
   Assert(histograms.size() == input_partition_count, "Expected one histogram per input partition");
+  if (histograms.empty()) return output;
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
+
+  if constexpr (retain_null_values) {
+    Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),
+                "partition_by_radix() called with NULL consideration but radix container does not store any NULL "
+                "value information");
+  }
 
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first value in the bucket written for input_partition_idx
   auto output_offsets_by_input_partition = std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
@@ -511,11 +512,11 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(input_partition_count);
+  // std::vector<std::shared_ptr<AbstractTask>> jobs;
+  // jobs.reserve(input_partition_count);
 
   for (ChunkID input_partition_idx{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, input_partition_idx]() {
+    // jobs.emplace_back(std::make_shared<JobTask>([&, input_partition_idx]() {
       const auto& input_partition = radix_container[input_partition_idx];
       for (auto input_idx = size_t{0}; input_idx < input_partition.elements.size(); ++input_idx) {
         const auto& element = input_partition.elements[input_idx];
@@ -548,11 +549,11 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
         ++output_idx;
       }
-    }));
-    jobs.back()->schedule();
+    // }));
+    // jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+  // Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return output;
 }
@@ -743,6 +744,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column, 
   auto debug_all = size_t{};
   auto debug_skipped = size_t{};
 
+  const auto build_table_empty = build_table.row_count() == 0;
+
   for (size_t partition_idx = 0; partition_idx < radix_probe_column.size();
        ++partition_idx) {
 
@@ -791,6 +794,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column, 
             if (null_values[partition_offset]) {
               // Primary predicate is TRUE, as long as we do not support secondary predicates with AntiNullAsTrue.
               // This means that the probe value never gets emitted
+              if (build_table_empty) pos_list_local.emplace_back(probe_column_element.row_id);
               continue;
             }
           }
