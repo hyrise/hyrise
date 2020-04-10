@@ -61,7 +61,7 @@ def generate_model_plot(model, test_data, method, encoding, scan, out):
     plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
-    output_path = '{}/Plots/{}_{}_{}'.format(out, method, encoding, scan)
+    output_path = '{}/plots/{}_{}_{}'.format(out, method, encoding, scan)
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
 
@@ -69,31 +69,21 @@ def generate_model_plot(model, test_data, method, encoding, scan, out):
 
 
 def calculate_error(test_X, y_true, y_pred, model):
-    # calculate error (ME) for the model
-    mse = mean_squared_error(y_true, y_pred, squared=False)
+    # calculate Root-mean-squared error (RMSE) for the model
+    RMSE = mean_squared_error(y_true, y_pred, squared=False)
 
     # The score function returns the coefficient of determination R^2 of the prediction.
-    # The coefficient R^2 is defined as (1 - u/v), where u is the residual sum of squares ((y_true - y_pred) ** 2).sum()
-    # and v is the total sum of squares ((y_true - y_true.mean()) ** 2).sum(). The best possible score is 1.0 and it can
-    # be negative (because the model can be arbitrarily worse). A constant model that always predicts the expected value
-    # of y, disregarding the input features, would get a R^2 score of 0.0.
+    # It gives a fast notion of how well a model is predicting since the score can be between -1 and 1; 1 being the
+    # optimum and 0 meaning the model is as good as just predicting the median of the training data.
     R2 = model.score(test_X, y_pred)
 
-    # Laut Master Thesis:
-    # logarithm of the accuracy ratio (LnQ). Tofallis et al. define this measure to overcome the limitations of RMSE and
-    # MAPE by providing a unbiased error measure [72]. LnQ is the natural logarithm of the quotient of the predicted
-    # value yˆ and the actual value y. By using the natural logarithm, this measure
-    # is symmetric in the sense that changing the actual value and the prediction merely changes the sign of the error
-    # value (cf. Equation (2.14)). By that, LnQ shows structural under- or over- estimation, which may show the quality
-    # of a tested model. A drawback of LnQ is the difficulty in interpreting error values. Doubling the quotient does
-    # not consistently affect the error value. Due to the logarithmic function, the measure penalizes small quotients
-    # relatively hard, whereas it treats large residuals comparably easy.
+    # logarithm of the accuracy ratio (LnQ)
     LNQ = 1/len(y_true) * np.sum(np.exp(np.divide(y_pred, y_true)))
 
-    # Percentage
-    perc = np.mean(100 * (np.divide(np.abs(y_true - y_pred), y_true)))
+    # mean absolute percentage error (MAPE)
+    MAPE = np.mean(100 * (np.divide(np.abs(y_true - y_pred), y_true)))
 
-    scores = {'MSE': '%.3f' % mse, 'R2': '%.3f' % R2, 'LNQ': '%.3f' % LNQ, 'Percentage': '%.3f' % perc}
+    scores = {'RMSE': '%.3f' % RMSE, 'R2': '%.3f' % R2, 'LNQ': '%.3f' % LNQ, 'MAPE': '%.3f' % MAPE}
 
     return scores
 
@@ -117,7 +107,7 @@ def add_dummy_types(train, test, cols):
     return [train, test]
 
 
-def parseargs(opt=None):
+def parse_arguments(opt=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
     # in case no test data is given, the trainings data will be split into trainings and test data
@@ -150,7 +140,7 @@ def import_data(args):
 
 
 def main(args):
-    out = "CostModelOutput"
+    out = "costModelOutput"
     scores = {}
 
     if args.m:
@@ -169,18 +159,18 @@ def main(args):
     if args.out:
         out = args.out
 
-    if not os.path.exists("{}/Models".format(out)):
-        os.makedirs("{}/Models".format(out))
+    if not os.path.exists("{}/models".format(out)):
+        os.makedirs("{}/models".format(out))
 
-    if not os.path.exists("{}/Plots".format(out)):
-        os.makedirs("{}/Plots".format(out))
+    if not os.path.exists("{}/plots".format(out)):
+        os.makedirs("{}/plots".format(out))
 
     # one single model for everything
     for type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
         scores['{}_general_model'.format(type)] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
-        filename = '{}/Models/{}_general_model.sav'.format(out, type)
+        filename = '{}/models/{}_general_model.sav'.format(out, type)
         joblib.dump(gmodel, filename)
 
     # make separate models for different scan operators and combinations of encodings/compressions
@@ -207,7 +197,7 @@ def main(args):
                     model = train_model(model_train_data, type)
 
                     model_name = '{}_{}_{}_model'.format(type, encoding, implementation_type)
-                    filename = '{}/Models/split_{}.sav'.format(out, model_name)
+                    filename = '{}/models/split_{}.sav'.format(out, model_name)
                     joblib.dump(model, filename)
 
                     if not model_test_data.empty:
@@ -216,5 +206,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = parseargs()
+    args = parse_arguments()
     main(args)
