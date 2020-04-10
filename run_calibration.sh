@@ -1,6 +1,12 @@
 #!/bin/bash -x
 
+if [ $# -gt 0 ];
+then 
+BASE_PATH=$1
+else
 BASE_PATH='./cmake-build-debug'
+fi
+
 MEASUREMENT_FOLDER='measurements'
 EXECUTABLE='hyrisePlayground'
 PYTHON=python3
