@@ -5,10 +5,10 @@ import pandas as pd
 
 def import_train_data(path):
     path = path[0]
-    table_scan_data = pd.read_csv('{}/TableScan.csv'.format(path))
-    table_data = pd.read_csv('{}/table_meta.csv'.format(path))
-    columns_data = pd.read_csv('{}/column_meta.csv'.format(path))
-    chunk_meta = pd.read_csv('{}/segment_meta.csv'.format(path))
+    table_scan_data = pd.read_csv(f'{path}/TableScan.csv')
+    table_data = pd.read_csv(f'{path}/table_meta.csv')
+    columns_data = pd.read_csv(f'{path}/column_meta.csv')
+    chunk_meta = pd.read_csv(f'{path}/segment_meta.csv')
 
     joined_data = table_scan_data.merge(table_data, on=["TABLE_NAME"], how="left")
     joined_data = joined_data.merge(columns_data, on=["TABLE_NAME", "COLUMN_NAME"], how="left")

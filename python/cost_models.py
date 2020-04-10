@@ -30,9 +30,9 @@ def train_model(train_data, type):
     if type == 'linear':
         model = LinearRegression().fit(X, y)
     elif type == 'ridge':
-        model = Ridge(alpha=1000).fit(X, y)
+        model = Ridge(alpha=10).fit(X, y)
     elif type == 'lasso':
-        model = Lasso(alpha=1000).fit(X, y)
+        model = Lasso(alpha=10).fit(X, y)
     elif type == 'boost':
         model = GradientBoostingRegressor(loss='huber').fit(X, y)
 
@@ -56,12 +56,12 @@ def generate_model_plot(model, test_data, method, encoding, scan, out):
 
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-    plt.title('{}_{}_{}; Score: {}'.format(encoding, scan, method, model_scores['R2']))
+    plt.title(f"{encoding}_{scan}_{method}; Score: {model_scores['R2']}")
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
-    output_path = '{}/plots/{}_{}_{}'.format(out, method, encoding, scan)
+    output_path = f'{out}/plots/{method}_{encoding}_{scan}'
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
 
@@ -89,9 +89,9 @@ def calculate_error(test_X, y_true, y_pred, model):
 
 
 def log(scores, out):
-    with open('{}/log.txt'.format(out), 'w') as file:
+    with open(f'{out}/log.txt', 'w') as file:
         for entry in scores:
-            file.write(entry + ': ' + str(scores[entry]) +  '\n')
+            file.write(f"{entry}: {scores[entry]} \n")
 
 
 # needed for prediction with one-hot-encoding in case trainings and test data don't have the same set of values in a
@@ -101,9 +101,9 @@ def add_dummy_types(train, test, cols):
         diff1 = np.setdiff1d(train[col].unique(), test[col].unique())
         diff2 = np.setdiff1d(test[col].unique(), train[col].unique())
         for d1 in diff1:
-            test['{}_{}'.format(col, d1)] = 0
+            test[f'{col}_{d1}'] = 0
         for d2 in diff2:
-            train['{}_{}'.format(col, d2)]= 0
+            train[f'{col}_{d2}']= 0
     return [train, test]
 
 
@@ -159,18 +159,18 @@ def main(args):
     if args.out:
         out = args.out
 
-    if not os.path.exists("{}/models".format(out)):
-        os.makedirs("{}/models".format(out))
+    if not os.path.exists(f"{out}/models"):
+        os.makedirs(f"{out}/models")
 
-    if not os.path.exists("{}/plots".format(out)):
-        os.makedirs("{}/plots".format(out))
+    if not os.path.exists(f"{out}/plots"):
+        os.makedirs(f"{out}/plots")
 
     # one single model for everything
     for type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
-        scores['{}_general_model'.format(type)] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
-        filename = '{}/models/{}_general_model.sav'.format(out, type)
+        scores[f'{type}_general_model'] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
+        filename = f'{out}/models/{type}_general_model.sav'
         joblib.dump(gmodel, filename)
 
     # make separate models for different scan operators and combinations of encodings/compressions
@@ -187,7 +187,7 @@ def main(args):
                     model_test_data = test_data.loc[(test_data['ENCODING'] == encoding) & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
 
             except ValueError:
-                print('Not enough data of the combination {}, {} to split into trainings and test data'.format(encoding, implementation_type))
+                print(f'Not enough data of the combination {encoding}, {implementation_type} to split into trainings and test data')
                 break
 
             # if there is training data for this combination, train a model
@@ -196,8 +196,8 @@ def main(args):
                     model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_TYPE', 'DATA_TYPE'])
                     model = train_model(model_train_data, type)
 
-                    model_name = '{}_{}_{}_model'.format(type, encoding, implementation_type)
-                    filename = '{}/models/split_{}.sav'.format(out, model_name)
+                    model_name = f'{type}_{encoding}_{implementation_type}_model'
+                    filename = f'{out}/models/split_{model_name}.sav'
                     joblib.dump(model, filename)
 
                     if not model_test_data.empty:
