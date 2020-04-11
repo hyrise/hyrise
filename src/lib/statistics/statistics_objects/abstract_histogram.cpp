@@ -210,6 +210,7 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
 
   HistogramCountType sum = 0;
   for (BinID bin_id = BinID(0); bin_id < bin_count(); bin_id++) {
+    const auto observed_count = bin_height(bin_id) / bin_distinct_count(bin_id);
     sum += (observed_count * std::abs(log(observed_count / expected_value)));
   }
 
