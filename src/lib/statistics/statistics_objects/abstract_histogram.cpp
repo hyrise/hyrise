@@ -215,7 +215,6 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
   }
 
   const auto g_test = 2.0 * sum;
-  std::cout << "gtest: " << g_test << std::endl;
 
   // The perfect uniform distribution returns 0 for g_test.
   return g_test < distribution_threshold;
