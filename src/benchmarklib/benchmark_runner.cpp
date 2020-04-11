@@ -327,7 +327,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                                {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
                                {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
                                {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
-                               {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
+                               {"query_plan_cache_hit", sql_statement_metrics->lqp_cache_hit}};
 
             pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
           }
