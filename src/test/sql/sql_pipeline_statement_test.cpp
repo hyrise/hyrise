@@ -764,8 +764,8 @@ TEST_F(SQLPipelineStatementTest, ParameterizationOnUniformDistribution) {
 }
 
 TEST_F(SQLPipelineStatementTest, NoParameterizationOnNonUniformDistribution) {
-  const auto query1 = "SELECT * FROM table_equal_and_not WHERE nonequal = 3;";
-  const auto query2 = "SELECT * FROM table_equal_and_not WHERE nonequal = 4;";
+  const auto query1 = "SELECT * FROM table_equal_and_not WHERE notequal = 3;";
+  const auto query2 = "SELECT * FROM table_equal_and_not WHERE notequal = 4;";
 
   auto sql_pipeline1 = SQLPipelineBuilder{query1}
                           .with_lqp_cache(_lqp_cache)
@@ -784,8 +784,8 @@ TEST_F(SQLPipelineStatementTest, NoParameterizationOnNonUniformDistribution) {
 }
 
 TEST_F(SQLPipelineStatementTest, NoParameterizationOnMixedUniformDistribution) {
-  const auto query1 = "SELECT * FROM table_equal_and_not WHERE nonequal = 3 AND equal = 3;";
-  const auto query2 = "SELECT * FROM table_equal_and_not WHERE nonequal = 4 AND equal = 4;";
+  const auto query1 = "SELECT * FROM table_equal_and_not WHERE notequal = 3 AND equal = 3;";
+  const auto query2 = "SELECT * FROM table_equal_and_not WHERE notequal = 4 AND equal = 4;";
 
   auto sql_pipeline1 = SQLPipelineBuilder{query1}
                           .with_lqp_cache(_lqp_cache)
