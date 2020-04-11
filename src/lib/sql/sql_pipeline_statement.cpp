@@ -216,8 +216,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     return _optimized_logical_plan;
   }
 
+  auto is_uniformly_distributed = check_column_distributions(100);
   // views and non-uniformly distributed tables can not be cached
-  if (!_translation_info.cacheable || !check_column_distributions(100)) {
+  if (!_translation_info.cacheable || !is_uniformly_distributed) {
     const auto started = std::chrono::high_resolution_clock::now();
 
     // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
