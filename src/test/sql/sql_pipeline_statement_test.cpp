@@ -48,6 +48,9 @@ class SQLPipelineStatementTest : public BaseTest {
     _table_int = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_int", _table_int);
 
+    _table_equal_and_not = load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl");
+    Hyrise::get().storage_manager.add_table("table_equal_and_not", _table_equal_and_not);
+
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
     column_definitions.emplace_back("b", DataType::Float, false);
@@ -77,6 +80,7 @@ class SQLPipelineStatementTest : public BaseTest {
   std::shared_ptr<Table> _table_a;
   std::shared_ptr<Table> _table_b;
   std::shared_ptr<Table> _table_int;
+  std::shared_ptr<Table> _table_equal_and_not;
   std::shared_ptr<Table> _join_result;
 
   TableColumnDefinitions _int_float_column_definitions;
@@ -740,10 +744,8 @@ TEST_F(SQLPipelineStatementTest, ViewNoCaching) {
 }
 
 TEST_F(SQLPipelineStatementTest, ParameterizationOnUniformDistribution) {
-  Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl"));
-
-  const auto query1 = "SELECT * FROM table WHERE equal = 3;";
-  const auto query2 = "SELECT * FROM table WHERE equal = 4;";
+  const auto query1 = "SELECT * FROM table_equal_and_not WHERE equal = 3;";
+  const auto query2 = "SELECT * FROM table_equal_and_not WHERE equal = 4;";
 
   auto sql_pipeline1 = SQLPipelineBuilder{query1}
                           .with_lqp_cache(_lqp_cache)
@@ -762,10 +764,8 @@ TEST_F(SQLPipelineStatementTest, ParameterizationOnUniformDistribution) {
 }
 
 TEST_F(SQLPipelineStatementTest, NoParameterizationOnNonUniformDistribution) {
-  Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl"));
-
-  const auto query1 = "SELECT * FROM table WHERE nonequal = 3;";
-  const auto query2 = "SELECT * FROM table WHERE nonequal = 4;";
+  const auto query1 = "SELECT * FROM table_equal_and_not WHERE nonequal = 3;";
+  const auto query2 = "SELECT * FROM table_equal_and_not WHERE nonequal = 4;";
 
   auto sql_pipeline1 = SQLPipelineBuilder{query1}
                           .with_lqp_cache(_lqp_cache)
@@ -784,10 +784,8 @@ TEST_F(SQLPipelineStatementTest, NoParameterizationOnNonUniformDistribution) {
 }
 
 TEST_F(SQLPipelineStatementTest, NoParameterizationOnMixedUniformDistribution) {
-  Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_and_not_equal_distribution.tbl"));
-
-  const auto query1 = "SELECT * FROM table WHERE nonequal = 3 AND equal = 3;";
-  const auto query2 = "SELECT * FROM table WHERE nonequal = 4 AND equal = 4;";
+  const auto query1 = "SELECT * FROM table_equal_and_not WHERE nonequal = 3 AND equal = 3;";
+  const auto query2 = "SELECT * FROM table_equal_and_not WHERE nonequal = 4 AND equal = 4;";
 
   auto sql_pipeline1 = SQLPipelineBuilder{query1}
                           .with_lqp_cache(_lqp_cache)
