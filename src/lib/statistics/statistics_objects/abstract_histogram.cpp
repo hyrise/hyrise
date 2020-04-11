@@ -217,12 +217,13 @@ bool AbstractHistogram<T>::is_uniformly_distributed(const float distribution_thr
     std::cout << "bin_maximum: " << bin_maximum(bin_id) << std::endl;
     const auto observed_count = bin_height(bin_id) / bin_distinct_count(bin_id);
     sum += (observed_count * log(observed_count / expected_value));
+    std::cout << "sum: " << sum << std::endl << std::endl;
   }
 
-  const auto g_test = 2 * sum;
+  const auto g_test = 2 * std::abs(sum);
 
   // The perfect uniform distribution returns 0 for g_test.
-  return std::abs(g_test) < distribution_threshold;
+  return g_test < distribution_threshold;
 }
 
 template <typename T>
