@@ -285,7 +285,7 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
     total_lqp_translate_nanos += statement_metric->lqp_translation_duration;
     total_execute_nanos += statement_metric->plan_execution_duration;
 
-    query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
+    query_plan_cache_hits.push_back(statement_metric->lqp_cache_hit);
   }
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);
