@@ -251,7 +251,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
         // and concurrent translations might conflict.
         _optimized_logical_plan = cached_plan->instantiate(extracted_values);
         auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
-        _metrics->query_plan_cache_hit = true;
+        _metrics->lqp_cache_hit = true;
         _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration =
@@ -328,7 +328,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
       }
 
       _physical_plan = (*cached_physical_plan)->deep_copy();
-      _metrics->query_plan_cache_hit = true;
+      _metrics->pqp_cache_hit = true;
+      _metrics->lqp_cache_hit = true;
     }
   }
 
@@ -346,7 +347,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
+  if (pqp_cache && !_metrics->pqp_cache_hit && _translation_info.cacheable) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
@@ -419,7 +420,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   DTRACE_PROBE9(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
                 _metrics->cache_duration.count(), _metrics->optimization_duration.count(),
                 _metrics->lqp_translation_duration.count(), _metrics->plan_execution_duration.count(),
-                _metrics->query_plan_cache_hit, get_tasks().size(), reinterpret_cast<uintptr_t>(this));
+                _metrics->lqp_cache_hit, get_tasks().size(), reinterpret_cast<uintptr_t>(this));
 
   return {SQLPipelineStatus::Success, _result_table};
 }

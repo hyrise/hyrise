@@ -22,7 +22,8 @@ struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds lqp_translation_duration{};
   std::chrono::nanoseconds plan_execution_duration{};
 
-  bool query_plan_cache_hit = false;
+  bool pqp_cache_hit = false;
+  bool lqp_cache_hit = false;
 };
 
 enum class SQLPipelineStatus {
