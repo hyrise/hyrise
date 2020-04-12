@@ -14,7 +14,6 @@ set(
     benchmarklib/sqlite_add_indices_test.cpp
     benchmarklib/table_builder_test.cpp
     cache/cache_test.cpp
-    calibrationlib/calibration_benchmark_runner_test.cpp
     calibrationlib/calibration_table_generator_test.cpp
     calibrationlib/calibration_table_wrapper_test.cpp
     calibrationlib/csv_writer_test.cpp
