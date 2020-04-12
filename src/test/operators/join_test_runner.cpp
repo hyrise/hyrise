@@ -541,21 +541,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the table have to be created. The index type is either GroupKeyIndex for dictionary segments or 
-       * BTreeIndex for non-dictionary segments.
+       * indexes for the table are created. The index type is BTreeIndex since it supports the most types of segments compared
+       * to the other available index types.
        */
       if (has_indexes) {
-        if (encoding_type == EncodingType::Dictionary || encoding_type == EncodingType::FixedStringDictionary) {
-          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-            table->create_index<GroupKeyIndex>({column_id});
-          }
-        } else {
-          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-            table->create_index<BTreeIndex>({column_id});
-          }
+        for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+          table->create_index<BTreeIndex>({column_id});
         }
       }
-
       input_table_iter = input_tables.emplace(key, table).first;
     }
 

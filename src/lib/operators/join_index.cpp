@@ -417,7 +417,10 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
   // we replicate the probe side value for each index side value
   std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
 
-  if (_mode != JoinMode::Semi) {
+  const auto is_semi_or_anti_join =
+      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+  if (!is_semi_or_anti_join) {
     std::transform(range_begin, range_end, std::back_inserter(*_index_pos_list),
                    [index_chunk_id](ChunkOffset index_chunk_offset) {
                      return RowID{index_chunk_id, index_chunk_offset};
@@ -425,8 +428,8 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
   }
 
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
-      (_mode == JoinMode::Semi && _index_side == IndexSide::Left) ||
-      (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter) {
+      (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter ||
+      (is_semi_or_anti_join && _index_side == IndexSide::Left)) {
     std::for_each(range_begin, range_end, [this, index_chunk_id](ChunkOffset index_chunk_offset) {
       _index_matches[index_chunk_id][index_chunk_offset] = true;
     });
