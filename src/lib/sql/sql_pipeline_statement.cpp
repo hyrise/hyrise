@@ -140,7 +140,8 @@ bool SQLPipelineStatement::check_column_distributions(const float distribution_t
 
               // generated for COUNT(*)
               if (column_id != INVALID_COLUMN_ID) {
-                std::shared_ptr<BaseAttributeStatistics> column_statistics = table_statistics->column_statistics[column_id];
+                std::shared_ptr<BaseAttributeStatistics> column_statistics =
+                    table_statistics->column_statistics[column_id];
 
                 auto data_type = table->column_data_type(column_id);
                 resolve_data_type(data_type, [&](auto type) {

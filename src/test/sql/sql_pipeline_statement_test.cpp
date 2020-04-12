@@ -731,7 +731,7 @@ TEST_F(SQLPipelineStatementTest, ViewNoCaching) {
     "DROP VIEW abc"
   };
 
-  for (const auto &query: queries) {
+  for (const auto &query : queries) {
     auto sql_pipeline = SQLPipelineBuilder{query}
                             .with_lqp_cache(_lqp_cache)
                             .with_pqp_cache(_pqp_cache)

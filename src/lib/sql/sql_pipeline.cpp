@@ -83,7 +83,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
 
     auto pipeline_statement =
         std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc,
-                                               transaction_context, optimizer, post_caching_optimizer, pqp_cache, lqp_cache);
+                                               transaction_context, optimizer, post_caching_optimizer, pqp_cache,
+                                               lqp_cache);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
