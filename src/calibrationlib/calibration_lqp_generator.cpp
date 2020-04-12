@@ -9,6 +9,7 @@
 using opossum::expression_functional::between_inclusive_;
 using opossum::expression_functional::equals_;
 using opossum::expression_functional::greater_than_;
+using opossum::expression_functional::greater_than_equals_;
 using opossum::expression_functional::is_not_null_;
 using opossum::expression_functional::is_null_;
 using opossum::expression_functional::less_than_;
@@ -26,7 +27,7 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
       break;
   }
 
-  Fail("Not implemented yet: Only TableScans are currently supported");
+  Fail("Not implemented yet: Only TableScans are currently supported.");
 }
 
 void CalibrationLQPGenerator::_generate_table_scans
@@ -70,12 +71,13 @@ void CalibrationLQPGenerator::_generate_table_scans
         const auto step_cursor = static_cast<uint32_t>(selectivity_step * step_size);
 
         const ColumnDataType lower_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(step_cursor);
+        const auto min_val = SyntheticTableGenerator::generate_value<ColumnDataType>(distribution.min_value);
 
         auto get_predicate_node_based_on = [column, lower_bound](const std::shared_ptr<AbstractLQPNode>& base) {
           return PredicateNode::make(greater_than_(column, lower_bound), base);
         };
 
-        // Baseline
+        // Base LQP for current iteration (without any further modifications)
         _generated_lpqs.emplace_back(get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
 
         // Add reference scans
@@ -94,13 +96,13 @@ void CalibrationLQPGenerator::_generate_table_scans
                   PredicateNode::make(between_inclusive_(column, lower_bound, upper_bound), stored_table_node));
             }
           }
+
           // add reference scan with full pos list
-          // TODO(ramboldio) ensure full and empty pos list also for NULL values
-          _generated_lpqs.emplace_back(
-              get_predicate_node_based_on(PredicateNode::make(is_not_null_(column), stored_table_node)));
+          _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(
+                  greater_than_equals_(column, min_val), stored_table_node)));
           // add reference scan with empty pos list
-          _generated_lpqs.emplace_back(
-              get_predicate_node_based_on(PredicateNode::make(is_null_(column), stored_table_node)));
+          _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(
+                  less_than_(column, min_val), stored_table_node)));
         }
 
         // LIKE and IN predicates for strings
@@ -124,31 +126,30 @@ void CalibrationLQPGenerator::_generate_table_scans
 }
 
 std::vector<CalibrationLQPGenerator::ColumnPair> CalibrationLQPGenerator::_get_column_pairs(
-    const std::shared_ptr<const CalibrationTableWrapper>& table) const {
+    const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) const {
   /*
-       * ColumnVsColumn Scans occur when the value of a predicate is a column.
-       * In this case every value from one column has to be compared to every value of the other
-       * making this operation somewhat costly and therefore requiring a dedicated test case.
-       *
-       * We implement this creating a ColumnVsColumn scan in between all the columns with same data type
-       */
-  const auto column_definitions = table->get_table()->column_definitions();
+   * ColumnVsColumn Scans occur when the value of a predicate is a column.
+   * In this case every value from one column has to be compared to every value of the other
+   * making this operation somewhat costly and therefore requiring a dedicated test case.
+   *
+   * We implement this creating a ColumnVsColumn scan in between all the columns with same data type
+   */
+  const auto column_definitions = table_wrapper->get_table()->column_definitions();
   auto column_comparison_pairs = std::vector<ColumnPair>();
 
   auto unmatched_columns = std::vector<TableColumnDefinition>();
 
   for (const auto& column : column_definitions) {
-    // TODO(ramboldio) simplify loop / ensure that first and second element are not the same
     bool matched = false;
-    auto single_iterator = unmatched_columns.begin();
-    while (single_iterator < unmatched_columns.end()) {
-      if (column.data_type == single_iterator->data_type) {
+    auto unmatched_iterator = unmatched_columns.begin();
+    while (unmatched_iterator < unmatched_columns.end()) {
+      if (column.data_type == unmatched_iterator->data_type) {
         matched = true;
-        column_comparison_pairs.emplace_back(ColumnPair(single_iterator->name, column.name));
-        unmatched_columns.erase(single_iterator);
+        column_comparison_pairs.emplace_back(ColumnPair(unmatched_iterator->name, column.name));
+        unmatched_columns.erase(unmatched_iterator);
         break;
       }
-      single_iterator++;
+      unmatched_iterator++;
     }
     if (!matched) {
       unmatched_columns.emplace_back(column);
@@ -158,10 +159,13 @@ std::vector<CalibrationLQPGenerator::ColumnPair> CalibrationLQPGenerator::_get_c
 }
 
 void CalibrationLQPGenerator::_generate_column_vs_column_scans(
-    const std::shared_ptr<const CalibrationTableWrapper>& table) {
-  // TODO(ramboldio) include statement of purpose like (ColumnVsColumn scans are an expensive special case)
-  const auto stored_table_node = StoredTableNode::make(table->get_name());
-  const auto column_vs_column_scan_pairs = _get_column_pairs(table);
+    const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) {
+  /*
+   * Here we are generating column vs column scans since they are significantly more costly and scale differently
+   * compared to regular scans.
+   */
+  const auto stored_table_node = StoredTableNode::make(table_wrapper->get_name());
+  const auto column_vs_column_scan_pairs = _get_column_pairs(table_wrapper);
 
   for (const ColumnPair& pair : column_vs_column_scan_pairs) {
     _generated_lpqs.emplace_back(PredicateNode::make(
