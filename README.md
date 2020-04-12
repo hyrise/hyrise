@@ -142,6 +142,7 @@ Contact: firstname.lastname@hpi.de
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
+-   Lukas     Rambold
 -   Hendrik   Rätz
 -   Alexander Riese
 -   Johannes  Schneider

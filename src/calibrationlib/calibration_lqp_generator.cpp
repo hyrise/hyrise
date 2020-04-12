@@ -112,9 +112,6 @@ void CalibrationLQPGenerator::_generate_table_scans
             _generated_lpqs.emplace_back(PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
           }
 
-          // IN
-          _generated_lpqs.emplace_back(PredicateNode::make(not_in_(column, "not_there"), stored_table_node));
-
           // 100% selectivity
           _generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%"), stored_table_node));
           // 0% selectivity
