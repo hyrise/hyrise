@@ -424,6 +424,7 @@ set(
     storage/chunk.cpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/column_interleaver.hpp
     storage/column_iterable.cpp
     storage/column_iterable.hpp
     storage/chunk.hpp
@@ -503,6 +504,13 @@ set(
     storage/segment_iterables.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
+    storage/tuple/dynamic_fixed_tuple_size_policy.hpp
+    storage/tuple/static_fixed_tuple_size_policy.hpp
+    storage/tuple/tuple_format.cpp
+    storage/tuple/tuple_format.hpp
+    storage/tuple/tuple_sequence.hpp
+    storage/tuple/tuple_sequence.inl
+    storage/tuple/variable_tuple_size_policy.hpp
     operators/table_scan/sorted_segment_search.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp

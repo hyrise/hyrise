@@ -182,6 +182,7 @@ set(
     storage/simd_bp128_test.cpp
     storage/single_segment_index_test.cpp
     storage/storage_manager_test.cpp
+    storage/tuple_sequence_test.cpp
     storage/table_test.cpp
     storage/value_segment_test.cpp
     storage/variable_length_key_base_test.cpp

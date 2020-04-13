@@ -970,8 +970,8 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
    * @returns   The VariablySizedGroupRun and the end RowID, i.e., the RowID the next run starts at
    */
   static Run from_table_range(const AggregateHashSortEnvironment& environment,
-                                                const std::shared_ptr<const Table>& table, const RowID& begin_row_id,
-                                                const size_t row_count) {
+                              const std::shared_ptr<const Table>& table, const RowID& begin_row_id,
+                              const size_t row_count) {
     using GroupSizePolicy = typename Run::GroupSizePolicyType;
 
     Assert(row_count > 0, "Cannot materialize zero rows");
