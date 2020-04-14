@@ -71,7 +71,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   // loadavg contains three integer load average values ldavg[3] that need to be divided
   // by the scaling factor fscale in order to obtain the correct load average values.
   size_t size = sizeof(load_avg);
-  const auto ret = sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0)
+  const auto ret = sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0);
   DebugAssert(ret == 0, "Failed to call sysctl vm.loadavg");
 
   return {static_cast<float>(load_avg.ldavg[0]) / static_cast<float>(load_avg.fscale),
@@ -229,13 +229,13 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #ifdef __APPLE__
   int64_t physical_memory;
   size_t size = sizeof(physical_memory);
-  const auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
+  auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
   DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
 
   vm_size_t page_size;
   vm_statistics64_data_t vm_statistics;
   mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
-  auto ret = host_page_size(mach_host_self(), &page_size);
+  ret = host_page_size(mach_host_self(), &page_size);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get page size");
   ret = host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics64");
