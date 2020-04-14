@@ -202,6 +202,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
   if (is_transaction_statement()) {
     _tasks = _get_transaction_tasks();
   } else {
+    _precheck_ddl_operators(get_physical_plan());
     auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
     _tasks = std::vector<std::shared_ptr<AbstractTask>>(operator_tasks.cbegin(), operator_tasks.cend());
   }
@@ -215,7 +216,7 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
   auto* transaction_statement = dynamic_cast<hsql::TransactionStatement*>(statements.front());
   switch (transaction_statement->command) {
     case hsql::kBeginTransaction:
-      AssertInput(_transaction_context && _transaction_context->is_auto_commit(),
+      AssertInput(!_transaction_context || _transaction_context->is_auto_commit(),
                   "Cannot begin transaction inside an active transaction.");
       return {std::make_shared<JobTask>([this] {
         _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
@@ -254,8 +255,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   if (_result_table || !_query_has_output) {
     return {SQLPipelineStatus::Success, _result_table};
   }
-
-  _precheck_ddl_operators(get_physical_plan());
 
   const auto& tasks = get_tasks();
 
