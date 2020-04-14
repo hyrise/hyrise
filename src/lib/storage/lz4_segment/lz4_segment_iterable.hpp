@@ -20,7 +20,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   void _on_with_iterators(const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
 
-    auto decompressed_segment = _segment.decompress();
+    const auto decompressed_segment = _segment.decompress();
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += decompressed_segment.size();
     if (_segment.null_values()) {
       auto begin =
@@ -43,6 +43,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
    */
   template <typename Functor, typename PosListType>
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
+    auto cached_block = std::vector<char>(_segment.block_size());
+    std::optional<size_t> cached_block_index;
+
     const auto position_filter_size = position_filter->size();
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter_size;
 
@@ -69,14 +72,12 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
                                                           _segment.null_values()->cend(), position_filter->cbegin(),
                                                           position_filter->cend()};
-
       functor(begin, end);
     } else {
       auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt,
                                                             position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt,
                                                           position_filter->cbegin(), position_filter->cend()};
-
       functor(begin, end);
     }
   }
@@ -85,8 +86,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
  private:
   const LZ4Segment<T>& _segment;
-  mutable std::vector<char> cached_block;
-  mutable std::optional<size_t> cached_block_index = std::nullopt;
 
  private:
   template <typename ValueIterator>
