@@ -349,6 +349,15 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
 
+  if (_mode == JoinMode::AntiNullAsTrue) {
+    const auto indexed_null_values = index->null_cbegin() != index->null_cend();
+    if (probe_side_position.is_null() || indexed_null_values) {
+      index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
+      index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
+      return index_ranges;
+    }
+  }
+
   if (!probe_side_position.is_null()) {
     auto range_begin = AbstractIndex::Iterator{};
     auto range_end = AbstractIndex::Iterator{};

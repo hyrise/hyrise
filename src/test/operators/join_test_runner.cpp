@@ -550,7 +550,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
             table->create_index<GroupKeyIndex>({column_id});
           }
-        } else { // NON-DICTIONARY SEGMENTS
+        } else {  // NON-DICTIONARY SEGMENTS
           for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
             table->create_index<BTreeIndex>({column_id});
           }
