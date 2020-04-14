@@ -56,7 +56,7 @@ enum class TransactionPhase {
 std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
 
 /**
- * @brief Representation of a transactionsql
+ * @brief Representation of a transaction
  */
 class TransactionContext : public std::enable_shared_from_this<TransactionContext> {
   friend class TransactionManager;
