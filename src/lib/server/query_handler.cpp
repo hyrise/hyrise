@@ -94,9 +94,9 @@ void QueryHandler::handle_transaction_statement_message(ExecutionInformation& ex
   auto& statements = sql_statement->getStatements();
 
   if (statements.front()->isType(hsql::StatementType::kStmtTransaction)) {
-    auto* transaction_statement = dynamic_cast<hsql::TransactionStatement*>(statements.front());
+    const auto& transaction_statement = dynamic_cast<hsql::TransactionStatement&>(*statements.front());
 
-    switch (transaction_statement->command) {
+    switch (transaction_statement.command) {
       case hsql::kBeginTransaction: {
         execution_info.custom_command_complete_message = "BEGIN";
         break;
