@@ -33,10 +33,11 @@ struct SortColumnDefinition final {
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
-  enum class ForceMaterialization : bool {Yes = true, No = false};
+  enum class ForceMaterialization : bool { Yes = true, No = false };
 
   Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-       const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE, const ForceMaterialization force_materialization = ForceMaterialization::No);
+       const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE,
+       const ForceMaterialization force_materialization = ForceMaterialization::No);
 
   const std::vector<SortColumnDefinition>& sort_definitions() const;
 
@@ -56,8 +57,8 @@ class Sort : public AbstractReadOnlyOperator {
   class SortImplMaterializeOutput;
 
   const std::vector<SortColumnDefinition> _sort_definitions;
-
   const ChunkOffset _output_chunk_size;
+  const ForceMaterialization _force_materialization;
 };
 
 }  // namespace opossum
