@@ -291,7 +291,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get task_info");
 
-  return {static_cast<int64_t>(info.virtual_size), static_cast<int64_t>(info.resident_size)};
+  return {info.virtual_size, info.resident_size};
 #endif
 
   Fail("Method not implemented for this platform");
