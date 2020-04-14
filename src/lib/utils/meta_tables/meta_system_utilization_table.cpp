@@ -1,15 +1,12 @@
 #ifdef __linux__
-
 #include <numa.h>
-#include <fstream>
-
 #endif
 
 #ifdef __APPLE__
-
 #include <mach/mach.h>
-
 #endif
+
+#include <fstream>
 
 #include "meta_system_utilization_table.hpp"
 
@@ -56,16 +53,13 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 #ifdef __linux__
   std::ifstream load_avg_file;
   load_avg_file.open("/proc/loadavg", std::ifstream::in);
+  DebugAssert(load_avg_file.is_open(), "Failed to open /proc/loadavg");
 
-  if (!load_avg_file.is_open()) {
-    Fail("Unable to open /proc/loadavg");
-  }
-
-  std::string load_avg_value;
-  std::vector<float> load_avg_values;
-  for (int value_index = 0; value_index < 3; ++value_index) {
-    std::getline(load_avg_file, load_avg_value, ' ');
-    load_avg_values.push_back(std::stof(load_avg_value));
+  std::array<float, 3> load_avg_values;
+  std::string load_avg_string;
+  for (auto& load_avg_value : load_avg_values) {
+    std::getline(load_avg_file, load_avg_string, ' ');
+    load_avg_value = std::stof(load_avg_string);
   }
   load_avg_file.close();
 
@@ -74,10 +68,11 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 
 #ifdef __APPLE__
   loadavg load_avg;
+  // loadavg contains three integer load average values ldavg[3] that need to be divided
+  // by the scaling factor fscale in order to obtain the correct load average values.
   size_t size = sizeof(load_avg);
-  if (sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0) != 0) {
-    Fail("Unable to call sysctl vm.loadavg");
-  }
+  const auto ret = sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0)
+  DebugAssert(ret == 0, "Failed to call sysctl vm.loadavg");
 
   return {static_cast<float>(load_avg.ldavg[0]) / static_cast<float>(load_avg.fscale),
           static_cast<float>(load_avg.ldavg[1]) / static_cast<float>(load_avg.fscale),
@@ -100,9 +95,7 @@ int64_t MetaSystemUtilizationTable::_get_total_time() {
 #ifdef __linux__
   struct timespec time_spec;
   const auto ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time_spec);
-  if (ret == -1) {
-    Fail("An error occured while fetching the time");
-  }
+  DebugAssert(ret == 0, "Failed in clock_gettime");
 
   const auto total_ns = time_spec.tv_sec * std::nano::den + time_spec.tv_nsec;
 
@@ -111,9 +104,7 @@ int64_t MetaSystemUtilizationTable::_get_total_time() {
 
 #ifdef __APPLE__
   const auto total_ns = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
-  if (total_ns == 0) {
-    Fail("An error occured while fetching the time");
-  }
+  DebugAssert(total_ns != 0, "Failed in clock_gettime_nsec_np");
   return total_ns;
 #endif
 
@@ -121,7 +112,7 @@ int64_t MetaSystemUtilizationTable::_get_total_time() {
 }
 
 /*
- * Returns the time in ns that ALL processes have spend on the CPU
+ * Returns the time in ns that ALL processes have spent on the CPU
  * since an arbitrary point in the past.
 */
 int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
@@ -130,10 +121,7 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
-
-  if (!stat_file.is_open()) {
-    Fail("Unable to open /proc/stat");
-  }
+  DebugAssert(stat_file.is_open(), "Failed to open /proc/stat");
 
   std::string cpu_line;
   std::getline(stat_file, cpu_line);
@@ -161,10 +149,8 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __APPLE__
   host_cpu_load_info_data_t cpu_info;
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
-  if (host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count) !=
-      KERN_SUCCESS) {
-    Fail("Unable to access host_statistics");
-  }
+  const auto ret = host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
+  DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics");
 
   const auto active_ticks = cpu_info.cpu_ticks[CPU_STATE_SYSTEM] +
                             cpu_info.cpu_ticks[CPU_STATE_USER] +
@@ -179,7 +165,7 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 }
 
 /*
- * Returns the time in ns that THIS process has spend on the CPU
+ * Returns the time in ns that THIS process has spent on the CPU
  * since an arbitrary point in the past.
 */
 int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
@@ -188,10 +174,7 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 #ifdef __linux__
   struct timespec time_spec;
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
-
-  if (ret == -1) {
-    Fail("An error occured while fetching the time");
-  }
+  DebugAssert(ret == 0, "Failed in clock_gettime");
 
   int cpu_count;
   if (numa_available() != -1) {
@@ -207,10 +190,7 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 
 #ifdef __APPLE__
   const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
-
-  if (active_ns == 0) {
-    Fail("An error occured while fetching the time");
-  }
+  DebugAssert(active_ns != 0, "Failed in clock_gettime_nsec_np");
 
   return active_ns / _get_cpu_count();
 #endif
@@ -219,19 +199,18 @@ int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 }
 
 /*
- * Returns a struct that contains the avaiable and free memory size in bytes.
+ * Returns a struct that contains the available and free memory size in bytes.
  * - Free memory is unallocated memory.
- * - Availlable memory includes free memory and currently allocated memory that
- *   could be made available (e.g. buffers, caches ...)
+ * - Available memory includes free memory and currently allocated memory that
+ *   could be made available (e.g. buffers, caches ...).
+ *   This is not equivalent to the total memory size, since certain data can not
+ *   be paged at any time.
 */
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
   std::ifstream meminfo_file;
   meminfo_file.open("/proc/meminfo", std::ifstream::in);
-
-  if (!meminfo_file.is_open()) {
-    Fail("Unable to open /proc/meminfo");
-  }
+  DebugAssert(meminfo_file.is_open(), "Unable to open /proc/meminfo");
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
   std::string meminfo_line;
@@ -250,18 +229,16 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #ifdef __APPLE__
   int64_t physical_memory;
   size_t size = sizeof(physical_memory);
-  if (sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0) != 0) {
-    Fail("Unable to call sysctl hw.memsize");
-  }
+  const auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
+  DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
 
   vm_size_t page_size;
   vm_statistics64_data_t vm_statistics;
   mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
-  if (host_page_size(mach_host_self(), &page_size) != KERN_SUCCESS ||
-      host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count) !=
-          KERN_SUCCESS) {
-    Fail("Unable to access host_page_size or host_statistics64");
-  }
+  auto ret = host_page_size(mach_host_self(), &page_size);
+  DebugAssert(ret == KERN_SUCCESS, "Failed to get page size");
+  ret = host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count);
+  DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics64");
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
   memory_usage.free_memory = vm_statistics.free_count * page_size;
@@ -282,10 +259,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __linux__
   std::ifstream self_status_file;
   self_status_file.open("/proc/self/status", std::ifstream::in);
-
-  if (!self_status_file.is_open()) {
-    Fail("Unable to open /proc/self/status");
-  }
+  DebugAssert(self_status_file.is_open(), "Failed to open /proc/self/status");
 
   MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage{};
   std::string self_status_line;
@@ -305,9 +279,8 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __APPLE__
   struct task_basic_info info;
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
-  if (task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count) != KERN_SUCCESS) {
-    Fail("Unable to access task_info");
-  }
+  const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
+  DebugAssert(ret == KERN_SUCCESS, "Failed to get task_info");
 
   return {static_cast<int64_t>(info.virtual_size), static_cast<int64_t>(info.resident_size)};
 #endif

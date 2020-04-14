@@ -1,10 +1,9 @@
 #ifdef __linux__
-
 #include <numa.h>
 #include <sys/sysinfo.h>
-#include <fstream>
-
 #endif
+
+#include <fstream>
 
 #include "meta_system_information_table.hpp"
 
@@ -37,35 +36,31 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 #ifdef __linux__
   struct sysinfo memory_info {};
   const auto ret = sysinfo(&memory_info);
-  if (ret != 0) {
-    Fail("Could not gather sysinfo.");
-  }
+  DebugAssert(ret == 0, "Failed to get sysinfo");
 
   ram = memory_info.totalram * memory_info.mem_unit;
 #endif
 
 #ifdef __APPLE__
   size_t size = sizeof(ram);
-  if (sysctlbyname("hw.memsize", &ram, &size, nullptr, 0) != 0) {
-    Fail("Unable to call sysctl hw.memsize");
-  }
+  const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
+  DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
 #endif
 
   const auto cpu_model = _cpu_model();
 
-  output_table->append({cpus, ram, numa_cpus, cpu_model});
+  output_table->append({static_cast<int32_t>(cpus), ram, static_cast<int32_t>(numa_cpus), cpu_model});
 
   return output_table;
 }
 
+
+// Returns the CPU model string 
 pmr_string MetaSystemInformationTable::_cpu_model() {
 #ifdef __linux__
   std::ifstream cpuinfo_file;
   cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
-
-  if (!cpuinfo_file.is_open()) {
-    Fail("Unable to open /proc/cpuinfo");
-  }
+  DebugAssert(cpuinfo_file.is_open(), "Failed to open /proc/cpuinfo");
 
   std::string cpuinfo_line;
   while (std::getline(cpuinfo_file, cpuinfo_line)) {
@@ -81,9 +76,9 @@ pmr_string MetaSystemInformationTable::_cpu_model() {
 #ifdef __APPLE__
   size_t buffer_size = 256;
   char buffer[256];
-  if (sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0) != 0) {
-    Fail("Unable to call sysctl machdep.cpu.brand_string");
-  }
+  const auto ret = sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0);
+  DebugAssert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
+
   return buffer;
 #endif
 }

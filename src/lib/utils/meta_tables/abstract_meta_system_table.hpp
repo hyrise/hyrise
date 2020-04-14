@@ -14,7 +14,7 @@ class AbstractMetaSystemTable : public AbstractMetaTable {
 
  protected:
   explicit AbstractMetaSystemTable(const TableColumnDefinitions& column_definitions);
-  static int _get_cpu_count();
+  static size_t _get_cpu_count();
 };
 
 }  // namespace opossum
