@@ -5,7 +5,6 @@
 #include <functional>
 
 #include "types.hpp"
-#include "utils/settings/log_level_setting.hpp"
 #include "utils/settings_manager.hpp"
 
 namespace opossum {
@@ -20,7 +19,7 @@ struct LogEntry {
 class LogManager : public Noncopyable {
  public:
   constexpr static LogLevel DEFAULT_LOG_LEVEL = LogLevel::Info;
-  constexpr static char SETTING_NAME[] = "LogManager.log_level";
+  constexpr static char LOG_LEVEL_SETTING_NAME[] = "LogManager.log_level";
 
   void add_message(const std::string& reporter, const std::string& message, const LogLevel log_level = LogLevel::Debug);
 
@@ -29,13 +28,14 @@ class LogManager : public Noncopyable {
  protected:
   friend class Hyrise;
   friend class LogLevelSetting;
+  friend class LogManagerTest;
+  friend class LogLevelSettingTest;
 
   explicit LogManager(SettingsManager& settings_manager);
 
   LogLevel _log_level;
 
  private:
-  std::shared_ptr<LogLevelSetting> _log_level_setting;
   tbb::concurrent_vector<LogEntry> _log_entries;
 };
 

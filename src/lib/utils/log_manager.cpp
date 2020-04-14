@@ -1,15 +1,14 @@
 #include "log_manager.hpp"
 
 #include "constant_mappings.hpp"
+#include "utils/settings/log_level_setting.hpp"
 
 namespace opossum {
 
 LogManager::LogManager(SettingsManager& settings_manager) : _log_level(DEFAULT_LOG_LEVEL) {
-  if (settings_manager.has_setting(SETTING_NAME)) {
-    _log_level_setting = std::dynamic_pointer_cast<LogLevelSetting>(settings_manager.get_setting(SETTING_NAME));
-  } else {
-    _log_level_setting = std::make_shared<LogLevelSetting>(SETTING_NAME);
-    _log_level_setting->register_at(settings_manager);
+  if (!settings_manager.has_setting(LOG_LEVEL_SETTING_NAME)) {
+    auto log_level_setting = std::make_shared<LogLevelSetting>(LOG_LEVEL_SETTING_NAME);
+    log_level_setting->register_at(settings_manager);
   }
 }
 
