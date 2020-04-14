@@ -76,7 +76,7 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _primary_predicate,
-                                     std::vector<OperatorJoinPredicate>{}, _index_side);
+                                     _secondary_predicates, _index_side);
 }
 
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -591,7 +591,7 @@ void JoinIndex::_on_cleanup() {
 void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData::output_to_stream(stream, description_mode);
 
-  stream << (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
+  stream << (description_mode == DescriptionMode::SingleLine ? " / " : "\n");
   stream << std::to_string(chunks_scanned_with_index) << " of "
          << std::to_string(chunks_scanned_with_index + chunks_scanned_without_index) << " chunks used an index";
 }

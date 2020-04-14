@@ -20,9 +20,9 @@
 
 namespace opossum {
 
-template <typename DerivedIndex>
-class JoinIndexTest : public BaseTest {
+class OperatorsJoinIndexTest : public BaseTest {
  public:
+  /*
   static void SetUpTestCase() {  // called ONCE before the tests
     // load and create the indexed tables
     _table_wrapper_a = load_table_with_index("resources/test_data/tbl/int_float.tbl", 2);
@@ -60,10 +60,14 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_m->execute();
     _table_wrapper_n->execute();
   }
-
+*/
  protected:
-  void SetUp() override {}
-
+  void SetUp() override {
+    const auto dummy_table =
+        std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+    dummy_input = std::make_shared<TableWrapper>(dummy_table);
+  }
+/*
   static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
@@ -125,61 +129,133 @@ class JoinIndexTest : public BaseTest {
       _table_wrapper_b_no_index, _table_wrapper_c, _table_wrapper_d, _table_wrapper_e, _table_wrapper_f,
       _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j, _table_wrapper_k, _table_wrapper_l,
       _table_wrapper_m, _table_wrapper_n;
+*/
+  std::shared_ptr<AbstractOperator> dummy_input;
 };
-
+/*
 typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex, GroupKeyIndex> DerivedIndices;
 
-TYPED_TEST_SUITE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(OperatorsJoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+*/
+TEST_F(OperatorsJoinIndexTest, SupportsFail) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+  const auto configuration = JoinConfiguration{};
 
-TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
+  auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate, std::vector<OperatorJoinPredicate>{},
+                                            IndexSide::Left);
+
+  EXPECT_THROW(join_operator->supports(configuration), std::logic_error);
+}
+
+TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+  const auto secondary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals};
+
+  const auto join_operator =
+      std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
+                                       std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Left);
+
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
+            "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Left");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
+            "JoinIndex\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)\nIndex side: Left");
+
+  dummy_input->execute();
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
+            "JoinIndex (Inner Join where a = a AND a != a) Index side: Left");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
+            "JoinIndex\n(Inner Join where a = a AND a != a)\nIndex side: Left");
+
+  EXPECT_EQ(join_operator->name(), "JoinIndex");
+}
+
+TEST_F(OperatorsJoinIndexTest, DeepCopy) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+  const auto secondary_predicates =
+      std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
+  const auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Left,
+                                                              primary_predicate, secondary_predicates);
+  const auto abstract_join_operator_copy = join_operator->deep_copy();
+  const auto join_operator_copy = std::dynamic_pointer_cast<JoinIndex>(abstract_join_operator_copy);
+
+  ASSERT_TRUE(join_operator_copy);
+
+  EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
+  EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
+  EXPECT_EQ(join_operator_copy->secondary_predicates(), secondary_predicates);
+  EXPECT_NE(join_operator_copy->input_left(), nullptr);
+  EXPECT_NE(join_operator_copy->input_right(), nullptr);
+}
+
+TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
+  auto performance_data = JoinIndex::PerformanceData{};
+  std::stringstream stream;
+
+  performance_data.executed = true;
+  performance_data.has_output = true;
+  performance_data.output_row_count = 2u;
+  performance_data.output_chunk_count = 1u;
+  performance_data.walltime = std::chrono::nanoseconds{999u};
+  performance_data.chunks_scanned_with_index = 10u;
+  performance_data.chunks_scanned_without_index = 5u;
+  stream << performance_data;
+  EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns / 10 of 15 chunks used an index");
+
+  stream.str("");
+  performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
+  EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns\n10 of 15 chunks used an index");
+}
+
+/*
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
                          "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1, false);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
                          "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinOnString) {
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoinOnString) {
   this->test_join_output(this->_table_wrapper_c, this->_table_wrapper_d,
                          {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
                          "resources/test_data/tbl/join_operators/string_left_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, RightJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
                          "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinFallBack) {
+TYPED_TEST(OperatorsJoinIndexTest, RightJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
                          "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1, false);
 }
 
-TYPED_TEST(JoinIndexTest, InnerJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerJoinOnString) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerJoinOnString) {
   this->test_join_output(this->_table_wrapper_c, this->_table_wrapper_d,
                          {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/string_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerJoinSingleChunk) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerJoinSingleChunk) {
   this->test_join_output(this->_table_wrapper_e, this->_table_wrapper_f,
                          {{ColumnID{1}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_join_single_chunk.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerRefJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerRefJoin) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -190,7 +266,7 @@ TYPED_TEST(JoinIndexTest, InnerRefJoin) {
                          "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerRefJoinFiltered) {
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -200,19 +276,19 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
                          "resources/test_data/tbl/join_operators/int_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerDictJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerDictJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerDictJoinSwapTables) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerDictJoinSwapTables) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b_no_index,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1, true, IndexSide::Left);
 }
 
-TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerRefDictJoin) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -223,7 +299,7 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
                          "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerRefDictJoinFiltered) {
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -233,13 +309,13 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
                          "resources/test_data/tbl/join_operators/int_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerJoinBig) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerJoinBig) {
   this->test_join_output(this->_table_wrapper_c, this->_table_wrapper_d,
                          {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_string_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
+TYPED_TEST(OperatorsJoinIndexTest, InnerRefJoinFilteredBig) {
   auto scan_c = create_table_scan(this->_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
   auto scan_d = create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
@@ -249,13 +325,13 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
                          "resources/test_data/tbl/join_operators/int_string_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, OuterJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, OuterJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, OuterJoinWithNull) {
+TYPED_TEST(OperatorsJoinIndexTest, OuterJoinWithNull) {
   if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
     return;  // CompositeGroupKeyIndex is currently not null-aware (#1818)
   }
@@ -265,13 +341,13 @@ TYPED_TEST(JoinIndexTest, OuterJoinWithNull) {
                          "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, OuterJoinDict) {
+TYPED_TEST(OperatorsJoinIndexTest, OuterJoinDict) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}, JoinMode::Inner,
@@ -283,7 +359,7 @@ TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
                          "resources/test_data/tbl/join_operators/float_smaller_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerInnerJoinDict) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}, JoinMode::Inner,
@@ -295,20 +371,20 @@ TYPED_TEST(JoinIndexTest, SmallerInnerJoinDict) {
                          "resources/test_data/tbl/join_operators/float_smaller_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerInnerJoin2) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_smaller_inner_join_2.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerOuterJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerOuterJoin) {
   this->test_join_output(this->_table_wrapper_k, this->_table_wrapper_l,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_smaller_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerEqualInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThanEquals}, JoinMode::Inner,
@@ -320,20 +396,20 @@ TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin) {
                          "resources/test_data/tbl/join_operators/float_smallerequal_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin2) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerEqualInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThanEquals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_smallerequal_inner_join_2.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SmallerEqualOuterJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, SmallerEqualOuterJoin) {
   this->test_join_output(this->_table_wrapper_k, this->_table_wrapper_l,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThanEquals}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_smallerequal_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThan}, JoinMode::Inner,
@@ -345,7 +421,7 @@ TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
                          "resources/test_data/tbl/join_operators/float_greater_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterInnerJoinDict) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThan}, JoinMode::Inner,
@@ -357,20 +433,20 @@ TYPED_TEST(JoinIndexTest, GreaterInnerJoinDict) {
                          "resources/test_data/tbl/join_operators/float_greater_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterInnerJoin2) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThan}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_greater_inner_join_2.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterOuterJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterOuterJoin) {
   this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThan}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_greater_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterEqualInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}, JoinMode::Inner,
@@ -382,7 +458,7 @@ TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin) {
                          "resources/test_data/tbl/join_operators/float_greaterequal_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoinDict) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterEqualInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}, JoinMode::Inner,
@@ -394,20 +470,20 @@ TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoinDict) {
                          "resources/test_data/tbl/join_operators/float_greaterequal_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterEqualOuterJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterEqualOuterJoin) {
   this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_greaterequal_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin2) {
+TYPED_TEST(OperatorsJoinIndexTest, GreaterEqualInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_greaterequal_inner_join_2.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, NotEqualInnerJoin) {
+TYPED_TEST(OperatorsJoinIndexTest, NotEqualInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}, JoinMode::Inner,
@@ -418,7 +494,7 @@ TYPED_TEST(JoinIndexTest, NotEqualInnerJoin) {
                          "resources/test_data/tbl/join_operators/float_notequal_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, NotEqualInnerJoinDict) {
+TYPED_TEST(OperatorsJoinIndexTest, NotEqualInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}, JoinMode::Inner,
@@ -429,13 +505,13 @@ TYPED_TEST(JoinIndexTest, NotEqualInnerJoinDict) {
                          "resources/test_data/tbl/join_operators/float_notequal_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinLessThanOnDictAndDict) {
+TYPED_TEST(OperatorsJoinIndexTest, JoinLessThanOnDictAndDict) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThanEquals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_float_leq_dict.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
+TYPED_TEST(OperatorsJoinIndexTest, JoinOnReferenceSegmentAndDict) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -444,7 +520,7 @@ TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
                          JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
+TYPED_TEST(OperatorsJoinIndexTest, JoinOnDictAndReferenceSegment) {
   // scan that returns all rows
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
   scan_b->execute();
@@ -453,7 +529,7 @@ TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
                          JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join_neq.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
+TYPED_TEST(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -473,7 +549,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
                          IndexSide::Left, false);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
+TYPED_TEST(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -491,7 +567,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
                          IndexSide::Right, true);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
+TYPED_TEST(OperatorsJoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -509,7 +585,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
                          IndexSide::Left, true);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
+TYPED_TEST(OperatorsJoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -529,7 +605,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
                          IndexSide::Right, false);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
+TYPED_TEST(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThan, 6);
   scan_a->execute();
@@ -546,7 +622,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
                          "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
+TYPED_TEST(OperatorsJoinIndexTest, MultiJoinOnRefOuter) {
   auto join =
       std::make_shared<JoinIndex>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
                                   OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
@@ -557,7 +633,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
                          "resources/test_data/tbl/join_operators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
+TYPED_TEST(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -566,7 +642,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRig
                          JoinMode::Right, "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
+TYPED_TEST(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns all rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -578,7 +654,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLef
       std::logic_error);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns all rows
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
@@ -588,7 +664,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft
                          IndexSide::Left);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
@@ -600,7 +676,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRigh
       std::logic_error);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
+TYPED_TEST(OperatorsJoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns no rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -609,7 +685,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSide
                          JoinMode::Right, "resources/test_data/tbl/join_operators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
+TYPED_TEST(OperatorsJoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns no rows
   auto scan_a = create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -621,7 +697,7 @@ TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSide
       std::logic_error);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns no rows
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
@@ -631,7 +707,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideI
                          IndexSide::Left);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
+TYPED_TEST(OperatorsJoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns no rows
   auto scan_b = create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
@@ -641,6 +717,6 @@ TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideI
                              JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1, true,
                              IndexSide::Right),
       std::logic_error);
-}
+}*/
 
 }  // namespace opossum

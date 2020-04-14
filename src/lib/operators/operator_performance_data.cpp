@@ -14,6 +14,7 @@ void OperatorPerformanceData::output_to_stream(std::ostream& stream, Description
 
   if (!has_output) {
     stream << "executed, but no output";
+    return;
   }
 
   stream << output_row_count << " row(s) in ";
