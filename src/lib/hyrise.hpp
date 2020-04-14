@@ -36,7 +36,7 @@ class Hyrise : public Singleton<Hyrise> {
   StorageManager storage_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
-  SettingsManager settings_manager = SettingsManager{};
+  SettingsManager settings_manager;
   Topology topology;
   LogManager log_manager = LogManager{settings_manager};
 
