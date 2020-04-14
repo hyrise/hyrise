@@ -116,11 +116,11 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
-  if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
+  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     func(*value_segment);
-  } else if (const auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
+  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
     func(*ref_segment);
-  } else if (const auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
+  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");

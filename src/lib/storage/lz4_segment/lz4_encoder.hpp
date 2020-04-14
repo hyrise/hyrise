@@ -67,8 +67,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                  const PolymorphicAllocator<T>& allocator) {
     // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
-    auto values = pmr_vector<T>{allocator};
-    auto null_values = pmr_vector<bool>{allocator};
+    auto values = pmr_vector<T>(allocator);
+    auto null_values = pmr_vector<bool>(allocator);
 
     /**
      * If the null value vector only contains the value false, then the value segment does not have any row value that
@@ -113,7 +113,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * size is pre-calculated instead of iterating over all blocks when the memory consumption of the LZ4 segment is
      * estimated.
      */
-    auto lz4_blocks = pmr_vector<pmr_vector<char>>{allocator};
+    auto lz4_blocks = pmr_vector<pmr_vector<char>>(allocator);
     auto total_compressed_size = size_t{0u};
     auto last_block_size = size_t{0u};
     if (!values.empty()) {

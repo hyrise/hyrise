@@ -31,9 +31,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     const auto& position_filter = _segment.pos_list();
 
-    resolve_pos_list_type(position_filter, [&functor, &referenced_table, &referenced_column_id](const auto& pos_list) {
-      const auto begin_it = pos_list->cbegin();
-      const auto end_it = pos_list->cend();
+    // resolve_pos_list_type(position_filter, [&functor, &referenced_table, &referenced_column_id](const auto& pos_list) {
+    //   const auto begin_it = pos_list->cbegin();
+    //   const auto end_it = pos_list->cend();
+    resolve_pos_list_type(position_filter, [&functor, &referenced_table, &referenced_column_id](auto pos_list) {
+      const auto begin_it = pos_list->begin();
+      const auto end_it = pos_list->end();
 
       // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some
       // optimizations. For example, we can use a single, non-virtual segment accessor instead of having
@@ -205,11 +208,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         functor(begin, end);
       }
     });
-  }
-
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<AbstractPosList>& position_filter, const Functor& functor) const {
-    Fail("Whooot?");
   }
 
   size_t _on_size() const { return _segment.size(); }

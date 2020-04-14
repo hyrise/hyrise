@@ -32,6 +32,8 @@ void AbstractOperator::execute() {
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
   DebugAssert(!_performance_data->executed, "Operator has already been executed");
 
+  // std::cout << "Executing " << name() << " (" << description() << ")\n" << std::flush;
+
   Timer performance_timer;
 
   auto transaction_context = this->transaction_context();

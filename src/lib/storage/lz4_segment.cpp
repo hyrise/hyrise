@@ -262,6 +262,10 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
         static_cast<int>(decompressed_block_size), _dictionary.data(), static_cast<int>(_dictionary.size()));
   }
 
+  if (decompressed_result <= 0) {
+    std::cout << "decompressed_result :::: " << decompressed_result << std::endl;
+  }
+
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
               "Decompressed LZ4 block has different size than the initial source data.");
