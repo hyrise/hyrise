@@ -120,7 +120,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
 
   if (input_pos_list.size() <= output_chunk_size && !resolve_indirection) {
-    std::cout << "Shortcut" << std::endl;
     // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection
     const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list));
     auto& output_segments = output_segments_by_chunk.at(0);
@@ -128,7 +127,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
     }
   } else {
-    std::cout << "NO Shortcut" << std::endl;
     for (ColumnID column_id{0u}; column_id < column_count; ++column_id) {
       // We write the output ReferenceSegments column by column. This means that even if input ReferenceSegments share a
       // PosList, the output will contain independent PosLists. While this is slightly less efficient for following
@@ -279,10 +277,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   }
 
   if (must_materialize) {
-    std::cout << "Materializing" << std::endl;
     sorted_table = write_materialized_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
   } else {
-    std::cout << "NOT materializing" << std::endl;
     sorted_table = write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
   }
 
