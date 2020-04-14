@@ -116,7 +116,7 @@ class Chunk : private Noncopyable {
    * We only return indexes whose columns cover all requested columns, even though it can make sense to use a more
    * narrow index and apply the remaining column filter in a following table scan.
    */
-  const std::vector<std::shared_ptr<AbstractIndex>> applicable_indexes(const std::vector<const ColumnID> column_ids);
+  const std::vector<std::shared_ptr<AbstractIndex>> applicable_indexes(const std::vector<ColumnID> column_ids);
 
   // TODO: move this method into createIndex(columnIDs)
   template <typename Index>

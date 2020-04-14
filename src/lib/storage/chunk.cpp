@@ -106,12 +106,12 @@ void Chunk::finalize() {
 
 const std::shared_ptr<IndexesByColumnIDsMap>& Chunk::indexes() const { return _indexes; }
 
-const std::vector<std::shared_ptr<AbstractIndex>> Chunk::applicable_indexes(const std::vector<const ColumnID> column_ids) {
-  const auto search_columns_set = std::set<const ColumnID>(column_ids.cbegin(), column_ids.cend());
+const std::vector<std::shared_ptr<AbstractIndex>> Chunk::applicable_indexes(const std::vector<ColumnID> column_ids) {
+  const auto search_columns_set = std::set<ColumnID>(column_ids.cbegin(), column_ids.cend());
 
   std::vector<std::shared_ptr<AbstractIndex>> applicable_indexes{};
   for (const auto& [index_column_ids, index] : *_indexes) {
-    std::vector<const ColumnID> index_intersection(column_ids.size());
+    std::vector<ColumnID> index_intersection(column_ids.size());
     std::set_intersection(column_ids.cbegin(), column_ids.cend(),
                           search_columns_set.cbegin(), search_columns_set.cend(),
                           std::back_inserter(index_intersection));
