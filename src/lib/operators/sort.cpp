@@ -97,8 +97,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
 // Given an unsorted_table and an input_pos_list that defines the output order, this writes the output table as a
 // reference table. This is usually faster, but can only be done if a single column in the input table does not
 // reference multiple tables. An example where this restriction applies is the sorted result of a union between two
-// tables. The restriction is needed is because a ReferenceSegment can only reference a single table. It does, however,
-// not necessarily apply to joined tables as two referenced in different columns is fine.
+// tables. The restriction is needed because a ReferenceSegment can only reference a single table. It does, however,
+// not necessarily apply to joined tables, so two tables referenced in different columns is fine.
 //
 // If unsorted_table is of TableType::Data, this is trivial and the input_pos_list is used to create the output
 // reference table. If the input is already a reference table, the double indirection needs to be resolved.
@@ -129,9 +129,10 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   } else {
     for (ColumnID column_id{0u}; column_id < column_count; ++column_id) {
       // We write the output ReferenceSegments column by column. This means that even if input ReferenceSegments share a
-      // PosList, the output will contain independent PosLists. While this is slightly less efficient for following
-      // operators, we assume that the lion's share of the work has been done before the sort operator is executed. In
-      // the future, this could be improved.
+      // PosList, the output will contain independent PosLists. While this is slightly more expensive to generate and
+      // slightly less efficient for following operators, we assume that the lion's share of the work has been done
+      // before the sort operator is executed and that the relative cost of this is acceptable. In the future, this
+      // could be improved.
       auto output_pos_list = std::make_shared<RowIDPosList>();
       output_pos_list->reserve(output_chunk_size);
 
