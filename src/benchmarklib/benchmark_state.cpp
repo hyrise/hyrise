@@ -25,8 +25,7 @@ bool BenchmarkState::keep_running() {
       break;
     case State::Over:
       return false;
-    default: {
-    }
+    default: {}
   }
 
   benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;

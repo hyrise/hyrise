@@ -4,10 +4,13 @@
 
 namespace opossum {
 
-LogManager::LogManager()
-    : _log_level(DEFAULT_LOG_LEVEL) , _log_level_setting(std::make_shared<LogLevelSetting>("LogManager.log_level"))
-  {
-  _log_level_setting->register_at_settings_manager();
+LogManager::LogManager(SettingsManager& settings_manager) : _log_level(DEFAULT_LOG_LEVEL) {
+  if (settings_manager.has_setting(SETTING_NAME)) {
+    _log_level_setting = std::dynamic_pointer_cast<LogLevelSetting>(settings_manager.get_setting(SETTING_NAME));
+  } else {
+    _log_level_setting = std::make_shared<LogLevelSetting>(SETTING_NAME);
+    _log_level_setting->register_at(settings_manager);
+  }
 }
 
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {

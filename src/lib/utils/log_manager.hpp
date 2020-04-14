@@ -20,6 +20,7 @@ struct LogEntry {
 class LogManager : public Noncopyable {
  public:
   constexpr static LogLevel DEFAULT_LOG_LEVEL = LogLevel::Info;
+  constexpr static char SETTING_NAME[] = "LogManager.log_level";
 
   void add_message(const std::string& reporter, const std::string& message, const LogLevel log_level = LogLevel::Debug);
 
@@ -29,8 +30,7 @@ class LogManager : public Noncopyable {
   friend class Hyrise;
   friend class LogLevelSetting;
 
-  explicit LogManager();
-  //~LogManager() { _log_level_setting->unregister_at_settings_manager(); }
+  explicit LogManager(SettingsManager& settings_manager);
 
   LogLevel _log_level;
 

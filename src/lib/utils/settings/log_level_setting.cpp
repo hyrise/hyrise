@@ -18,4 +18,8 @@ void LogLevelSetting::set(const std::string& value) {
   Hyrise::get().log_manager._log_level = log_level_to_string.right.at(value);
 }
 
+void LogLevelSetting::register_at(SettingsManager& settings_manager) {
+  settings_manager._add(std::static_pointer_cast<AbstractSetting>(shared_from_this()));
+}
+
 }  // namespace opossum

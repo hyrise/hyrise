@@ -14,6 +14,8 @@ class LogLevelSetting : public AbstractSetting {
   const std::string& get() final;
 
   void set(const std::string& value) final;
+
+  void register_at(SettingsManager& settings_manager);
 };
 
 }  // namespace opossum
