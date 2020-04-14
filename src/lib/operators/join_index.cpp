@@ -79,8 +79,6 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
                                      _secondary_predicates, _index_side);
 }
 
-void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
   Assert(
       supports({_mode, _primary_predicate.predicate_condition,
@@ -153,10 +151,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
       Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-      if (index_chunk->size() == 0) {
-        continue;
-      }
-
       const auto& reference_segment =
           std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->get_segment(_primary_predicate.column_ids.second));
       Assert(reference_segment != nullptr,
@@ -164,10 +158,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       auto index_data_table = reference_segment->referenced_table();
       const std::vector<ColumnID> index_data_table_column_ids{reference_segment->referenced_column_id()};
       const auto& reference_segment_pos_list = reference_segment->pos_list();
-
-      if (reference_segment_pos_list->empty()) {
-        continue;
-      }
 
       if (reference_segment_pos_list->references_single_chunk()) {
         const auto index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
