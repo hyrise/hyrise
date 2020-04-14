@@ -39,9 +39,16 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
 
-  output_table->append({system_cpu_ticks, process_cpu_ticks, total_ticks, load_avg.load_1_min, load_avg.load_5_min,
-                        load_avg.load_15_min, system_memory_usage.free_memory, system_memory_usage.available_memory,
-                        process_memory_usage.virtual_memory, process_memory_usage.physical_memory});
+  output_table->append({static_cast<int64_t>(system_cpu_ticks),
+                        static_cast<int64_t>(process_cpu_ticks),
+                        static_cast<int64_t>(total_ticks),
+                        load_avg.load_1_min,
+                        load_avg.load_5_min,
+                        load_avg.load_15_min,
+                        static_cast<int64_t>(system_memory_usage.free_memory),
+                        static_cast<int64_t>(system_memory_usage.available_memory),
+                        static_cast<int64_t>(process_memory_usage.virtual_memory),
+                        static_cast<int64_t>(process_memory_usage.physical_memory)});
 
   return output_table;
 }
@@ -85,7 +92,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 /*
   * Returns the time in ns since an arbitrary point in the past.
 */
-int64_t MetaSystemUtilizationTable::_get_total_time() {
+uint64_t MetaSystemUtilizationTable::_get_total_time() {
 /* CLOCK_MONOTONIC_RAW:
  * Similar to CLOCK_MONOTONIC, but provides access to a raw hard‐
  * ware-based time that is not subject to NTP adjustments or the
@@ -115,9 +122,7 @@ int64_t MetaSystemUtilizationTable::_get_total_time() {
  * Returns the time in ns that ALL processes have spent on the CPU
  * since an arbitrary point in the past.
 */
-int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
-// The amount of time is measured in units of clock ticks.
-// sysconf(_SC_CLK_TCK) can be used to obtain the right value.
+uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
   std::ifstream stat_file;
   stat_file.open("/proc/stat", std::ifstream::in);
@@ -141,6 +146,8 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
     cpu_count = _get_cpu_count();
   }
 
+  // The amount of time in /proc/stat is measured in units of clock ticks.
+  // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
   const auto active_ns = (active_ticks * std::nano::den) / (sysconf(_SC_CLK_TCK) * cpu_count);
 
   return active_ns;
@@ -156,6 +163,8 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
                             cpu_info.cpu_ticks[CPU_STATE_USER] +
                             cpu_info.cpu_ticks[CPU_STATE_NICE];
 
+  // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks.
+  // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
   const auto active_ns = active_ticks * std::nano::den / (sysconf(_SC_CLK_TCK) * _get_cpu_count());
 
   return active_ns;
@@ -168,7 +177,7 @@ int64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
  * Returns the time in ns that THIS process has spent on the CPU
  * since an arbitrary point in the past.
 */
-int64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
+uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // Per-process CPU-time clock (measures CPU time consumed by all threads in the process).
 #ifdef __linux__

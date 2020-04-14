@@ -23,19 +23,19 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   };
 
   struct SystemMemoryUsage {
-    int64_t free_memory;
-    int64_t available_memory;
+    uint64_t free_memory;
+    uint64_t available_memory;
   };
 
   struct ProcessMemoryUsage {
-    int64_t virtual_memory;
-    int64_t physical_memory;
+    uint64_t virtual_memory;
+    uint64_t physical_memory;
   };
 
   static LoadAvg _get_load_avg();
-  static int64_t _get_total_time();
-  static int64_t _get_system_cpu_time();
-  static int64_t _get_process_cpu_time();
+  static uint64_t _get_total_time();
+  static uint64_t _get_system_cpu_time();
+  static uint64_t _get_process_cpu_time();
   static SystemMemoryUsage _get_system_memory_usage();
   static std::vector<int64_t> _get_values(std::string& input_string);
   static ProcessMemoryUsage _get_process_memory_usage();
