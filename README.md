@@ -113,6 +113,7 @@ Contact: firstname.lastname@hpi.de
 
 -   Yannick   Bäumer
 -   Lawrence  Benson
+-   Lukas     Böhme
 -   Timo      Djürken
 -   Fabian    Dumke
 -   Fabian    Engel
