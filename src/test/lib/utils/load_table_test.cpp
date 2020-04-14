@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
@@ -27,6 +26,10 @@ TEST_F(LoadTableTest, AllChunksFinalized) {
     // During finalization, chunks are set to immutable
     EXPECT_FALSE(table->get_chunk(chunk_id)->is_mutable());
   }
+}
+
+TEST_F(LoadTableTest, WindowsEncoding) {
+  EXPECT_THROW(load_table("resources/test_data/tbl/float_int_crlf.tbl", 2), std::exception);
 }
 
 }  // namespace opossum

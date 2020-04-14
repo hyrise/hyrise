@@ -199,8 +199,8 @@ TEST_F(SchedulerTest, MultipleOperators) {
   auto a = PQPColumnExpression::from_table(*test_table, ColumnID{0});
   auto ts = std::make_shared<TableScan>(gt, greater_than_equals_(a, 1234));
 
-  auto gt_task = std::make_shared<OperatorTask>(gt, CleanupTemporaries::Yes);
-  auto ts_task = std::make_shared<OperatorTask>(ts, CleanupTemporaries::Yes);
+  auto gt_task = std::make_shared<OperatorTask>(gt);
+  auto ts_task = std::make_shared<OperatorTask>(ts);
   gt_task->set_as_predecessor_of(ts_task);
 
   gt_task->schedule();

@@ -86,7 +86,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   if (HYRISE_DEBUG && !transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
-                  "For tables with physically deleted chunks, the transaction context must be set.");
+                  "For TableType::Data tables with deleted chunks, the transaction context must be set.");
     }
   }
 
@@ -191,9 +191,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         if (current_chunk_order && current_chunk_order->first == stored_column_id) {
-          adapted_chunk_order = {
-              ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter))},
-              current_chunk_order->second};
+          const auto columns_pruned_so_far = std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter);
+          adapted_chunk_order = {ColumnID{static_cast<uint16_t>(stored_column_id - columns_pruned_so_far)},
+                                 current_chunk_order->second};
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
@@ -220,7 +220,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
-                                 stored_table->has_mvcc());
+                                 stored_table->uses_mvcc());
 }
 
 }  // namespace opossum

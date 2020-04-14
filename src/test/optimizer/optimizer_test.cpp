@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -11,13 +11,12 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
-#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class OptimizerTest : public ::testing::Test {
+class OptimizerTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
@@ -108,8 +107,8 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
   class LQPBreakingRule : public AbstractRule {
    public:
-    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
-        : out_of_plan_expression(out_of_plan_expression) {}
+    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
+        : out_of_plan_expression(init_out_of_plan_expression) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
@@ -136,7 +135,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   // A "rule" that just collects the nodes it was applied to
   class MockRule : public AbstractRule {
    public:
-    explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& nodes) : nodes(nodes) {}
+    explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
       nodes.emplace(root);
@@ -215,7 +214,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   size_t counter{0};
   class MockRule : public AbstractRule {
    public:
-    explicit MockRule(size_t& counter) : counter(counter) {}
+    explicit MockRule(size_t& init_counter) : counter(init_counter) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override { ++counter; }
 

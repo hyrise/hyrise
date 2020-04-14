@@ -10,16 +10,16 @@
 
 namespace opossum {
 
-FunctionExpression::FunctionExpression(const FunctionType function_type,
-                                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments_function)
-    : AbstractExpression(ExpressionType::Function, arguments_function), function_type(function_type) {
+FunctionExpression::FunctionExpression(const FunctionType init_function_type,
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
+    : AbstractExpression(ExpressionType::Function, init_arguments), function_type(init_function_type) {
   switch (function_type) {
     case FunctionType::Substring:
-      Assert(arguments_function.size() == 3, "Substring expects 3 parameters");
+      Assert(arguments.size() == 3, "Substring expects 3 parameters");
       break;
     case FunctionType::Concatenate:
-      Assert(arguments_function.size() >= 2, "Concatenate expects at least 2 parameters");
-      for (const auto& argument : arguments_function) {
+      Assert(arguments.size() >= 2, "Concatenate expects at least 2 parameters");
+      for (const auto& argument : arguments) {
         Assert(argument->data_type() == DataType::String || argument->data_type() == DataType::Null,
                "Concatenate takes only Strings and Nulls as arguments");
       }
@@ -31,12 +31,12 @@ std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
   return std::make_shared<FunctionExpression>(function_type, expressions_deep_copy(arguments));
 }
 
-std::string FunctionExpression::as_column_name() const {
+std::string FunctionExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
-    stream << arguments[argument_idx]->as_column_name();
+    stream << arguments[argument_idx]->description(mode);
     if (argument_idx + 1 < arguments.size()) stream << ",";
   }
   stream << ")";

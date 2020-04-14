@@ -11,8 +11,8 @@ class SegmentIteratorsTest : public EncodingTest {
    * all table columns. The ReferenceSegment iterators use the provided position filters.
    */
   template <typename Functor>
-  void test_all_iterators(const std::shared_ptr<Table> table, const std::shared_ptr<PosList> position_filter,
-                          const std::shared_ptr<PosList> position_filter_multi_chunk, const Functor functor) {
+  void test_all_iterators(const std::shared_ptr<Table> table, const std::shared_ptr<RowIDPosList> position_filter,
+                          const std::shared_ptr<RowIDPosList> position_filter_multi_chunk, const Functor functor) {
     ASSERT_TRUE(position_filter->references_single_chunk());
     ASSERT_FALSE(position_filter_multi_chunk->references_single_chunk());
 
@@ -75,7 +75,7 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
 
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 5);
 
-  const auto position_filter = std::make_shared<PosList>();
+  const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
@@ -83,7 +83,8 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{4}});
   position_filter->guarantee_single_chunk();
 
-  const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
+  const auto position_filter_multi_chunk =
+      std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{2}});
@@ -128,13 +129,14 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
 
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 3);
 
-  const auto position_filter = std::make_shared<PosList>();
+  const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   position_filter->guarantee_single_chunk();
 
-  const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
+  const auto position_filter_multi_chunk =
+      std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
@@ -172,13 +174,14 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
 
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 3);
 
-  const auto position_filter = std::make_shared<PosList>();
+  const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   position_filter->guarantee_single_chunk();
 
-  const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
+  const auto position_filter_multi_chunk =
+      std::make_shared<RowIDPosList>(position_filter->begin(), position_filter->end());
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
@@ -197,6 +200,6 @@ bool operator<(const AbstractSegmentPosition<T>&, const AbstractSegmentPosition<
 }
 
 INSTANTIATE_TEST_SUITE_P(SegmentIteratorsTestInstances, SegmentIteratorsTest,
-                         ::testing::ValuesIn(all_segment_encoding_specs));
+                         ::testing::ValuesIn(all_segment_encoding_specs), all_segment_encoding_specs_formatter);
 
 }  // namespace opossum

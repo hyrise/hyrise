@@ -29,7 +29,7 @@ extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
  */
 class TPCHTableGenerator final : public AbstractTableGenerator {
  public:
-  // Convenience constructor for creating a TPCHTableGenerator out of a benchmarking context
+  // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
   explicit TPCHTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TPCHTableGenerator in a benchmark

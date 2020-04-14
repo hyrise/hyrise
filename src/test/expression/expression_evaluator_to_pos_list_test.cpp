@@ -1,6 +1,6 @@
 #include <optional>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -20,14 +20,13 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ExpressionEvaluatorToPosListTest : public ::testing::Test {
+class ExpressionEvaluatorToPosListTest : public BaseTest {
  public:
   void SetUp() override {
     table_a = load_table("resources/test_data/tbl/expression_evaluator/input_a.tbl", 4);
@@ -43,7 +42,7 @@ class ExpressionEvaluatorToPosListTest : public ::testing::Test {
                        const AbstractExpression& expression, const std::vector<ChunkOffset>& matching_chunk_offsets) {
     const auto actual_pos_list = ExpressionEvaluator{table, chunk_id}.evaluate_expression_to_pos_list(expression);
 
-    auto expected_pos_list = PosList{};
+    auto expected_pos_list = RowIDPosList{};
     expected_pos_list.resize(matching_chunk_offsets.size());
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < matching_chunk_offsets.size(); ++chunk_offset) {
       expected_pos_list[chunk_offset] = RowID{chunk_id, matching_chunk_offsets[chunk_offset]};

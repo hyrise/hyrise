@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/abstract_expression.hpp"

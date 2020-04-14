@@ -19,7 +19,7 @@ const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner
   LQPTranslator lqp_translator{};
   const auto pqp = lqp_translator.translate_node(lqp);
   pqp->set_transaction_context_recursively(transaction_context);
-  const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::No);
+  const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
@@ -34,7 +34,6 @@ const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner
 
   auto pipeline_builder = SQLPipelineBuilder{query};
   pipeline_builder.disable_mvcc();
-  pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
 
   // Execute the query, we don't care about the results

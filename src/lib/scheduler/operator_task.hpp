@@ -16,14 +16,14 @@ class AbstractOperator;
 class OperatorTask : public AbstractTask {
  public:
   // We don't like abbreviations, but "operator" is a keyword
-  OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,
+  OperatorTask(std::shared_ptr<AbstractOperator> op,
                SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
 
   /**
    * Create tasks recursively from result operator and set task dependencies automatically.
    */
   static std::vector<std::shared_ptr<OperatorTask>> make_tasks_from_operator(
-      const std::shared_ptr<AbstractOperator>& op, CleanupTemporaries cleanup_temporaries);
+      const std::shared_ptr<AbstractOperator>& op);
 
   const std::shared_ptr<AbstractOperator>& get_operator() const;
 
@@ -38,11 +38,9 @@ class OperatorTask : public AbstractTask {
    */
   static std::shared_ptr<OperatorTask> _add_tasks_from_operator(
       const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
-      std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op,
-      CleanupTemporaries cleanup_temporaries);
+      std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op);
 
  private:
   std::shared_ptr<AbstractOperator> _op;
-  CleanupTemporaries _cleanup_temporaries;
 };
 }  // namespace opossum

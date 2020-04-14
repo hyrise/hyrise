@@ -60,13 +60,13 @@ class ColumnMaterializer {
    * by creating multiple jobs that materialize chunks.
    * Returns the materialized segments and a list of null row ids if materialize_null is enabled.
    **/
-  std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<PosList>, std::vector<T>> materialize(
+  std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<RowIDPosList>, std::vector<T>> materialize(
       const std::shared_ptr<const Table> input, const ColumnID column_id) {
     const ChunkOffset samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
     auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
-    auto null_rows = std::make_unique<PosList>();
+    auto null_rows = std::make_unique<RowIDPosList>();
 
     std::vector<Subsample<T>> subsamples;
     subsamples.reserve(chunk_count);
@@ -74,7 +74,7 @@ class ColumnMaterializer {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input->get_chunk(chunk_id);
-      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto samples_to_write = std::min(samples_per_chunk, chunk->size());
       subsamples.push_back(Subsample<T>(samples_to_write));
@@ -101,7 +101,7 @@ class ColumnMaterializer {
    * Creates a job to materialize and sort a chunk.
    **/
   std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
-                                                                  std::unique_ptr<PosList>& null_rows_output,
+                                                                  std::unique_ptr<RowIDPosList>& null_rows_output,
                                                                   const ChunkID chunk_id,
                                                                   std::shared_ptr<const Table> input,
                                                                   const ColumnID column_id, Subsample<T>& subsample) {
@@ -145,7 +145,7 @@ class ColumnMaterializer {
    */
   std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment,
                                                                        const ChunkID chunk_id,
-                                                                       std::unique_ptr<PosList>& null_rows_output,
+                                                                       std::unique_ptr<RowIDPosList>& null_rows_output,
                                                                        Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
@@ -174,10 +174,9 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment,
-                                                                          const ChunkID chunk_id,
-                                                                          std::unique_ptr<PosList>& null_rows_output,
-                                                                          Subsample<T>& subsample) {
+  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(
+      const DictionarySegment<T>& segment, const ChunkID chunk_id, std::unique_ptr<RowIDPosList>& null_rows_output,
+      Subsample<T>& subsample) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 

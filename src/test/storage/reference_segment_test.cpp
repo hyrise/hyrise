@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
@@ -50,8 +49,8 @@ class ReferenceSegmentTest : public BaseTest {
 };
 
 TEST_F(ReferenceSegmentTest, RetrievesValues) {
-  // PosList with (0, 0), (0, 1), (0, 2)
-  auto pos_list = std::make_shared<PosList>(
+  // RowIDPosList with (0, 0), (0, 1), (0, 2)
+  auto pos_list = std::make_shared<RowIDPosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0}, 0}, RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}}));
   auto ref_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
 
@@ -63,8 +62,8 @@ TEST_F(ReferenceSegmentTest, RetrievesValues) {
 }
 
 TEST_F(ReferenceSegmentTest, RetrievesValuesOutOfOrder) {
-  // PosList with (0, 1), (0, 2), (0, 0)
-  auto pos_list = std::make_shared<PosList>(
+  // RowIDPosList with (0, 1), (0, 2), (0, 0)
+  auto pos_list = std::make_shared<RowIDPosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}, RowID{ChunkID{0}, 0}}));
   auto ref_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
 
@@ -76,8 +75,8 @@ TEST_F(ReferenceSegmentTest, RetrievesValuesOutOfOrder) {
 }
 
 TEST_F(ReferenceSegmentTest, RetrievesValuesFromChunks) {
-  // PosList with (0, 2), (1, 0), (1, 1)
-  auto pos_list = std::make_shared<PosList>(
+  // RowIDPosList with (0, 2), (1, 0), (1, 1)
+  auto pos_list = std::make_shared<RowIDPosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0}, 2}, RowID{ChunkID{1}, 0}, RowID{ChunkID{1}, 1}}));
   auto ref_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
 
@@ -90,8 +89,8 @@ TEST_F(ReferenceSegmentTest, RetrievesValuesFromChunks) {
 }
 
 TEST_F(ReferenceSegmentTest, RetrieveNullValueFromNullRowID) {
-  // PosList with (0, 0), (0, 1), NULL_ROW_ID, (0, 2)
-  auto pos_list = std::make_shared<PosList>(
+  // RowIDPosList with (0, 0), (0, 1), NULL_ROW_ID, (0, 2)
+  auto pos_list = std::make_shared<RowIDPosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0u}, ChunkOffset{0u}}, RowID{ChunkID{0u}, ChunkOffset{1u}},
                                     NULL_ROW_ID, RowID{ChunkID{0u}, ChunkOffset{2u}}}));
 
@@ -111,16 +110,16 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto pos_list_a = std::make_shared<PosList>();
+  const auto pos_list_a = std::make_shared<RowIDPosList>();
   pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
   pos_list_a->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
-  const auto pos_list_b = std::make_shared<PosList>();
+  const auto pos_list_b = std::make_shared<RowIDPosList>();
 
   ReferenceSegment reference_segment_a(_test_table, ColumnID{0}, pos_list_a);
   ReferenceSegment reference_segment_b(_test_table, ColumnID{0}, pos_list_b);
 
-  EXPECT_EQ(reference_segment_a.estimate_memory_usage(),
-            reference_segment_b.estimate_memory_usage() + 2 * sizeof(RowID));
+  EXPECT_EQ(reference_segment_a.memory_usage(MemoryUsageCalculationMode::Sampled),
+            reference_segment_b.memory_usage(MemoryUsageCalculationMode::Sampled) + 2 * sizeof(RowID));
 }
 
 }  // namespace opossum

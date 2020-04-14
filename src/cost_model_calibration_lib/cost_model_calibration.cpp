@@ -10,7 +10,7 @@
 #include "cost_model_calibration_query_runner.hpp"
 #include "cost_model_calibration_table_generator.hpp"
 #include "hyrise.hpp"
-#include "import_export/csv_writer.hpp"
+#include "import_export/csv/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "statistics/base_attribute_statistics.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -163,14 +163,16 @@ void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
                                                  const std::vector<cost_model::CostModelFeatures>& features) {
   std::lock_guard<std::mutex> csv_guard(_csv_write_mutex);
 
-  CsvWriter writer(output_path);
+  std::ofstream output_csv;
+  output_csv.open(output_path);
   for (const auto& feature : features) {
     const auto all_type_variants = feature.serialize();
 
-    for (const auto& value : all_type_variants) {
-      writer.write(value.second);
+    for (auto iter = all_type_variants.cbegin(); iter != all_type_variants.cend(); ++iter) {
+      if (iter != all_type_variants.cbegin()) output_csv << ",";
+      output_csv << iter->second;
     }
-    writer.end_line();
+    output_csv << "\n";
   }
 }
 
@@ -243,7 +245,7 @@ void CostModelCalibration::_export_segment_size_information() {
         const auto estimated_segment_distinct_value_count = std::min(distinct_value_count, static_cast<size_t>(chunk->size()));
         segment_size_csv_file << data_type_to_string.left.at(data_type) << "," << chunk->size() << ",";
         segment_size_csv_file << estimated_segment_distinct_value_count << "," << (column_def.nullable ? 1 : 0) << ",";
-        segment_size_csv_file << segment->estimate_memory_usage() << "\n";
+        segment_size_csv_file << segment->memory_usage(MemoryUsageCalculationMode::Full) << "\n";
       }
     }
   }

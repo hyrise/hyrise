@@ -11,19 +11,19 @@ namespace opossum {
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractLQPNode(LQPNodeType::Projection, expressions) {}
 
-std::string ProjectionNode::description() const {
+std::string ProjectionNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
+
   std::stringstream stream;
 
-  stream << "[Projection] " << expression_column_names(node_expressions);
+  stream << "[Projection] " << expression_descriptions(node_expressions, expression_mode);
 
   return stream.str();
 }
 
 OperatorType ProjectionNode::operator_type() const { return OperatorType::Projection; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_expressions() const {
-  return node_expressions;
-}
+std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::column_expressions() const { return node_expressions; }
 
 bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");

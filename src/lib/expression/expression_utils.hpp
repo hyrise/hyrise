@@ -42,8 +42,8 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
-/*
- * Recurse through the expression and replace them according to replacements, where applicable
+/**
+ * Recurse through the expression and replace them according to @param mapping, where applicable
  */
 void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
                              const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping);
@@ -72,9 +72,10 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
                                                                        const LQPNodeMapping& node_mapping);
 
 /**
- * Create a comma separated string with the AbstractExpression::as_column_name() of each expression
+ * Create a comma separated string with the AbstractExpression::description(mode) of each expression
  */
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                    const AbstractExpression::DescriptionMode mode);
 
 enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 

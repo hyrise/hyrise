@@ -6,7 +6,7 @@
 
 #include <array>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
 #include "types.hpp"
@@ -23,7 +23,7 @@ class AbstractTableScanImpl {
 
   virtual std::string description() const = 0;
 
-  virtual std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) const = 0;
+  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) const = 0;
 
  protected:
   /**
@@ -33,7 +33,7 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator>
   static void _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                                   const ChunkID chunk_id, PosList& matches_out) {
+                                   const ChunkID chunk_id, RowIDPosList& matches_out) {
     // Can't use a default argument for this because default arguments are non-type deduced contexts
     auto false_type = std::false_type{};
     _scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, false_type);
@@ -45,7 +45,7 @@ class AbstractTableScanImpl {
   // itself.
   static void __attribute__((hot, flatten, noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
+                       const ChunkID chunk_id, RowIDPosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
     _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
@@ -70,7 +70,7 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   static void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
-                                        const ChunkID chunk_id, PosList& matches_out,
+                                        const ChunkID chunk_id, RowIDPosList& matches_out,
                                         [[maybe_unused]] RightIterator& right_it) {
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled by the caller without
     // optimization. We first check if the rows match and set the `mask` to 1 at the appropriate positions.
@@ -147,7 +147,8 @@ class AbstractTableScanImpl {
       auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
 
       if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
-                                                                      std::decay_t<decltype(*left_it)>>,
+                                                                      std::decay_t<decltype(*left_it)>,
+                                                                      std::decay_t<decltype(left_it)>>,
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup

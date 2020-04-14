@@ -90,16 +90,16 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     const auto left_input = op->input_left()->get_output();
     operator_features.left_input_row_count = left_input->row_count();
     operator_features.left_input_chunk_count = left_input->chunk_count();
-    operator_features.left_input_memory_usage_bytes = left_input->estimate_memory_usage();
-    operator_features.left_input_chunk_size = left_input->max_chunk_size();
+    operator_features.left_input_memory_usage_bytes = left_input->memory_usage(MemoryUsageCalculationMode::Full);
+    operator_features.left_input_chunk_size = left_input->target_chunk_size();
   }
 
   if (op->input_right()) {
     const auto right_input = op->input_right()->get_output();
     operator_features.right_input_row_count = right_input->row_count();
     operator_features.right_input_chunk_count = right_input->chunk_count();
-    operator_features.right_input_memory_usage_bytes = right_input->estimate_memory_usage();
-    operator_features.right_input_chunk_size = right_input->max_chunk_size();
+    operator_features.right_input_memory_usage_bytes = right_input->memory_usage(MemoryUsageCalculationMode::Full);
+    operator_features.right_input_chunk_size = right_input->target_chunk_size();
   }
 
   const auto left_input_row_count = operator_features.left_input_row_count;
@@ -118,9 +118,9 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     operator_features.selectivity = output_selectivity;
     operator_features.output_row_count = output_row_count;
     operator_features.output_chunk_count = output->chunk_count();
-    operator_features.output_memory_usage_bytes = output->estimate_memory_usage();
+    operator_features.output_memory_usage_bytes = output->memory_usage(MemoryUsageCalculationMode::Full);
 
-    const auto output_chunk_size = output->max_chunk_size();
+    const auto output_chunk_size = output->target_chunk_size();
     operator_features.output_chunk_size = output_chunk_size;
   }
 
@@ -250,7 +250,7 @@ size_t CalibrationFeatureExtractor::_get_memory_usage_for_column(const std::shar
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(column_id);
-    memory_usage += segment->estimate_memory_usage();
+    memory_usage += segment->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   return memory_usage;

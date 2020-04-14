@@ -401,7 +401,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto row_id = row_id_dist(engine);
   const auto value = stored_table->get_value<pmr_string>(column_id, row_id);
 
-  return equals_(filter_column, value);
+  return equals_(filter_column, *value);
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_or(

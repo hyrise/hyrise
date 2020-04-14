@@ -13,9 +13,9 @@
 
 namespace opossum {
 
-AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
+AggregateExpression::AggregateExpression(const AggregateFunction init_aggregate_function,
                                          const std::shared_ptr<AbstractExpression>& argument)
-    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(aggregate_function) {}
+    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(init_aggregate_function) {}
 
 std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];
@@ -25,17 +25,23 @@ std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
   return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
 }
 
-std::string AggregateExpression::as_column_name() const {
+std::string AggregateExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
-    stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
+    stream << "COUNT(DISTINCT " << argument()->description(mode) << ")";
   } else if (is_count_star(*this)) {
-    stream << "COUNT(*)";
+    if (mode == DescriptionMode::ColumnName) {
+      stream << "COUNT(*)";
+    } else {
+      const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument());
+      DebugAssert(column_expression, "Expected aggregate argument to be column expression");
+      stream << "COUNT(" << column_expression->column_reference.original_node() << ".*)";
+    }
   } else {
     stream << aggregate_function << "(";
-    if (argument()) stream << argument()->as_column_name();
+    if (argument()) stream << argument()->description(mode);
     stream << ")";
   }
 
@@ -53,7 +59,7 @@ DataType AggregateExpression::data_type() const {
     return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE;
   }
 
-  const auto argument_data_type = arguments[0]->data_type();
+  const auto argument_data_type = argument()->data_type();
   auto aggregate_data_type = DataType::Null;
 
   resolve_data_type(argument_data_type, [&](const auto data_type_t) {
@@ -77,6 +83,9 @@ DataType AggregateExpression::data_type() const {
       case AggregateFunction::StandardDeviationSample:
         aggregate_data_type =
             AggregateTraits<AggregateDataType, AggregateFunction::StandardDeviationSample>::AGGREGATE_DATA_TYPE;
+        break;
+      case AggregateFunction::Any:
+        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Any>::AGGREGATE_DATA_TYPE;
         break;
     }
   });

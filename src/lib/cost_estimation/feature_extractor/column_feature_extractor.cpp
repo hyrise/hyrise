@@ -160,7 +160,7 @@ size_t ColumnFeatureExtractor::_get_memory_usage_for_column(const std::shared_pt
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(column_id);
-    memory_usage += segment->estimate_memory_usage();
+    memory_usage += segment->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   return memory_usage;

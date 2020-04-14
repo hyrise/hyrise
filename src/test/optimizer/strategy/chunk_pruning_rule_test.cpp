@@ -4,12 +4,13 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "utils/assert.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -23,10 +24,6 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
-
-#include "logical_query_plan/mock_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -133,6 +130,8 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
 TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
   auto table = Hyrise::get().storage_manager.get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
+  EXPECT_TRUE(chunk->pruning_statistics());
+  chunk->set_pruning_statistics(std::nullopt);
   EXPECT_FALSE(chunk->pruning_statistics());
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
@@ -287,7 +286,7 @@ TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
   auto result_table = get_table_operator->get_output();
 
   EXPECT_EQ(result_table->chunk_count(), ChunkID{1});
-  EXPECT_EQ(result_table->get_value<int>(ColumnID{0}, 0), 12345);
+  EXPECT_EQ(result_table->get_value<int32_t>(ColumnID{0}, 0), 12345);
 }
 
 TEST_F(ChunkPruningRuleTest, StringPruningTest) {

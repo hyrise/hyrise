@@ -21,12 +21,6 @@ int main(int argc, char* argv[]) {
    *
    * TODO: Proper documentation of Calibration Configuration JSON
    */
-
-  if (!opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
-    std::cout << "Missing Calibration Configuration" << std::endl;
-    return 0;
-  }
-
   nlohmann::json json_config;
   std::ifstream json_file{argv[1]};
   json_file >> json_config;

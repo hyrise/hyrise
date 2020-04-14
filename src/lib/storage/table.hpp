@@ -30,10 +30,10 @@ class Table : private Noncopyable {
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
   // We want a common interface for tables that contain data (TableType::Data) and tables that contain reference
-  // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
+  // segments (TableType::References). The attribute target_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        const std::optional<ChunkOffset> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+        const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
@@ -63,10 +63,10 @@ class Table : private Noncopyable {
 
   TableType type() const;
 
-  UseMvcc has_mvcc() const;
+  UseMvcc uses_mvcc() const;
 
-  // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
-  ChunkOffset max_chunk_size() const;
+  // For data tables, returns the target chunk size (i.e., the number of rows pre-allocated in the ValueSegment).
+  ChunkOffset target_chunk_size() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -81,10 +81,14 @@ class Table : private Noncopyable {
    * @defgroup Accessing and adding Chunks
    * @{
    */
-  // returns the number of chunks (cannot exceed ChunkID (uint32_t))
+  // Returns the number of chunks, or, more correctly, the ID of the last chunk plus one (see get_chunk / #1686).
+  // This cannot exceed ChunkID (uint32_t).
   ChunkID chunk_count() const;
 
-  // returns the chunk with the given id
+  // Returns the chunk with the given id. If a previously existing chunk has been physically deleted by the
+  // MvccDeletePlugin, this returns nullptr. In the execution engine, it is the GetTable operator's job to
+  // filter these nullptrs and return only existing chunks to the following operator. Thus, all other operators
+  // should not accept nullptrs and instead assert that this function returned a chunk.
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
@@ -120,12 +124,12 @@ class Table : private Noncopyable {
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(const std::vector<AllTypeVariant>& values);
 
-  // returns one materialized value
-  // multiversion concurrency control values of chunks are ignored
-  // - table needs to be validated before by Validate operator
+  // Returns one materialized value using an easy, but inefficient AllTypeVariant approach.
   // If you want to write efficient operators, back off!
+  // Multi-Version Concurrency Control information of chunks is ignored. This means that if you are calling this method
+  // on a non-validated table, you may end up with a row you should not be able to see or an entirely different row.
   template <typename T>
-  T get_value(const ColumnID column_id, const size_t row_number) const {
+  std::optional<T> get_value(const ColumnID column_id, const size_t row_number) const {
     PerformanceWarning("get_value() used");
 
     Assert(column_id < column_count(), "column_id invalid");
@@ -139,11 +143,21 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return boost::get<T>(
-            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)]);
+        const auto variant =
+            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)];
+        if (variant_is_null(variant)) {
+          return std::nullopt;
+        } else {
+          return boost::get<T>(variant);
+        }
       }
     }
     Fail("Row does not exist.");
+  }
+
+  template <typename T>
+  std::optional<T> get_value(const std::string& column_name, const size_t row_number) const {
+    return get_value<T>(column_id_by_name(column_name), row_number);
   }
 
   // Materialize a single Tuple
@@ -174,7 +188,7 @@ class Table : private Noncopyable {
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       chunk->create_index<Index>(column_ids);
     }
@@ -194,13 +208,13 @@ class Table : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
  protected:
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
-  const ChunkOffset _max_chunk_size;
+  const ChunkOffset _target_chunk_size;
 
   /**
    * To prevent data races for TableType::Data tables, we must access _chunks atomically.
@@ -218,5 +232,9 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;
+
+  // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
+  // chunks more than once.
+  mutable std::optional<uint64_t> _cached_row_count;
 };
 }  // namespace opossum

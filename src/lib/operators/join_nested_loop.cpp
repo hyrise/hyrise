@@ -90,7 +90,8 @@ const std::string& JoinNestedLoop::name() const {
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate);
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                          _secondary_predicates);
 }
 
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -125,8 +126,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   }
 
   // Track pairs of matching RowIDs
-  const auto pos_list_left = std::make_shared<PosList>();
-  const auto pos_list_right = std::make_shared<PosList>();
+  const auto pos_list_left = std::make_shared<RowIDPosList>();
+  const auto pos_list_right = std::make_shared<RowIDPosList>();
 
   const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
   const auto is_semi_or_anti_join =
@@ -141,7 +142,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   const auto chunk_count_right = right_table->chunk_count();
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
     const auto chunk_right = right_table->get_chunk(chunk_id_right);
-    Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     right_matches_by_chunk[chunk_id_right].resize(chunk_right->size());
   }
@@ -153,7 +154,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   const auto chunk_count_left = left_table->chunk_count();
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left; ++chunk_id_left) {
     const auto chunk_left = left_table->get_chunk(chunk_id_left);
-    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto segment_left = chunk_left->get_segment(left_column_id);
 
@@ -165,7 +166,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
       const auto chunk_right = right_table->get_chunk(chunk_id_right);
-      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto segment_right = chunk_right->get_segment(right_column_id);
 
@@ -200,7 +201,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   if (_mode == JoinMode::FullOuter) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
       const auto chunk_right = right_table->get_chunk(chunk_id_right);
-      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto chunk_size = chunk_right->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
@@ -219,7 +220,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
       const auto chunk_left = left_table->get_chunk(chunk_id);
-      Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+      Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
       const auto chunk_size = chunk_left->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (left_matches_by_chunk[chunk_id][chunk_offset] ^ invert) {
@@ -325,14 +326,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
 }
 
 void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
-                                         const std::shared_ptr<PosList>& pos_list) {
+                                         const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseSegment> segment;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
-        auto new_pos_list = std::make_shared<PosList>();
+        auto new_pos_list = std::make_shared<RowIDPosList>();
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto& row : *pos_list) {

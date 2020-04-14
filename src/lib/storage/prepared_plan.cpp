@@ -53,8 +53,9 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
 
 namespace opossum {
 
-PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids)
-    : lqp(lqp), parameter_ids(parameter_ids) {}
+PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp,
+                           const std::vector<ParameterID>& init_parameter_ids)
+    : lqp(init_lqp), parameter_ids(init_parameter_ids) {}
 
 std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();

@@ -8,7 +8,7 @@ namespace opossum {
 
 class BinaryPredicateExpression : public AbstractPredicateExpression {
  public:
-  BinaryPredicateExpression(const PredicateCondition predicate_condition_binary,
+  BinaryPredicateExpression(const PredicateCondition init_predicate_condition,
                             const std::shared_ptr<AbstractExpression>& left_operand,
                             const std::shared_ptr<AbstractExpression>& right_operand);
 
@@ -16,7 +16,7 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
   const std::shared_ptr<AbstractExpression>& right_operand() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
 
  protected:
   ExpressionPrecedence _precedence() const override;

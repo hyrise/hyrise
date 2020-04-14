@@ -1,5 +1,6 @@
 #include <pqxx/pqxx>
 
+#include <fstream>
 #include <future>
 #include <thread>
 
@@ -23,15 +24,16 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-    // Set scheduler so that the server can execute the tasks on separate threads.
-    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-
     auto server_runner = [](Server& server) { server.run(); };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
 
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
+    std::remove(_export_filename.c_str());
+
+    // Wait to run the server and set the scheduler
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
   void TearDown() override {
@@ -40,6 +42,8 @@ class ServerTestRunner : public BaseTest {
     // Give the server time to shut down gracefully before force-closing the socket it's working on
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
+
+    std::remove(_export_filename.c_str());
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
@@ -48,7 +52,14 @@ class ServerTestRunner : public BaseTest {
   std::string _connection_string;
 
   std::shared_ptr<Table> _table_a;
+  const std::string _export_filename = test_data_path + "server_test.bin";
 };
+
+TEST_F(ServerTestRunner, TestCacheAndSchedulerInitialization) {
+  EXPECT_NE(std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler()), nullptr);
+  EXPECT_NE(Hyrise::get().default_lqp_cache, nullptr);
+  EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
+}
 
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
@@ -87,6 +98,94 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
       }
     }
   }
+}
+
+TEST_F(ServerTestRunner, TestCopyImport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
+
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("another_table"));
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("another_table"), _table_a);
+}
+
+TEST_F(ServerTestRunner, TestInvalidCopyImport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  // Ill-formed
+  EXPECT_THROW(transaction.exec("COPY another_table FROM;"), pqxx::sql_error);
+
+  // File is not existing
+  EXPECT_THROW(transaction.exec("COPY another_table FROM 'not/existing/file.tbl';"), pqxx::sql_error);
+
+  // Unsupported file extension
+  EXPECT_THROW(transaction.exec("COPY another_table FROM 'resources/test_data/tbl/float';"), pqxx::sql_error);
+
+  // Check whether server is still running and connection established
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), _table_a->row_count());
+}
+
+TEST_F(ServerTestRunner, TestCopyExport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  transaction.exec("COPY table_a TO '" + _export_filename + "';");
+
+  EXPECT_TRUE(file_exists(_export_filename));
+  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float.bin"));
+}
+
+TEST_F(ServerTestRunner, TestInvalidCopyExport) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  // Ill-formed
+  EXPECT_THROW(transaction.exec("COPY table_a TO;"), pqxx::sql_error);
+
+  // Table is not existing
+  EXPECT_THROW(transaction.exec("COPY not_existing TO './does_not_work.tbl';"), pqxx::sql_error);
+
+  // Unsupported file extension
+  EXPECT_THROW(transaction.exec("COPY table_a TO './does_not_work.mp3';"), pqxx::sql_error);
+
+  // Check whether server is still running and connection established
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), _table_a->row_count());
+}
+
+TEST_F(ServerTestRunner, TestCopyIntegration) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
+  // Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  // We delete a tuple of a table, export and re-import it.
+  transaction.exec("DELETE FROM table_a WHERE a = 123;");
+  transaction.exec("COPY table_a TO '" + _export_filename + "';");
+  transaction.exec("COPY table_b FROM '" + _export_filename + "';");
+
+  // Check that we did not export the deleted row
+  auto table_b = Hyrise::get().storage_manager.get_table("table_b");
+  EXPECT_EQ(table_b->row_count(), _table_a->row_count() - 1);
+
+  EXPECT_TRUE(file_exists(_export_filename));
+  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float_deleted.bin"));
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {
@@ -242,7 +341,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    initial_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   std::atomic_int successful_increments{0};
@@ -291,7 +390,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   // Really pessimistic, but at least 2 statements should have made it

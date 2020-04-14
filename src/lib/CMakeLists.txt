@@ -118,14 +118,20 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
-    import_export/csv_converter.cpp
-    import_export/csv_converter.hpp
-    import_export/csv_meta.cpp
-    import_export/csv_meta.hpp
-    import_export/csv_parser.cpp
-    import_export/csv_parser.hpp
-    import_export/csv_writer.cpp
-    import_export/csv_writer.hpp
+    import_export/binary/binary_parser.cpp
+    import_export/binary/binary_parser.hpp
+    import_export/binary/binary_writer.cpp
+    import_export/binary/binary_writer.hpp
+    import_export/csv/csv_converter.cpp
+    import_export/csv/csv_converter.hpp
+    import_export/csv/csv_meta.cpp
+    import_export/csv/csv_meta.hpp
+    import_export/csv/csv_parser.cpp
+    import_export/csv/csv_parser.hpp
+    import_export/csv/csv_writer.cpp
+    import_export/csv/csv_writer.hpp
+    import_export/file_type.cpp
+    import_export/file_type.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
@@ -134,6 +140,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/change_meta_table_node.cpp
+    logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
@@ -149,6 +157,10 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/export_node.cpp
+    logical_query_plan/export_node.hpp
+    logical_query_plan/import_node.cpp
+    logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -204,20 +216,18 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/change_meta_table.cpp
+    operators/change_meta_table.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
     operators/difference.hpp
-    operators/export_binary.cpp
-    operators/export_binary.hpp
-    operators/export_csv.cpp
-    operators/export_csv.hpp
+    operators/export.cpp
+    operators/export.hpp
     operators/get_table.cpp
     operators/get_table.hpp
-    operators/import_binary.cpp
-    operators/import_binary.hpp
-    operators/import_csv.cpp
-    operators/import_csv.hpp
+    operators/import.hpp
+    operators/import.cpp
     operators/index_scan.cpp
     operators/index_scan.hpp
     operators/insert.cpp
@@ -317,6 +327,8 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/dependent_group_by_reduction_rule.cpp
+    optimizer/strategy/dependent_group_by_reduction_rule.hpp
     optimizer/strategy/expression_reduction_rule.cpp
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
@@ -337,6 +349,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp
     optimizer/strategy/predicate_split_up_rule.hpp
+    optimizer/strategy/semi_join_reduction_rule.cpp
+    optimizer/strategy/semi_join_reduction_rule.hpp
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
@@ -370,6 +384,7 @@ set(
     server/ring_buffer_iterator.hpp
     server/server.cpp
     server/server.hpp
+    server/server_types.hpp
     server/session.cpp
     server/session.hpp
     server/write_buffer.cpp
@@ -443,6 +458,8 @@ set(
     storage/chunk_encoder.hpp
     storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
+    storage/create_iterable_from_reference_segment.ipp
+    storage/create_iterable_from_segment.ipp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp
     storage/dictionary_segment/dictionary_encoder.hpp
@@ -495,7 +512,12 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/pos_list.hpp
+    storage/pos_lists/abstract_pos_list.hpp
+    storage/pos_lists/abstract_pos_list.cpp
+    storage/pos_lists/entire_chunk_pos_list.hpp
+    storage/pos_lists/entire_chunk_pos_list.cpp
+    storage/pos_lists/rowid_pos_list.hpp
+    storage/pos_lists/rowid_pos_list.cpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
     storage/reference_segment.cpp
@@ -508,6 +530,8 @@ set(
     storage/run_length_segment/run_length_segment_iterable.hpp
     storage/segment_accessor.cpp
     storage/segment_accessor.hpp
+    storage/segment_access_counter.cpp
+    storage/segment_access_counter.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
     storage/segment_iterables/any_segment_iterable.cpp
@@ -585,6 +609,26 @@ set(
     utils/make_bimap.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
+    utils/meta_tables/abstract_meta_table.cpp
+    utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_chunk_sort_orders_table.cpp
+    utils/meta_tables/meta_chunk_sort_orders_table.hpp
+    utils/meta_tables/meta_chunks_table.cpp
+    utils/meta_tables/meta_chunks_table.hpp
+    utils/meta_tables/meta_columns_table.cpp
+    utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_plugins_table.cpp
+    utils/meta_tables/meta_plugins_table.hpp
+    utils/meta_tables/meta_segments_accurate_table.cpp
+    utils/meta_tables/meta_segments_accurate_table.hpp
+    utils/meta_tables/meta_segments_table.cpp
+    utils/meta_tables/meta_segments_table.hpp
+    utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_tables_table.cpp
+    utils/meta_tables/meta_tables_table.hpp
+    utils/meta_tables/segment_meta_data.cpp
+    utils/meta_tables/segment_meta_data.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -592,12 +636,16 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
-    utils/scoped_locking_ptr.hpp
+    utils/settings/abstract_setting.hpp
+    utils/settings/abstract_setting.cpp
+    utils/settings_manager.cpp
+    utils/settings_manager.hpp
     utils/singleton.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp
     utils/sqlite_wrapper.cpp
     utils/sqlite_wrapper.hpp
+    utils/size_estimation_utils.hpp
     utils/string_utils.cpp
     utils/string_utils.hpp
     utils/template_type.hpp
@@ -618,13 +666,11 @@ set(
 
 set(
     LIBRARIES
-    pthread
     sqlparser
     cqf
     uninitialized_vector
     lz4
     zstd
-    custom_jemalloc
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
@@ -634,7 +680,7 @@ set(
 )
 
 if (NOT APPLE)
-    set(LIBRARIES ${LIBRARIES} atomic)
+    set(LIBRARIES ${LIBRARIES} atomic pthread)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
@@ -658,46 +704,78 @@ add_custom_command (
     DEPENDS utils/tracing/provider.d
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
-
+add_custom_target (
+    generate-provider-hpp
+    DEPENDS ${PROVIDER_FILE}
+)
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
-# Configure the regular hyrise library used for tests/server/playground...
-if(NOT ${ENABLE_COVERAGE} AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
-    add_library(hyrise SHARED ${SOURCES})
+# hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
+if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
+    add_library(hyrise_impl SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
     # Also, the sanitizer builds on Mac require static linkage
-    add_library(hyrise STATIC ${SOURCES})
+    add_library(hyrise_impl STATIC ${SOURCES})
 endif()
+
+add_dependencies(hyrise_impl generate-provider-hpp)
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
     utils/list_directory.cpp
     PROPERTIES
     COMPILE_FLAGS -O0
+    SKIP_PRECOMPILE_HEADERS TRUE
 )
+
+# Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
+# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
+target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
+target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
+
+# Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
+# of negatively affecting the build time.
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(hyrise_impl PUBLIC -Xclang -fno-pch-timestamp)
+endif()
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    target_precompile_headers(hyrise_impl PRIVATE
+      all_parameter_variant.hpp
+      storage/create_iterable_from_segment.hpp
+      storage/table.hpp
+      types.hpp
+    )
+endif()
+
+# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
+target_compile_options(hyrise_impl PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+
+add_dependencies(hyrise_impl AlwaysCheckGit)
+
+# This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
+add_library(hyrise INTERFACE)
+# Forward all include directories from hyrise_impl
+target_include_directories(hyrise INTERFACE $<TARGET_PROPERTY:hyrise_impl,INCLUDE_DIRECTORIES>)
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise_impl>)
 else()
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive,$<TARGET_FILE:hyrise_impl>,--no-whole-archive)
 endif()
+
+# Link against all libraries used by hyrise_impl - do this after INTERFACE_LINK_LIBRARIES is initially set so that it is not overwritten
+target_link_libraries(hyrise INTERFACE hyrise_impl)
 
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
-    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
-)
+        COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
+        )
 
-# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
-target_link_libraries_system(hyrise nlohmann_json::nlohmann_json)
-target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
-
-# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
-target_compile_options(hyrise PRIVATE -fPIC)
-
-# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
-# isn't updated when HEAD changes
-add_dependencies(hyrise AlwaysCheckGit resourceLink)
+add_dependencies(hyrise resourceLink)

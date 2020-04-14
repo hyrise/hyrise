@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
@@ -113,8 +112,8 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
   auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto table = get_table->get_output();
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
-  EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
-  EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID(0), 0u), original_table->get_value<int32_t>(ColumnID(0), 1u));
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID(0), 1u), original_table->get_value<int32_t>(ColumnID(0), 3u));
   const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
   const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_0).size(), 1u);
@@ -131,7 +130,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
 
   auto table = get_table->get_output();
   EXPECT_EQ(table->column_count(), 2u);
-  EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 9);
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0u), 9);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 10.5f);
   const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
   const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
@@ -153,7 +152,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
 
   auto table = get_table->get_output();
   EXPECT_EQ(table->column_count(), 2u);
-  EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 10);
+  EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0u), 10);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 0u), 10.5f);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 9.5f);
   const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
@@ -291,7 +290,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
   table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{2}, OrderByMode::Descending});
 
-  // with column pruning
+  // single column pruned
   {
     auto get_table =
         std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
@@ -306,7 +305,20 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
   }
 
-  // without column pruning
+  // multiple columns pruned
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{},
+                                                         std::vector{ColumnID{0}, ColumnID{1}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 1);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+  }
+
+  // no columns pruned
   {
     auto get_table =
         std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});

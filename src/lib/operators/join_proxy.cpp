@@ -102,7 +102,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < left_chunk_count; ++chunk_id) {
     const auto& chunk = left_input_table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(left_column_id);
-    left_memory_usage += segment->estimate_memory_usage();
+    left_memory_usage += segment->memory_usage(MemoryUsageCalculationMode::Sampled);
 
     const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
     is_left_reference_segment = is_left_reference_segment || reference_segment;
@@ -114,7 +114,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < right_chunk_count; ++chunk_id) {
     const auto& chunk = right_input_table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(right_column_id);
-    right_memory_usage += segment->estimate_memory_usage();
+    right_memory_usage += segment->memory_usage(MemoryUsageCalculationMode::Sampled);
 
     const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
     is_right_reference_segment = is_right_reference_segment || reference_segment;

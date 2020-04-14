@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "resolve_type.hpp"
@@ -32,14 +33,15 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
             node_expressions.begin() + group_by_expressions.size());
 }
 
-std::string AggregateNode::description() const {
+std::string AggregateNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
   std::stringstream stream;
 
   stream << "[Aggregate] ";
 
   stream << "GroupBy: [";
   for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
-    stream << node_expressions[expression_idx]->as_column_name();
+    stream << node_expressions[expression_idx]->description(expression_mode);
     if (expression_idx + 1 < aggregate_expressions_begin_idx) stream << ", ";
   }
   stream << "] ";
@@ -47,7 +49,7 @@ std::string AggregateNode::description() const {
   stream << "Aggregates: [";
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < node_expressions.size();
        ++expression_idx) {
-    stream << node_expressions[expression_idx]->as_column_name();
+    stream << node_expressions[expression_idx]->description(expression_mode);
     if (expression_idx + 1 < node_expressions.size()) stream << ", ";
   }
   stream << "]";
@@ -57,8 +59,24 @@ std::string AggregateNode::description() const {
 
 OperatorType AggregateNode::operator_type() const { return OperatorType::Aggregate; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
-  return node_expressions;
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressions() const {
+  // We do not return node_expressions directly here, because we do not want to expose ANY() to the following LQP
+  // nodes. This way, we execute ANY() as intended, but do not have to traverse the LQP upwards and adapt nodes
+  // that reference the ANY'd column.
+  auto column_expressions = node_expressions;
+
+  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < column_expressions.size();
+       ++expression_idx) {
+    auto& column_expression = column_expressions[expression_idx];
+    DebugAssert(column_expression->type == ExpressionType::Aggregate,
+                "Unexpected non-aggregate in list of aggregates.");
+    const auto& aggregate_expression = static_cast<AggregateExpression&>(*column_expression);
+    if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
+      column_expression = column_expression->arguments[0];
+    }
+  }
+
+  return column_expressions;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
@@ -79,7 +97,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping&
       expressions_copy_and_adapt_to_different_lqp(aggregate_expressions, node_mapping));
 }
 
-size_t AggregateNode::_shallow_hash() const { return aggregate_expressions_begin_idx; }
+size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
 
 bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);

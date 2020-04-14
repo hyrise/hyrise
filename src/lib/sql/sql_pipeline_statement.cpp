@@ -1,5 +1,6 @@
 #include "sql_pipeline_statement.hpp"
 
+#include <fstream>
 #include <iomanip>
 #include <utility>
 
@@ -10,6 +11,8 @@
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export.hpp"
+#include "operators/import.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
@@ -28,19 +31,17 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<Optimizer>& optimizer,
-                                           const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
-                                           const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
-                                           const CleanupTemporaries cleanup_temporaries)
-    : pqp_cache(pqp_cache),
-      lqp_cache(lqp_cache),
+                                           const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
+                                           const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
+    : pqp_cache(init_pqp_cache),
+      lqp_cache(init_lqp_cache),
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
-      _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
-      _cleanup_temporaries(cleanup_temporaries) {
+      _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
@@ -83,8 +84,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   SQLTranslator sql_translator{_use_mvcc};
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-  lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
+  auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
+  auto lqp_roots = translation_result.lqp_nodes;
+  _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
   _unoptimized_logical_plan = lqp_roots.front();
@@ -107,7 +109,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
-        _optimized_logical_plan = plan;
+        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
+        // and concurrent translations might conflict.
+        _optimized_logical_plan = plan->deep_copy();
         return _optimized_logical_plan;
       }
     }
@@ -128,7 +132,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache) {
+  if (lqp_cache && _translation_info.cacheable) {
     lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
@@ -142,7 +146,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
   if (!_transaction_context && _use_mvcc == UseMvcc::Yes) {
-    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
   // Stores when the actual compilation started/ended
@@ -177,7 +181,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit) {
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
@@ -191,7 +195,7 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
 
-  _tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
+  _tasks = OperatorTask::make_tasks_from_operator(get_physical_plan());
   return _tasks;
 }
 
@@ -297,6 +301,12 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
       const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
       AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
                   "There is no view '" + drop_view->view_name + "'.");
+      break;
+    }
+    case OperatorType::Import: {
+      const auto import = std::dynamic_pointer_cast<Import>(pqp);
+      std::ifstream file(import->filename);
+      AssertInput(file.good(), "There is no file '" + import->filename + "'.");
       break;
     }
     default:

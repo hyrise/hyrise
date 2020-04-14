@@ -6,7 +6,7 @@ namespace opossum {
 
 ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
-std::string ValidateNode::description() const { return "[Validate]"; }
+std::string ValidateNode::description(const DescriptionMode mode) const { return "[Validate]"; }
 
 OperatorType ValidateNode::operator_type() const { return OperatorType::Validate; }
 

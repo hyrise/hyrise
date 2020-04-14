@@ -18,7 +18,6 @@
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
-#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 
@@ -39,13 +38,19 @@ using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatisti
  */
 class Chunk : private Noncopyable {
  public:
-  // The last chunk offset is reserved for NULL as used in ReferenceSegments.
+  // This is the architecture-defined limit on the size of a single chunk. The last chunk offset is reserved for NULL
+  // as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
+  // For a new chunk, this is the size of the pre-allocated ValueSegments. This is only relevant for chunks that
+  // contain data. Chunks that contain reference segments do not use the table's target_chunk_size at all.
+  //
   // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
-  // feel free to re-evaluate this. This is only relevant for chunks that contain data. Chunks that contain reference
-  // segments do not use the table's max_chunk_size at all.
-  static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
+  // feel free to re-evaluate this. 2^16 is a good size because it means that on a unique column, dictionary
+  // requires up to 16 bits for the value ids. A chunk size of 100'000 would put us just slightly over that 16 bits,
+  // meaning that FixedSizeByteAligned vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
+  // account for NULL being encoded as a separate value id.
+  static constexpr ChunkOffset DEFAULT_SIZE = 65'535;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
@@ -60,7 +65,7 @@ class Chunk : private Noncopyable {
   ColumnCount column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
-  uint32_t size() const;
+  ChunkOffset size() const;
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -79,17 +84,6 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
 
   bool has_mvcc_data() const;
-
-  /**
-   * The locking pointer locks the MVCC data non-exclusively
-   * and unlocks them on destruction
-   *
-   * For improved performance, it is best to call this function
-   * once and retain the reference as long as needed.
-   *
-   * @return a locking ptr to the MVCC data
-   */
-  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
@@ -144,7 +138,7 @@ class Chunk : private Noncopyable {
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
    */
-  size_t estimate_memory_usage() const;
+  size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
@@ -162,26 +156,26 @@ class Chunk : private Noncopyable {
   ChunkOffset invalid_row_count() const { return _invalid_row_count.load(); }
 
   /**
-     * Atomically increases the counter of deleted/invalidated rows within this chunk.
-     * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
-     */
+   * Atomically increases the counter of deleted/invalidated rows within this chunk.
+   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+   */
   void increase_invalid_row_count(ChunkOffset count) const;
 
   /**
-      * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
-      * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
-      * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
-      * have to look at this chunk anymore.
-      * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
-      */
-  const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
+   * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+   * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+   * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+   * have to look at this chunk anymore.
+   * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+   */
+  std::optional<CommitID> get_cleanup_commit_id() const;
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
   /**
-     * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
-     * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
-     */
+   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
+   * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   */
   void finalize();
 
  private:
@@ -195,8 +189,11 @@ class Chunk : private Noncopyable {
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
-  mutable std::atomic<ChunkOffset> _invalid_row_count = 0;
-  std::optional<CommitID> _cleanup_commit_id;
+  mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+
+  // Default value of zero means "not set"
+  std::atomic<CommitID> _cleanup_commit_id{0};
+  static_assert(std::is_same<uint32_t, CommitID>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
 }  // namespace opossum

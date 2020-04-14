@@ -20,13 +20,11 @@ class BaseValueSegment : public BaseSegment {
   virtual void append(const AllTypeVariant& val) = 0;
 
   /**
-   * @brief Returns null array
+   * @brief Returns vector of NULL values (which is true for offsets where the segment's value is NULL).
+   *        Cannot be written to, see value_segment.hpp for details.
    *
    * Throws exception if is_nullable() returns false
    */
-  virtual const pmr_concurrent_vector<bool>& null_values() const = 0;
-  virtual pmr_concurrent_vector<bool>& null_values() = 0;
-
-  virtual void reserve(const size_t capacity) = 0;
+  virtual const pmr_vector<bool>& null_values() const = 0;
 };
 }  // namespace opossum

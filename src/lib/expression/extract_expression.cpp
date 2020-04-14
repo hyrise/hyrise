@@ -28,17 +28,17 @@ std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_
   return stream;
 }
 
-ExtractExpression::ExtractExpression(const DatetimeComponent datetime_component,
+ExtractExpression::ExtractExpression(const DatetimeComponent init_datetime_component,
                                      const std::shared_ptr<AbstractExpression>& from)
-    : AbstractExpression(ExpressionType::Extract, {from}), datetime_component(datetime_component) {}
+    : AbstractExpression(ExpressionType::Extract, {from}), datetime_component(init_datetime_component) {}
 
 std::shared_ptr<AbstractExpression> ExtractExpression::deep_copy() const {
   return std::make_shared<ExtractExpression>(datetime_component, from()->deep_copy());
 }
 
-std::string ExtractExpression::as_column_name() const {
+std::string ExtractExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << "EXTRACT(" << datetime_component << " FROM " << from()->as_column_name() << ")";
+  stream << "EXTRACT(" << datetime_component << " FROM " << from()->description(mode) << ")";
   return stream.str();
 }
 

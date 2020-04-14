@@ -1,5 +1,6 @@
 set(
     SHARED_SOURCES
+    base_test.cpp
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
@@ -31,17 +32,22 @@ set(
     expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/hyrise_test.cpp
-    lib/import_export/csv_parser_test.cpp
+    lib/import_export/binary/binary_parser_test.cpp
+    lib/import_export/binary/binary_writer_test.cpp
+    lib/import_export/csv/csv_meta_test.cpp
+    lib/import_export/csv/csv_parser_test.cpp
+    lib/import_export/csv/csv_writer_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
+    lib/entire_chunk_pos_list_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
+    logical_query_plan/change_meta_table_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/create_prepared_plan_node_test.cpp
     logical_query_plan/create_table_node_test.cpp
@@ -49,6 +55,8 @@ set(
     logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
+    logical_query_plan/export_node_test.cpp
+    logical_query_plan/import_node_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
     logical_query_plan/limit_node_test.cpp
@@ -66,16 +74,16 @@ set(
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
+    memory/segments_using_allocators_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
+    operators/change_meta_table_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
-    operators/export_binary_test.cpp
-    operators/export_csv_test.cpp
+    operators/export_test.cpp
     operators/get_table_test.cpp
-    operators/import_binary_test.cpp
-    operators/import_csv_test.cpp
+    operators/import_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
     operators/join_hash_test.cpp
@@ -121,6 +129,7 @@ set(
     optimizer/strategy/chunk_pruning_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
+    optimizer/strategy/dependent_group_by_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/in_expression_rewrite_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
@@ -129,9 +138,11 @@ set(
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
+    optimizer/strategy/semi_join_reduction_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
+    plugins/mvcc_delete_plugin_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_socket.hpp
     server/postgres_protocol_handler_test.cpp
@@ -178,6 +189,7 @@ set(
     storage/multi_segment_index_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
+    storage/segment_access_counter_test.cpp
     storage/segment_accessor_test.cpp
     storage/segment_iterators_test.cpp
     storage/simd_bp128_test.cpp
@@ -193,15 +205,25 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/column_ids_after_pruning_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
     utils/meta_table_manager_test.cpp
+    utils/meta_tables/meta_mock_table.cpp
+    utils/meta_tables/meta_mock_table.hpp
+    utils/meta_tables/meta_table_test.cpp
+    utils/meta_tables/meta_plugins_test.cpp
+    utils/meta_tables/meta_settings_test.cpp
+    utils/mock_setting.hpp
+    utils/mock_setting.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
-    utils/column_ids_after_pruning_test.cpp
+    utils/setting_test.cpp
+    utils/settings_manager_test.cpp
     utils/singleton_test.cpp
+    utils/size_estimation_utils_test.cpp
     utils/string_utils_test.cpp
 )
 
@@ -211,10 +233,14 @@ set (
     concurrency/stress_test.cpp
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpcc_test.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
+    plugins/mvcc_delete_plugin_system_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
@@ -223,6 +249,7 @@ set(
     gtest
     gmock
     sqlite3
+    MvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -240,7 +267,19 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
-target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
+endif()
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    target_precompile_headers(hyriseTest PRIVATE
+        <gtest/gtest.h>
+        [["all_parameter_variant.hpp"]]
+        [["storage/create_iterable_from_segment.hpp"]]
+        [["storage/table.hpp"]]
+        [["types.hpp"]]
+    )
+endif()
 
 # Configure hyriseCalibratinCostModelTest
 add_executable(hyriseCostModelCalibrationTest ${HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES})
@@ -249,6 +288,6 @@ target_link_libraries(hyriseCostModelCalibrationTest hyrise hyriseCostModelCalib
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest nlohmann_json::nlohmann_json pqxx_static)
+target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries_system(hyriseSystemTest pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

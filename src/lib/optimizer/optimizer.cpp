@@ -10,6 +10,7 @@
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
+#include "strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
@@ -19,6 +20,7 @@
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 
 /**
@@ -41,6 +43,10 @@
  *
  * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assigns the optimized LQPs back
  *                                          to the SubqueryExpressions referencing them.
+ *
+ * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
+ * earlier rule. In the future, it might make sense to bring back iterative groups of rules, but we should keep
+ * optimization costs reasonable.
  */
 
 namespace {
@@ -86,9 +92,9 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
 
-  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
   // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
@@ -101,18 +107,22 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
-  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
-  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
-  // which does not like semi joins (see above).
-  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
-
-  // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
-  // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
+
+  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
+  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
+  // which does not like semi joins (see above).
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+
+  // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
+  // SemiJoinReductionRule are properly placed, too.
+  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
@@ -182,20 +192,20 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
     lqps.emplace_back(lqp);
   }
 
-  // Next, collect all nodes found in the entire plan (not only the main LQP)
-  std::unordered_set<std::shared_ptr<const AbstractLQPNode>> all_nodes;
+  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>
+      nodes_by_lqp;
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&all_nodes](const auto& node) {
-      all_nodes.emplace(node);
+    visit_lqp(lqp, [&](const auto& node) {
+      nodes_by_lqp[lqp].emplace(node);
       return LQPVisitation::VisitInputs;
     });
   }
 
-  // (1) Make sure that all outputs found anywhere in the entire plan are also part of the plan
+  // (1) Make sure that all outputs found in an LQP are also part of the same LQP (excluding subqueries)
   // (2) Make sure each node has the number of inputs expected for that node type
   // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&all_nodes](const auto& node) {
+    visit_lqp(lqp, [&](const auto& node) {
       // Check that all outputs are part of the LQP
       const auto outputs = node->outputs();
       for (const auto& output : outputs) {
@@ -204,18 +214,26 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
         // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
         // enforced when rules are executed through the optimizer, not when tests call the rule directly.
-        Assert(all_nodes.contains(output), std::string{"Output `"} + output->description() + "` of node `" +
-                                               node->description() + "` not found in LQP");
+        Assert(nodes_by_lqp[lqp].contains(output), std::string{"Output `"} + output->description() + "` of node `" +
+                                                       node->description() + "` not found in LQP");
+
+        for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
+          if (other_lqp == lqp) continue;
+          Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
+                                            node->description() + "` found in different LQP");
+        }
       }
 
-      // Check that all LQPColumnExpressions in the node can be resolved. This does, however, not guarantee that it is
-      // correctly used as one of the (transitive) inputs of `node`. Checking that would be more expensive.
+      // Check that all LQPColumnExpressions in the node can be resolved. This mostly guards against expired columns
+      // leaving an optimizer rule. It does not guarantee that it the LQPColumnExpressions are correctly returned from
+      // one of the (transitive) inputs of `node`. If that is not the case, that will be caught by the LQPTranslator,
+      // at the latest. However, feel free to add that check here.
       for (const auto& node_expression : node->node_expressions) {
-        visit_expression(node_expression, [&all_nodes](const auto& sub_expression) {
+        visit_expression(node_expression, [&](const auto& sub_expression) {
           if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
           const auto original_node =
               dynamic_cast<LQPColumnExpression&>(*sub_expression).column_reference.original_node();
-          Assert(all_nodes.contains(original_node),
+          Assert(nodes_by_lqp[lqp].contains(original_node),
                  std::string{"LQPColumnExpression "} + sub_expression->as_column_name() + " can not be resolved");
           return ExpressionVisitation::VisitArguments;
         });
@@ -229,6 +247,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::DummyTable:
         case LQPNodeType::DropView:
         case LQPNodeType::DropTable:
+        case LQPNodeType::Import:
         case LQPNodeType::StaticTable:
         case LQPNodeType::StoredTable:
         case LQPNodeType::Mock:
@@ -239,6 +258,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         case LQPNodeType::Alias:
         case LQPNodeType::CreateTable:
         case LQPNodeType::Delete:
+        case LQPNodeType::Export:
         case LQPNodeType::Insert:
         case LQPNodeType::Limit:
         case LQPNodeType::Predicate:
@@ -250,6 +270,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
           break;
 
         case LQPNodeType::Join:
+        case LQPNodeType::ChangeMetaTable:
         case LQPNodeType::Update:
         case LQPNodeType::Union:
           num_expected_inputs = 2;

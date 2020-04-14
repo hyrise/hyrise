@@ -55,8 +55,8 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 namespace opossum {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
-                                 const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions)
-    : type(node_type), node_expressions(node_expressions) {}
+                                 const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions)
+    : type(node_type), node_expressions(init_node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
   Assert(
@@ -78,7 +78,7 @@ size_t AbstractLQPNode::hash() const {
         boost::hash_combine(hash, expression->hash());
       }
       boost::hash_combine(hash, node->type);
-      boost::hash_combine(hash, node->_shallow_hash());
+      boost::hash_combine(hash, node->_on_shallow_hash());
       return LQPVisitation::VisitInputs;
     } else {
       return LQPVisitation::DoNotVisitInputs;
@@ -88,7 +88,7 @@ size_t AbstractLQPNode::hash() const {
   return hash;
 }
 
-size_t AbstractLQPNode::_shallow_hash() const { return 0; }
+size_t AbstractLQPNode::_on_shallow_hash() const { return 0; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 
@@ -104,15 +104,15 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 }
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
-  DebugAssert(
-      right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union || type == LQPNodeType::Update,
-      "This node type does not accept a right input");
+  DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
+                  type == LQPNodeType::Update || type == LQPNodeType::ChangeMetaTable,
+              "This node type does not accept a right input");
   set_input(LQPInputSide::Right, right);
 }
 
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
   DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
-                  type == LQPNodeType::Union || type == LQPNodeType::Update,
+                  type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::ChangeMetaTable,
               "This node type does not accept a right input");
 
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
@@ -218,7 +218,7 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
   return _on_shallow_equals(rhs, node_mapping);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(),
          "Can only forward input expressions iff there is a left input and no right input");
   return left_input()->column_expressions();
@@ -266,6 +266,7 @@ OperatorType AbstractLQPNode::operator_type() const {
 bool AbstractLQPNode::creates_reference_segments() const { return false; }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
+  if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 
@@ -328,6 +329,16 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
+AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {
+  switch (mode) {
+    case DescriptionMode::Short:
+      return AbstractExpression::DescriptionMode::ColumnName;
+    case DescriptionMode::Detailed:
+      return AbstractExpression::DescriptionMode::Detailed;
+  }
+  Fail("Unhandled DescriptionMode");
+}
+
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   // Recursively collect all LQPs in LQPSubqueryExpressions (and any anywhere within those) in this LQP into a list and
   // then print them
@@ -343,10 +354,11 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
     };
 
     const auto node_print_fn = [](const auto& node2, auto& stream2) {
-      stream2 << node2->description();
+      stream2 << node2->description(AbstractLQPNode::DescriptionMode::Detailed);
       if (!node2->comment.empty()) {
         stream2 << " (" << node2->comment << ")";
       }
+      stream2 << " @ " << node2;
     };
 
     print_directed_acyclic_graph<const AbstractLQPNode>(root.shared_from_this(), get_inputs_fn, node_print_fn, stream);

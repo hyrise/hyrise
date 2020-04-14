@@ -7,6 +7,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "sql/sql_translator.hpp"
 #include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
 
@@ -50,9 +51,8 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<Optimizer>& optimizer,
-                       const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
-                       const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
-                       const CleanupTemporaries cleanup_temporaries);
+                       const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
+                       const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -118,11 +118,9 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output{true};
+  TranslationInfo _translation_info;
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
-
-  // Delete temporary tables
-  const CleanupTemporaries _cleanup_temporaries;
 };
 
 }  // namespace opossum

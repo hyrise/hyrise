@@ -24,8 +24,9 @@ using HistogramCountType = Cardinality;
 
 template <typename T>
 struct HistogramBin {
-  HistogramBin(const T& min, const T& max, const HistogramCountType height, const HistogramCountType distinct_count)
-      : min(min), max(max), height(height), distinct_count(distinct_count) {}
+  HistogramBin(const T& init_min, const T& init_max, const HistogramCountType init_height,
+               const HistogramCountType init_distinct_count)
+      : min(init_min), max(init_max), height(init_height), distinct_count(init_distinct_count) {}
 
   T min{};
   T max{};
@@ -172,12 +173,12 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * Returns the smallest value in the bin.
    */
-  virtual T bin_minimum(const BinID index) const = 0;
+  virtual const T& bin_minimum(const BinID index) const = 0;
 
   /**
    * Returns the largest value in a bin.
    */
-  virtual T bin_maximum(const BinID index) const = 0;
+  virtual const T& bin_maximum(const BinID index) const = 0;
 
   /**
    * Returns whether the value belongs into a given bin. This does not necessarily mean that the value is actually

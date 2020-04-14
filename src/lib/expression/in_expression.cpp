@@ -7,11 +7,11 @@
 
 namespace opossum {
 
-InExpression::InExpression(const PredicateCondition predicate_condition_in,
+InExpression::InExpression(const PredicateCondition init_predicate_condition,
                            const std::shared_ptr<AbstractExpression>& value,
                            const std::shared_ptr<AbstractExpression>& set)
-    : AbstractPredicateExpression(predicate_condition_in, {value, set}) {
-  DebugAssert(predicate_condition_in == PredicateCondition::In || predicate_condition_in == PredicateCondition::NotIn,
+    : AbstractPredicateExpression(init_predicate_condition, {value, set}) {
+  DebugAssert(predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn,
               "Expected either IN or NOT IN as PredicateCondition");
 }
 
@@ -25,11 +25,11 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
   return std::make_shared<InExpression>(predicate_condition, value()->deep_copy(), set()->deep_copy());
 }
 
-std::string InExpression::as_column_name() const {
+std::string InExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << _enclose_argument_as_column_name(*value()) << " ";
+  stream << _enclose_argument(*value(), mode) << " ";
   stream << predicate_condition << " ";
-  stream << set()->as_column_name();
+  stream << set()->description(mode);
   return stream.str();
 }
 

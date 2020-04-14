@@ -8,7 +8,7 @@ namespace opossum {
 
 class BetweenExpression : public AbstractPredicateExpression {
  public:
-  BetweenExpression(const PredicateCondition predicate_condition_between, const std::shared_ptr<AbstractExpression>& value,
+  BetweenExpression(const PredicateCondition init_predicate_condition, const std::shared_ptr<AbstractExpression>& value,
                     const std::shared_ptr<AbstractExpression>& lower_bound,
                     const std::shared_ptr<AbstractExpression>& upper_bound);
 
@@ -17,7 +17,7 @@ class BetweenExpression : public AbstractPredicateExpression {
   const std::shared_ptr<AbstractExpression>& upper_bound() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string description(const DescriptionMode mode) const override;
 
  protected:
   ExpressionPrecedence _precedence() const override;

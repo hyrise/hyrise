@@ -43,7 +43,7 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
   auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
 
-  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op});
+  execute_all({get_table_op, table_scan_a_op, table_scan_b_op});
 
   /**
    * Just an early check we're actually getting some results here
@@ -68,7 +68,7 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 200));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
                             load_table("resources/test_data/tbl/10_ints_exclusive_ranges.tbl"));
@@ -86,7 +86,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 100));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), _table_10_ints);
 }
@@ -101,7 +101,7 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
   EXPECT_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
@@ -117,7 +117,7 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
@@ -135,7 +135,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
   auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_float_column_1_non_nullable, 400));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
                             load_table("resources/test_data/tbl/int_float4_overlapping_ranges.tbl"));
@@ -184,7 +184,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   auto table_scan_b_op = std::make_shared<TableScan>(join, less_than_(_float_column_1_non_nullable, 457.0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, join, table_scan_a_op, table_scan_b_op, union_unique_op});
+  execute_all({get_table_a_op, get_table_b_op, join, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
                             load_table("resources/test_data/tbl/int_float4_int_int_union_positions.tbl"));
@@ -201,8 +201,8 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
 
   const auto& output = union_unique_op->get_output();
 
-  EXPECT_EQ(*get_pos_list(output, ColumnID{0}), *get_pos_list(output, ColumnID{1}));
-  EXPECT_EQ(*get_pos_list(output, ColumnID{2}), *get_pos_list(output, ColumnID{3}));
+  EXPECT_EQ(get_pos_list(output, ColumnID{0}), get_pos_list(output, ColumnID{1}));
+  EXPECT_EQ(get_pos_list(output, ColumnID{2}), get_pos_list(output, ColumnID{3}));
 }
 
 TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
@@ -212,48 +212,48 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
    * TODO(anybody) this test is an atrocity, look how complicated it is to build Reference Tables!
    */
   // Left input table, chunk 0, pos_list 0
-  auto pos_list_left_0_0 = std::make_shared<PosList>();
+  auto pos_list_left_0_0 = std::make_shared<RowIDPosList>();
   pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, 2});
   pos_list_left_0_0->emplace_back(RowID{ChunkID{0}, 1});
   pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, 2});
 
   // Left input table, chunk 1, pos_list 0
-  auto pos_list_left_1_0 = std::make_shared<PosList>();
+  auto pos_list_left_1_0 = std::make_shared<RowIDPosList>();
   pos_list_left_1_0->emplace_back(RowID{ChunkID{2}, 0});
   pos_list_left_1_0->emplace_back(RowID{ChunkID{0}, 1});
 
   // Left input table, chunk 0, pos_list 1
-  auto pos_list_left_0_1 = std::make_shared<PosList>();
+  auto pos_list_left_0_1 = std::make_shared<RowIDPosList>();
   pos_list_left_0_1->emplace_back(RowID{ChunkID{2}, 0});
   pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, 1});
   pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, 1});
 
   // Left input table, chunk 1, pos_list 1
-  auto pos_list_left_1_1 = std::make_shared<PosList>();
+  auto pos_list_left_1_1 = std::make_shared<RowIDPosList>();
   pos_list_left_1_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_left_1_1->emplace_back(RowID{ChunkID{2}, 0});
 
   // Right input table, chunk 0, pos_list 0
-  auto pos_list_right_0_0 = std::make_shared<PosList>();
+  auto pos_list_right_0_0 = std::make_shared<RowIDPosList>();
   pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
   pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
   pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, 2});
   pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, 0});
 
   // Right input table, chunk 1, pos_list 0
-  auto pos_list_right_1_0 = std::make_shared<PosList>();
+  auto pos_list_right_1_0 = std::make_shared<RowIDPosList>();
   pos_list_right_1_0->emplace_back(RowID{ChunkID{0}, 0});
   pos_list_right_1_0->emplace_back(RowID{ChunkID{2}, 0});
 
   // Right input table, chunk 0, pos_list 1
-  auto pos_list_right_0_1 = std::make_shared<PosList>();
+  auto pos_list_right_0_1 = std::make_shared<RowIDPosList>();
   pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_right_0_1->emplace_back(RowID{ChunkID{2}, 0});
   pos_list_right_0_1->emplace_back(RowID{ChunkID{0}, 0});
 
   // Right input table, chunk 1, pos_list 1
-  auto pos_list_right_1_1 = std::make_shared<PosList>();
+  auto pos_list_right_1_1 = std::make_shared<RowIDPosList>();
   pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
 
@@ -289,7 +289,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto table_wrapper_right_op = std::make_shared<TableWrapper>(table_right);
   auto set_union_op = std::make_shared<UnionPositions>(table_wrapper_left_op, table_wrapper_right_op);
 
-  _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
+  execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
   EXPECT_TABLE_EQ_UNORDERED(set_union_op->get_output(),
                             load_table("resources/test_data/tbl/union_positions_multiple_shuffled_pos_list.tbl"));

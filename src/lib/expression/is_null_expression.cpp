@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-IsNullExpression::IsNullExpression(const PredicateCondition predicate_condition_is_null,
+IsNullExpression::IsNullExpression(const PredicateCondition init_predicate_condition,
                                    const std::shared_ptr<AbstractExpression>& operand)
-    : AbstractPredicateExpression(predicate_condition_is_null, {operand}) {
-  Assert(predicate_condition_is_null == PredicateCondition::IsNull || predicate_condition_is_null == PredicateCondition::IsNotNull,
+    : AbstractPredicateExpression(init_predicate_condition, {operand}) {
+  Assert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
          "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull");
 }
 
@@ -19,13 +19,13 @@ std::shared_ptr<AbstractExpression> IsNullExpression::deep_copy() const {
   return std::make_shared<IsNullExpression>(predicate_condition, operand()->deep_copy());
 }
 
-std::string IsNullExpression::as_column_name() const {
+std::string IsNullExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   if (predicate_condition == PredicateCondition::IsNull) {
-    stream << _enclose_argument_as_column_name(*operand()) << " IS NULL";
+    stream << _enclose_argument(*operand(), mode) << " IS NULL";
   } else {
-    stream << _enclose_argument_as_column_name(*operand()) << " IS NOT NULL";
+    stream << _enclose_argument(*operand(), mode) << " IS NOT NULL";
   }
 
   return stream.str();

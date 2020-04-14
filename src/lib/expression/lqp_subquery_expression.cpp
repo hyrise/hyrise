@@ -13,9 +13,11 @@
 namespace opossum {
 
 LQPSubqueryExpression::LQPSubqueryExpression(
-    const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids,
+    const std::shared_ptr<AbstractLQPNode>& init_lqp, const std::vector<ParameterID>& init_parameter_ids,
     const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions)
-    : AbstractExpression(ExpressionType::LQPSubquery, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
+    : AbstractExpression(ExpressionType::LQPSubquery, parameter_expressions),
+      lqp(init_lqp),
+      parameter_ids(init_parameter_ids) {
   Assert(parameter_ids.size() == parameter_expressions.size(),
          "Need exactly as many ParameterIDs as parameter Expressions");
 }
@@ -33,14 +35,14 @@ std::shared_ptr<AbstractExpression> LQPSubqueryExpression::deep_copy() const {
   return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
-std::string LQPSubqueryExpression::as_column_name() const {
+std::string LQPSubqueryExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "SUBQUERY (LQP, " << lqp.get();
 
   if (!arguments.empty()) {
     stream << ", Parameters: ";
     for (auto parameter_idx = size_t{0}; parameter_idx < arguments.size(); ++parameter_idx) {
-      stream << "[" << arguments[parameter_idx]->as_column_name() << ", id=" << parameter_ids[parameter_idx] << "]";
+      stream << "[" << arguments[parameter_idx]->description(mode) << ", id=" << parameter_ids[parameter_idx] << "]";
       if (parameter_idx + 1 < arguments.size()) stream << ", ";
     }
   }

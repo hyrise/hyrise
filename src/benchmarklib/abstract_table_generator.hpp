@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <filesystem>
 #include <unordered_map>
 
 #include "encoding_config.hpp"
@@ -13,7 +14,7 @@ class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
   BenchmarkTableInfo() = default;
-  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& init_table);
 
   std::shared_ptr<Table> table;
 

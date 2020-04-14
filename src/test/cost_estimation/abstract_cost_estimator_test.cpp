@@ -1,6 +1,6 @@
 #include <unordered_map>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_functional.hpp"
@@ -20,7 +20,8 @@ class MockCostEstimator : public AbstractCostEstimator {
  public:
   MockCosts mock_costs;
 
-  explicit MockCostEstimator(const MockCosts& mock_costs) : AbstractCostEstimator(nullptr), mock_costs(mock_costs) {}
+  explicit MockCostEstimator(const MockCosts& init_mock_costs)
+      : AbstractCostEstimator(nullptr), mock_costs(init_mock_costs) {}
 
   std::shared_ptr<AbstractCostEstimator> new_instance() const override { Fail("Shouldn't be called"); }
 
@@ -31,7 +32,7 @@ class MockCostEstimator : public AbstractCostEstimator {
 
 namespace opossum {
 
-class AbstractCostEstimatorTest : public ::testing::Test {
+class AbstractCostEstimatorTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");

@@ -4,9 +4,11 @@
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
+#include "utils/settings_manager.hpp"
 #include "utils/singleton.hpp"
 
 namespace opossum {
@@ -33,7 +35,13 @@ class Hyrise : public Singleton<Hyrise> {
   StorageManager storage_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
+  SettingsManager settings_manager;
   Topology topology;
+
+  // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
+  // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
+  std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
   // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
   // result JSON.

@@ -57,26 +57,21 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
   SyntheticTableGenerator table_generator;
 
-  // Gather data required for table generator.
-  std::vector<ColumnDataDistribution> column_data_distributions;
-  std::vector<DataType> column_data_types;
-  std::vector<std::string> column_names;
-  std::vector<SegmentEncodingSpec> column_encodings;
+  std::vector<ColumnSpecification> column_specifications;
+  column_specifications.reserve(_configuration.columns.size());
 
   for (const auto& column_spec : _configuration.columns) {
-    column_data_distributions.push_back(
-        ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count));
-    column_data_types.push_back(column_spec.data_type);
-    column_names.push_back(column_spec.column_name);
-    column_encodings.push_back(column_spec.encoding);
+    //column_specifications.emplace_back(ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count),
+//		                        column_spec.data_type, column_spec.encoding, column_spec.column_name));
+    column_specifications.emplace_back(ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count),
+		                       column_spec.data_type, column_spec.encoding, column_spec.column_name);
   }
 
   for (const auto table_size : _configuration.table_generation_table_sizes) {
     auto const table_name = _configuration.table_generation_name_prefix + std::to_string(table_size);
 
     std::cout << "Table >>" << table_name << "<<\tdata generation: " << std::flush;
-    auto table = table_generator.generate_table(column_data_distributions, column_data_types, table_size, _chunk_size,
-                                                column_encodings, column_names, UseMvcc::Yes);
+    auto table = table_generator.generate_table(column_specifications, table_size, _chunk_size, UseMvcc::Yes);
 
     std::cout << "done -- adding to storage manager: " << std::flush;
 
@@ -86,8 +81,9 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
     for (const auto& column_spec : _configuration.columns) {
       if (column_spec.encoding.encoding_type == EncodingType::Dictionary &&
           *column_spec.encoding.vector_compression_type == VectorCompressionType::FixedSizeByteAligned) {
-        // std::cout << column_spec.column_id << " is a dict fsba" << std::endl;
-        table->template create_index<GroupKeyIndex>({column_spec.column_id});
+        std::vector<ColumnID> column_ids{};
+        column_ids.push_back(column_spec.column_id);
+        table->create_index<GroupKeyIndex>(column_ids);
       }
     }
     std::cout << " done." << std::endl;

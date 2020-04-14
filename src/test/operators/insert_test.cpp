@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
@@ -151,16 +150,50 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
   insert->set_transaction_context(context1);
   insert->execute();
+
+  const auto check = [&]() {
+    auto get_table2 = std::make_shared<GetTable>(table_name);
+    get_table2->execute();
+    auto validate = std::make_shared<Validate>(get_table2);
+    auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
+    validate->set_transaction_context(context2);
+    validate->execute();
+    EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  };
+  check();
+
+  context1->rollback();
+  check();
+}
+
+TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
+  auto t_name = "test1";
+
+  // Set Up
+  auto t = load_table("resources/test_data/tbl/int.tbl", 10u);
+  Hyrise::get().storage_manager.add_table(t_name, t);
+  auto row_count = t->row_count();
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(), 1);
+
+  // Insert rows again
+  auto gt1 = std::make_shared<GetTable>(t_name);
+  gt1->execute();
+  auto ins = std::make_shared<Insert>(t_name, gt1);
+  auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
+  ins->set_transaction_context(context1);
+  ins->execute();
+
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->row_count(), row_count * 2);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(),
+            2);  // load_table() has finalized first chunk
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{0});
+
+  // Rollback Insert - invalidate inserted rows
   context1->rollback();
 
-  auto get_table2 = std::make_shared<GetTable>(table_name);
-  get_table2->execute();
-  auto validate = std::make_shared<Validate>(get_table2);
-  auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
-  validate->set_transaction_context(context2);
-  validate->execute();
-
-  EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{3});
 }
 
 TEST_F(OperatorsInsertTest, InsertStringNullValue) {

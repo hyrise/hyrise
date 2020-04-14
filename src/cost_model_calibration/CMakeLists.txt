@@ -9,4 +9,4 @@ target_link_libraries(
         hyriseBenchmarkLib
 )
 
-target_link_libraries_system(hyriseCostModelCalibration nlohmann_json::nlohmann_json)
+target_link_libraries_system(hyriseCostModelCalibration)

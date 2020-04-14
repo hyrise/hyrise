@@ -7,10 +7,10 @@
 
 namespace opossum {
 
-StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& table)
-    : BaseNonQueryNode(LQPNodeType::StaticTable), table(table) {}
+StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
+    : BaseNonQueryNode(LQPNodeType::StaticTable), table(init_table) {}
 
-std::string StaticTableNode::description() const {
+std::string StaticTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
 
   stream << "[StaticTable]:"
@@ -28,7 +28,7 @@ std::string StaticTableNode::description() const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& StaticTableNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
   // that in the constructor
   if (!_column_expressions) {
@@ -47,7 +47,7 @@ bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-size_t StaticTableNode::_shallow_hash() const {
+size_t StaticTableNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());

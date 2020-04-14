@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pos_list.hpp"
+#include "pos_lists/rowid_pos_list.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -14,7 +14,7 @@
  *      segment_with_iterators[_filtered]()    Calls the functor with a begin and end iterator
  *      segment_iterate[_filtered]()           Calls the functor with each value in the segment
  *
- * The *_filtered() variants of the functions take a PosList wnich allows for selective access to the values in a
+ * The *_filtered() variants of the functions take a AbstractPosList wnich allows for selective access to the values in a
  * segment.
  *
  * The template parameter T is either (if known to the caller) the DataType of the values contained in the segment, or
@@ -39,7 +39,7 @@ namespace opossum {
 
 struct ResolveDataTypeTag {};
 
-// Variant without PosList
+// Variant without AbstractPosList
 template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
           typename Functor>
 void segment_with_iterators(const BaseSegment& base_segment, const Functor& functor) {
@@ -65,7 +65,8 @@ void segment_with_iterators(const BaseSegment& base_segment, const Functor& func
 template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
           typename Functor>
 void segment_with_iterators_filtered(const BaseSegment& base_segment,
-                                     const std::shared_ptr<const PosList>& position_filter, const Functor& functor) {
+                                     const std::shared_ptr<const AbstractPosList>& position_filter,
+                                     const Functor& functor) {
   if (!position_filter) {
     segment_with_iterators<T, erase_iterator_types>(base_segment, functor);
     return;
@@ -93,11 +94,11 @@ void segment_with_iterators_filtered(const BaseSegment& base_segment,
   }
 }
 
-// Variant with PosList
+// Variant with AbstractPosList
 template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
           typename Functor>
-void segment_iterate_filtered(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
-                              const Functor& functor) {
+void segment_iterate_filtered(const BaseSegment& base_segment,
+                              const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) {
   segment_with_iterators_filtered<T, erase_iterator_types>(base_segment, position_filter, [&](auto it, const auto end) {
     while (it != end) {
       functor(*it);
@@ -106,7 +107,7 @@ void segment_iterate_filtered(const BaseSegment& base_segment, const std::shared
   });
 }
 
-// Variant without PosList
+// Variant without AbstractPosList
 template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = EraseTypes::OnlyInDebugBuild,
           typename Functor>
 void segment_iterate(const BaseSegment& base_segment, const Functor& functor) {
