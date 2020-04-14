@@ -20,22 +20,20 @@ namespace opossum {
 class OperatorsSortTest : public BaseTestWithParam<EncodingType> {
  protected:
   void SetUp() override {
-    _encoding_type = GetParam();
-
     _table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
     _table_wrapper_null =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_with_null.tbl", 2));
 
-    auto table = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    ChunkEncoder::encode_all_chunks(table, _encoding_type);
+    auto table_dict = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    ChunkEncoder::encode_all_chunks(table_dict, EncodingType::Dictionary);
 
-    auto table_dict = load_table("resources/test_data/tbl/int_float_with_null.tbl", 2);
-    ChunkEncoder::encode_all_chunks(table_dict, _encoding_type);
+    auto table_null_dict = load_table("resources/test_data/tbl/int_float_with_null.tbl", 2);
+    ChunkEncoder::encode_all_chunks(table_null_dict, EncodingType::Dictionary);
 
-    _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(table));
+    _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(table_dict));
     _table_wrapper_dict->execute();
 
-    _table_wrapper_null_dict = std::make_shared<TableWrapper>(std::move(table_dict));
+    _table_wrapper_null_dict = std::make_shared<TableWrapper>(std::move(table_null_dict));
     _table_wrapper_null_dict->execute();
 
     _table_wrapper_outer_join = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
@@ -48,18 +46,13 @@ class OperatorsSortTest : public BaseTestWithParam<EncodingType> {
  protected:
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null, _table_wrapper_dict, _table_wrapper_null_dict,
       _table_wrapper_outer_join;
-  EncodingType _encoding_type;
 };
 
 auto sort_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-// As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
-INSTANTIATE_TEST_SUITE_P(DictionaryEncodingTypes, OperatorsSortTest, ::testing::Values(EncodingType::Dictionary),
-                         sort_test_formatter);
-
-TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -69,7 +62,20 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOFilteredColumn) {
+TEST_F(OperatorsSortTest, AscendingSortOfEmptyColumn) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", 3);
+
+  auto input = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_empty.tbl", 3));
+  input->execute();
+
+  auto sort = std::make_shared<Sort>(
+      input, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}}, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
+}
+
+TEST_F(OperatorsSortTest, AscendingSortOfFilteredColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered_sorted.tbl", 2);
 
   auto input = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 1));
@@ -85,7 +91,23 @@ TEST_P(OperatorsSortTest, AscendingSortOFilteredColumn) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
+TEST_F(OperatorsSortTest, AscendingSortOfEmptyFilteredColumn) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", 2);
+
+  auto input = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", 1));
+  input->execute();
+
+  auto scan = create_table_scan(input, ColumnID{0}, PredicateCondition::Equals, 17);
+  scan->execute();
+
+  auto sort = std::make_shared<Sort>(
+      scan, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}}, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
+}
+
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -95,7 +117,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DoubleSortOfOneColumn) {
+TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort1 = std::make_shared<Sort>(
@@ -110,7 +132,7 @@ TEST_P(OperatorsSortTest, DoubleSortOfOneColumn) {
   EXPECT_TABLE_EQ_ORDERED(sort2->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneColumn) {
+TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -121,7 +143,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumn) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, MultipleColumnSortIsStable) {
+TEST_F(OperatorsSortTest, MultipleColumnSortIsStable) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float4.tbl", 2));
   table_wrapper->execute();
 
@@ -136,7 +158,7 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStable) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
+TEST_F(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float4.tbl", 2));
   table_wrapper->execute();
 
@@ -151,7 +173,7 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -162,7 +184,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
+TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_null_sorted_desc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -173,7 +195,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
   std::shared_ptr<Table> expected_result =
       load_table("resources/test_data/tbl/int_float_null_sorted_asc_nulls_last.tbl", 2);
 
@@ -185,7 +207,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
+TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
   std::shared_ptr<Table> expected_result =
       load_table("resources/test_data/tbl/int_float_null_sorted_desc_nulls_last.tbl", 2);
 
@@ -197,7 +219,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegmentWithNull) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneDictSegmentWithNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -208,7 +230,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegmentWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegmentWithNull) {
+TEST_F(OperatorsSortTest, DescendingSortOfOneDictSegmentWithNull) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_null_sorted_desc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -219,7 +241,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegmentWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegment) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -230,7 +252,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegment) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
+TEST_F(OperatorsSortTest, DescendingSortOfOneDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(
@@ -241,7 +263,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
+TEST_F(OperatorsSortTest, SortAfterOuterJoin) {
   auto join =
       std::make_shared<JoinNestedLoop>(_table_wrapper, _table_wrapper_outer_join, JoinMode::FullOuter,
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
@@ -255,5 +277,10 @@ TEST_P(OperatorsSortTest, SortAfterOuterJoin) {
       load_table("resources/test_data/tbl/join_operators/int_outer_join_sorted_asc.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
+
+// TODO sort large table spanning multiple chunks (both reference and non-reference)
+// TODO force materialize
+// TODO input column referencing (a) multiple tables, (b) different columns within the same table
+// TODO test output chunk size
 
 }  // namespace opossum
