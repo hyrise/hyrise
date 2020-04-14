@@ -5,23 +5,37 @@
 #include <functional>
 
 #include "types.hpp"
-#include "utils/settings/abstract_setting.hpp"
+#include "utils/settings/log_level_setting.hpp"
+#include "utils/settings_manager.hpp"
 
 namespace opossum {
 
 struct LogEntry {
   std::chrono::milliseconds timestamp;
+  LogLevel log_level;
   std::string reporter;
   std::string message;
 };
 
 class LogManager : public Noncopyable {
  public:
-  void add_message(const std::string& reporter, const std::string& message);
+  constexpr static LogLevel DEFAULT_LOG_LEVEL = LogLevel::Info;
+
+  void add_message(const std::string& reporter, const std::string& message, const LogLevel log_level = LogLevel::Debug);
 
   const tbb::concurrent_vector<LogEntry>& log_entries() const;
 
+ protected:
+  friend class Hyrise;
+  friend class LogLevelSetting;
+
+  explicit LogManager();
+  //~LogManager() { _log_level_setting->unregister_at_settings_manager(); }
+
+  LogLevel _log_level;
+
  private:
+  std::shared_ptr<LogLevelSetting> _log_level_setting;
   tbb::concurrent_vector<LogEntry> _log_entries;
 };
 

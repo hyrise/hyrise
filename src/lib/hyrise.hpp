@@ -32,13 +32,13 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 
-  LogManager log_manager;
   PluginManager plugin_manager;
   StorageManager storage_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   SettingsManager settings_manager;
   Topology topology;
+  LogManager log_manager;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.

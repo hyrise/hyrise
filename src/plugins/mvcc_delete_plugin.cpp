@@ -90,7 +90,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
       std::ostringstream message;
       message << "Compressed " << table_name << " by factor "
               << std::to_string(static_cast<double>(removed_row_count) / row_count);
-      Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str());
+      Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Warning);
     }
   }
 }

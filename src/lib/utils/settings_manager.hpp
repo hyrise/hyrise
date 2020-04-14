@@ -21,6 +21,7 @@ class SettingsManager : public Noncopyable {
 
  protected:
   friend class AbstractSetting;
+  friend class LogLevelSetting;
   friend class Hyrise;
   friend class SettingsManagerTest;
 
