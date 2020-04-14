@@ -9,8 +9,6 @@ namespace opossum {
  * Here, we provide the distinct value count per segment.
  * It is which is expensive to get, as we need to interate over the values of all stored segments.
  * For faster results without that information use MetaSegmentsTable.
- *
- * Note that AccessCounter statistics depend on the segment implementation.
  */
 class MetaSegmentsAccurateTable : public AbstractMetaTable {
  public:

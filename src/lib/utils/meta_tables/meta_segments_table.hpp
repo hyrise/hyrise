@@ -8,8 +8,6 @@ namespace opossum {
  * This is a class for showing information of all stored segments via a meta table.
  * Here, we do not provide the distinct value count per segment.
  * For slower results with that information use MetaSegmentsAccurateTable.
- *
- * Note that AccessCounter statistics depend on the segment implementation.
  */
 class MetaSegmentsTable : public AbstractMetaTable {
  public:
