@@ -303,7 +303,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 
   // Store resolved WithDescription / temporary view
   const auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
-  //   A WITH description masks a preceding WITH description if their aliases are identical
+  // A WITH description masks a preceding WITH description if their aliases are identical
   AssertInput(_with_descriptions.count(desc.alias) == 0, "Invalid redeclaration of WITH alias.");
   _with_descriptions.emplace(desc.alias, lqp_view);
 }
@@ -1461,6 +1461,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         AssertInput(expr.exprList && expr.exprList->size() == 1,
                     "Expected exactly one argument for this AggregateFunction");
 
+        auto aggregate_expression = std::shared_ptr<AggregateExpression>{};
+
         switch (aggregate_function) {
           case AggregateFunction::Min:
           case AggregateFunction::Max:
@@ -1489,12 +1491,33 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
               const auto column_expression =
                   std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
-              return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
+
+              aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
-              return std::make_shared<AggregateExpression>(
+              aggregate_expression = std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
             }
         }
+
+        // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
+        //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2
+        // Our current expression system cannot handle this case and would consider the two COUNT(a) to be identical,
+        // see #1902 for details. This check here might have false positives, feel free to improve the check or tackle
+        // the underlying issue if this ever becomes an issue.
+        auto table_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+        DebugAssert(_from_clause_result, "_from_clause_result should be set by now");
+        table_expressions.reserve(_from_clause_result->elements_in_order.size());
+        for (const auto& select_list_element : _from_clause_result->elements_in_order) {
+          table_expressions.emplace_back(select_list_element.expression);
+        }
+
+        AssertInput(std::none_of(table_expressions.cbegin(), table_expressions.cend(),
+                                 [&aggregate_expression](const auto input_expression) {
+                                   return *input_expression == *aggregate_expression;
+                                 }),
+                    "Hyrise cannot handle repeated aggregate expressions, see #1902 for details.");
+
+        return aggregate_expression;
       }
 
       /**
@@ -1741,22 +1764,22 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
   return expressions;
 }
 
-SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression)
-    : expression(expression) {}
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression)
+    : expression(init_expression) {}
 
-SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                                                    const std::vector<SQLIdentifier>& identifiers)
-    : expression(expression), identifiers(identifiers) {}
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression,
+                                                    const std::vector<SQLIdentifier>& init_identifiers)
+    : expression(init_expression), identifiers(init_identifiers) {}
 
 SQLTranslator::TableSourceState::TableSourceState(
-    const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
-    const std::vector<SelectListElement>& elements_in_order,
-    const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver)
-    : lqp(lqp),
-      elements_by_table_name(elements_by_table_name),
-      elements_in_order(elements_in_order),
-      sql_identifier_resolver(sql_identifier_resolver) {}
+    const std::shared_ptr<AbstractLQPNode>& init_lqp,
+    const std::unordered_map<std::string, std::vector<SelectListElement>>& init_elements_by_table_name,
+    const std::vector<SelectListElement>& init_elements_in_order,
+    const std::shared_ptr<SQLIdentifierResolver>& init_sql_identifier_resolver)
+    : lqp(init_lqp),
+      elements_by_table_name(init_elements_by_table_name),
+      elements_in_order(init_elements_in_order),
+      sql_identifier_resolver(init_sql_identifier_resolver) {}
 
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {

@@ -10,7 +10,8 @@
 
 namespace opossum {
 
-InsertNode::InsertNode(const std::string& table_name) : AbstractLQPNode(LQPNodeType::Insert), table_name(table_name) {}
+InsertNode::InsertNode(const std::string& init_table_name)
+    : AbstractLQPNode(LQPNodeType::Insert), table_name(init_table_name) {}
 
 std::string InsertNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;

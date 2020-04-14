@@ -12,7 +12,7 @@ enum class FunctionType {
 
 class FunctionExpression : public AbstractExpression {
  public:
-  FunctionExpression(const FunctionType function_type,
+  FunctionExpression(const FunctionType init_function_type,
                      const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;

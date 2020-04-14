@@ -41,6 +41,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Private / protected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
+- In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`
 
 ### Naming convention for gtest macros:
 
@@ -68,4 +69,4 @@ If you want to test a single module, class or test you have to execute the test 
 	- Is the copy constructor deleted where it makes sense?
 	- Is the destructor virtual for base classes?
 	- Are unnecessary copies of heavy elements made? (prefer vector& over vector, but not int& over int)
-	- Did the author update documentation and dependencies (Wiki, README.md, DEPENDENCIES.md, Dockerfile, install.sh, Jenkinsfile)
+	- Did the author update documentation and dependencies (Wiki, README.md, DEPENDENCIES.md, Dockerfile, install_dependencies.sh, Jenkinsfile)

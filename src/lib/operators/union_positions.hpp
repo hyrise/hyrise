@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/rowid_pos_list.hpp"
 
 namespace opossum {
 
@@ -76,7 +76,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
 
  private:
   // See docs at the top of the cpp
-  using ReferenceMatrix = std::vector<opossum::PosList>;
+  using ReferenceMatrix = std::vector<opossum::RowIDPosList>;
   using VirtualPosList = std::vector<size_t>;
 
   /**
