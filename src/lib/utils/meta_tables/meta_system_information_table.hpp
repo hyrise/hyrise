@@ -16,7 +16,7 @@ class MetaSystemInformationTable : public AbstractMetaSystemTable {
  protected:
   std::shared_ptr<Table> _on_generate() const final;
 
-  static pmr_string _cpu_model();
+  static std::string _cpu_model();
 };
 
 }  // namespace opossum

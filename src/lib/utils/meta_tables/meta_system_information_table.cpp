@@ -32,7 +32,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   }
 #endif
 
-  int64_t ram;
+  uint64_t ram;
 #ifdef __linux__
   struct sysinfo memory_info {};
   const auto ret = sysinfo(&memory_info);
@@ -49,14 +49,17 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 
   const auto cpu_model = _cpu_model();
 
-  output_table->append({static_cast<int32_t>(cpus), ram, static_cast<int32_t>(numa_cpus), cpu_model});
+  output_table->append({static_cast<int32_t>(cpus), 
+                        static_cast<int64_t>(ram), 
+                        static_cast<int32_t>(numa_cpus), 
+                        static_cast<pmr_string>(cpu_model)});
 
   return output_table;
 }
 
 
 // Returns the CPU model string 
-pmr_string MetaSystemInformationTable::_cpu_model() {
+std::string MetaSystemInformationTable::_cpu_model() {
 #ifdef __linux__
   std::ifstream cpuinfo_file;
   cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
@@ -67,7 +70,7 @@ pmr_string MetaSystemInformationTable::_cpu_model() {
     if (cpuinfo_line.rfind("model name", 0) == 0) {
       cpuinfo_line.erase(0, cpuinfo_line.find(": ") + 2);
       cpuinfo_file.close();
-      return pmr_string{cpuinfo_line};
+      return cpuinfo_line;
     }
   }
   Fail("Could not read CPU model.");
@@ -79,7 +82,7 @@ pmr_string MetaSystemInformationTable::_cpu_model() {
   const auto ret = sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0);
   DebugAssert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
 
-  return buffer;
+  return std::string(buffer);
 #endif
 }
 
