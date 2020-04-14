@@ -195,7 +195,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
     case hsql::kStmtTransaction:
       // The transaction statements are handled directly in the SQLPipelineStatement,
-      //  but the translation is still called, so we need some kind of handling here.
+      //  but the translation is still called, so we return a dummy node here.
       return DummyTableNode::make();
     default:
       FailInput("SQL statement type not supported");
