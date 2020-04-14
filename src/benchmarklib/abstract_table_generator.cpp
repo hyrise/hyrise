@@ -148,7 +148,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Encode the tables
    */
-  std::cout << "- Encoding tables if necessary and generating pruning statistics" << std::endl;
+  std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Encoding '" << table_name << "' - " << std::flush;
     Timer per_table_timer;
