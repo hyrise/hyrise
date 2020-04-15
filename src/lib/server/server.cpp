@@ -61,6 +61,10 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
     --num_running_sessions;
   });
 
+  // We ensure that all threads are completed before the server is shut down by tracking the number of running threads
+  // in _num_running_sessions. The alternative would be to store the std::thread objects in some kind of data structure
+  // and call join() on all of them before shutting down the server. This would result in a growing number of completed
+  // threads waiting to be joined and the need for a cleanup procedure.
   session_thread.detach();
   _accept_new_session();
 }
