@@ -13,6 +13,7 @@ class AbstractMetaSystemTable : public AbstractMetaTable {
   virtual const std::string& name() const = 0;
 
  protected:
+  friend class MetaSystemUtilizationTest;
   explicit AbstractMetaSystemTable(const TableColumnDefinitions& column_definitions);
   static size_t _get_cpu_count();
 };
