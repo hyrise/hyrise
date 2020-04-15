@@ -195,7 +195,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
 
-  if (is_transaction_statement()) {
+  if (_is_transaction_statement()) {
     _tasks = _get_transaction_tasks();
   } else {
     _precheck_ddl_operators(get_physical_plan());
@@ -244,7 +244,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     return false;
   };
 
-  if (has_failed() && !is_transaction_statement()) {
+  if (has_failed() && !_is_transaction_statement()) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
 
@@ -280,7 +280,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task if the task was an actual operator and not a transaction statement
-  if (!is_transaction_statement()) {
+  if (!_is_transaction_statement()) {
     _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
   }
 
@@ -349,7 +349,7 @@ void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<Abstrac
   }
 }
 
-bool SQLPipelineStatement::is_transaction_statement() {
+bool SQLPipelineStatement::_is_transaction_statement() {
   return get_parsed_sql_statement()->getStatements().front()->isType(hsql::kStmtTransaction);
 }
 

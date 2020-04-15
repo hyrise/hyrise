@@ -22,7 +22,7 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
     execution_info.result_table = result_table;
     execution_info.root_operator_type = sql_pipeline.get_physical_plans().back()->type();
 
-    handle_transaction_statement_message(execution_info, sql_pipeline);
+    _handle_transaction_statement_message(execution_info, sql_pipeline);
 
     if (send_execution_info == SendExecutionInfo::Yes) {
       std::stringstream stream;
@@ -87,8 +87,8 @@ std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(
   return tasks.back()->get_operator()->get_output();
 }
 
-void QueryHandler::handle_transaction_statement_message(ExecutionInformation& execution_info,
-                                                        SQLPipeline& sql_pipeline) {
+void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& execution_info,
+                                                         SQLPipeline& sql_pipeline) {
   // handle custom user feedback (command complete messages) for transaction statements
   auto sql_statement = sql_pipeline.get_parsed_sql_statements().back();
   auto& statements = sql_statement->getStatements();

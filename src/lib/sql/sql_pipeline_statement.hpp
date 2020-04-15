@@ -100,7 +100,7 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
  private:
-  bool is_transaction_statement();
+  bool _is_transaction_statement();
 
   // Returns the tasks that execute transaction statements
   std::vector<std::shared_ptr<AbstractTask>> _get_transaction_tasks();
