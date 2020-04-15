@@ -407,19 +407,24 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
     return;
   }
 
-  // Remember the matches for outer joins
-  if ((_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
-      (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
+  const auto is_left_semi_anti_join = _mode == JoinMode::Left || _mode == JoinMode::Semi ||
+                                      _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+  // Remember the matches for non-inner joins
+  if ((is_left_semi_anti_join && _index_side == IndexSide::Right) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter ||
+      (_mode == JoinMode::AntiNullAsTrue && _index_side == IndexSide::Right) ||
+      (_mode == JoinMode::AntiNullAsFalse && _index_side == IndexSide::Right)) {
     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
   }
-
-  // we replicate the probe side value for each index side value
-  std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
 
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
   if (!is_semi_or_anti_join) {
+    // we replicate the probe side value for each index side value
+    std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
+
     std::transform(range_begin, range_end, std::back_inserter(*_index_pos_list),
                    [index_chunk_id](ChunkOffset index_chunk_offset) {
                      return RowID{index_chunk_id, index_chunk_offset};
