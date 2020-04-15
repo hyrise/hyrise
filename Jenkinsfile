@@ -44,6 +44,37 @@ try {
     }
   }
 
+  node('linux') {
+    def oppossumCI = docker.image('hyrise/opossum-ci:19.10');
+    oppossumCI.pull()
+    // create ccache volume on host using:
+    // mkdir /mnt/ccache; mount -t tmpfs -o size=200G none /mnt/ccache
+    // or add it to /etc/fstab:
+    // tmpfs  /mnt/ccache tmpfs defaults,size=200G  0 0
+
+    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_MAXSIZE=200GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" -e\"CCACHE_DEPEND=1\" -e\"CCACHE_NOHASHDIR=1\" -e\"CCACHE_DEBUG=1\" --privileged=true") {
+      try {
+        stage("Setup") {
+          checkout scm
+          sh "./install_dependencies.sh"
+
+          cmake = 'cmake -DCI_BUILD=ON'
+          ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+          unity = '-DCMAKE_UNITY_BUILD=ON'
+
+          clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+          gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+
+          debug = '-DCMAKE_BUILD_TYPE=Debug'
+          release = '-DCMAKE_BUILD_TYPE=Release'
+          relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
+        }
+      } finally {
+        sh "ls -A1 | xargs rm -rf"
+        deleteDir()
+      }
+    }
+  }
 
   // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   node('mac') {
