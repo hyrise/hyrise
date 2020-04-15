@@ -817,7 +817,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
               create_segment_accessor<ColumnDataType>(input_table->get_chunk(row_id.chunk_id)->get_segment(column_id));
         }
 
-        const auto& optional_value = accessor->access(row_id.chunk_offset);
+        using ReceiveType = typename std::conditional_t<std::is_same_v<ColumnDataType, pmr_string>, const std::optional<ColumnDataType>&, const std::optional<ColumnDataType>>;
+        const ReceiveType optional_value = accessor->access(row_id.chunk_offset);
         if (!optional_value) {
           null_values[output_offset] = true;
         } else {
