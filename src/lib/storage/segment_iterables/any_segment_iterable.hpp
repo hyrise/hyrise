@@ -54,7 +54,7 @@ class BaseAnySegmentIterableWrapper {
  public:
   virtual ~BaseAnySegmentIterableWrapper() = default;
   virtual void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
-  virtual void with_iterators(const std::shared_ptr<const PosList>& position_filter,
+  virtual void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter,
                               const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
   virtual size_t size() const = 0;
 };
@@ -72,7 +72,7 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
     });
   }
 
-  void with_iterators(const std::shared_ptr<const PosList>& position_filter,
+  void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter,
                       const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     if (position_filter) {
       if constexpr (is_point_accessible_segment_iterable_v<IterableT>) {
@@ -126,8 +126,8 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     _iterable_wrapper->with_iterators(functor_wrapper);
   }
 
-  template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
   }

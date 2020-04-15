@@ -16,12 +16,14 @@ namespace opossum {
 struct OperatorPerformanceData : public Noncopyable {
   virtual ~OperatorPerformanceData() = default;
 
+  bool executed{false};
   std::chrono::nanoseconds walltime{0};
 
-  std::optional<size_t> input_row_count_left;
-  std::optional<size_t> input_row_count_right;  // expect to receive that via the previous operator's input?
-  std::optional<size_t> output_chunk_count;
-  std::optional<size_t> output_row_count;  // expect to receive that via the following operator's input?
+  // Some operators do not return a table (e.g., Insert).
+  // Note: The operator returning an empty table will be expressed as has_output == true, output_row_count == 0
+  bool has_output{false};
+  uint64_t output_row_count{0};
+  uint64_t output_chunk_count{0};
 
   virtual void output_to_stream(std::ostream& stream,
                                 DescriptionMode description_mode = DescriptionMode::SingleLine) const;

@@ -28,8 +28,6 @@ class BinaryWriterTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_BinaryWriterTest : public BinaryWriterTest {}; /* #1367 */
-
 class BinaryWriterMultiEncodingTest : public BinaryWriterTest, public ::testing::WithParamInterface<EncodingType> {};
 
 auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
@@ -60,7 +58,7 @@ TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 */
+TEST_F(BinaryWriterTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -79,7 +77,28 @@ TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionarySingleChunk) { /* #1367 *
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(DISABLED_BinaryWriterTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({opossum::NULL_VALUE});
+  table->append({"test"});
+  table->append({opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+  BinaryWriter::write(*table, filename);
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+}
+
+TEST_F(BinaryWriterTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -457,13 +476,10 @@ TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
-  table->append_mutable_chunk();
-
-  auto base_segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
-  auto value_segment = std::dynamic_pointer_cast<ValueSegment<int>>(base_segment);
-
-  value_segment->values() = {1, 1, 1, 1, 2, 2, 2, 3};
-  value_segment->null_values() = {true, false, true, true, true, false, false, true};
+  auto values = pmr_vector<int32_t>{1, 1, 1, 1, 2, 2, 2, 3};
+  auto null_values = pmr_vector<bool>{true, false, true, true, true, false, false, true};
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+  table->append_chunk(Segments{value_segment});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
