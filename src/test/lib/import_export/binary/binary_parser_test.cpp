@@ -16,8 +16,6 @@ class BinaryParserTest : public BaseTest {
   const std::string _reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_BinaryParserTest : public BinaryParserTest {}; /* #1367 */
-
 class BinaryParserMultiEncodingTest : public BinaryParserTest, public ::testing::WithParamInterface<EncodingType> {};
 
 auto import_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
@@ -277,7 +275,7 @@ TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(DISABLED_BinaryParserTest, FixedStringDictionarySingleChunk) {  // #1367
+TEST_F(BinaryParserTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -293,7 +291,25 @@ TEST_F(DISABLED_BinaryParserTest, FixedStringDictionarySingleChunk) {  // #1367
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(DISABLED_BinaryParserTest, FixedStringDictionaryMultipleChunks) {  // #1367
+TEST_F(BinaryParserTest, FixedStringDictionaryNullValue) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, true);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  expected_table->append({"This"});
+  expected_table->append({"is"});
+  expected_table->append({"a"});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({"test"});
+  expected_table->append({opossum::NULL_VALUE});
+
+  auto table = BinaryParser::parse(_reference_filepath +
+                                   ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+
+  EXPECT_TABLE_EQ_ORDERED(table, expected_table);
+}
+
+TEST_F(BinaryParserTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -343,7 +359,7 @@ TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(BinaryParserTest, InvalidColumnType) {
+TEST_F(BinaryParserTest, InvalidEncodingType) {
   auto filename = _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_THROW(BinaryParser::parse(filename), std::exception);
 }
