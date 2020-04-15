@@ -5,20 +5,17 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 /**
- * This node type is used to (1) represent the intersect set operation with the modes Unique and All, and (2) to
- * intersect disjuncitve PosLists (using the Positions mode). For example, `a = 1 OR b = 2` can be split up into
- * and later united by a UnionNode in the Positions mode.
- *
+ * This node type is used to represent the except set operation.
  */
-
-class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode {
+class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNode {
  public:
-  explicit UnionNode(const SetOperationMode init_set_operation_mode);
+  explicit ExceptNode(const SetOperationMode init_operation_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;

@@ -245,7 +245,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = UnionNode::make(UnionMode::Positions);
+  auto new_node = UnionNode::make(SetOperationMode::Positions);
 
   lqp_replace_node(_nodes[5], new_node);
 
@@ -339,7 +339,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   const auto lqp =
   PredicateNode::make(greater_than_(a1, 5),
     JoinNode::make(JoinMode::Inner, equals_(a1, a2),
-      UnionNode::make(UnionMode::Positions,
+      UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(equals_(a1, 5), node_int_int),
         PredicateNode::make(equals_(a1, 6), node_int_int)),
     node_int_int_int));
@@ -352,7 +352,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
 
   EXPECT_EQ(cleaned_str, R"([0] [Predicate] 0x00000000.a > 5 @ 0x00000000
  \_[1] [Join] Mode: Inner [0x00000000.a = 0x00000000.a] @ 0x00000000
-    \_[2] [UnionNode] Mode: UnionPositions @ 0x00000000
+    \_[2] [UnionNode] Mode: Positions @ 0x00000000
     |  \_[3] [Predicate] 0x00000000.a = 5 @ 0x00000000
     |  |  \_[4] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s) @ 0x00000000
     |  \_[5] [Predicate] 0x00000000.a = 6 @ 0x00000000
