@@ -210,16 +210,6 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns\n10 of 15 chunks used an index");
 }
 
-TEST_F(OperatorsJoinIndexTest, InnerRefJoin) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_i, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-
-  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true);
-}
-
 TEST_F(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
   // scan that returns all rows
   auto scan_a = create_table_scan(_table_wrapper_h_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -228,61 +218,6 @@ TEST_F(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
   scan_b->execute();
 
   test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
-}
-
-TEST_F(OperatorsJoinIndexTest, InnerRefJoinFiltered) {
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-
-  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, InnerRefDictJoin) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-
-  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, InnerRefDictJoinFiltered) {
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-
-  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, InnerRefJoinFilteredBig) {
-  auto scan_c = create_table_scan(_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_c->execute();
-  auto scan_d = create_table_scan(_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
-  scan_d->execute();
-
-  test_join_output(scan_c, scan_d, {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, JoinOnReferenceSegmentAndDict) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-
-  test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
-                   1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, JoinOnDictAndReferenceSegment) {
-  // scan that returns all rows
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
-  scan_b->execute();
-
-  test_join_output(_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals},
-                   JoinMode::Inner, 1, true);
 }
 
 TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
@@ -304,85 +239,6 @@ TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
                    IndexSide::Left, false);
 }
 
-TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-  auto scan_c = create_table_scan(_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_c->execute();
-
-  auto join = std::make_shared<JoinIndex>(
-      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  join->execute();
-
-  test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
-                   IndexSide::Right, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-  auto scan_c = create_table_scan(_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_c->execute();
-
-  auto join = std::make_shared<JoinIndex>(
-      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  join->execute();
-
-  test_join_output(scan_c, join, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
-                   IndexSide::Left, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-  auto scan_c = create_table_scan(_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_c->execute();
-
-  auto join = std::make_shared<JoinIndex>(
-      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  join->execute();
-
-  // Referencing single chunk guarantee is not given since the right input of the index join is also an index join
-  // and the IndexSide is right. The execution of the index join does not provide single chunk reference guarantee.
-  test_join_output(scan_c, join, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
-                   IndexSide::Right, false);
-}
-
-TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThan, 6);
-  scan_a->execute();
-  auto scan_b = create_table_scan(_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-  auto scan_c = create_table_scan(_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_c->execute();
-
-  auto join = std::make_shared<JoinIndex>(
-      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  join->execute();
-
-  test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, MultiJoinOnRefOuter) {
-  auto join =
-      std::make_shared<JoinIndex>(_table_wrapper_e, _table_wrapper_f, JoinMode::Left,
-                                  OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  join->execute();
-
-  test_join_output(join, _table_wrapper_g, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1,
-                   true);
-}
-
 TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
   auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -390,73 +246,6 @@ TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
 
   test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
                    1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-
-  EXPECT_THROW(test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                                JoinMode::Right, 1, true, IndexSide::Left),
-               std::logic_error);
-}
-
-TEST_F(OperatorsJoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
-  // scan that returns all rows
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-
-  test_join_output(_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
-                   1, true, IndexSide::Left);
-}
-
-TEST_F(OperatorsJoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
-  // scan that returns all rows
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_b->execute();
-
-  EXPECT_THROW(test_join_output(_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                                JoinMode::Left, 1, true, IndexSide::Right),
-               std::logic_error);
-}
-
-TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
-  // scan that returns no rows
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
-  scan_a->execute();
-
-  test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-                   1, true);
-}
-
-TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
-  // scan that returns no rows
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
-  scan_a->execute();
-
-  EXPECT_THROW(test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                                JoinMode::Right, 1, true, IndexSide::Left),
-               std::logic_error);
-}
-
-TEST_F(OperatorsJoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
-  // scan that returns no rows
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
-  scan_b->execute();
-
-  test_join_output(_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Left,
-                   1, true, IndexSide::Left);
-}
-
-TEST_F(OperatorsJoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
-  // scan that returns no rows
-  auto scan_b = create_table_scan(_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
-  scan_b->execute();
-
-  EXPECT_THROW(test_join_output(_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                                JoinMode::Left, 1, true, IndexSide::Right),
-               std::logic_error);
 }
 
 }  // namespace opossum

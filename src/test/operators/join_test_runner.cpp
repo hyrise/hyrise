@@ -545,7 +545,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * for non-disctionary segments.
        */
       if (has_indexes) {
-        // If the table to index is a referenced table, this table is not (dictionary) encoded in Join Test Runner scenarios
+        // If the table to index is a referenced table, this table is not
+        // (dictionary) encoded in Join Test Runner scenarios
         if (encoding_type == EncodingType::Dictionary && input_table_type == InputTableType::Data) {
           for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
             table->create_index<GroupKeyIndex>({column_id});
