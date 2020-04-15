@@ -14,7 +14,7 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
 
   const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
-  auto [execution_information, transaction_context] =
+  auto [execution_information, _] =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
 
   // begin and commit transaction statements are executed successfully
@@ -33,7 +33,7 @@ TEST_F(TransactionHandlingTest, RollbackTransaction) {
 
   const auto transaction_ctx = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
 
-  auto [execution_information, transaction_context] =
+  auto [execution_information, _] =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
 
   // rollback transaction statement is executed successfully
