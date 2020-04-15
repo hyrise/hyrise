@@ -69,7 +69,7 @@ class LQPFindSubplanMismatchTest : public BaseTest {
 
     query_nodes.predicate_node_a = PredicateNode::make(less_than_(query_nodes.table_a_a, 41));
     query_nodes.predicate_node_b = PredicateNode::make(between_inclusive_(query_nodes.table_a_a, 42, 45));
-    query_nodes.union_node = UnionNode::make(UnionMode::Positions);
+    query_nodes.union_node = UnionNode::make(SetOperationMode::Positions);
     query_nodes.limit_node = LimitNode::make(to_expression(10));
     query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals_(query_nodes.table_a_a, query_nodes.table_c_b));
 
