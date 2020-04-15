@@ -105,7 +105,7 @@ When trying to optimize the time spent building the project, it is often helpful
 - Jan Kossmann
 - Markus Dreseler
 - Martin Boissier
-- Stefan Klauck
+- Stefan Halfpap
 
 
 Contact: firstname.lastname@hpi.de
