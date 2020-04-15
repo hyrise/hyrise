@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <server/postgres_protocol_handler.hpp>
 
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"

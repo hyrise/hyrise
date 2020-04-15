@@ -168,7 +168,7 @@ void Session::_handle_bind_command() {
 
 void Session::_sync() {
   _postgres_protocol_handler->read_sync_packet();
-  if (!_transaction_context->is_auto_commit()) {
+  if (_transaction_context && !_transaction_context->is_auto_commit()) {
     _transaction_context->commit();
     _transaction_context.reset();
   }
