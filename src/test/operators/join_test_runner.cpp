@@ -216,7 +216,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         uint8_t variation_index{0};
         for (const auto& index_side : all_index_sides) {
           for (const auto& has_indexes : {true, false}) {
-            variations[variation_index].index_side = all_index_sides[variation_index];
+            variations[variation_index].index_side = index_side;
             if (index_side == IndexSide::Left) {
               variations[variation_index].input_left.has_indexes = has_indexes;
             } else {
