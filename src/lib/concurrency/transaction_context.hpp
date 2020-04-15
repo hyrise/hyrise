@@ -47,7 +47,7 @@ class CommitContext;
 enum class TransactionPhase {
   Active,                   // Transaction has just been created. Operators may be executed.
   Aborted,                  // One of the operators failed. Transaction needs to be rolled back.
-  RolledBackAfterConflict,  // Transaction has been rolled back due to error. (Considered a failure)
+  RolledBackAfterConflict,  // Transaction has been rolled back because an operator failed. (Considered a failure)
   RolledBackByUser,         // Transaction has been rolled back due to ROLLBACK;-statement. (Considered a success)
   Committing,               // Commit ID has been assigned. Operators may commit records.
   Committed,                // Transaction has been committed.
@@ -90,7 +90,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   TransactionPhase phase() const;
 
   /**
-   * Returns true if transaction has been aborted due to an error.
+   * Returns true if transaction is aborted or has been rolled back because an operator failed.
    */
   bool aborted() const;
 

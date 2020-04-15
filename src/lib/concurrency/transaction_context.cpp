@@ -71,7 +71,9 @@ bool TransactionContext::aborted() const {
 }
 
 void TransactionContext::rollback(RollBackReason rollback_reason) {
-  _abort();
+  if (rollback_reason == RollBackReason::RollBackAfterConflict) {
+    _abort();
+  }
 
   for (const auto& op : _read_write_operators) {
     op->rollback_records();
@@ -123,9 +125,13 @@ void TransactionContext::_mark_as_rolled_back(RollBackReason rollback_reason) {
               }()),
               "All read/write operators need to have been rolled back.");
 
-  _transition(TransactionPhase::Aborted, rollback_reason == RollBackReason::RollBackByUser
-                                             ? TransactionPhase::RolledBackByUser
-                                             : TransactionPhase::RolledBackAfterConflict);
+  if (rollback_reason == RollBackReason::RollBackByUser) {
+    _transition(TransactionPhase::Active, TransactionPhase::RolledBackByUser);
+  } else {
+    DebugAssert(rollback_reason == RollBackReason::RollBackAfterConflict,
+                "RollBackReason must be ByUser or AfterConflict");
+    _transition(TransactionPhase::Aborted, TransactionPhase::RolledBackAfterConflict);
+  }
 }
 
 void TransactionContext::_prepare_commit() {
