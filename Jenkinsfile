@@ -84,7 +84,7 @@ try {
           checkout scm
 
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-          sh "git submodule update --init --recursive --jobs 4"
+          sh "git submodule update --init --recursive --jobs 4 --depth 1"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
