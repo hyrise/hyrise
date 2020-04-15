@@ -148,6 +148,7 @@ Contact: firstname.lastname@hpi.de
 -   Alexander Riese
 -   Johannes  Schneider
 -   David     Schumann
+-   Franziska Schumann
 -   Simon     Siegert
 -   Arthur    Silber
 -   Toni      Stachewicz
