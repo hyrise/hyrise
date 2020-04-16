@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-// For a long time, PosList was just a pmr_vector<RowID>. With this class, we want to add functionality to that vector,
-// more specifically, flags that give us some guarantees about its contents. If we know, e.g., that all entries point
-// into the same chunk, we can simplify things in split_pos_list_by_chunk_id.
+// The RowIDPosList is the most generic type of PosList. It holds a list of RowIDs where ChunkID and ChunkOffset can
+// vary freely. Not only can it point to different chunks, but it can also contain NULLs (as, e.g., produced by an
+// outer join). This comes at the cost of a higher memory usage than more specialized types of PosLists have.
 // Inheriting from std::vector is generally not encouraged, because the STL containers are not prepared for
 // inheritance. By making the inheritance private and this class final, we can assure that the problems that come with
 // a non-virtual destructor do not occur.

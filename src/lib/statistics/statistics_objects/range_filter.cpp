@@ -143,7 +143,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 
   /*
   * The code to determine the range boundaries requires calculating the distances between values. We cannot express the
-  * distance between -DBL_MAX and DBL_MAX using any of the standard data types. For these cases, the RangeFilter 
+  * distance between -DBL_MAX and DBL_MAX using any of the standard data types. For these cases, the RangeFilter
   * effectively degrades to a MinMaxFilter (i.e., stores only a single range).
   * While being rather unlikely for doubles, it's more likely to happen when Hyrise includes tinyint etc.
   * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.

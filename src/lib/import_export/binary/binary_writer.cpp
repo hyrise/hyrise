@@ -243,11 +243,12 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.block_minima().size()));
   export_values(ofstream, frame_of_reference_segment.block_minima());
 
-  // Write length of the NULL and offset value vectors (i.e., size of segment)
-  export_value(ofstream, static_cast<uint32_t>(frame_of_reference_segment.null_values().size()));
-
-  // Write NULL values
-  export_values(ofstream, frame_of_reference_segment.null_values());
+  // Write flag if optional NULL value vector is written
+  export_value(ofstream, static_cast<BoolAsByteType>(frame_of_reference_segment.null_values().has_value()));
+  if (frame_of_reference_segment.null_values()) {
+    // Write NULL values
+    export_values(ofstream, *frame_of_reference_segment.null_values());
+  }
 
   // Write offset values
   _export_compressed_vector(ofstream, *frame_of_reference_segment.compressed_vector_type(),
