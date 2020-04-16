@@ -4,10 +4,7 @@ namespace opossum {
 
 bool EntireChunkPosList::references_single_chunk() const { return true; }
 
-ChunkID EntireChunkPosList::common_chunk_id() const {
-  DebugAssert(_common_chunk_id != INVALID_CHUNK_ID, "common_chunk_id called on invalid chunk id");
-  return _common_chunk_id;
-}
+ChunkID EntireChunkPosList::common_chunk_id() const { return _common_chunk_id; }
 
 bool EntireChunkPosList::empty() const { return size() == 0; }
 

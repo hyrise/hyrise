@@ -4,7 +4,7 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
-  node('master') {
+  node {
     stage ("Start") {
       // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
       if (env.CHANGE_ID) {
@@ -322,7 +322,7 @@ try {
     }
   }
 
-  node ('master') {
+  node {
     stage("Notify") {
       script {
         githubNotify context: 'CI Pipeline', status: 'SUCCESS'
