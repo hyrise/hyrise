@@ -41,7 +41,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 exit 1
             fi
 
-            if ! git submodule update --jobs 5 --init --recursive; then
+            if ! git submodule update --jobs 5 --init --recursive --depth 1; then
                 echo "Error during installation."
                 exit 1
             fi
