@@ -10,16 +10,16 @@
 
 namespace opossum {
 
-class SimpleClusteringAlgo : AbstractClusteringAlgo {
+class SimpleClusteringAlgo : public AbstractClusteringAlgo {
  public:
 
   SimpleClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering);
 
   const std::string description() const override;
 
-  void run() override;
-
  protected:
+
+  void _perform_clustering() override;
 
   std::shared_ptr<Table> _sort_table_mutable(const std::shared_ptr<Table> table, const std::string& column_name, const ChunkOffset chunk_size);
 
@@ -28,8 +28,6 @@ class SimpleClusteringAlgo : AbstractClusteringAlgo {
   void _append_chunks(const std::shared_ptr<const Table> from, std::shared_ptr<Table> to);
 
   void _append_chunk(const std::shared_ptr<const Chunk> from, std::shared_ptr<Table> to);
-
-  void _run_assertions() const;
 };
 
 } // namespace opossum

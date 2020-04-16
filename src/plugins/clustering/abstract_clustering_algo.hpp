@@ -19,10 +19,16 @@ class AbstractClusteringAlgo {
 
   virtual const std::string description() const = 0;
 
-  virtual void run() = 0;
+  void run();
 
   StorageManager& storage_manager;
   ClusteringByTable clustering_by_table;
+
+ protected:
+  void _run_assertions() const;
+  virtual void _perform_clustering() = 0;
+
+  std::map<std::string, size_t> _original_table_sizes;
 };
 
 }  // namespace opossum

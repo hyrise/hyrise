@@ -63,7 +63,6 @@ int main(int argc, char* argv[]) {
   auto config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
   config->cache_binary_tables = false;
   config->sql_metrics = true;
-  config->enable_visualization = false;
   Assert(config->output_file_path, "you must provide an output file");
   std::string output_file_path = *config->output_file_path;
 
