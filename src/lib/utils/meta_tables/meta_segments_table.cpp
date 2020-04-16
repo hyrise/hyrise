@@ -13,7 +13,11 @@ MetaSegmentsTable::MetaSegmentsTable()
                                                {"column_data_type", DataType::String, false},
                                                {"encoding_type", DataType::String, true},
                                                {"vector_compression_type", DataType::String, true},
-                                               {"estimated_size_in_bytes", DataType::Long, false}}) {}
+                                               {"estimated_size_in_bytes", DataType::Long, false},
+                                               {"point_accesses", DataType::Long, false},
+                                               {"sequential_accesses", DataType::Long, false},
+                                               {"monotonic_accesses", DataType::Long, false},
+                                               {"random_accesses", DataType::Long, false}}) {}
 
 const std::string& MetaSegmentsTable::name() const {
   static const auto name = std::string{"segments"};
