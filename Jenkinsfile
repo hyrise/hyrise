@@ -76,21 +76,21 @@ try {
           // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
           // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
 
-          sh "mkdir clang-debug && cd clang-debug &&                                                  ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
+          sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
 
           // Configure the rest in parallel
           // clang + precompiled headers + ccache is broken: https://gitlab.kitware.com/cmake/cmake/issues/19923
           // Some configurations don't use unity builds as this would break the ccache use across different PRs.
           // For clang-tidy, ccache does not have an effect, so we use unity there.
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                        ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                  ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers &&    ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&            ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release &&                                                  ${cmake}           ${release}        ${clang}          .. &\
-          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&  ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir gcc-debug && cd gcc-debug &&                                                          ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
-          mkdir gcc-release && cd gcc-release &&                                                      ${cmake} ${ccache} ${release}        ${gcc}            .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release &&                                                   ${cmake}           ${release}        ${clang}          .. &\
+          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
+          mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${ccache} ${release}        ${gcc}            .. &\
           wait"
         }
 
@@ -304,7 +304,7 @@ try {
           checkout scm
 
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-          sh "git submodule update --init --recursive --jobs 4"
+          sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
