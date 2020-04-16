@@ -79,6 +79,8 @@ if old_data['context']['benchmark_mode'] != new_data['context']['benchmark_mode'
     exit("Benchmark runs with different modes (ordered/shuffled) are not comparable")
 
 diffs = []
+total_runtime_old = 0
+total_runtime_new = 0
 
 table_data = []
 table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value"])
@@ -87,6 +89,9 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
     if old['name'] != new['name']:
         name += ' -> ' + new['name']
+
+    total_runtime_old += old['avg_real_time_per_iteration']
+    total_runtime_new += new['avg_real_time_per_iteration']
 
     if float(old['items_per_second']) > 0.0:
         diff = float(new['items_per_second']) / float(old['items_per_second'])
@@ -121,6 +126,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
         table_data.append(unsuccessful_info_colored)
 
 table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(diffs)), ''])
+table_data.append(['∑ avg. query runtimes', '', '', '', '', format_diff(total_runtime_old / total_runtime_new), ''])
 
 table = AsciiTable(table_data)
 table.justify_columns[6] = 'right'
