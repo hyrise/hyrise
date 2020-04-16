@@ -116,11 +116,11 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
-  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
+  if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     functor(*value_segment);
-  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
-    functor(*ref_segment);
-  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
+  } else if (const auto reference_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
+    functor(*reference_segment);
+  } else if (const auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, functor);
   } else {
     Fail("Unrecognized column type encountered.");
@@ -137,13 +137,14 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
   if constexpr (HYRISE_DEBUG || erase_pos_list_type == ErasePosListType::Always) {
     functor(untyped_pos_list);
   } else {
-    if (auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list);
+    if (const auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list);
         !untyped_pos_list || row_id_pos_list) {
       // We also use this branch for nullptr instead of calling the functor with the untyped_pos_list. This way, we
       // avoid initializing the functor template with AbstractPosList. The first thing the functor has to do is to
       // check for nullptr anyway, and for that check it does not matter "which" nullptr we pass in.
       functor(row_id_pos_list);
-    } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
+    } else if (const auto entire_chunk_pos_list =
+                   std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
       functor(entire_chunk_pos_list);
     } else {
       Fail("Unrecognized PosList type encountered");
