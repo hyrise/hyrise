@@ -1,4 +1,4 @@
-#include "rowid_pos_list.hpp"
+#include "row_id_pos_list.hpp"
 
 namespace opossum {
 
