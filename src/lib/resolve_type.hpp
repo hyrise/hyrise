@@ -116,11 +116,11 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
-  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
+  if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     func(*value_segment);
-  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
+  } else if (const auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
     func(*ref_segment);
-  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
+  } else if (const auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
     resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");
@@ -134,9 +134,9 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
     return;
   }
 
-  if (auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
+  if (const auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list)) {
     func(row_id_pos_list);
-  } else if (auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
+  } else if (const auto entire_chunk_pos_list = std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
     func(entire_chunk_pos_list);
   } else {
     Fail("Unrecognized PosList type encountered");
