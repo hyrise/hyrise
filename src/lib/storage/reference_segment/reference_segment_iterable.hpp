@@ -33,9 +33,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto& position_filter = _segment.pos_list();
 
     // If we are guaranteed that the reference segment refers to a single non-NULL chunk, we can do some
-    // optimizations. For example, we can use a single, non-virtual segment accessor instead of having
-    // to keep multiple and using virtual method calls. If begin_it is NULL, chunk_id will be INVALID_CHUNK_ID.
-    // Therefore, we skip this case.
+    // optimizations. For example, we can use a filtered iterator instead of having to create segments accessors
+    // and using virtual method calls.
 
     if (position_filter->references_single_chunk() && position_filter->size() > 0) {
       // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
@@ -44,7 +43,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       // PosList has no NULL values. However, once we have a `has_null_values` flag in a smarter PosList, we should
       // use it here.
 
-      auto referenced_segment =
+      const auto referenced_segment =
           referenced_table->get_chunk(position_filter->common_chunk_id())->get_segment(referenced_column_id);
 
       bool functor_was_called = false;
