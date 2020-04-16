@@ -322,11 +322,13 @@ try {
     }
   }
 
-  stage("Notify") {
-    script {
-      githubNotify context: 'CI Pipeline', status: 'SUCCESS'
-      if (env.BRANCH_NAME == 'master' || full_ci) {
-        githubNotify context: 'Full CI', status: 'SUCCESS'
+  node {
+    stage("Notify") {
+      script {
+        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          githubNotify context: 'Full CI', status: 'SUCCESS'
+        }
       }
     }
   }
