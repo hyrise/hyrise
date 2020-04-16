@@ -821,7 +821,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         // Create a pos_list referencing the original segment instead of the reference segment
         // TODO(anyone): consider caching of dereferenced pos lists (as done in the hash join) when derefencing
         //               becomes a bottleneck here.
-        auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
+        const auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
           const auto base_segment = input_table->get_chunk(ChunkID{0})->get_segment(column_id);

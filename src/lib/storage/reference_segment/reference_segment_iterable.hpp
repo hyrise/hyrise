@@ -128,6 +128,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             pos_lists_per_segment[chunk_id] = std::make_shared<RowIDPosList>();
             pos_lists_per_segment[chunk_id]->reserve(64);
           }
+          // TODO: evaluate optimization that write final segment_position_vector offset as ChunkID into PosList.
           pos_lists_per_segment[chunk_id]->emplace_back(position);
         }
 
@@ -149,27 +150,22 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
               Fail("Unexpected iterable for reference segment.");
               return;
             }
-            const auto iterable = create_any_segment_iterable<T>(typed_segment);
+            // const auto iterable = create_any_segment_iterable<T>(typed_segment);
+            const auto iterable = create_iterable_from_segment<T>(typed_segment);
             using IterableType = std::decay_t<decltype(iterable)>;
             if constexpr (std::is_same_v<IterableType, ReferenceSegmentIterable>) {
               Fail("Unexpected iterable for reference segment.");
               return;
+            } else {
+              iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
+                while (it != end) {
+                  // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
+                  // we don't want to use a list of AbstractSegmentPositions.
+                  single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
+                  ++it;
+                }
+              });
             }
-            // for (const auto& p : *iterable_pos_list) {
-            //   std::cout << " | " << p;
-            // }
-            // std::cout << std::endl;
-            // auto pos_list_it = iterable_pos_list->cbegin();
-            iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
-              while (it != end) {
-                // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
-                // we don't want to use a list of AbstractSegmentPositions.
-                single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
-                // std::cout << " | " <<  chunk_id << "," << pos_list_it->chunk_offset;
-                ++it;
-                // ++pos_list_it;
-              }
-            });
           });
         }
 
@@ -195,12 +191,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         }
 
         DebugAssert(segment_positions.size() == pos_list->size(), "Sizes do not match");
-        // for (auto iter = begin_it; iter != end_it; ++iter) {
-        //   std::cout << " | " << *iter;
-        // } std::cout << std::endl;
-        // for (const auto& el : segment_positions) {
-        //   std::cout << " | (" << el.value() << "," << el.is_null() << "," << el.chunk_offset() << ")";
-        // } std::cout << std::endl;
 
         auto begin = SegmentPositionVectorIterator{&segment_positions, ChunkOffset{0}};
         auto end = SegmentPositionVectorIterator{&segment_positions, static_cast<ChunkOffset>(pos_list->size())};
@@ -208,6 +198,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         functor(begin, end);
       }
     });
+  }
+
+  template <typename Functor, typename PosListType>
+  void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
+    Fail("Reference segments should never be called with a position list.");
   }
 
   size_t _on_size() const { return _segment.size(); }
