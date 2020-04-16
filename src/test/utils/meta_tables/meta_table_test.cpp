@@ -107,8 +107,8 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
 
-  // AccessCounters rely on segment implementation.
-  // meta_segments*.tbl is expected to become outdated on segment changes.
+  // The values in the AccessCounters depend on how the segments are accessed during the test. As such, the values in
+  // meta_segments*.tbl are fragile and may become outdated.
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
