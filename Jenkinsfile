@@ -4,39 +4,41 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
-  stage ("Start") {
-    // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-    if (env.CHANGE_ID) {
-      try {
-        withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-          env.PR_CREATED_BY = pullRequest.createdBy
-          sh '''
-            curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
-          '''
-        }
-      } catch (error) {
-        stage ("User unknown") {
-          script {
-            githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+  node {
+    stage ("Start") {
+      // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
+      if (env.CHANGE_ID) {
+        try {
+          withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
+            env.PR_CREATED_BY = pullRequest.createdBy
+            sh '''
+              curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
+            '''
           }
+        } catch (error) {
+          stage ("User unknown") {
+            script {
+              githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+            }
+          }
+          throw error
         }
-        throw error
       }
-    }
 
-    script {
-      githubNotify context: 'CI Pipeline', status: 'PENDING'
+      script {
+        githubNotify context: 'CI Pipeline', status: 'PENDING'
 
-      // Cancel previous builds
-      if (env.BRANCH_NAME != 'master') {
-        def jobname = env.JOB_NAME
-        def buildnum = env.BUILD_NUMBER.toInteger()
-        def job = Jenkins.instance.getItemByFullName(jobname)
-        for (build in job.builds) {
-          if (!build.isBuilding()) { continue; }
-          if (buildnum == build.getNumber().toInteger()) { continue; }
-          echo "Cancelling previous build " + build.getNumber().toString()
-          build.doStop();
+        // Cancel previous builds
+        if (env.BRANCH_NAME != 'master') {
+          def jobname = env.JOB_NAME
+          def buildnum = env.BUILD_NUMBER.toInteger()
+          def job = Jenkins.instance.getItemByFullName(jobname)
+          for (build in job.builds) {
+            if (!build.isBuilding()) { continue; }
+            if (buildnum == build.getNumber().toInteger()) { continue; }
+            echo "Cancelling previous build " + build.getNumber().toString()
+            build.doStop();
+          }
         }
       }
     }
@@ -320,13 +322,11 @@ try {
     }
   }
 
-  node ('master') {
-    stage("Notify") {
-      script {
-        githubNotify context: 'CI Pipeline', status: 'SUCCESS'
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          githubNotify context: 'Full CI', status: 'SUCCESS'
-        }
+  stage("Notify") {
+    script {
+      githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+      if (env.BRANCH_NAME == 'master' || full_ci) {
+        githubNotify context: 'Full CI', status: 'SUCCESS'
       }
     }
   }
