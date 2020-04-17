@@ -36,7 +36,7 @@ struct StepOperatorPerformanceData : public OperatorPerformanceData {
 
   std::array<std::chrono::nanoseconds, 10> step_runtimes;
 
-  std::chrono::nanoseconds get_stage_runtime(const size_t stage) const { return stage_runtimes[stage]; }
+  std::chrono::nanoseconds get_stage_runtime(const size_t step) const { return step_runtimes[step]; }
 
   virtual void output_to_stream(std::ostream& stream,
                                 DescriptionMode description_mode = DescriptionMode::SingleLine) const;

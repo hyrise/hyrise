@@ -141,8 +141,8 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
 
   auto& perf = static_cast<const StagedOperatorPerformanceData&>(*join->performance_data);
 
-  for (const auto stage : magic_enum::enum_values<JoinHash::OperatorStages>()) {
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(stage)).count(), 0);
+  for (const auto stage : magic_enum::enum_values<JoinHash::OperatorSteps>()) {
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(stage)).count(), 0);
   }
 }
 
@@ -160,9 +160,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_EQ(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
+    EXPECT_EQ(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
   }
@@ -178,9 +178,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
-    EXPECT_EQ(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
+    EXPECT_EQ(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
   }
@@ -194,9 +194,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
   }
@@ -215,7 +215,7 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
   auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(*aggregate->performance_data);
 
   for (const auto stage : magic_enum::enum_values<AggregateHash::OperatorStages>()) {
-    EXPECT_GT(staged_performance_data.get_stage_runtime(*magic_enum::enum_index(stage)).count(), 0);
+    EXPECT_GT(staged_performance_data.get_stage_runtime(static_cast<size_t>(stage)).count(), 0);
   }
 }
 

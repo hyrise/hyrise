@@ -82,7 +82,7 @@ namespace opossum {
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids, std::make_unique<StagedOperatorPerformanceData>()) {
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids, std::make_unique<StepOperatorPerformanceData>()) {
 }
 
 const std::string& AggregateHash::name() const {
@@ -615,7 +615,7 @@ void AggregateHash::_aggregate() {
 }
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
-  auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*performance_data);
+  auto& step_performance_data = static_cast<StepOperatorPerformanceData&>(*performance_data);
   Timer timer;
 
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
@@ -638,7 +638,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
-  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::Aggregate)] = timer.lap();
+  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::Aggregate)] = timer.lap();
 
   /**
    * Write group-by columns.
@@ -658,7 +658,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
-  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::WriteGroupByColumns)] = timer.lap();
+  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::WriteGroupByColumns)] = timer.lap();
 
   /*
   Write the aggregated columns to the output
@@ -679,13 +679,13 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::WriteAggregateColumns)] = timer.lap();
+  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::WriteAggregateColumns)] = timer.lap();
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   output->append_chunk(_output_segments);
 
-  staged_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
+  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer.lap();
 
   return output;
 }

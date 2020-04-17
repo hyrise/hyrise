@@ -185,19 +185,19 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                                        reference_segment_pos_list);
             });
           }
-          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] +=
+          join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::IndexJoining)] +=
               timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
-          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+          join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::NestedLoopJoining)] +=
               timer.lap();
         }
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+        join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::NestedLoopJoining)] +=
             timer.lap();
       }
     }
@@ -228,12 +228,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           });
         }
         join_index_performance_data.chunks_scanned_with_index++;
-        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] +=
+        join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::IndexJoining)] +=
             timer.lap();
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+        join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::NestedLoopJoining)] +=
             timer.lap();
       }
     }
@@ -266,7 +266,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                       join_index_performance_data.chunks_scanned_without_index) +
                        " chunks processed using an index.");
   }
-  join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
+  join_index_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer.lap();
 
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }
@@ -567,7 +567,7 @@ void JoinIndex::_on_cleanup() {
 }
 
 void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-  StagedOperatorPerformanceData::output_to_stream(stream, description_mode);
+  StepOperatorPerformanceData::output_to_stream(stream, description_mode);
 
   stream << (description_mode == DescriptionMode::SingleLine ? " - " : "\n");
   stream << chunks_scanned_with_index << " of " << (chunks_scanned_with_index + chunks_scanned_without_index)

@@ -46,7 +46,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates,
                    const std::optional<size_t>& radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<StagedOperatorPerformanceData>()),
+                           std::make_unique<StepOperatorPerformanceData>()),
       _radix_bits(radix_bits) {}
 
 const std::string& JoinHash::name() const {
@@ -178,7 +178,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
   }
 
-  auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*performance_data);
+  auto& step_performance_data = static_cast<StepOperatorPerformanceData&>(*performance_data);
 
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
@@ -207,7 +207,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, staged_performance_data,
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, step_performance_data,
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
@@ -227,7 +227,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
-               StagedOperatorPerformanceData& staged_performance_data,
+               StepOperatorPerformanceData& step_performance_data,
                std::vector<OperatorJoinPredicate> secondary_predicates = {})
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
@@ -235,7 +235,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _performance(staged_performance_data),
+        _performance(step_performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)),
         _radix_bits(radix_bits) {}
@@ -246,7 +246,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-  StagedOperatorPerformanceData& _performance;
+  StepOperatorPerformanceData& _performance;
 
   OutputColumnOrder _output_column_order;
 
@@ -404,11 +404,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
-    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Materialization)] =
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Materialization)] =
         clock_materialization_build_column + clock_materialization_probe_column;
-    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Clustering)] =
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Clustering)] =
         clock_clustering_build_column + clock_clustering_probe_column;
-    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Building)] = clock_hash_map_build;
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Building)] = clock_hash_map_build;
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted
@@ -483,7 +483,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::Probing)] = clock_probe_stage.lap();
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Probing)] = clock_probe_stage.lap();
 
     // After probing, the partitioned columns are not needed anymore.
     radix_build_column.clear();
@@ -574,7 +574,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
       ++output_chunk_id;
     }
-    _performance.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = clock_output_stage.lap();
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = clock_output_stage.lap();
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }
