@@ -315,10 +315,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (keep_nulls_build_column) {
       materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, probe_side_bloom_filter);
+          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
     } else {
       materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, probe_side_bloom_filter);
+          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
     }
 
     /**
