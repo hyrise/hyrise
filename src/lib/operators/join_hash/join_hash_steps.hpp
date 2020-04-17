@@ -205,7 +205,7 @@ using ThreadSafeBloomFilter = std::vector<char>;
 //                             bloom filter is false
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits, BloomFilter& output_bloom_filter, const BloomFilter& input_bloom_filter = BloomFilter{}) {
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits, BloomFilter& output_bloom_filter, const BloomFilter& input_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true)) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -268,11 +268,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
 
             auto skip = false;
-            if (!value.is_null() && !input_bloom_filter.empty()) {
-              if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK]) {
+            if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
                 // Value in not present in input bloom filter and can be skipped
                 skip = true;
-              }
             }
 
             if (!skip) {
