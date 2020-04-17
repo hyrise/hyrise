@@ -5,20 +5,26 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 /**
- * This node type is used to (1) represent the intersect set operation with the modes Unique and All, and (2) to
- * intersect disjuncitve PosLists (using the Positions mode). For example, `a = 1 OR b = 2` can be split up into
- * and later united by a UnionNode in the Positions mode.
+ * This node type is used to represent the intersect set operation.
  *
+ * Please note the following about the cardinality for an implementation:
+ *
+ * "By default these operators remove duplicates, which can occur if there are duplicates in the inputs.
+ * If ALL is specified then duplicates are not removed.
+ * If t1 has m copies of row R and t2 has n copies then t1 INTERSECT ALL t2 returns min(m,n) copies of R,
+ * and t1 EXCEPT ALL t2 returns max( 0, m-n) copies of R." 
+ *
+ * Source: https://db.apache.org/derby/papers/Intersect-design.html 
  */
-
-class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode {
+class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public AbstractLQPNode {
  public:
-  explicit UnionNode(const SetOperationMode init_set_operation_mode);
+  explicit IntersectNode(const SetOperationMode init_operation_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;

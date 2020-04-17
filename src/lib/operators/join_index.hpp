@@ -8,7 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/index/abstract_index.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {

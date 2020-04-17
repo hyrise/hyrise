@@ -14,7 +14,11 @@ MetaSegmentsAccurateTable::MetaSegmentsAccurateTable()
                                                {"distinct_value_count", DataType::Long, false},
                                                {"encoding_type", DataType::String, true},
                                                {"vector_compression_type", DataType::String, true},
-                                               {"size_in_bytes", DataType::Long, false}}) {}
+                                               {"size_in_bytes", DataType::Long, false},
+                                               {"point_accesses", DataType::Long, false},
+                                               {"sequential_accesses", DataType::Long, false},
+                                               {"monotonic_accesses", DataType::Long, false},
+                                               {"random_accesses", DataType::Long, false}}) {}
 
 const std::string& MetaSegmentsAccurateTable::name() const {
   static const auto name = std::string{"segments_accurate"};
