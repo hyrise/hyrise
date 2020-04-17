@@ -321,8 +321,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     /**
-     * 1.2. Materialize the build partition, which is expected to be smaller. Use the bloom filter from the probe
-     *      partition to skip rows that will not find a join partner.
+     * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
+     *       will not find a join partner.
      */
 
     auto probe_side_bloom_filter = BloomFilter{};
@@ -338,7 +338,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     /**
-     * 2. Perform radix partitioning for build and probe sides.
+     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step.
      */
 
     if (_radix_bits > 0) {
@@ -383,9 +383,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     /**
-     * 3. Build hash tables. In the case of semi or anti joins, we do not need to track all rows on the hashed side,
-     *    just one per value. However, if we have secondary predicates, those might fail on that single row. In that
-     *    case, we DO need all rows. Use the probe side's bloom filter to ignore values that are not present there.
+     * 3. Build hash tables.
+     *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
+     *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
+     *    all rows.
+     *    We use the probe side's bloom filter to exclude values from the hash table that will not be accessed in the
+     *    probe phase.
      */
 
     if (_secondary_predicates.empty() &&

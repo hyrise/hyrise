@@ -183,17 +183,21 @@ class PosHashTable {
   std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
 };
 
-// This "bloom filter" (with k=1) contains `true` for each `hash_function(value) % BLOOM_FILTER_SIZE`. Much of this
-// could be improved, for example by (1) dynamically checking whether bloom filters make sense, (2) choosing an
-// appropriate filter size, and (3) working with multiple hash functions. The bloom filter is used during the
-// materialization and build phases.
+// The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
+// `hash_function(value) % BLOOM_FILTER_SIZE`. Much of this could be improved, for example by (1) dynamically checking
+// whether bloom filters make sense, (2) choosing an appropriate filter size, and (3) working with multiple hash
+// functions.
 static constexpr auto BLOOM_FILTER_BITS = 20;
 static constexpr auto BLOOM_FILTER_SIZE = 1 << BLOOM_FILTER_BITS;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
+
+// Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
+// needed for merging partial bloom filters created by different threads. Note that the dynamic_bitset(n, value)
+// constructor does not do what you would expect it to, so try to avoid it.
 using BloomFilter = boost::dynamic_bitset<>;
 
 // @param in_table             Table to materialize
-// @param column_id            Column in that table to materialize
+// @param column_id            Column within that table to materialize
 // @param histograms           Out: If radix_bits > 0, contains one histogram per chunk where each histogram contains
 //                             1 << radix_bits slots
 // @param radix_bits           Number of radix_bits, needed only for histogram calculation
@@ -225,7 +229,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   std::mutex output_bloom_filter_mutex;
 
-  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
 
   // Create histograms per chunk
   histograms.resize(chunk_count);
@@ -285,6 +289,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
 
             if (!skip) {
+              // Fill the corresponding slot in the bloom filter
               used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
 
               /*
