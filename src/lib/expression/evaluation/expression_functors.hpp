@@ -94,7 +94,8 @@ struct STLComparisonFunctorWrapper {
     if constexpr (std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
-      result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(a, b));
+      result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
+          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
     }
   }
 };
@@ -122,7 +123,8 @@ struct STLArithmeticFunctorWrapper {
                   std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
-      result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(a, b));
+      result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(
+          static_cast<std::common_type_t<ArgA, ArgB>>(a), static_cast<std::common_type_t<ArgA, ArgB>>(b)));
     }
   }
 };
@@ -183,7 +185,7 @@ struct DivisionEvaluator {
       if (b_value == 0) {
         result_null = true;
       } else {
-        result_value = static_cast<Result>(a_value / b_value);
+        result_value = static_cast<Result>(static_cast<Result>(a_value) / static_cast<Result>(b_value));
       }
     }
   }
