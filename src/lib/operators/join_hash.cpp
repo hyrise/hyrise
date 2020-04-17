@@ -1,7 +1,6 @@
 #include "join_hash.hpp"
 
 #include <cmath>
-#include <magic_enum.hpp>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -9,6 +8,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <magic_enum.hpp>
 
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"

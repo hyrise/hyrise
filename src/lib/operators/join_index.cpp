@@ -1,6 +1,5 @@
 #include "join_index.hpp"
 
-#include <magic_enum.hpp>
 #include <map>
 #include <memory>
 #include <numeric>
@@ -8,6 +7,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <magic_enum.hpp>
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"

@@ -1,7 +1,6 @@
 #include "aggregate_hash.hpp"
 
 #include <cmath>
-#include <magic_enum.hpp>
 #include <memory>
 #include <optional>
 #include <string>
@@ -10,6 +9,7 @@
 #include <vector>
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <magic_enum.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"

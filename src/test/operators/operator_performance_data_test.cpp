@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <iostream>
-#include <magic_enum.hpp>
 #include <map>
 #include <memory>
 #include <optional>
@@ -8,8 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
+#include <magic_enum.hpp>
 
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/aggregate_hash.hpp"
