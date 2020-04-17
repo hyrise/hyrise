@@ -196,9 +196,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // clang-format on
 
     /**
-     * Returns a set of adapted configurations if the join type provides further configuration possibilities
-     * which should be tested.
-     * Otherwise, a vector containing only the passed configuration is returned.
+     * Returns a set of adapted configurations if the join type provides further configuration possibilities that
+     * should be tested. Otherwise, a vector containing only the passed configuration is returned.
      */
     const auto build_join_type_specific_variations = [&](const auto& configuration) {
       if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
@@ -542,11 +541,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
        * indexes for the table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
-       * for non-disctionary segments.
+       * for non-dictionary segments.
        */
       if (has_indexes) {
-        // If the table to index is a referenced table, this table is not
-        // (dictionary) encoded in Join Test Runner scenarios
+        // If the table to index is a referenced table, this table is not encoded in Join Test Runner scenarios
         if (encoding_type == EncodingType::Dictionary && input_table_type == InputTableType::Data) {
           for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
             table->create_index<GroupKeyIndex>({column_id});

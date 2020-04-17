@@ -193,7 +193,6 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
 
 TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   auto performance_data = JoinIndex::PerformanceData{};
-  std::stringstream stream;
 
   performance_data.executed = true;
   performance_data.has_output = true;
@@ -202,12 +201,18 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   performance_data.walltime = std::chrono::nanoseconds{999u};
   performance_data.chunks_scanned_with_index = 10u;
   performance_data.chunks_scanned_without_index = 5u;
-  stream << performance_data;
-  EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns / 10 of 15 chunks used an index");
 
-  stream.str("");
-  performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
-  EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns\n10 of 15 chunks used an index");
+  {
+    std::stringstream stream;
+    stream << performance_data;
+    EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns, indexes used for 10 of 15 chunk(s)");
+  }
+
+  {
+    std::stringstream stream;
+    performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
+    EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns\nindexes used for 10 of 15 chunk(s)");
+  }
 }
 
 TEST_F(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
