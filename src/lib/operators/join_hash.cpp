@@ -1,6 +1,7 @@
 #include "join_hash.hpp"
 
 #include <cmath>
+#include <magic_enum.hpp>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -13,7 +14,6 @@
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
-#include "magic_enum.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"

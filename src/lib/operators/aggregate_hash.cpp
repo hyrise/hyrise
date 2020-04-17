@@ -1,6 +1,7 @@
 #include "aggregate_hash.hpp"
 
 #include <cmath>
+#include <magic_enum.hpp>
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,7 +15,6 @@
 #include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
-#include "magic_enum.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"

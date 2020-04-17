@@ -1,5 +1,6 @@
 #include "join_index.hpp"
 
+#include <magic_enum.hpp>
 #include <map>
 #include <memory>
 #include <numeric>
@@ -10,7 +11,6 @@
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
-#include "magic_enum.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/abstract_index.hpp"
