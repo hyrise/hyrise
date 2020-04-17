@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 
 #include "base_test.hpp"
@@ -39,6 +40,10 @@ enum class InputTableType {
   IndividualPosLists
 };
 
+enum class ChunkPosition { First, Inner, Last };
+
+using ChunkPosList = std::vector<ChunkPosition>;
+
 std::unordered_map<InputTableType, std::string> input_table_type_to_string{
     {InputTableType::Data, "Data"},
     {InputTableType::SharedPosList, "SharedPosList"},
@@ -50,9 +55,16 @@ struct InputTableConfiguration {
   size_t table_size{};
   InputTableType table_type{};
   EncodingType encoding_type{EncodingType::Unencoded};
-  bool has_indexes{false};
 
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type, has_indexes); }
+  // Only for JoinIndex
+  ChunkPosList missing_index_positions{};
+  // missing_index_positions semantics:
+  //  (a) empty set:     indexes available for all segments of the join column
+  //  (b) non-empty set: indexes available for all segments except the ones with a chunk position contained in the set
+
+  auto to_tuple() const {
+    return std::tie(side, chunk_size, table_size, table_type, encoding_type, missing_index_positions);
+  }
 };
 
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
@@ -207,19 +219,34 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           return std::vector<JoinTestConfiguration>{};
         }
 
+        // For index join executions, scenarios shall be tested in which the majority of segments are indexed but some
+        // chunks are not indexed.
+        std::vector<ChunkPosList> missing_index_lists{
+            // no missing indexes
+            ChunkPosList{},
+            // an index for the first segment is missing
+            ChunkPosList{ChunkPosition::First},
+            // an index for a segment that is not the first or last one is missing
+            ChunkPosList{ChunkPosition::Inner},
+            // an index for the last segment is missing
+            ChunkPosList{ChunkPosition::Last}};
+
+        // TODO(Marcel) single segment guarantee
+        // TODO(Marcel) update doc
         // For the JoinIndex, two additional parameters influence its execution behavior.
         // These are the index side and the availability of indexes on that index side.
         // Based on the input configuration, two configurations are generated for each possible
         // index side: configurations (1) with and (2) without indexes on the index side.
-        std::vector<JoinTestConfiguration> variations(all_index_sides.size() * 2, configuration);
+        std::vector<JoinTestConfiguration> variations(all_index_sides.size() * missing_index_lists.size(),
+                                                      configuration);
         uint8_t variation_index{0};
         for (const auto& index_side : all_index_sides) {
-          for (const auto& has_indexes : {true, false}) {
+          for (const auto& missing_index_positions : missing_index_lists) {
             variations[variation_index].index_side = index_side;
             if (index_side == IndexSide::Left) {
-              variations[variation_index].input_left.has_indexes = has_indexes;
+              variations[variation_index].input_left.missing_index_positions = missing_index_positions;
             } else {
-              variations[variation_index].input_right.has_indexes = has_indexes;
+              variations[variation_index].input_right.missing_index_positions = missing_index_positions;
             }
             ++variation_index;
           }
@@ -290,7 +317,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Anti* joins have different behaviours with NULL values.
+    // Anti* joins have different behaviors with NULL values.
     // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
     // would get emitted.
     for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
@@ -465,7 +492,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, has_indexes] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, missing_index_positions] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -476,7 +503,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, has_indexes] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, missing_index_positions] = key;
       std::ignore = side;
       std::ignore = table_size;
 
@@ -543,15 +570,36 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * indexes for the table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
        * for non-dictionary segments.
        */
-      if (has_indexes) {
+      auto index_blacklist = std::vector<ChunkID>{};
+      const auto table_chunk_count = table->chunk_count();
+      for (const auto& missing_position : missing_index_positions) {
+        switch (missing_position) {
+          case ChunkPosition::First:
+            index_blacklist.emplace_back(0);
+            break;
+          case ChunkPosition::Inner:
+            index_blacklist.emplace_back(table_chunk_count / 2);
+            break;
+          case ChunkPosition::Last:
+            index_blacklist.emplace_back(table_chunk_count - 1);
+            break;
+        }
         // If the table to index is a referenced table, this table is not encoded in Join Test Runner scenarios
         if (encoding_type == EncodingType::Dictionary && input_table_type == InputTableType::Data) {
-          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-            table->create_index<GroupKeyIndex>({column_id});
+          for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+            if (std::find(index_blacklist.begin(), index_blacklist.end(), chunk_id) != index_blacklist.end()) {
+              for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+                table->create_index<GroupKeyIndex>({column_id});
+              }
+            }
           }
         } else {  // NON-DICTIONARY SEGMENTS
-          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-            table->create_index<BTreeIndex>({column_id});
+          for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+            if (std::find(index_blacklist.begin(), index_blacklist.end(), chunk_id) != index_blacklist.end()) {
+              for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+                table->create_index<BTreeIndex>({column_id});
+              }
+            }
           }
         }
       }
