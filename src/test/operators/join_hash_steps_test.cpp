@@ -106,10 +106,10 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   BloomFilter bloom_filter_without_nulls;
 
   // We materialize the table twice, once with keeping NULL values and once without
-  auto materialized_with_nulls = materialize_input<int, int, true>(_table_with_nulls_and_zeros->get_output(),
-                                                                   ColumnID{0}, histograms, radix_bit_count, bloom_filter_with_nulls);
-  auto materialized_without_nulls = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(),
-                                                                       ColumnID{0}, histograms, radix_bit_count, bloom_filter_without_nulls);
+  auto materialized_with_nulls = materialize_input<int, int, true>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter_with_nulls);
+  auto materialized_without_nulls = materialize_input<int, int, false>(
+      _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter_without_nulls);
 
   // Partition count should be equal to chunk count
   EXPECT_EQ(materialized_with_nulls.size(),
@@ -161,8 +161,10 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   auto bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true);
 
   // Build phase: NULLs should be discarded
-  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);  // TODO test with bloom filter
-  auto hash_map_without_nulls = build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
+  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0,
+                                             bloom_filter);  // TODO test with bloom filter
+  auto hash_map_without_nulls =
+      build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
 
   // With 0 radix bits, only a single hash map should be built
   EXPECT_EQ(hash_map_with_nulls.size(), 1);
@@ -184,7 +186,8 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
     std::vector<std::vector<size_t>> histograms;  // Ignored in this test
     BloomFilter bloom_filter;
 
-    materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1, bloom_filter);
+    materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
+                                       bloom_filter);
 
     // For all input values, their position in the bloom filter should be correctly set to true
     for (auto value : std::vector<int>{0, 6, 7, 9, 13, 18}) {
@@ -195,7 +198,7 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
     }
 
     // All other slots should be false
-    EXPECT_TRUE(std::none_of(bloom_filter.begin(), bloom_filter.end(), [](auto value) {return value;}));
+    EXPECT_TRUE(std::none_of(bloom_filter.begin(), bloom_filter.end(), [](auto value) { return value; }));
   }
 }
 
@@ -210,13 +213,14 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
       input_bloom_filter[value] = true;
     }
 
-    auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1, output_bloom_filter, input_bloom_filter);
+    auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},
+                                                        histograms, 1, output_bloom_filter, input_bloom_filter);
 
     auto materialized_values = std::vector<int>{};
     auto chunk_offsets = std::vector<int>{};
 
     for (const auto& partition : container) {
-      for(const auto& element : partition.elements) {
+      for (const auto& element : partition.elements) {
         materialized_values.emplace_back(element.value);
         chunk_offsets.emplace_back(static_cast<int>(element.row_id.chunk_offset));
       }
@@ -276,8 +280,8 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   std::vector<std::vector<size_t>> histograms;
   BloomFilter bloom_filter;  // Ignored in this test
 
-  const auto materialized_without_null_handling =
-      materialize_input<int, int, true>(_table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
+  const auto materialized_without_null_handling = materialize_input<int, int, true>(
+      _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
   // Ensure we created NULL value information
   EXPECT_EQ(materialized_without_null_handling[0].null_values.size(),
             materialized_without_null_handling[0].elements.size());

@@ -306,7 +306,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //                           \                 /
     //                          Probing (actual Join)
 
-
     /**
      * 1.1. Materialize the build partition, which is expected to be smaller. Create a bloom filter.
      */
@@ -330,10 +329,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (keep_nulls_probe_column) {
       materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter, build_side_bloom_filter);
+          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+          build_side_bloom_filter);
     } else {
       materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter, build_side_bloom_filter);
+          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+          build_side_bloom_filter);
     }
 
     /**
@@ -386,13 +387,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     if (_secondary_predicates.empty() &&
         (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-      hash_tables =
-          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits, probe_side_bloom_filter);
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition,
+                                                       _radix_bits, probe_side_bloom_filter);
     } else {
-      hash_tables =
-          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits, probe_side_bloom_filter);
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
+                                                       probe_side_bloom_filter);
     }
-
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted

@@ -202,7 +202,9 @@ using BloomFilter = std::vector<bool>;
 //                             bloom filter is false
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits, BloomFilter& output_bloom_filter, const BloomFilter& input_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true)) {
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                    BloomFilter& output_bloom_filter,
+                                    const BloomFilter& input_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true)) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -275,8 +277,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
             auto skip = false;
             if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
-                // Value in not present in input bloom filter and can be skipped
-                skip = true;
+              // Value in not present in input bloom filter and can be skipped
+              skip = true;
             }
 
             if (!skip) {
@@ -352,7 +354,8 @@ Build all the hash tables for the partitions of the build column. One job per pa
 
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
-                                                           const JoinHashBuildMode mode, const size_t radix_bits, const BloomFilter& input_bloom_filter) {
+                                                           const JoinHashBuildMode mode, const size_t radix_bits,
+                                                           const BloomFilter& input_bloom_filter) {
   if (radix_container.empty()) return {};
 
   /*
