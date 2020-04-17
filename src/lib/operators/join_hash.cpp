@@ -355,6 +355,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
+        histograms_build_column.clear();
         materialized_build_column.clear();
       }));
 
@@ -369,6 +370,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         }
 
         // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
+        histograms_probe_column.clear();
         materialized_probe_column.clear();
       }));
 

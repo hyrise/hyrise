@@ -209,7 +209,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   auto chunk_count = in_table->chunk_count();
 
   const std::hash<HashedType> hash_function;
-  // :ist of all elements that will be partitioned
+  // List of all elements that will be partitioned
   auto radix_container = RadixContainer<T>{};
   radix_container.resize(chunk_count);
 
@@ -223,6 +223,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
   output_bloom_filter.resize(BLOOM_FILTER_SIZE);
   std::mutex output_bloom_filter_mutex;
+
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
   // Create histograms per chunk
   histograms.resize(chunk_count);
@@ -356,6 +358,8 @@ template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
                                                            const BloomFilter& input_bloom_filter) {
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
+
   if (radix_container.empty()) return {};
 
   /*

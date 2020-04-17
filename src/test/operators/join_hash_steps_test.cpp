@@ -161,8 +161,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   auto bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true);
 
   // Build phase: NULLs should be discarded
-  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0,
-                                             bloom_filter);  // TODO test with bloom filter
+  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
   auto hash_map_without_nulls =
       build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
 
@@ -301,6 +300,32 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
       }
     }
   }
+}
+
+TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
+  std::vector<std::vector<size_t>> histograms;  // Ignored in this test
+  BloomFilter output_bloom_filter;              // Ignored in this test
+
+  // Fill input_bloom_filter
+  BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
+  for (auto value : std::vector<int>{6, 7, 9}) {
+    input_bloom_filter[value] = true;
+  }
+
+  auto container = materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0},
+                                                      histograms, 1, output_bloom_filter);
+
+  auto hash_tables = build<int, int>(container, JoinHashBuildMode::AllPositions, 0, input_bloom_filter);
+
+  EXPECT_EQ(hash_tables.size(), 1);
+  const auto& hash_table = hash_tables[0];
+  EXPECT_TRUE(hash_table);
+
+  EXPECT_TRUE(hash_table->contains(6));
+  EXPECT_TRUE(hash_table->contains(7));
+  EXPECT_TRUE(hash_table->contains(9));
+  EXPECT_FALSE(hash_table->contains(13));
+  EXPECT_FALSE(hash_table->contains(18));
 }
 
 TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
