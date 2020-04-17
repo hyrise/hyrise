@@ -182,30 +182,53 @@ class PosHashTable {
   std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
 };
 
+// This "bloom filter" (with k=1) contains `true` for each `hash_function(value) % BLOOM_FILTER_SIZE`. Much of this
+// could be improved, for example by (1) dynamically checking whether bloom filters make sense, (2) choosing an
+// appropriate filter size, and (3) working with multiple hash functions. The bloom filter is used during the
+// materialization and build phases.
+static constexpr auto BLOOM_FILTER_BITS = 20;
+static constexpr auto BLOOM_FILTER_SIZE = 1 << BLOOM_FILTER_BITS;
+static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
+using BloomFilter = std::vector<bool>;
+
+// Same as BloomFilter, but allows for multiple threads to write simultaneously.
+using ThreadSafeBloomFilter = std::vector<char>;
+
+// @param in_table             Table to materialize
+// @param column_id            Column in that table to materialize
+// @param histograms           Out: If radix_bits > 0, contains one histogram per chunk where each histogram contains
+//                             1 << radix_bits slots
+// @param radix_bits           Number of radix_bits, needed only for histogram calculation
+// @param output_bloom_filter  Out: A filled BloomFilter where `value & BLOOM_FILTER_MASK == true` for each value
+//                             encountered in the input column
+// @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
+//                             bloom filter is false
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits, BloomFilter& output_bloom_filter, const BloomFilter& input_bloom_filter = BloomFilter{}) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
   const std::hash<HashedType> hash_function;
-  // list of all elements that will be partitioned
+  // :ist of all elements that will be partitioned
   auto radix_container = RadixContainer<T>{};
   radix_container.resize(chunk_count);
 
-  // fan-out
+  // Fan-out
   const size_t num_radix_partitions = 1ull << radix_bits;
 
-  // currently, we just do one pass
+  // Currently, we just do one pass
   const auto pass = size_t{0};
   const auto radix_mask = static_cast<size_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
-  // create histograms per chunk
+  // Create bloom filter, which will be written to in parallel and compressed to vector<bool> later
+  ThreadSafeBloomFilter thread_safe_bloom_filter(BLOOM_FILTER_SIZE, false);
+
+  // Create histograms per chunk
   histograms.resize(chunk_count);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
-
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     if (!in_table->get_chunk(chunk_id)) continue;
 
@@ -244,29 +267,41 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             // double. See #1550 for details.
             const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
 
-            /*
-            For ReferenceSegments we do not use the RowIDs from the referenced tables.
-            Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-            values from different inputs (important for Multi Joins).
-            */
-            if constexpr (is_reference_segment_iterable_v<IterableType>) {
-              *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
-            } else {
-              *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
-            }
-            ++elements_iter;
-
-            // In case we care about NULL values, store the NULL flag
-            if constexpr (keep_null_values) {
-              if (value.is_null()) {
-                *null_values_iter = true;
+            auto skip = false;
+            if (!value.is_null() && !input_bloom_filter.empty()) {
+              if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK]) {
+                // Value in not present in input bloom filter and can be skipped
+                skip = true;
               }
-              ++null_values_iter;
             }
 
-            if (radix_bits > 0) {
-              const Hash radix = hashed_value & radix_mask;
-              ++histogram[radix];
+            if (!skip) {
+              thread_safe_bloom_filter[hashed_value & BLOOM_FILTER_MASK] = true;
+
+              /*
+              For ReferenceSegments we do not use the RowIDs from the referenced tables.
+              Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
+              values from different inputs (important for Multi Joins).
+              */
+              if constexpr (is_reference_segment_iterable_v<IterableType>) {
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+              } else {
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+              }
+              ++elements_iter;
+
+              // In case we care about NULL values, store the NULL flag
+              if constexpr (keep_null_values) {
+                if (value.is_null()) {
+                  *null_values_iter = true;
+                }
+                ++null_values_iter;
+              }
+
+              if (radix_bits > 0) {
+                const Hash radix = hashed_value & radix_mask;
+                ++histogram[radix];
+              }
             }
           }
 
@@ -295,6 +330,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     jobs.back()->schedule();
   }
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
+
+  // Compress ThreadSafeBloomFilter into output_bloom_filter
+  Assert(output_bloom_filter.empty(), "Expected output_bloom_filter to be empty");
+  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+  for (auto bloom_filter_slot = size_t{0}; bloom_filter_slot < BLOOM_FILTER_SIZE; ++bloom_filter_slot) {
+    output_bloom_filter[bloom_filter_slot] = thread_safe_bloom_filter[bloom_filter_slot];
+  }
 
   return radix_container;
 }
