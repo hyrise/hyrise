@@ -105,6 +105,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       std::vector<SegmentPosition<T>> segment_positions;
       segment_positions.reserve(position_filter->size());
 
+      // TODO: do we expect an impact of resolving the pos list? Unsure.
+
       auto max_chunk_id = ChunkID{0};
       for (auto iter = position_filter->cbegin(); iter != position_filter->cend(); ++iter) {
         const auto& position = *iter;
@@ -139,7 +141,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
         const auto& base_segment = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
         resolve_segment_type<T>(*base_segment, [&](const auto& typed_segment) {
-          const auto write_segment_positions = [&](auto it, const auto end) {
+          [[maybe_unused]] const auto write_segment_positions = [&](auto it, const auto end) {
             while (it != end) {
               // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
               // we don't want to use a list of AbstractSegmentPositions.
