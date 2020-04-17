@@ -12,8 +12,8 @@ namespace opossum {
 template <typename T>
 class AllTypeVariantTest : public BaseTest {};
 
-using DataTypes = ::testing::Types<int32_t, int64_t, float, double, pmr_string>;
-TYPED_TEST_SUITE(AllTypeVariantTest, DataTypes, );  // NOLINT(whitespace/parens)
+using AllTypeVariantTestDataTypes = ::testing::Types<int32_t, int64_t, float, double, pmr_string>;
+TYPED_TEST_SUITE(AllTypeVariantTest, AllTypeVariantTestDataTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AllTypeVariantTest, GetExtractsExactNumericalValue) {
   auto values = std::vector<TypeParam>{};

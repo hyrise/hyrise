@@ -121,8 +121,8 @@ class CountingQuotientFilterTypedTest : public BaseTest {
   }
 };
 
-using Types = ::testing::Types<int32_t, int64_t, pmr_string>;
-TYPED_TEST_SUITE(CountingQuotientFilterTypedTest, Types, );  // NOLINT(whitespace/parens)
+using CountingQuitenFilterTestTypes = ::testing::Types<int32_t, int64_t, pmr_string>;
+TYPED_TEST_SUITE(CountingQuotientFilterTypedTest, CountingQuitenFilterTestTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CountingQuotientFilterTypedTest, ValueCounts) {
   this->test_value_counts(this->cqf2);
