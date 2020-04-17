@@ -67,8 +67,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
           continue;
         }
 
-        auto transaction_context =
-            Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+        auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         const bool success = _try_logical_delete(table_name, chunk_id, transaction_context);
 
         if (success) {

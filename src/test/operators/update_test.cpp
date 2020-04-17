@@ -43,8 +43,7 @@ class OperatorsUpdateTest : public BaseTest {
     where_scan->execute();
     updated_values_projection->execute();
 
-    const auto transaction_context =
-        Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
     update->set_transaction_context(transaction_context);
     update->execute();

@@ -860,8 +860,7 @@ int Console::_begin_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _explicitly_created_transaction_context =
-      Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  _explicitly_created_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("New transaction (" + transaction_id + ") started.\n");
