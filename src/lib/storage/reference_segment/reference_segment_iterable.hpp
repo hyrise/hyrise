@@ -145,43 +145,26 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
           const auto& base_segment = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
           resolve_segment_type<T>(*base_segment, [&](const auto& typed_segment) {
-            using SegmentType = std::decay_t<decltype(typed_segment)>;
-            if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
-              Fail("Unexpected iterable for reference segment.");
-              return;
-            }
+            const auto write_segment_positions = [&](auto it, const auto end) {
+              while (it != end) {
+                // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
+                // we don't want to use a list of AbstractSegmentPositions.
+                single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
+                ++it;
+              }
+            };
+
             if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
               const auto iterable = create_iterable_from_segment<T>(typed_segment);
               using IterableType = std::decay_t<decltype(iterable)>;
-              if constexpr (std::is_same_v<IterableType, ReferenceSegmentIterable>) {
-                Fail("Unexpected iterable for reference segment.");
-                return;
+              if constexpr (!std::is_same_v<IterableType, ReferenceSegmentIterable>) {
+                iterable.with_iterators(iterable_pos_list, write_segment_positions);
               } else {
-                iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
-                  while (it != end) {
-                    // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
-                    // we don't want to use a list of AbstractSegmentPositions.
-                    single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
-                    ++it;
-                  }
-                });
+                Fail("Cannot instantiate an interable with a position list.");
               }
             } else {
               const auto iterable = create_any_segment_iterable<T>(typed_segment);
-              using IterableType = std::decay_t<decltype(iterable)>;
-              if constexpr (std::is_same_v<IterableType, ReferenceSegmentIterable>) {
-                Fail("Unexpected iterable for reference segment.");
-                return;
-              } else {
-                iterable.with_iterators(iterable_pos_list, [&](auto it, const auto end) {
-                  while (it != end) {
-                    // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
-                    // we don't want to use a list of AbstractSegmentPositions.
-                    single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
-                    ++it;
-                  }
-                });
-              }
+              iterable.with_iterators(iterable_pos_list, write_segment_positions);
             }
           });
         }
