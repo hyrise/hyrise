@@ -306,18 +306,19 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //                           \                 /
     //                          Probing (actual Join)
 
+
     /**
-     * 1.1. Materialize the probe partition, which is expected to be smaller. Create a bloom filter.
+     * 1.1. Materialize the build partition, which is expected to be smaller. Create a bloom filter.
      */
 
-    auto probe_side_bloom_filter = BloomFilter{};
+    auto build_side_bloom_filter = BloomFilter{};
 
-    if (keep_nulls_probe_column) {
-      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter);
+    if (keep_nulls_build_column) {
+      materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
+          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, probe_side_bloom_filter);
     } else {
-      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter);
+      materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
+          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, probe_side_bloom_filter);
     }
 
     /**
@@ -325,14 +326,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *      partition to skip rows that will not find a join partner.
      */
 
-    auto build_side_bloom_filter = BloomFilter{};
+    auto probe_side_bloom_filter = BloomFilter{};
 
-    if (keep_nulls_build_column) {
-      materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, probe_side_bloom_filter);
+    if (keep_nulls_probe_column) {
+      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
+          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter, build_side_bloom_filter);
     } else {
-      materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter, probe_side_bloom_filter);
+      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
+          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter, build_side_bloom_filter);
     }
 
     /**
