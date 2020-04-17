@@ -357,7 +357,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
         materialized_build_column.clear();
       }));
-      histograms_build_column.clear();
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the probe column.
@@ -372,9 +371,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
         materialized_probe_column.clear();
       }));
-      histograms_probe_column.clear();
 
       Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
+
+      histograms_build_column.clear();
+      histograms_probe_column.clear();
     } else {
       // short cut: skip radix partitioning and use materialized data directly
       radix_build_column = std::move(materialized_build_column);

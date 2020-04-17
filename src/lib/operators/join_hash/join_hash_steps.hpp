@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/container/small_vector.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
@@ -189,7 +190,7 @@ class PosHashTable {
 static constexpr auto BLOOM_FILTER_BITS = 20;
 static constexpr auto BLOOM_FILTER_SIZE = 1 << BLOOM_FILTER_BITS;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
-using BloomFilter = std::vector<bool>;
+using BloomFilter = boost::dynamic_bitset<>;
 
 // @param in_table             Table to materialize
 // @param column_id            Column in that table to materialize
@@ -204,7 +205,7 @@ template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
-                                    const BloomFilter& input_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true)) {
+                                    const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -338,9 +339,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       if (Hyrise::get().is_multi_threaded()) {
         // Merge the local_output_bloom_filter into output_bloom_filter
         std::lock_guard<std::mutex> lock{output_bloom_filter_mutex};
-        for (auto bloom_filter_slot = size_t{0}; bloom_filter_slot < BLOOM_FILTER_SIZE; ++bloom_filter_slot) {
-          output_bloom_filter[bloom_filter_slot] = local_output_bloom_filter[bloom_filter_slot];
-        }
+        output_bloom_filter |= local_output_bloom_filter;
       }
     }));
     jobs.back()->schedule();

@@ -158,7 +158,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   }
 
   // Build a BloomFilter that cannot be used to skip any entries
-  auto bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true);
+  auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
   // Build phase: NULLs should be discarded
   auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
@@ -197,7 +197,7 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
     }
 
     // All other slots should be false
-    EXPECT_TRUE(std::none_of(bloom_filter.begin(), bloom_filter.end(), [](auto value) { return value; }));
+    EXPECT_EQ(bloom_filter, BloomFilter{BLOOM_FILTER_SIZE});
   }
 }
 
