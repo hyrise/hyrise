@@ -347,7 +347,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   index_ranges.reserve(2);
 
   // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
-  // TODO(Marcel) doc
+  // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
+  // has a match.
   if (_mode == JoinMode::AntiNullAsTrue) {
     const auto indexed_null_values = index->null_cbegin() != index->null_cend();
     if (probe_side_position.is_null() || indexed_null_values) {
