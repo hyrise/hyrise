@@ -21,14 +21,17 @@ std::shared_ptr<Table> MetaCachedOperatorsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
   if (!Hyrise::get().default_pqp_cache) return output_table;
 
-  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin();
-       iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
-    const auto& [query_string, physical_query_plan] = *iter;
+  auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
+      Hyrise::get().default_pqp_cache->unsafe_cache());
+  auto cache_map = gdfs_cache.snapshot();
+
+  for (auto iter = cache_map.begin(); iter != cache_map.end(); ++iter) {
+    const auto& [query_string, entry] = *iter;
     std::stringstream query_hex_hash;
     query_hex_hash << std::hex << std::hash<std::string>{}(query_string);
 
     std::unordered_set<std::shared_ptr<const AbstractOperator>> visited_pqp_nodes;
-    _process_pqp(physical_query_plan, query_hex_hash.str(), visited_pqp_nodes, output_table);
+    _process_pqp((*entry).value, query_hex_hash.str(), visited_pqp_nodes, output_table);
   }
 
   return output_table;

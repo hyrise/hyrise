@@ -63,6 +63,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   explicit GDFSCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+    std::unique_lock<std::shared_mutex> lock(_map_mutex);
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -110,7 +111,10 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   size_t size() const { return _map.size(); }
 
   void clear() {
-    _map.clear();
+    {
+      std::unique_lock<std::shared_mutex> lock(_map_mutex);
+      _map.clear();
+    }
     _queue.clear();
   }
 
@@ -135,6 +139,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
 
   size_t frequency(const Key& key) {
+    std::shared_lock<std::shared_mutex> lock(_map_mutex);
     const auto it = _map.find(key);
     if (it == _map.end()) {
       return size_t{0};
@@ -143,6 +148,12 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     return entry.frequency;
+  }
+
+  CacheMap snapshot() const {
+    std::shared_lock<std::shared_mutex> lock(_map_mutex);
+    CacheMap map_copy(_map);
+    return map_copy;
   }
 
  protected:
@@ -155,11 +166,16 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;
 
+  mutable std::shared_mutex _map_mutex;
+
   void _evict() {
     auto top = _queue.top();
 
     _inflation = top.priority;
-    _map.erase(top.key);
+    {
+      std::unique_lock<std::shared_mutex> lock(_map_mutex);
+      _map.erase(top.key);
+    }
     _queue.pop();
   }
 };
