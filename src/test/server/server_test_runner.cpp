@@ -431,7 +431,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   EXPECT_GE(conflicted_increments, 1);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
-  EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
+  EXPECT_EQ(final_sum - initial_sum, successful_increments);
 }
 
 }  // namespace opossum

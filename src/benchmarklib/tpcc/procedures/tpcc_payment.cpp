@@ -103,7 +103,7 @@ bool TPCCPayment::_on_execute() {
 
     // Calculate ceil(n/2)
     customer_offset =
-        static_cast<size_t>(std::max(0.0, std::min(std::ceil(customer_table->row_count() / 2.0),
+        static_cast<size_t>(std::max(0.0, std::min(std::ceil(static_cast<double>(customer_table->row_count()) / 2.0),
                                                    static_cast<double>(customer_table->row_count() - 1))));
     c_id = *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }

@@ -150,7 +150,7 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     const auto value_repr = _domain.string_to_number(in_domain_value);
     const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
     const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
-    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / static_cast<float>(max_repr - min_repr + 1);
 
     return bin_ratio;
   }
@@ -186,7 +186,7 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     const auto value_repr = _domain.string_to_number(in_domain_value) + 1;
     const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
     const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
-    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    const auto bin_ratio = static_cast<float>(value_repr - min_repr) / static_cast<float>(max_repr - min_repr + 1);
 
     return bin_ratio;
   }
