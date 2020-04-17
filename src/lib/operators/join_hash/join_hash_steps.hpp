@@ -222,7 +222,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   const auto radix_mask = static_cast<size_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // Create bloom filter, which will be written to in parallel and compressed to vector<bool> later
-  ThreadSafeBloomFilter thread_safe_bloom_filter(BLOOM_FILTER_SIZE, false);
+  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+  // ThreadSafeBloomFilter thread_safe_bloom_filter(BLOOM_FILTER_SIZE, false);
 
   // Create histograms per chunk
   histograms.resize(chunk_count);
@@ -274,7 +275,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
 
             if (!skip) {
-              thread_safe_bloom_filter[hashed_value & BLOOM_FILTER_MASK] = true;
+              output_bloom_filter[hashed_value & BLOOM_FILTER_MASK] = true;  // TODO thread_safe
 
               /*
               For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -329,12 +330,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
-  // Compress ThreadSafeBloomFilter into output_bloom_filter
-  Assert(output_bloom_filter.empty(), "Expected output_bloom_filter to be empty");
-  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
-  for (auto bloom_filter_slot = size_t{0}; bloom_filter_slot < BLOOM_FILTER_SIZE; ++bloom_filter_slot) {
-    output_bloom_filter[bloom_filter_slot] = thread_safe_bloom_filter[bloom_filter_slot];
-  }
+  // // Compress ThreadSafeBloomFilter into output_bloom_filter
+  // Assert(output_bloom_filter.empty(), "Expected output_bloom_filter to be empty");
+  // output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+  // for (auto bloom_filter_slot = size_t{0}; bloom_filter_slot < BLOOM_FILTER_SIZE; ++bloom_filter_slot) {
+  //   output_bloom_filter[bloom_filter_slot] = thread_safe_bloom_filter[bloom_filter_slot];
+  // }
 
   return radix_container;
 }

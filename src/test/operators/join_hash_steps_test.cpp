@@ -161,7 +161,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   auto bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, true);
 
   // Build phase: NULLs should be discarded
-  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
+  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);  // TODO test with bloom filter
   auto hash_map_without_nulls = build<int, int>(materialized_without_nulls, JoinHashBuildMode::AllPositions, 0, bloom_filter);
 
   // With 0 radix bits, only a single hash map should be built
