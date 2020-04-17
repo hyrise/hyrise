@@ -11,15 +11,15 @@ p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
 
-def format_diff(diff, inverse_colors = False):
+def format_diff(diff):
     select_color = lambda value, color: color if abs(value) > 0.05 else 'white'
 
     diff -= 1  # adapt to show change in percent
     if diff < 0.0:
-        color = 'green' if inverse_colors else 'red'
+        color = 'green'
         return colored("{0:.0%}".format(diff), select_color(diff, color))
     else:
-        color = 'red' if inverse_colors else 'green'
+        color = 'red'
         return colored("+{0:.0%}".format(diff), select_color(diff, color))
 
 def geometric_mean(values):
@@ -83,7 +83,7 @@ total_runtime_old = 0
 total_runtime_new = 0
 
 table_data = []
-table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value"])
+table_data.append(["Benchmark", "old ms/iter", "runs", "new ms/iter", "runs", "change [%]", "p-value"])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
@@ -93,8 +93,8 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     total_runtime_old += old['avg_real_time_per_iteration']
     total_runtime_new += new['avg_real_time_per_iteration']
 
-    if float(old['items_per_second']) > 0.0:
-        diff = float(new['items_per_second']) / float(old['items_per_second'])
+    if float(old['avg_real_time_per_iteration']) > 0.0:
+        diff = float(new['avg_real_time_per_iteration']) / float(old['avg_real_time_per_iteration'])
         diffs.append(diff)
     else:
         diff = float('nan')
@@ -102,7 +102,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     diff_formatted = format_diff(diff)
     p_value_formatted = calculate_and_format_p_value(old, new)
 
-    table_data.append([name, str(old['items_per_second']), str(len(old['successful_runs'])), str(new['items_per_second']), str(len(new['successful_runs'])), diff_formatted, p_value_formatted])
+    table_data.append([name, '{:>11.2f}'.format(old['avg_real_time_per_iteration'] / 1e6), str(len(old['successful_runs'])), '{:>11.2f}'.format(new['avg_real_time_per_iteration'] / 1e6), str(len(new['successful_runs'])), diff_formatted, p_value_formatted])
 
     if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
         old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
@@ -119,33 +119,63 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
             ' ' + str(len(old['unsuccessful_runs'])),
             ' ' + str(new_unsuccessful_per_second),
             ' ' + str(len(new['unsuccessful_runs'])),
-            ' ' + format_diff(diff_unsuccessful, True)
+            ' ' + format_diff(diff_unsuccessful)
         ]
 
         unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
         table_data.append(unsuccessful_info_colored)
 
-table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(diffs)), ''])
-table_data.append(['∑ avg. query runtimes', '', '', '', '', format_diff(total_runtime_old / total_runtime_new), ''])
+# <...> indicates a span, which will be replaced later
+table_data.append(['Sum of items', '{:>11.2f}'.format(total_runtime_old / 1e6), '', '{:>11.2f}'.format(total_runtime_new / 1e6), '', format_diff(total_runtime_new / total_runtime_old), ''])
+table_data.append(['<', '', '', '', '>', format_diff(geometric_mean(diffs)), ''])
 
 table = AsciiTable(table_data)
+table.justify_columns[2] = 'right'
+table.justify_columns[4] = 'right'
+table.justify_columns[5] = 'right'
 table.justify_columns[6] = 'right'
+
+result = str(table.table)
+
+# terminaltables does not support spans. Add spans manually for the last two rows.
+new_result = ''
+lines = result.splitlines()
+for (line_number, line) in enumerate(lines):
+    if line_number == len(table_data):
+        # Add another separation between benchmark items and aggregates
+        new_result += lines[-1] + "\n"
+
+    if line_number != len(table_data) + 1:
+        new_result += line + "\n"
+        continue
+
+    span_begin = line.find('<')
+    span_end = line.find('>') + 1
+    span_text = ''
+    if line_number == len(table_data) + 1:
+        span_text = 'Geometric mean (All items have the same weight)'
+
+    new_result += line[0:span_begin]
+    new_result += span_text + ' ' * (span_end - span_begin - len(span_text))
+    new_result += line[span_end:] + "\n"
+
+result = new_result
+
 
 # If github_format is set, format the output in the style of a diff file where added lines (starting with +) are
 # colored green, removed lines (starting with -) are red, and others (starting with an empty space) are black.
 # Because terminaltables (unsurprisingly) does not support this hack, we need to post-process the result string,
 # searching for the control codes that define text to be formatted as green or red.
 
-result = str(table.table)
 if github_format:
     new_result = '```diff\n'
     green_control_sequence = colored('', 'green')[0:5]
     red_control_sequence = colored('', 'red')[0:5]
 
     for line in result.splitlines():
-        if green_control_sequence + '+' in line:
+        if green_control_sequence + '-' in line:
             new_result += '+'
-        elif red_control_sequence + '-' in line:
+        elif red_control_sequence + '+' in line:
             new_result += '-'
         else:
             new_result += ' '
