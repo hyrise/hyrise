@@ -116,7 +116,7 @@ class CountingQuotientFilterTypedTest : public BaseTest {
         ++false_positives;
       }
     }
-    const auto false_positive_rate = false_positives / static_cast<float>(runs);
+    const auto false_positive_rate = static_cast<float>(false_positives) / static_cast<float>(runs);
     EXPECT_LT(false_positive_rate, 0.4f);
   }
 };

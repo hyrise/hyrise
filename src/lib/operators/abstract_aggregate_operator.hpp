@@ -55,7 +55,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
               std::vector<AggregateType>& current_secondary_aggregates) {
       // add new value to sum
       if (current_primary_aggregate) {
-        *current_primary_aggregate += new_value;
+        *current_primary_aggregate += static_cast<AggregateType>(new_value);
       } else {
         current_primary_aggregate = new_value;
       }
@@ -104,9 +104,9 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 
         // update values
         ++count;
-        const double delta = new_value - mean;
+        const double delta = static_cast<double>(new_value) - mean;
         mean += delta / count;
-        const double delta2 = new_value - mean;
+        const double delta2 = static_cast<double>(new_value) - mean;
         squared_distance_from_mean += delta * delta2;
 
         if (count > 1) {
