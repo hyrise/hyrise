@@ -381,16 +381,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     /**
      * 3. Build hash tables. In the case of semi or anti joins, we do not need to track all rows on the hashed side,
      *    just one per value. However, if we have secondary predicates, those might fail on that single row. In that
-     *    case, we DO need all rows.
+     *    case, we DO need all rows. Use the probe side's bloom filter to ignore values that are not present there.
      */
 
     if (_secondary_predicates.empty() &&
         (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
       hash_tables =
-          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits);
+          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits, probe_side_bloom_filter);
     } else {
       hash_tables =
-          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits);
+          build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits, probe_side_bloom_filter);
     }
 
 

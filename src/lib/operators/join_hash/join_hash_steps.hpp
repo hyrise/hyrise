@@ -345,7 +345,7 @@ Build all the hash tables for the partitions of the build column. One job per pa
 
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
-                                                           const JoinHashBuildMode mode, const size_t radix_bits) {
+                                                           const JoinHashBuildMode mode, const size_t radix_bits, const BloomFilter& input_bloom_filter) {
   if (radix_container.empty()) return {};
 
   /*
@@ -373,6 +373,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       continue;
     }
 
+    const std::hash<HashedType> hash_function;
+
     const auto insert_into_hash_table = [&, partition_idx]() {
       const auto hash_table_idx = radix_bits > 0 ? partition_idx : 0;
       const auto& elements = radix_container[partition_idx].elements;
@@ -383,6 +385,11 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       }
       for (const auto& element : elements) {
         DebugAssert(!(element.row_id == NULL_ROW_ID), "No NULL_ROW_IDs should make it to this point");
+
+        const Hash hashed_value = hash_function(static_cast<HashedType>(element.value));
+        if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK]) {
+          continue;
+        }
 
         hash_table->emplace(element.value, element.row_id);
       }
