@@ -130,6 +130,10 @@ Console::Console()
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
 
+  // Set Hyrise caches
+  Hyrise::get().default_pqp_cache = _pqp_cache;
+  Hyrise::get().default_lqp_cache = _lqp_cache;
+
   // Register default commands to Console
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
@@ -248,10 +252,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
-    auto builder = SQLPipelineBuilder{sql}
-                       .with_lqp_cache(_lqp_cache)
-                       .with_pqp_cache(_pqp_cache)
-                       .dont_cleanup_temporaries();  // keep tables for debugging and visualization
+    auto builder = SQLPipelineBuilder{sql};
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
@@ -860,7 +861,7 @@ int Console::_begin_transaction(const std::string& input) {
   }
 
   _explicitly_created_transaction_context =
-      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+      Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("New transaction (" + transaction_id + ") started.\n");

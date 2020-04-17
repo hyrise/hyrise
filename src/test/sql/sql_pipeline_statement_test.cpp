@@ -71,6 +71,7 @@ class SQLPipelineStatementTest : public BaseTest {
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
     _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+    _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -82,6 +83,7 @@ class SQLPipelineStatementTest : public BaseTest {
   TableColumnDefinitions _int_int_int_column_definitions;
 
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -90,8 +92,6 @@ class SQLPipelineStatementTest : public BaseTest {
       "> 1000";
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
-
-  const std::vector<std::string> _join_column_names{"a", "b", "bb"};
 
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
@@ -121,7 +121,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -144,7 +144,7 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement(
       _select_parse_result);
 
@@ -163,7 +163,7 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
 
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context
   auto sql_pipeline1 = SQLPipelineBuilder{_select_query_a}.with_optimizer(optimizer).create_pipeline_statement();
@@ -413,7 +413,7 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
   const auto& plan = sql_pipeline.get_physical_plan();
 
@@ -521,7 +521,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutputNoReexecution) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
   const auto transaction_context =
-      Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+      Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   {
     const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
@@ -566,10 +566,10 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransaction) {
   // Mark a row as modified by a different transaction
-  _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
+  _table_a->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{17});
 
   const auto sql = "UPDATE table_a SET a = 1";
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
@@ -586,7 +586,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransac
 
 TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
   // Mark a row as modified by a different transaction
-  _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
+  _table_a->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{17});
 
   const auto sql = "UPDATE table_a SET a = 1";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
@@ -688,6 +688,22 @@ TEST_F(SQLPipelineStatementTest, PrecheckDDLOperators) {
 
   auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
   EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
+}
+
+TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
+  const auto meta_table_query = "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables";
+
+  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}
+                          .with_lqp_cache(_lqp_cache)
+                          .with_pqp_cache(_pqp_cache)
+                          .create_pipeline_statement();
+  sql_pipeline.get_result_table();
+
+  EXPECT_EQ(_lqp_cache->size(), 0u);
+  EXPECT_FALSE(_lqp_cache->has(meta_table_query));
+
+  EXPECT_EQ(_pqp_cache->size(), 0u);
+  EXPECT_FALSE(_pqp_cache->has(meta_table_query));
 }
 
 }  // namespace opossum

@@ -13,6 +13,7 @@ namespace opossum {
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
@@ -20,9 +21,11 @@ enum class LQPNodeType {
   DropView,
   DropTable,
   DummyTable,
+  Except,
   Export,
   Import,
   Insert,
+  Intersect,
   Join,
   Limit,
   Predicate,
@@ -50,7 +53,7 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
+                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -123,7 +126,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The Expressions defining each column that this node outputs
    */
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
+  virtual std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)

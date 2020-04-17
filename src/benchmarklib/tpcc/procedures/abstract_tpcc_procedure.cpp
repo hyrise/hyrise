@@ -16,7 +16,7 @@ bool AbstractTPCCProcedure::execute() {
               "The SQLExecutor should not already have a transaction context set");
 
   // Private to the AbstractTPCCProcedure. The actual procedures should not directly interact with the context.
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   _sql_executor.transaction_context = transaction_context;
 
   auto success = _on_execute();

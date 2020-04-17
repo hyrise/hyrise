@@ -12,7 +12,7 @@ namespace opossum {
  */
 class DropViewNode : public EnableMakeForLQPNode<DropViewNode>, public BaseNonQueryNode {
  public:
-  DropViewNode(const std::string& view_name, bool if_exists);
+  DropViewNode(const std::string& init_view_name, bool init_if_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

@@ -32,16 +32,16 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
   const AllTypeVariant value;
 
  protected:
-  void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                   const std::shared_ptr<const PosList>& position_filter) const override;
+  void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                                   const std::shared_ptr<const AbstractPosList>& position_filter) const override;
 
-  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                             const std::shared_ptr<const PosList>& position_filter) const;
-  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
-                                const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                             const std::shared_ptr<const AbstractPosList>& position_filter) const;
+  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                                const std::shared_ptr<const AbstractPosList>& position_filter) const;
 
-  void _scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                            const std::shared_ptr<const PosList>& position_filter,
+  void _scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                            const std::shared_ptr<const AbstractPosList>& position_filter,
                             const OrderByMode order_by_mode) const;
 
   /**
@@ -81,6 +81,8 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
     }
   }
   /**@}*/
+ private:
+  const bool _column_is_nullable;
 };
 
 }  // namespace opossum

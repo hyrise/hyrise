@@ -8,9 +8,8 @@
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "sql/sql_plan_cache.hpp"
-
 #include "server/server.hpp"
+#include "sql/sql_plan_cache.hpp"
 
 namespace opossum {
 
@@ -24,9 +23,6 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-    // Set scheduler so that the server can execute the tasks on separate threads.
-    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-
     auto server_runner = [](Server& server) { server.run(); };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
@@ -34,6 +30,9 @@ class ServerTestRunner : public BaseTest {
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
     std::remove(_export_filename.c_str());
+
+    // Wait to run the server and set the scheduler
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 
   void TearDown() override {
@@ -54,6 +53,12 @@ class ServerTestRunner : public BaseTest {
   std::shared_ptr<Table> _table_a;
   const std::string _export_filename = test_data_path + "server_test.bin";
 };
+
+TEST_F(ServerTestRunner, TestCacheAndSchedulerInitialization) {
+  EXPECT_NE(std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler()), nullptr);
+  EXPECT_NE(Hyrise::get().default_lqp_cache, nullptr);
+  EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
+}
 
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
@@ -232,6 +237,37 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   EXPECT_EQ(result.size(), expected_num_rows);
 }
 
+TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
+  // Test that open sessions are allowed to finish before the server is destroyed. This is more relevant for tests
+  // than for the actual execution. In "real-life", i.e., during our experiments, we usually simply kill the server.
+  // In tests however, the server finishing while sessions might not be completely finished could lead to issues
+  // like #1977.
+
+  pqxx::connection insert_connection{_connection_string};
+  pqxx::nontransaction insert_transaction{insert_connection};
+  for (auto i = 0; i < (HYRISE_DEBUG ? 6 : 8); ++i) {
+    insert_transaction.exec("INSERT INTO table_a SELECT * FROM table_a;");
+  }
+
+  // These should run for a while, one should finish earlier
+  std::thread([&] {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    transaction.exec("SELECT * FROM table_a t1, table_a t2");
+  }).detach();
+
+  std::thread([&] {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123");
+  }).detach();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // No assertions here. If the server would destroy resources early, we would expect to see errors in asan/tsan and
+  // segfaults in regular execution.
+}
+
 TEST_F(ServerTestRunner, TestPreparedStatement) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
@@ -335,7 +371,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    initial_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   std::atomic_int successful_increments{0};
@@ -384,7 +420,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+    final_sum = *table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   // Really pessimistic, but at least 2 statements should have made it

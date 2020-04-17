@@ -63,7 +63,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
  public:
   TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id,
-                     IsAutoCommitTransaction is_auto_commit = IsAutoCommitTransaction::Yes);
+                     AutoCommit is_auto_commit = AutoCommit::No);
   ~TransactionContext();
 
   /**
@@ -83,6 +83,11 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * Only available after TransactionManager::prepare_commit has been called
    */
   CommitID commit_id() const;
+
+  /**
+   * Flag that indicates whether the context belongs to a transaction or non-transaction (i.e., it auto-commits).
+   */
+  AutoCommit is_auto_commit() const;
 
   /**
    * Returns the current phase of the transaction
@@ -193,6 +198,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
+  const AutoCommit _is_auto_commit;
 
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _read_write_operators;
 
@@ -203,7 +209,5 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
-
-  const IsAutoCommitTransaction _is_auto_commit;
 };
 }  // namespace opossum

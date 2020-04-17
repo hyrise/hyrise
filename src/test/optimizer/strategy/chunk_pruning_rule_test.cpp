@@ -130,6 +130,8 @@ TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
 TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
   auto table = Hyrise::get().storage_manager.get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
+  EXPECT_TRUE(chunk->pruning_statistics());
+  chunk->set_pruning_statistics(std::nullopt);
   EXPECT_FALSE(chunk->pruning_statistics());
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
@@ -176,7 +178,7 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
       std::make_shared<PredicateNode>(greater_than_(LQPColumnReference(stored_table_node, ColumnID{0}), 200));
   predicate_node_1->set_left_input(stored_table_node);
 
-  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+  auto union_node = std::make_shared<UnionNode>(SetOperationMode::Positions);
   union_node->set_left_input(predicate_node_0);
   union_node->set_right_input(predicate_node_1);
 

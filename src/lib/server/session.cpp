@@ -168,7 +168,7 @@ void Session::_handle_bind_command() {
 
 void Session::_sync() {
   _postgres_protocol_handler->read_sync_packet();
-  if (_transaction_context && !_transaction_context->is_auto_commit()) {
+  if (_transaction_context) {
     _transaction_context->commit();
     _transaction_context.reset();
   }
@@ -193,7 +193,7 @@ void Session::_handle_execute() {
   if (portal_name.empty()) _portals.erase(portal_it);
 
   if (!_transaction_context)
-    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   physical_plan->set_transaction_context_recursively(_transaction_context);
 
   const auto result_table = QueryHandler::execute_prepared_plan(physical_plan);

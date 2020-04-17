@@ -11,12 +11,12 @@
 namespace opossum {
 
 TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
-                                       IsAutoCommitTransaction is_auto_commit)
+                                       const AutoCommit is_auto_commit)
     : _transaction_id{transaction_id},
       _snapshot_commit_id{snapshot_commit_id},
+      _is_auto_commit{is_auto_commit},
       _phase{TransactionPhase::Active},
-      _num_active_operators{0},
-      _is_auto_commit(is_auto_commit) {
+      _num_active_operators{0} {
   Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
 }
 
@@ -56,6 +56,7 @@ TransactionContext::~TransactionContext() {
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
 CommitID TransactionContext::snapshot_commit_id() const { return _snapshot_commit_id; }
+AutoCommit TransactionContext::is_auto_commit() const { return _is_auto_commit; }
 
 CommitID TransactionContext::commit_id() const {
   Assert(_commit_context, "TransactionContext cid only available after commit context has been created.");
@@ -183,7 +184,7 @@ void TransactionContext::on_operator_finished() {
   }
 }
 
-bool TransactionContext::is_auto_commit() { return _is_auto_commit == IsAutoCommitTransaction::Yes; }
+bool TransactionContext::is_auto_commit() { return _is_auto_commit == AutoCommit::Yes; }
 
 void TransactionContext::_wait_for_active_operators_to_finish() const {
   std::unique_lock<std::mutex> lock(_active_operators_mutex);

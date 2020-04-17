@@ -825,4 +825,66 @@ TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
 }
 
+TYPED_TEST(OperatorsAggregateTest, StringVariations) {
+  // Check that different strings in the GROUP BY column are treated correctly even in the presence of optimizations.
+  // Not using a tbl file as expressing edge cases like "\0" feels safer in C++ code than in tbl files.
+  const auto values = pmr_vector<pmr_string>{"",
+                                             {"\0", 1},
+                                             {"\0\0", 2},
+                                             {"\0\0\0", 3},
+                                             {"\0\0\0\0", 4},
+                                             "a",
+                                             {"a\0", 2},
+                                             "aa",
+                                             "ab",
+                                             {"a\0\0", 3},
+                                             {"a\0b", 3},
+                                             {"aa\0", 3},
+                                             {"ab\0", 3},
+                                             "abc",
+                                             "aaa",
+                                             {"a\0\0\0", 4},
+                                             {"a\0b\0", 4},
+                                             {"abc\0", 4},
+                                             "abcd",
+                                             "aaaa",
+                                             {"\xff", 1},
+                                             {"\xff\xff", 2},
+                                             {"\xff\xff\xff", 3},
+                                             {"\xff\xff\xff\xff", 4},
+                                             {"\0\0\0\0\0", 5},
+                                             {"\xff\xff\xff\xff\xff", 5},
+                                             "hello",
+                                             {"abcd\0", 5},
+                                             "alongstring",
+                                             "anotherlongstring"};
+
+  auto values_copy = values;
+  const auto value_segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values_copy));
+
+  const auto table_definitions = TableColumnDefinitions{{"a", DataType::String, true}};
+  const auto table = std::make_shared<Table>(table_definitions, TableType::Data);
+  table->append_chunk({value_segment});
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  // No aggregate expressions, i.e., aggregate acts as DISTINCT
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{};
+  const auto aggregate =
+      std::make_shared<TypeParam>(table_wrapper, aggregate_expressions, std::vector<ColumnID>{ColumnID{0}});
+  aggregate->execute();
+
+  const auto& result = aggregate->get_output();
+
+  auto result_values = std::vector<pmr_string>{};
+  for (auto row_number = size_t{0}; row_number < result->row_count(); ++row_number) {
+    result_values.emplace_back(*result->template get_value<pmr_string>(ColumnID{0}, row_number));
+  }
+
+  const auto values_sorted = std::set<pmr_string>(values.begin(), values.end());
+  const auto result_values_sorted = std::set<pmr_string>(result_values.begin(), result_values.end());
+  EXPECT_EQ(values_sorted, result_values_sorted);
+}
+
 }  // namespace opossum

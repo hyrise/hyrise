@@ -21,7 +21,6 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>&
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
-  if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
   if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);
 
   auto pipeline = pipeline_builder.create_pipeline();
@@ -64,7 +63,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
 }
 
 void BenchmarkSQLExecutor::commit() {
-  Assert(transaction_context, "Can only explicitly commit transaction if auto-commit is disabled");
+  Assert(transaction_context && !transaction_context->is_auto_commit(), "Can only explicitly commit transaction if auto-commit is disabled");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->commit();
   if (_sqlite_connection) {

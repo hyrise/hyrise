@@ -29,18 +29,17 @@
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
-                                           const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
-                                           const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
-                                           const CleanupTemporaries cleanup_temporaries)
-    : pqp_cache(pqp_cache),
-      lqp_cache(lqp_cache),
+                                           const UseMvcc use_mvcc,
+                                           const std::shared_ptr<Optimizer>& optimizer,
+                                           const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
+                                           const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
+    : pqp_cache(init_pqp_cache),
+      lqp_cache(init_lqp_cache),
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
-      _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
-      _cleanup_temporaries(cleanup_temporaries) {
+      _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
@@ -83,9 +82,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   SQLTranslator sql_translator{_use_mvcc};
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-
-  lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
+  auto translation_result = sql_translator.translate_parser_result(*parsed_sql);
+  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots = translation_result.lqp_nodes;
+  _translation_info = translation_result.translation_info;
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
 
@@ -132,7 +131,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Cache newly created plan for the according sql statement
-  if (lqp_cache) {
+  if (lqp_cache && _translation_info.cacheable) {
     lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
@@ -146,7 +145,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // If we need a transaction context but haven't passed one in, this is the last point where we can create it
   if (!_transaction_context && _use_mvcc == UseMvcc::Yes) {
-    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
   // Stores when the actual compilation started/ended
@@ -181,7 +180,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (pqp_cache && !_metrics->query_plan_cache_hit) {
+  if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
@@ -199,10 +198,9 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     _tasks = _get_transaction_tasks();
   } else {
     _precheck_ddl_operators(get_physical_plan());
-    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
+    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan());
     _tasks = std::vector<std::shared_ptr<AbstractTask>>(operator_tasks.cbegin(), operator_tasks.cend());
   }
-
   return _tasks;
 }
 
@@ -215,7 +213,7 @@ std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transactio
       AssertInput(!_transaction_context || _transaction_context->is_auto_commit(),
                   "Cannot begin transaction inside an active transaction.");
       return {std::make_shared<JobTask>([this] {
-        _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
+        _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       })};
     case hsql::kCommitTransaction:
       AssertInput(_transaction_context && !_transaction_context->is_auto_commit(),

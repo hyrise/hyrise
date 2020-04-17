@@ -184,7 +184,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
       _table_a));
 
   const auto input_lqp =
-  UnionNode::make(UnionMode::All,
+  UnionNode::make(SetOperationMode::All,
     PredicateNode::make(greater_than_(_a_a, 2),
       PredicateNode::make(less_than_(_a_b, 5),
        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(3.2, DataType::Float)),
@@ -200,7 +200,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
       _table_a));
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::All,
+  UnionNode::make(SetOperationMode::All,
     ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(3.2, DataType::Float)),
       PredicateNode::make(greater_than_(_a_a, 2),
         PredicateNode::make(less_than_(_a_b, 5),
@@ -446,14 +446,14 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
   // clang-format off
   const auto input_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subquery), _table_a);
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(exists_(_subquery),
       input_predicate_node_with_multiple_outputs),
     input_predicate_node_with_multiple_outputs);
 
   const auto expected_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subquery), _table_a);
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(exists_(_subquery),
       expected_predicate_node_with_multiple_outputs),
     expected_predicate_node_with_multiple_outputs);

@@ -34,7 +34,7 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   get_table->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
 
   insert->execute();
@@ -72,7 +72,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   get_table2->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
@@ -99,7 +99,7 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   get_table2->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
@@ -127,7 +127,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   get_table2->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
@@ -147,19 +147,23 @@ TEST_F(OperatorsInsertTest, Rollback) {
   get_table1->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table1);
-  auto context1 = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::No);
+  auto context1 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context1);
   insert->execute();
-  context1->rollback(RollBackReason::RollBackByUser);
 
-  auto get_table2 = std::make_shared<GetTable>(table_name);
-  get_table2->execute();
-  auto validate = std::make_shared<Validate>(get_table2);
-  auto context2 = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
-  validate->set_transaction_context(context2);
-  validate->execute();
+  const auto check = [&]() {
+    auto get_table2 = std::make_shared<GetTable>(table_name);
+    get_table2->execute();
+    auto validate = std::make_shared<Validate>(get_table2);
+    auto context2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+    validate->set_transaction_context(context2);
+    validate->execute();
+    EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  };
+  check();
 
-  EXPECT_EQ(validate->get_output()->row_count(), 3u);
+  context1->rollback();
+  check();
 }
 
 TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
@@ -175,7 +179,7 @@ TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   auto gt1 = std::make_shared<GetTable>(t_name);
   gt1->execute();
   auto ins = std::make_shared<Insert>(t_name, gt1);
-  auto context1 = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context1 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   ins->set_transaction_context(context1);
   ins->execute();
 
@@ -206,7 +210,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   get_table2->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
@@ -232,7 +236,7 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   get_table2->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
@@ -261,7 +265,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   get_table2->execute();
 
   auto insert = std::make_shared<Insert>(table_name, get_table2);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   EXPECT_THROW(insert->execute(), std::logic_error);
   context->rollback();
@@ -281,7 +285,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   projection->execute();
 
   auto insert = std::make_shared<Insert>(table_name, projection);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
@@ -308,7 +312,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   table_wrapper->execute();
 
   const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context(IsAutoCommitTransaction::Yes);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();
