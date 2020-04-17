@@ -36,18 +36,21 @@ bool JoinIndex::supports(const JoinConfiguration config) {
     } else {
       index_side_table_type = *config.right_table_type;
     }
+
     if (index_side_table_type == TableType::References && config.join_mode != JoinMode::Inner) {
       return false;  // non-inner index joins on reference tables are not supported
-    } else if (config.secondary_predicates) {
-      return false;  // multi predicate index joins are not supported
-    } else {
-      const auto is_semi_or_anti_join = config.join_mode == JoinMode::Semi ||
-                                        config.join_mode == JoinMode::AntiNullAsFalse ||
-                                        config.join_mode == JoinMode::AntiNullAsTrue;
-      // if a Semi or Anti* join is executed, the left side is outputted by definition. Choosing the index join when
-      // indexes are not available for the right table would not be beneficial.
-      return !(is_semi_or_anti_join && config.index_side == IndexSide::Left);
     }
+
+    if (config.secondary_predicates) {
+      return false;  // multi predicate index joins are not supported
+    }
+
+    const auto is_semi_or_anti_join = config.join_mode == JoinMode::Semi ||
+                                      config.join_mode == JoinMode::AntiNullAsFalse ||
+                                      config.join_mode == JoinMode::AntiNullAsTrue;
+    // if a Semi or Anti* join is executed, the left side is outputted by definition. Choosing the index join when
+    // indexes are not available for the right table would not be beneficial.
+    return !(is_semi_or_anti_join && config.index_side == IndexSide::Left);
   }
 }
 
