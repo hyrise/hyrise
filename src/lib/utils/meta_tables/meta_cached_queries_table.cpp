@@ -18,15 +18,15 @@ std::shared_ptr<Table> MetaCachedQueriesTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
   if (!Hyrise::get().default_pqp_cache) return output_table;
 
-  auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
-      Hyrise::get().default_pqp_cache->unsafe_cache());
-  auto cache_map = gdfs_cache.snapshot();
+  //auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
+  //    Hyrise::get().default_pqp_cache->unsafe_cache());
+  auto cache_map = Hyrise::get().default_pqp_cache->snapshot();
 
   for (auto iter = cache_map.begin(); iter != cache_map.end(); ++iter) {
     const auto& [query_string, entry] = *iter;
     std::stringstream query_hex_hash;
     query_hex_hash << std::hex << std::hash<std::string>{}(query_string);
-    const auto frequency = (*entry).frequency;
+    const auto frequency = entry.frequency;
 
     auto query_single_line{query_string};
     query_single_line.erase(std::remove(query_single_line.begin(), query_single_line.end(), '\n'),

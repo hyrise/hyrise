@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-inline constexpr size_t DefaultCacheCapacity = 1024;
+inline constexpr size_t DefaultCacheCapacity = 10;
 
 // Per-default, uses the GDFS cache as underlying storage.
 template <typename Value, typename Key = std::string>

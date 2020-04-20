@@ -71,7 +71,7 @@ class AbstractCacheImpl {
   // Remove an element from the cache according to the cache algorithm's strategy
   virtual void _evict() = 0;
 
-  size_t _capacity;
+  std::atomic_size_t _capacity;
 };
 
 }  // namespace opossum
