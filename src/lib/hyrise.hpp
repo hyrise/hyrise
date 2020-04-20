@@ -31,8 +31,8 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 
-  PluginManager plugin_manager;
   StorageManager storage_manager;
+  PluginManager plugin_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   SettingsManager settings_manager;
