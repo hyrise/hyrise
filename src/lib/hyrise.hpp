@@ -31,6 +31,10 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 
+  // The order of these members is important because it defines in which order their destructors are called.
+  // For example, the StorageManager's destructor should not be called before the PluginManager's destructor.
+  // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
+  // could not work without the StorageManager still in place.
   StorageManager storage_manager;
   PluginManager plugin_manager;
   TransactionManager transaction_manager;
