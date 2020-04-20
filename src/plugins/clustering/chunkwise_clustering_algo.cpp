@@ -107,8 +107,16 @@ size_t _insertion_index(const std::vector<std::pair<ColumnDataType, ColumnDataTy
   Fail("No boundary matched");
 }
 
+Segments _get_segments(std::shared_ptr<const Chunk> chunk) {
+  Segments segments;
+  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
+    segments.push_back(chunk->get_segment(column_id));
+  }
+  return segments;
+}
+
 template <typename ColumnDataType>
-void _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::shared_ptr<Chunk>>& target_chunks, const std::vector<std::pair<ColumnDataType, ColumnDataType>>& boundaries, const size_t rows_per_chunk, const ColumnID clustering_column) {
+void _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::shared_ptr<Chunk>>& target_chunks, const std::vector<std::pair<ColumnDataType, ColumnDataType>>& boundaries, const size_t rows_per_chunk, const ColumnID clustering_column, std::shared_ptr<Table>& trash_table) {
   Assert(target_chunks.size() == boundaries.size(), "mismatching input sizes");
   std::vector<size_t> chunk_sizes(target_chunks.size());
   for (size_t index{0};index < chunk_sizes.size();index++) {
@@ -154,8 +162,16 @@ void _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::sha
       insertion_values[column_id] = chunk->get_segment(column_id)->operator[](index);
     }
     const auto insertion_index = insertion_indices[index];
-    if (insertion_index == std::numeric_limits<size_t>::max()) continue;
-    target_chunks[insertion_index]->append(insertion_values);
+    if (insertion_index == std::numeric_limits<size_t>::max()) {
+      // all matching target chunks are full -> move to trash chunk;
+      if (trash_table->empty() || trash_table->last_chunk()->size() == trash_table->target_chunk_size()) {
+        trash_table->append_mutable_chunk();
+      }
+      auto trash_chunk = trash_table->last_chunk();
+      trash_chunk->append(insertion_values);
+    } else {
+      target_chunks[insertion_index]->append(insertion_values);
+    }
   }
 }
 
@@ -175,6 +191,64 @@ std::shared_ptr<Chunk> _create_empty_chunk(const std::shared_ptr<const Table>& t
     mvcc_data = std::make_shared<MvccData>(rows_per_chunk, MvccData::MAX_COMMIT_ID);
   }
   return std::make_shared<Chunk>(segments, mvcc_data);
+}
+
+void _append_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table) {
+  Assert(chunk, "chunk is nullptr");
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+  Segments segments;
+  for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
+    segments.push_back(chunk->get_segment(column_id));
+  }
+  table->append_chunk(segments, chunk->mvcc_data());
+  Assert(table->last_chunk()->mvcc_data(), "MVCC data disappeared");
+
+  if (chunk->ordered_by()) {
+    const auto ordered_by = *chunk->ordered_by();
+    table->last_chunk()->set_ordered_by(ordered_by);
+  }
+}
+
+void _append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table) {
+  Assert(chunk, "chunk is nullptr");
+  Assert(chunk->ordered_by(), "chunk has no ordering information");
+  _append_chunk_to_table(chunk, table);
+}
+
+void _append_chunks_to_table(const std::vector<std::shared_ptr<Chunk>> chunks, const std::shared_ptr<Table> table) {
+  for (const auto& chunk : chunks) {
+    _append_chunk_to_table(chunk, table);
+  }
+}
+
+std::shared_ptr<Chunk> _sort_chunk(std::shared_ptr<Chunk> chunk, const ColumnID sort_column, const TableColumnDefinitions& column_definitions) {
+  Assert(chunk, "chunk is nullptr");
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+
+  const auto size_before_sort = chunk->size();
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk->size(), UseMvcc::Yes);
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+  _append_chunk_to_table(chunk, table);
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+  auto wrapper = std::make_shared<TableWrapper>(table);
+  wrapper->execute();
+  Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
+  auto sort = std::make_shared<Sort>(wrapper, sort_column, OrderByMode::Ascending, size_before_sort);
+  sort->execute();
+
+  const auto& sort_result = sort->get_output();
+  const auto size_after_sort = sort_result->row_count();
+  Assert(size_before_sort == size_after_sort, "chunk size changed during sorting");
+  Assert(sort_result->chunk_count() == 1, "expected exactly 1 chunk");
+
+  const auto sorted_const_chunk = sort_result->get_chunk(ChunkID{0});
+  Assert(!sorted_const_chunk->mvcc_data(), "sort result has mvcc data now - what changed?");
+  const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+
+  auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
+  sorted_chunk_with_mvcc->set_ordered_by(*sorted_const_chunk->ordered_by());
+  return sorted_chunk_with_mvcc;
 }
 
 void ChunkwiseClusteringAlgo::_perform_clustering() {
@@ -216,8 +290,12 @@ void ChunkwiseClusteringAlgo::_perform_clustering() {
       }
 
       const auto clustering_column_id = table->column_id_by_name(clustering_column);
-      _distribute_chunk<ColumnDataType>(first_chunk, newly_created_chunks, boundaries, rows_per_chunk, clustering_column_id);
+      auto trash_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, rows_per_chunk, UseMvcc::Yes);
+
+      _distribute_chunk<ColumnDataType>(first_chunk, newly_created_chunks, boundaries, rows_per_chunk, clustering_column_id, trash_table);
       std::cout << "first chunk distributed" << std::endl;
+
+      ChunkID trash_chunks_added {0};
 
       // TODO: perform MVCC checks whether the chunk has changed
       constexpr bool FIRST_CHUNK_UNCHANGED = true;
@@ -226,25 +304,51 @@ void ChunkwiseClusteringAlgo::_perform_clustering() {
         // TODO: make this threadsafe and atomic
         table->remove_chunk(ChunkID{0});
         Assert(!table->get_chunk(ChunkID{0}), "chunk still exists");
-        for (const auto& new_chunk : newly_created_chunks) {
-          Segments segments;
-          for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
-            segments.push_back(new_chunk->get_segment(column_id));
-          }
-          table->append_chunk(segments, new_chunk->mvcc_data());
+        _append_chunks_to_table(newly_created_chunks, table);
+        for (;trash_chunks_added < trash_table->chunk_count();trash_chunks_added++) {
+          _append_chunk_to_table(trash_table->get_chunk(trash_chunks_added), table);
         }
       }
 
+      // distribute the rest of the chunks. MVCC checks missing
+      constexpr bool CHUNK_UNCHANGED = true;
       for (ChunkID chunk_id{1}; chunk_id < table_chunk_count; chunk_id++) {
-        const auto& chunk = table->get_chunk(chunk_id);
-        _distribute_chunk<ColumnDataType>(chunk, newly_created_chunks, boundaries, rows_per_chunk, clustering_column_id);
-        table->remove_chunk(chunk_id);
+        if (CHUNK_UNCHANGED) {
+          const auto& chunk = table->get_chunk(chunk_id);
+          _distribute_chunk<ColumnDataType>(chunk, newly_created_chunks, boundaries, rows_per_chunk, clustering_column_id, trash_table);
+          table->remove_chunk(chunk_id);
+          for (;trash_chunks_added < trash_table->chunk_count();trash_chunks_added++) {
+            _append_chunk_to_table(trash_table->get_chunk(trash_chunks_added), table);
+          }
+        }
+      }
 
-      }    
+      const auto table_pre_sort_chunk_count = table->chunk_count();
+
+      std::cout << "There are " << trash_chunks_added << " trash chunks" << std::endl;
+
+      // sort and finalize chunks
+      const auto& sort_column_name = clustering_config.back().first;
+      const auto sort_column_id = table->column_id_by_name(sort_column_name);
+      for (ChunkID chunk_id{0}; chunk_id < table_pre_sort_chunk_count; chunk_id++) {
+        const auto& chunk = table->get_chunk(chunk_id);
+        if (chunk) {
+          //std::cout << "Sorting chunk " << chunk_id << std::endl;
+          auto sorted_chunk = _sort_chunk(chunk, sort_column_id, table->column_definitions());
+          _append_sorted_chunk_to_table(sorted_chunk, table);
+          table->last_chunk()->finalize();
+          table->remove_chunk(chunk_id);
+        }
+      }
+
+      // perform encoding
+      std::vector<ChunkID> existing_chunks;
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+        if (table->get_chunk(chunk_id)) existing_chunks.push_back(chunk_id);
+      }
+      ChunkEncoder::encode_chunks(table, existing_chunks, EncodingType::Dictionary);
     });
   }
-
-  _run_assertions();
 }
 
 } // namespace opossum
