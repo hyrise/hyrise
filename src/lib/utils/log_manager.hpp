@@ -31,7 +31,7 @@ class LogManager : public Noncopyable {
   friend class LogManagerTest;
   friend class LogLevelSettingTest;
 
-  explicit LogManager(SettingsManager& settings_manager);
+  explicit LogManager(SettingsManager& settings_manager, LogLevel log_level = DEFAULT_LOG_LEVEL);
 
   LogLevel _log_level;
 
