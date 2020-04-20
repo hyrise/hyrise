@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <fstream>
 
 #include "base_test.hpp"
@@ -51,15 +50,9 @@ struct InputTableConfiguration {
   size_t table_size{};
   InputTableType table_type{};
   EncodingType encoding_type{EncodingType::Unencoded};
+  bool has_indexes{false};
 
-  // Only for JoinIndex
-  size_t indexed_chunk_count{};           // number of indexed join column segments
-  size_t single_chunk_reference_count{};  // number of join column segments that reference only one chunk
-
-  auto to_tuple() const {
-    return std::tie(side, chunk_size, table_size, table_type, encoding_type, indexed_chunk_count,
-                    single_chunk_reference_count);
-  }
+  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type, has_indexes); }
 };
 
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
@@ -214,40 +207,21 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           return std::vector<JoinTestConfiguration>{};
         }
 
-        // For the JoinIndex, additional parameters influence its execution behavior:
-        //  - index side (left or right)
-        //  - availability of an index for a join column segment
-        //  - presence of "single chunk reference guarantee" for join column reference segments
-
-        // share of indexed segments; 1 means all segments are indexed
-        std::vector<float> indexed_segment_shares{1.0f, .1f};
-
-        std::vector<JoinTestConfiguration> variations{};
+        // For the JoinIndex, two additional parameters influence its execution behavior.
+        // These are the index side and the availability of indexes on that index side.
+        // Based on the input configuration, two configurations are generated for each possible
+        // index side: configurations (1) with and (2) without indexes on the index side.
+        std::vector<JoinTestConfiguration> variations(all_index_sides.size() * 2, configuration);
+        uint8_t variation_index{0};
         for (const auto& index_side : all_index_sides) {
-          auto variation = configuration;
-          variation.index_side = index_side;
-
-          // calculate index chunk counts, eliminate duplicates by using the unordered set
-          auto& indexed_input = index_side == IndexSide::Left ? variation.input_left : variation.input_right;
-          const auto chunk_count = std::ceil(static_cast<float>(indexed_input.table_size) / indexed_input.chunk_size);
-
-          auto indexed_chunk_counts = std::unordered_set<size_t>{};
-          for (const auto& indexed_share : indexed_segment_shares) {
-            indexed_chunk_counts.insert(static_cast<size_t>(indexed_share * chunk_count));
-          }
-
-          // for each index chunk count, create a variation
-          for (const auto& indexed_chunk_count : indexed_chunk_counts) {
-            indexed_input.indexed_chunk_count = indexed_chunk_count;
-            if (indexed_input.table_type != InputTableType::Data && variation.join_mode == JoinMode::Inner) {
-              indexed_input.single_chunk_reference_count = indexed_chunk_count;
-              if ((chunk_count - indexed_chunk_count) > 1) {
-                // Leads to the creation of a reference segment that references a single chunk but the referenced
-                // data segment is not indexed.
-                ++indexed_input.single_chunk_reference_count;
-              }
+          for (const auto& has_indexes : {true, false}) {
+            variations[variation_index].index_side = index_side;
+            if (index_side == IndexSide::Left) {
+              variations[variation_index].input_left.has_indexes = has_indexes;
+            } else {
+              variations[variation_index].input_right.has_indexes = has_indexes;
             }
-            variations.emplace_back(variation);
+            ++variation_index;
           }
         }
         return variations;
@@ -316,7 +290,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Anti* joins have different behaviors with NULL values.
+    // Anti* joins have different behaviours with NULL values.
     // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
     // would get emitted.
     for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
@@ -491,8 +465,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_count,
-                 single_chunk_reference_count] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, has_indexes] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -503,42 +476,38 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_count,
-                   single_chunk_reference_count] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, has_indexes] = key;
       std::ignore = side;
       std::ignore = table_size;
 
-      auto data_table = load_table(get_table_path(key), chunk_size);
+      auto table = load_table(get_table_path(key), chunk_size);
 
       /**
        * Encode the table, if requested. Encode only those columns whose DataTypes are supported by the requested
        * encoding.
        */
       if (key.encoding_type != EncodingType::Unencoded) {
-        auto chunk_encoding_spec = ChunkEncodingSpec{data_table->column_count()};
-        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-          if (encoding_supports_data_type(key.encoding_type, data_table->column_data_type(column_id))) {
+        auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count()};
+        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+          if (encoding_supports_data_type(key.encoding_type, table->column_data_type(column_id))) {
             chunk_encoding_spec[column_id] = {key.encoding_type};
           } else {
             chunk_encoding_spec[column_id] = {EncodingType::Unencoded};
           }
         }
-        ChunkEncoder::encode_all_chunks(data_table, chunk_encoding_spec);
+        ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
       }
 
       /**
-       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original data table. This tests the
+       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table. This tests the
        * writing of the output table in the JoinOperator, which has to make sure not to create ReferenceSegments
-       * pointing to ReferenceSegments. In addition, special index join executions are tested. The first
-       * 0.5 * indexed_chunk_count segments provide the guarantee referencing only a single chunk.
+       * pointing to ReferenceSegments.
        */
-      std::shared_ptr<Table> reference_table = nullptr;
-
       if (input_table_type != InputTableType::Data) {
-        reference_table = std::make_shared<Table>(data_table->column_definitions(), TableType::References);
+        const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
-        for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
-          const auto input_chunk = data_table->get_chunk(chunk_id);
+        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+          const auto input_chunk = table->get_chunk(chunk_id);
 
           Segments reference_segments;
 
@@ -548,52 +517,45 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
-            if (chunk_id < single_chunk_reference_count) {
-              pos_list->guarantee_single_chunk();
-            }
-
-            for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
+            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
             }
 
           } else if (input_table_type == InputTableType::IndividualPosLists) {
-            for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
               const auto pos_list = std::make_shared<RowIDPosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
 
-              if (chunk_id < single_chunk_reference_count) {
-                pos_list->guarantee_single_chunk();
-              }
-              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
+              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
             }
           }
 
           reference_table->append_chunk(reference_segments);
         }
+
+        table = reference_table;
       }
 
       /**
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
-       * indexes for the data table are created. The index type is either GroupKeyIndex for dictionary segments or
-       * BTreeIndex for non-dictionary segments.
+       * indexes for the table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
+       * for non-dictionary segments.
        */
-      for (ChunkID chunk_id{0}; chunk_id < indexed_chunk_count; ++chunk_id) {
-        for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
-          if (encoding_type == EncodingType::Dictionary) {
-            data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-          } else {
-            data_table->get_chunk(chunk_id)->create_index<BTreeIndex>(std::vector<ColumnID>{column_id});
+      if (has_indexes) {
+        // If the table to index is a referenced table, this table is not encoded in Join Test Runner scenarios
+        if (encoding_type == EncodingType::Dictionary && input_table_type == InputTableType::Data) {
+          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+            table->create_index<GroupKeyIndex>({column_id});
+          }
+        } else {  // NON-DICTIONARY SEGMENTS
+          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+            table->create_index<BTreeIndex>({column_id});
           }
         }
       }
-
-      if (reference_table) {
-        input_table_iter = input_tables.emplace(key, reference_table).first;
-      } else {
-        input_table_iter = input_tables.emplace(key, data_table).first;
-      }
+      input_table_iter = input_tables.emplace(key, table).first;
     }
 
     return input_table_iter->second;
@@ -698,14 +660,41 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 
   if (configuration.index_side) {  // configuration is a specialized JoinIndex configuration
-    auto& indexed_input_config =
-        configuration.index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
+    std::shared_ptr<const Table> index_table = nullptr;
+    if (configuration.index_side == IndexSide::Left) {
+      index_table = join_op->input_table_left();
+    } else {
+      index_table = join_op->input_table_right();
+    }
 
     // count how many chunks had to be scanned with index
-    auto expected_chunks_scanned_with_index = size_t{0};
+    auto expected_chunks_scanned_with_index{0};
 
-    if (indexed_input_config.table_type == InputTableType::Data || configuration.join_mode == JoinMode::Inner) {
-      expected_chunks_scanned_with_index = indexed_input_config.indexed_chunk_count;
+    ColumnID index_side_column_id{0};
+    if (configuration.index_side == IndexSide::Left) {
+      index_side_column_id = join_op->primary_predicate().column_ids.first;
+    } else {
+      index_side_column_id = join_op->primary_predicate().column_ids.second;
+    }
+
+    for (ChunkID chunk_id{0}; chunk_id < index_table->chunk_count(); ++chunk_id) {
+      const auto& chunk = index_table->get_chunk(chunk_id);
+      const auto& indexes = chunk->get_indexes(std::vector<ColumnID>{index_side_column_id});
+
+      if (indexes.empty()) {
+        continue;
+      }
+
+      if (index_table->type() == TableType::Data) {
+        ++expected_chunks_scanned_with_index;
+      } else {  // INDEX REFERENCE TABLE
+        const auto& reference_segment =
+            std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(index_side_column_id));
+        const auto single_chunk_reference_guarantee = reference_segment->pos_list()->references_single_chunk();
+        if (join_op->mode() == JoinMode::Inner && single_chunk_reference_guarantee) {
+          ++expected_chunks_scanned_with_index;
+        }
+      }
     }
 
     // verify correctness of index usage
