@@ -237,7 +237,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       for (auto& [column_id, mode] : *sorted_by) {
         if (!column_id_to_expression_id.count(column_id)) continue;  // column is not present in output expression list
         const auto projected_column_id = column_id_to_expression_id.at(column_id);
-        transformed.push_back(SortColumnDefinition(projected_column_id, mode));
+        transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       chunk->set_sorted_by(transformed);
     }
