@@ -26,7 +26,7 @@ TEST_F(MetaLogTest, IsImmutable) {
 }
 
 TEST_F(MetaLogTest, TableGeneration) {
-  const auto column_definitions = TableColumnDefinitions{{"timestamp", DataType::Long, false},
+  const auto column_definitions = TableColumnDefinitions{{"timestamp", DataType::String, false},
                                                          {"log_level", DataType::String, false},
                                                          {"reporter", DataType::String, false},
                                                          {"message", DataType::String, false}};

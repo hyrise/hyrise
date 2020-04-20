@@ -36,17 +36,15 @@ void MvccDeletePlugin::_logical_delete_loop() {
   // Check all tables
   for (auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
-
-    const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
-    uint64_t row_count = table->get_chunk(max_chunk_id)->size();
-    auto removed_row_count = uint64_t{0};
+    size_t saved_memory = 0;
+    size_t num_chunks = 0;
 
     // Check all chunks, except for the last one, which is currently used for insertions
+    const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
     for (auto chunk_id = ChunkID{0}; chunk_id < max_chunk_id; chunk_id++) {
       const auto& chunk = table->get_chunk(chunk_id);
       if (chunk && !chunk->get_cleanup_commit_id()) {
-        const auto chunk_invalid_rows = chunk->invalid_row_count();
-        row_count += chunk->size();
+        const auto chunk_memory = chunk->memory_usage(MemoryUsageCalculationMode::Sampled);
 
         // Calculate metric 1 – Chunk invalidation level
         const double invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
@@ -82,15 +80,17 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
           std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
           _physical_delete_queue.emplace(table, chunk_id);
-          removed_row_count += chunk_invalid_rows;
+          saved_memory += chunk_memory;
+          num_chunks++;
         }
       }
     }
-    if (removed_row_count > 0) {
+    if (saved_memory > 0) {
       std::ostringstream message;
-      message << "Compressed " << table_name << " by factor "
-              << std::to_string(static_cast<double>(removed_row_count) / row_count);
-      Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Warning);
+      double saved_mb = std::round(static_cast<float>(saved_memory) / (10000.0)) / 100.0;
+      message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", saved approx. " << saved_mb
+              << " MB";
+      Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Info);
     }
   }
 }

@@ -10,7 +10,7 @@
 namespace opossum {
 
 struct LogEntry {
-  std::chrono::milliseconds timestamp;
+  std::chrono::system_clock::time_point timestamp;
   LogLevel log_level;
   std::string reporter;
   std::string message;

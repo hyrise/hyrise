@@ -15,7 +15,9 @@ const std::string& LogLevelSetting::description() const {
 const std::string& LogLevelSetting::get() { return log_level_to_string.left.at(Hyrise::get().log_manager._log_level); }
 
 void LogLevelSetting::set(const std::string& value) {
-  Hyrise::get().log_manager._log_level = log_level_to_string.right.at(value);
+  if (log_level_to_string.right.count(value)) {
+    Hyrise::get().log_manager._log_level = log_level_to_string.right.at(value);
+  }
 }
 
 void LogLevelSetting::register_at(SettingsManager& settings_manager) {
