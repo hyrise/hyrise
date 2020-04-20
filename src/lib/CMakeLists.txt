@@ -638,7 +638,6 @@ set(
     LIBRARIES
     cqf
     lz4
-    magic_enum
     uninitialized_vector
     sqlparser
     zstd
