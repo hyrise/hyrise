@@ -159,8 +159,8 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << " (" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
   metrics.encoding_duration = timer.lap();
-  std::cout << "- Encoding tables and generating pruning statistic done ("
-            << format_duration(metrics.encoding_duration) << ")" << std::endl;
+  std::cout << "- Encoding tables and generating pruning statistic done (" << format_duration(metrics.encoding_duration)
+            << ")" << std::endl;
 
   /**
    * Write the Tables into binary files if required
