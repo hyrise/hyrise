@@ -174,8 +174,10 @@ const boost::bimap<JoinMode, std::string> join_mode_to_string = make_bimap<JoinM
 const boost::bimap<TableType, std::string> table_type_to_string =
     make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
-const boost::bimap<UnionMode, std::string> union_mode_to_string =
-    make_bimap<UnionMode, std::string>({{UnionMode::All, "UnionAll"}, {UnionMode::Positions, "UnionPositions"}});
+const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string =
+    make_bimap<SetOperationMode, std::string>({{SetOperationMode::Unique, "Unique"},
+                                               {SetOperationMode::All, "All"},
+                                               {SetOperationMode::Positions, "Positions"}});
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
   return stream << predicate_condition_to_string.left.at(predicate_condition);
@@ -189,8 +191,8 @@ std::ostream& operator<<(std::ostream& stream, JoinMode join_mode) {
   return stream << join_mode_to_string.left.at(join_mode);
 }
 
-std::ostream& operator<<(std::ostream& stream, UnionMode union_mode) {
-  return stream << union_mode_to_string.left.at(union_mode);
+std::ostream& operator<<(std::ostream& stream, SetOperationMode set_operation_mode) {
+  return stream << set_operation_mode_to_string.left.at(set_operation_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, TableType table_type) {

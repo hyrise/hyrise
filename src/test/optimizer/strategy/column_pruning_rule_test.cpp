@@ -86,7 +86,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
   // clang-format off
   lqp =
   ProjectionNode::make(expression_vector(a),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(greater_than_(a, 5),
         node_a),
       PredicateNode::make(greater_than_(b, 5),
@@ -95,15 +95,16 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
   // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
-  const auto pruned_node_a = pruned(node_a, {ColumnID{2}});
+  const auto pruned_node_a = pruned(node_a, {});
   const auto pruned_a = pruned_node_a->get_column("a");
   const auto pruned_b = pruned_node_a->get_column("b");
+  const auto pruned_c = pruned_node_a->get_column("c");
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(pruned_a),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(greater_than_(pruned_a, 5),
         pruned_node_a),
       PredicateNode::make(greater_than_(pruned_b, 5),
@@ -185,7 +186,7 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
 
   lqp =
   ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
-    UnionNode::make(UnionMode::All,
+    UnionNode::make(SetOperationMode::All,
       PredicateNode::make(greater_than_(add_(a, 2), 5),
         sub_lqp),
       PredicateNode::make(less_than_(add_(b, 3), 10),
@@ -194,18 +195,19 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
   // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
-  const auto pruned_node_a = pruned(node_a, {ColumnID{2}});
+  const auto pruned_node_a = pruned(node_a, {});
   const auto pruned_a = pruned_node_a->get_column("a");
   const auto pruned_b = pruned_node_a->get_column("b");
+  const auto pruned_c = pruned_node_a->get_column("c");
 
-  const auto expected_sub_lqp = ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)),
-        pruned_node_a);
+  const auto expected_sub_lqp = ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3),
+                                                     add_(pruned_c, 4)), pruned_node_a);
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)),
-    UnionNode::make(UnionMode::All,
+    UnionNode::make(SetOperationMode::All,
       PredicateNode::make(greater_than_(add_(pruned_a, 2), 5),
         expected_sub_lqp),
       PredicateNode::make(less_than_(add_(pruned_b, 3), 10),

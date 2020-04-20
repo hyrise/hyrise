@@ -50,8 +50,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
             // property
             const auto null_value_ratio =
-                table.row_count() == 0 ? 0.0f
-                                       : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
+                table.row_count() == 0
+                    ? 0.0f
+                    : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
             output_column_statistics->set_statistics_object(
                 std::make_shared<NullValueRatioStatistics>(null_value_ratio));
           } else {

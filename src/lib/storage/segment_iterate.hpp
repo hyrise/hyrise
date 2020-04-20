@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pos_lists/rowid_pos_list.hpp"
+#include "pos_lists/row_id_pos_list.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"

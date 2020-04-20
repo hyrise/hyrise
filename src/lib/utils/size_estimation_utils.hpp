@@ -49,7 +49,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   constexpr auto min_rows = size_t{10};
 
   const auto samples_to_draw =
-      std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
+      std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * static_cast<float>(string_vector.size()))));
 
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
@@ -84,10 +84,10 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     elements_size += string_heap_size(string_vector[sample_position]);
   }
 
-  const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
-  return base_size +
-         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)) +
-                             (string_vector.capacity() - string_vector.size()) * sizeof(StringType));
+  const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / static_cast<float>(string_vector.size());
+  return base_size + static_cast<size_t>(
+                         std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)) +
+                         static_cast<float>((string_vector.capacity() - string_vector.size()) * sizeof(StringType)));
 }
 
 }  // namespace opossum
