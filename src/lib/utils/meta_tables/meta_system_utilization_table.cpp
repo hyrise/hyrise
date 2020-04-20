@@ -139,7 +139,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto kernel_ticks = cpu_ticks.at(2);
 
   const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
-  int cpu_count;
+  size_t cpu_count;
   if (numa_available() != -1) {
     cpu_count = numa_num_task_cpus();
   } else {
@@ -185,7 +185,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
   DebugAssert(ret == 0, "Failed in clock_gettime");
 
-  int cpu_count;
+  size_t cpu_count;
   if (numa_available() != -1) {
     cpu_count = numa_num_task_cpus();
   } else {
