@@ -300,7 +300,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
       _translate_set_operation(*set_operator);
 
       // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
-      if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
+      if (set_operator->resultOrder) _translate_sorted_by(*set_operator->resultOrder);
       if (set_operator->resultLimit) _translate_limit(*set_operator->resultLimit);
     }
   }

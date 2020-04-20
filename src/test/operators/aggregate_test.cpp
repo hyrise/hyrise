@@ -980,8 +980,10 @@ TEST_F(AggregateSortedTest, AggregateSetsOrderedBy) {
     const auto chunk = aggregate->get_output()->get_chunk(chunk_id);
     const auto sorted_by = chunk->sorted_by();
 
-    for (auto& order : *sorted_by) {
-      EXPECT_EQ(order, expected_sorted_by);
+    if (sorted_by) {
+      for (auto& order : *sorted_by) {
+        EXPECT_EQ(order, expected_sorted_by);
+      }
     }
   }
 }

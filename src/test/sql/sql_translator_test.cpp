@@ -2793,16 +2793,16 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
     IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
                        stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
         ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending },
+            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{ SortMode::Ascending },
                            stored_table_node_int_int_int))))));
   // clang-format on
 
