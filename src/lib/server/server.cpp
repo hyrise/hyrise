@@ -19,6 +19,8 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
 }
 
 void Server::run() {
+  _is_initialized = false;
+
   // Set scheduler so that the server can execute the tasks on separate threads.
   Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
 
@@ -26,6 +28,7 @@ void Server::run() {
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
+  _is_initialized = true;
   _accept_new_session();
   _io_service.run();
 }
@@ -80,5 +83,7 @@ void Server::shutdown() {
   }
   _io_service.stop();
 }
+
+bool Server::is_initialized() const { return _is_initialized; }
 
 }  // namespace opossum
