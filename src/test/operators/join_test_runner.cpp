@@ -52,10 +52,12 @@ struct InputTableConfiguration {
   EncodingType encoding_type{EncodingType::Unencoded};
 
   // Only for JoinIndex
-  uint32_t indexed_chunk_count{};  // number of indexed join column segments
+  uint32_t indexed_chunk_count{};           // number of indexed join column segments
+  uint32_t single_chunk_reference_count{};  // number of join column segments that reference only one chunk
 
   auto to_tuple() const {
-    return std::tie(side, chunk_size, table_size, table_type, encoding_type, indexed_chunk_count);
+    return std::tie(side, chunk_size, table_size, table_type, encoding_type, indexed_chunk_count,
+                    single_chunk_reference_count);
   }
 };
 
@@ -228,6 +230,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
             variation.index_side = index_side;
             indexed_input.indexed_chunk_count = chunk_count;
+            if (indexed_input.table_type != InputTableType::Data) {
+              indexed_input.single_chunk_reference_count = chunk_count;
+            }
             ++variation_index;
           }
         }
@@ -472,7 +477,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_count] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_count,
+                 single_chunk_reference_count] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -483,7 +489,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_count] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_count,
+                   single_chunk_reference_count] = key;
       std::ignore = side;
       std::ignore = table_size;
 
@@ -527,6 +534,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
+            if (chunk_id < single_chunk_reference_count) {
+              pos_list->guarantee_single_chunk();
+            }
+
             for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
             }
@@ -537,7 +548,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
-
+              if (chunk_id < single_chunk_reference_count) {
+                pos_list->guarantee_single_chunk();
+              }
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
             }
           }
@@ -617,14 +630,14 @@ TEST_P(JoinTestRunner, TestJoin) {
     Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
     std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
-    std::cout << "Has indexes: " << std::boolalpha << !input_table_left->indexes_statistics().empty() << std::endl;
+    std::cout << "Has indexes: " << std::boolalpha << (configuration.input_left.indexed_chunk_count > 0) << std::endl;
     std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
     std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
-    std::cout << "Has indexes: " << std::boolalpha << !input_table_right->indexes_statistics().empty() << std::endl;
+    std::cout << "Has indexes: " << std::boolalpha << (configuration.input_right.indexed_chunk_count > 0) << std::endl;
     std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
@@ -671,46 +684,15 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 
   if (configuration.index_side) {  // configuration is a specialized JoinIndex configuration
-    std::shared_ptr<const Table> index_table = nullptr;
-    if (configuration.index_side == IndexSide::Left) {
-      index_table = join_op->input_table_left();
-    } else {
-      index_table = join_op->input_table_right();
-    }
-
-    // count how many chunks had to be scanned with index
-    auto expected_chunks_scanned_with_index{0};
-
-    ColumnID index_side_column_id{0};
-    if (configuration.index_side == IndexSide::Left) {
-      index_side_column_id = join_op->primary_predicate().column_ids.first;
-    } else {
-      index_side_column_id = join_op->primary_predicate().column_ids.second;
-    }
-
-    for (ChunkID chunk_id{0}; chunk_id < index_table->chunk_count(); ++chunk_id) {
-      const auto& chunk = index_table->get_chunk(chunk_id);
-      const auto& indexes = chunk->get_indexes(std::vector<ColumnID>{index_side_column_id});
-
-      if (indexes.empty()) {
-        continue;
-      }
-
-      if (index_table->type() == TableType::Data) {
-        ++expected_chunks_scanned_with_index;
-      } else {  // INDEX REFERENCE TABLE
-        const auto& reference_segment =
-            std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(index_side_column_id));
-        const auto single_chunk_reference_guarantee = reference_segment->pos_list()->references_single_chunk();
-        if (join_op->mode() == JoinMode::Inner && single_chunk_reference_guarantee) {
-          ++expected_chunks_scanned_with_index;
-        }
-      }
-    }
+    auto& indexed_input =
+        configuration.index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
 
     // verify correctness of index usage
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join_op->performance_data());
-    EXPECT_EQ(performance_data.chunks_scanned_with_index, expected_chunks_scanned_with_index);
+    EXPECT_EQ(performance_data.chunks_scanned_with_index, indexed_input.indexed_chunk_count);
+    if (performance_data.chunks_scanned_with_index != indexed_input.indexed_chunk_count) {
+      print_configuration_info();
+    }
   }
 }
 
