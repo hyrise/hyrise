@@ -43,7 +43,7 @@ class Server {
   // Shutdown Hyrise server.
   void shutdown();
 
-  // Tells if setup() is completed.
+  // Indicates if setup is completed.
   bool is_initialized() const;
 
  private:
