@@ -131,7 +131,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         if (!pos_lists_per_segment[chunk_id]) {
           // Reserve the expected pos list size when positions are uniformly distributed over all chunks, but always
           // reserve at least 16 elements.
-          const auto elements_to_reserve = std::max(16ul, position_filter->size() / max_chunk_id);
+          const auto elements_to_reserve = std::max(16ul, position_filter->size() / std::max(ChunkID{1u}, max_chunk_id));
 
           pos_lists_per_segment[chunk_id] = std::make_shared<RowIDPosList>();
           pos_lists_per_segment[chunk_id]->reserve(elements_to_reserve);
