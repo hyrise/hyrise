@@ -102,42 +102,59 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     } else {
       // Gather referenced positions for iterables
       std::vector<std::shared_ptr<RowIDPosList>> pos_lists_per_segment(8);
-      std::vector<SegmentPosition<T>> segment_positions;
+      std::vector<std::vector<size_t>> write_offsets_per_segment(8);
+
+      // Preallocate segment positions with NULL positions that might stem from previous operators. Such NULL (in
+      // constrast to NULL rows in segments) cannot be passed to iterables. Thus, we intialize the vector with NULL
+      // positions and later (potentially) overwrite positions with their actual values.
+      std::vector<SegmentPosition<T>> segment_positions(position_filter->size(), {T{}, true, ChunkOffset{0}});
       segment_positions.reserve(position_filter->size());
 
       // TODO: do we expect an impact of resolving the pos list? Unsure.
 
       auto max_chunk_id = ChunkID{0};
+      auto pos_list_position = size_t{0};
       for (auto iter = position_filter->cbegin(); iter != position_filter->cend(); ++iter) {
         const auto& position = *iter;
         const auto chunk_id = position.chunk_id;
         if (chunk_id == INVALID_CHUNK_ID) {
+          ++pos_list_position;
           continue;
         }
 
         max_chunk_id = std::max(chunk_id, max_chunk_id);
         if (static_cast<size_t>(chunk_id) >= pos_lists_per_segment.size()) {
           pos_lists_per_segment.resize(chunk_id * 2);  // grow fast, don't care about a little bit of oversizing here.
+          write_offsets_per_segment.resize(chunk_id * 2);
         }
 
         if (!pos_lists_per_segment[chunk_id]) {
+          // Reserve the expected pos list size when positions are uniformly distributed over all chunks, but always
+          // reserve at least 16 elements.
+          const auto elements_to_reserve = std::max(16ul, position_filter->size() / max_chunk_id);
+
           pos_lists_per_segment[chunk_id] = std::make_shared<RowIDPosList>();
-          pos_lists_per_segment[chunk_id]->reserve(std::max(16ul, position_filter->size() / max_chunk_id));
+          pos_lists_per_segment[chunk_id]->reserve(elements_to_reserve);
+          write_offsets_per_segment.reserve(elements_to_reserve);
         }
-        // TODO: evaluate optimization that write final segment_position_vector offset as ChunkID into PosList.
         pos_lists_per_segment[chunk_id]->emplace_back(position);
+        write_offsets_per_segment[chunk_id].emplace_back(pos_list_position);
+        ++pos_list_position;
       }
 
-      std::vector<std::vector<SegmentPosition<T>>> segment_positions_per_segment{max_chunk_id + 1};
+      // std::vector<std::vector<SegmentPosition<T>>> segment_positions_per_segment{max_chunk_id + 1};
       for (auto chunk_id = ChunkID{0}; chunk_id < pos_lists_per_segment.size(); ++chunk_id) {
         const auto& iterable_pos_list = pos_lists_per_segment[chunk_id];
+        const auto& write_offsets = write_offsets_per_segment[chunk_id];
+        auto current_write_offset = size_t{0};
+
         if (!iterable_pos_list) {
           continue;
         }
         iterable_pos_list->guarantee_single_chunk();
 
-        auto& single_chunk_segment_positions = segment_positions_per_segment[chunk_id];
-        single_chunk_segment_positions.reserve(iterable_pos_list->size());
+        // auto& single_chunk_segment_positions = segment_positions_per_segment[chunk_id];
+        // single_chunk_segment_positions.reserve(iterable_pos_list->size());
 
         const auto& base_segment = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
         resolve_segment_type<T>(*base_segment, [&](const auto& typed_segment) {
@@ -145,8 +162,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             while (it != end) {
               // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
               // we don't want to use a list of AbstractSegmentPositions.
-              single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
+              // single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
+              segment_positions[write_offsets[current_write_offset]] = SegmentPosition(it->value(), it->is_null(), it->chunk_offset());
+
               ++it;
+              ++current_write_offset;
             }
           };
 
@@ -165,23 +185,23 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         });
       }
 
-      auto chunk_offset = 0;
-      std::vector<size_t> segment_position_list_offsets(max_chunk_id + 1, 0ul);
-      for (auto iter = position_filter->cbegin(); iter != position_filter->cend(); ++iter) {
-        const auto& position = *iter;
-        if (position == NULL_ROW_ID) {
-          segment_positions.emplace_back(T{}, true, chunk_offset);
-          ++chunk_offset;
-          continue;
-        }
+      // auto chunk_offset = 0;
+      // std::vector<size_t> segment_position_list_offsets(max_chunk_id + 1, 0ul);
+      // for (auto iter = position_filter->cbegin(); iter != position_filter->cend(); ++iter) {
+      //   const auto& position = *iter;
+      //   if (position == NULL_ROW_ID) {
+      //     segment_positions.emplace_back(T{}, true, chunk_offset);
+      //     ++chunk_offset;
+      //     continue;
+      //   }
 
-        const auto chunk_id = position.chunk_id;
-        const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
-        segment_positions.emplace_back(segment_position.value(), segment_position.is_null(), chunk_offset);
+      //   const auto chunk_id = position.chunk_id;
+      //   const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
+      //   segment_positions.emplace_back(segment_position.value(), segment_position.is_null(), chunk_offset);
 
-        ++segment_position_list_offsets[chunk_id];
-        ++chunk_offset;
-      }
+      //   ++segment_position_list_offsets[chunk_id];
+      //   ++chunk_offset;
+      // }
 
       DebugAssert(segment_positions.size() == position_filter->size(), "Sizes do not match");
 
