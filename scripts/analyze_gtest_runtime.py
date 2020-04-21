@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Takes the JSON output of googletest and prints information about the longest tests and test suites
+# Takes the JSON output of googletest and prints information about the longest running tests and test suites
 
 import json
 import sys
@@ -26,11 +26,11 @@ for testsuite in data['testsuites']:
 testsuites_sorted = list({k: v for k, v in sorted(testsuites.items(), key=lambda item: -item[1])}.items())
 tests_sorted = list({k: v for k, v in sorted(tests.items(), key=lambda item: -item[1])}.items())
 
-NUM = 20
+ENTRIES_SHOWN = 20
 table = []
-table += [[str(NUM) + ' most expensive test suites', 's', str(NUM) + ' most expensive tests', 's']]
+table += [[str(ENTRIES_SHOWN) + ' most expensive test suites', 's', str(ENTRIES_SHOWN) + ' most expensive tests', 's']]
 
-for i in range(NUM):
+for i in range(ENTRIES_SHOWN):
   table += [[testsuites_sorted[i][0], testsuites_sorted[i][1], tests_sorted[i][0], tests_sorted[i][1]]]
 
 print(AsciiTable(table).table)
