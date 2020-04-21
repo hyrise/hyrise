@@ -118,7 +118,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
 
 void BM_TableScanSorted(
     benchmark::State& state, const int table_size, const double selectivity, const EncodingType encoding_type,
-    const std::string& mode, const bool is_between_scan,
+    const std::string& mode, const bool is_between_scan, const bool is_reference_scan,
     const std::function<std::shared_ptr<TableWrapper>(const EncodingType, const std::string)> table_creator) {
   micro_benchmark_clear_cache();
 
@@ -134,7 +134,7 @@ void BM_TableScanSorted(
   const auto column_definition = table_column_definitions.at(column_index);
 
   std::shared_ptr<AbstractPredicateExpression> predicate;
-  std::shared_ptr<AbstractPredicateExpression> predicate2;
+  std::shared_ptr<AbstractPredicateExpression> reference_scan_predicate;
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
@@ -168,28 +168,33 @@ void BM_TableScanSorted(
     }
 
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-        auto search_value2 = pad_string(std::to_string(0), STRING_SIZE);
-        predicate2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, column_expression,
-                                                              value_(search_value2));
-      } else {
-        auto search_value2 = static_cast<ColumnDataType>(0);
-        predicate2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, column_expression,
-                                                              value_(search_value2));
-      }
+      auto reference_scan_value = pad_string(std::to_string(0), STRING_SIZE);
+      reference_scan_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan,
+                                                                             column_expression,
+                                                                             value_(reference_scan_value));
+    } else {
+      auto reference_scan_value = static_cast<ColumnDataType>(0);
+      reference_scan_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan,
+                                                                             column_expression,
+                                                                             value_(reference_scan_value));
+    }
   });
 
-  //std::cout << "1";
-  auto first = std::make_shared<TableScan>(table_wrapper, predicate2);
-  first->execute();
-  auto warm_up = std::make_shared<TableScan>(first, predicate);
-  warm_up->execute();
-  //std::cout << "2";
+  // Warming up and setting input table for scan to measure.
+  std::shared_ptr<AbstractOperator> input;
+  if (is_reference_scan) {
+    input = std::make_shared<TableScan>(table_wrapper, reference_scan_predicate);
+    input->execute();
+    auto warm_up = std::make_shared<TableScan>(input, predicate);
+    warm_up->execute();
+  } else {
+    input = table_wrapper;
+    auto warm_up = std::make_shared<TableScan>(input, predicate);
+    warm_up->execute();
+  }
+
   for (auto _ : state) {
-    //state.PauseTiming();
-    //auto scan = std::make_shared<TableScan>(table_wrapper, predicate2);
-    //scan->execute();
-    //state.ResumeTiming();
-    auto table_scan = std::make_shared<TableScan>(first, predicate);
+    auto table_scan = std::make_shared<TableScan>(input, predicate);
     table_scan->execute();
   }
 }
@@ -228,15 +233,18 @@ void registerTableScanSortedBenchmarks() {
     for (const auto selectivity : selectivities) {
       for (const auto& data_type : supported_data_types) {
         for (const auto& mode : modes) {
-          for (const auto is_between_scan : {false, true}) {
-            const auto& table_generator = table_types.at(data_type);
+          for (const auto& is_reference_scan : {false, true}) {
+            for (const auto is_between_scan : {false, true}) {
+              const auto& table_generator = table_types.at(data_type);
 
-            const std::string between_label = is_between_scan ? "Between" : "";
-            benchmark::RegisterBenchmark(("BM_Table" + between_label + "ScanSorted/" + encoding_name + "/" +
-                                          std::to_string(selectivity) + "/" + data_type + "/" + mode)
-                                             .c_str(),
-                                         BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan,
-                                         table_generator);
+              const std::string between_label = is_between_scan ? "Between" : "";
+              const std::string ref_scan_label = is_reference_scan ? "ReferenceTableScan" : "DataTableScan";
+              benchmark::RegisterBenchmark(("BM_Table" + between_label + "ScanSorted/" + ref_scan_label + "/" +
+                                            encoding_name + "/" + std::to_string(selectivity) + "/" + data_type +
+                                            "/" + mode).c_str(),
+                                           BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan,
+                                           is_reference_scan, table_generator);
+            }
           }
         }
       }
