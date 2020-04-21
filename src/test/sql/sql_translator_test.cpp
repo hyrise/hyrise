@@ -46,18 +46,26 @@ namespace opossum {
 
 class SQLTranslatorTest : public BaseTest {
  public:
-  void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
-    Hyrise::get().storage_manager.add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
-    Hyrise::get().storage_manager.add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
-    Hyrise::get().storage_manager.add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
-    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+  static void SetUpTestSuite() {
+    int_float = load_table("resources/test_data/tbl/int_float.tbl");
+    int_string = load_table("resources/test_data/tbl/int_string.tbl");
+    int_float2 = load_table("resources/test_data/tbl/int_float2.tbl");
+    int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
+    int_int_int = load_table("resources/test_data/tbl/int_int_int.tbl");
+  }
 
+  void SetUp() override {
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
     stored_table_node_int_float2 = StoredTableNode::make("int_float2");
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
+
+    Hyrise::get().storage_manager.add_table("int_float", int_float);
+    Hyrise::get().storage_manager.add_table("int_string", int_string);
+    Hyrise::get().storage_manager.add_table("int_float2", int_float2);
+    Hyrise::get().storage_manager.add_table("int_float5", int_float5);
+    Hyrise::get().storage_manager.add_table("int_int_int", int_int_int);
 
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
@@ -98,11 +106,9 @@ class SQLTranslatorTest : public BaseTest {
     return {lqps.at(0), translation_result.translation_info.parameter_ids_of_value_placeholders};
   }
 
-  std::shared_ptr<StoredTableNode> stored_table_node_int_float;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_string;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_int_int;
+  static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
+  static inline std::shared_ptr<StoredTableNode> stored_table_node_int_float, stored_table_node_int_string,
+      stored_table_node_int_float2, stored_table_node_int_float5, stored_table_node_int_int_int;
   LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d, int_float2_a,
       int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
 };
