@@ -43,6 +43,9 @@ class Server {
   // Shutdown Hyrise server.
   void shutdown();
 
+  // Tells if setup() is completed.
+  bool is_initialized() const;
+
  private:
   void _accept_new_session();
 
@@ -52,5 +55,6 @@ class Server {
   boost::asio::io_service _io_service;
   boost::asio::ip::tcp::acceptor _acceptor;
   const SendExecutionInfo _send_execution_info;
+  bool _is_initialized;
 };
 }  // namespace opossum
