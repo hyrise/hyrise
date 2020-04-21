@@ -229,7 +229,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                 std::ceil(static_cast<float>(indexed_input.table_size) / indexed_input.chunk_size));
 
             variation.index_side = index_side;
-            indexed_input.indexed_chunk_count = chunk_count;
+            if (has_indexes) {
+              indexed_input.indexed_chunk_count = chunk_count;
+            }
             if (indexed_input.table_type != InputTableType::Data) {
               indexed_input.single_chunk_reference_count = chunk_count;
             }
