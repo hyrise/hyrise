@@ -134,6 +134,7 @@ void BM_TableScanSorted(
   const auto column_definition = table_column_definitions.at(column_index);
 
   std::shared_ptr<AbstractPredicateExpression> predicate;
+  std::shared_ptr<AbstractPredicateExpression> predicate2;
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
@@ -165,12 +166,30 @@ void BM_TableScanSorted(
       predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, column_expression,
                                                               value_(search_value));
     }
+
+    if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+        auto search_value2 = pad_string(std::to_string(0), STRING_SIZE);
+        predicate2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, column_expression,
+                                                              value_(search_value2));
+      } else {
+        auto search_value2 = static_cast<ColumnDataType>(0);
+        predicate2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, column_expression,
+                                                              value_(search_value2));
+      }
   });
 
-  auto warm_up = std::make_shared<TableScan>(table_wrapper, predicate);
+  //std::cout << "1";
+  auto first = std::make_shared<TableScan>(table_wrapper, predicate2);
+  first->execute();
+  auto warm_up = std::make_shared<TableScan>(first, predicate);
   warm_up->execute();
+  //std::cout << "2";
   for (auto _ : state) {
-    auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
+    //state.PauseTiming();
+    //auto scan = std::make_shared<TableScan>(table_wrapper, predicate2);
+    //scan->execute();
+    //state.ResumeTiming();
+    auto table_scan = std::make_shared<TableScan>(first, predicate);
     table_scan->execute();
   }
 }
