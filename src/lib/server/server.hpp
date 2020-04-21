@@ -55,6 +55,6 @@ class Server {
   boost::asio::io_service _io_service;
   boost::asio::ip::tcp::acceptor _acceptor;
   const SendExecutionInfo _send_execution_info;
-  bool _is_initialized;
+  std::atomic_bool _is_initialized{false};
 };
 }  // namespace opossum
