@@ -213,46 +213,31 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           return std::vector<JoinTestConfiguration>{};
         }
 
-        // For the JoinIndex, additional parameters influence its execution behavior:
-        //  - index side (left or right)
-        //  - availability of an index for a join column segment
-        //  - presence of "single chunk reference guarantee" for join column reference segments
-
-        // share of indexed segments; 1 means all segments are indexed
-        std::array<float, 2> indexed_segment_shares{1.0f, .1f};
-
-        std::vector<JoinTestConfiguration> variations{};
-        variations.reserve(all_index_sides.size() * 2);
+        // For the JoinIndex, two additional parameters influence its execution behavior.
+        // These are the index side and the availability of indexes on that index side.
+        // Based on the input configuration, two configurations are generated for each possible
+        // index side: configurations (1) with and (2) without indexes on the index side.
+        std::vector<JoinTestConfiguration> variations(all_index_sides.size() * 2, configuration);
+        uint8_t variation_index{0};
         for (const auto& index_side : all_index_sides) {
-          // calculate index chunk counts, eliminate duplicates by using the unordered set
-          auto& indexed_input = index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
-          const auto chunk_count =
-              static_cast<uint32_t>(std::ceil(static_cast<float>(indexed_input.table_size) / indexed_input.chunk_size));
+          for (const auto& has_indexes : {true, false}) {
+            auto& variation = variations[variation_index];
 
-          auto indexed_chunk_counts = std::unordered_set<uint32_t>{};
-          for (const auto indexed_share : indexed_segment_shares) {
-            indexed_chunk_counts.insert(static_cast<uint32_t>(indexed_share * chunk_count));
-          }
+            // calculate index chunk counts, eliminate duplicates by using the unordered set
+            auto& indexed_input = index_side == IndexSide::Left ? variation.input_left : variation.input_right;
+            const auto chunk_count = static_cast<uint32_t>(
+                std::ceil(static_cast<float>(indexed_input.table_size) / indexed_input.chunk_size));
 
-          for (const auto indexed_chunk_count : indexed_chunk_counts) {
-            auto variation = configuration;
-            auto& variation_indexed_input =
-                index_side == IndexSide::Left ? variation.input_left : variation.input_right;
             variation.index_side = index_side;
-            variation_indexed_input.indexed_chunk_count = indexed_chunk_count;
-
-            if (variation_indexed_input.table_type != InputTableType::Data && variation.join_mode == JoinMode::Inner) {
-              variation_indexed_input.single_chunk_reference_count = indexed_chunk_count;
-              if ((chunk_count - indexed_chunk_count) > 1) {
-                // Leads to the creation of a reference segment that references a single chunk but the referenced
-                // data segment is not indexed.
-                ++variation_indexed_input.single_chunk_reference_count;
-              }
+            if (has_indexes) {
+              indexed_input.indexed_chunk_count = chunk_count;
             }
-            variations.emplace_back(variation);
+            if (indexed_input.table_type != InputTableType::Data) {
+              indexed_input.single_chunk_reference_count = chunk_count;
+            }
+            ++variation_index;
           }
         }
-        variations.shrink_to_fit();
         return variations;
       }
       return std::vector{configuration};
@@ -319,7 +304,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Anti* joins have different behaviors with NULL values.
+    // Anti* joins have different behaviours with NULL values.
     // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
     // would get emitted.
     for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
