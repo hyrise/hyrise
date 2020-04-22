@@ -31,15 +31,25 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
           }
         }
 
+        const auto& access_counter = segment->access_counter;
+
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
-                              vector_compression, static_cast<int64_t>(estimated_size)});
+                              vector_compression, static_cast<int64_t>(estimated_size),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random])});
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
                               pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
-                              static_cast<int64_t>(estimated_size)});
+                              static_cast<int64_t>(estimated_size),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
+                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random])});
         }
       }
     }
