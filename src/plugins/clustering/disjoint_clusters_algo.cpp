@@ -194,10 +194,10 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
         indices.push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
       });      
     }
-    Assert(indices.size() == 1, "index calculation broken");
+    Assert(indices.size() == boundaries.size(), "index calculation broken: " + std::to_string(indices.size()) + " indices when there should be " + std::to_string(boundaries.size()));
     const auto segments = _get_segments(previously_partially_filled_chunk);
     auto copied_chunk = std::make_shared<Chunk>(segments, previously_partially_filled_chunk->mvcc_data());
-    std::cout << "starting with a partially filled chunk (id: " << indices[0] << "), size is: " << copied_chunk->size() << std::endl;
+    //std::cout << "starting with a partially filled chunk (id: " << indices[0] << "), size is: " << copied_chunk->size() << std::endl;
     clusters[indices] = { copied_chunk };
   }
   Assert(clusters.size() == previously_partially_filled_chunks.size(), "did not copy all chunks into the cluster");
@@ -223,9 +223,9 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
 
     if (clusters.find(cluster_index) == clusters.end()) {
       clusters[cluster_index] = { _create_empty_chunk(table, table->target_chunk_size()) };
-      std::cout << "creating new empty chunk with id ";
-      for (const auto ci : cluster_index) {std::cout << ci << " ";}
-      std::cout << std::endl;
+      //std::cout << "creating new empty chunk with id ";
+      //for (const auto ci : cluster_index) {std::cout << ci << " ";}
+      //std::cout << std::endl;
     } else {
       //std::cout << "chunk with id ";
       //for (const auto ci : cluster_index) {std::cout << ci << " ";}
@@ -237,7 +237,7 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
       Assert(table->target_chunk_size() >= insertion_chunk_vector.back()->size(), "chunk is larger than allowed");
       if (insertion_chunk_vector.back()->size() == table->target_chunk_size()) {
         clusters[cluster_index].push_back(_create_empty_chunk(table, table->target_chunk_size()));
-        std::cout << "reached a full chunk" << std::endl;
+        //std::cout << "reached a full chunk" << std::endl;
       }
     }
     auto rows = clusters[cluster_index].back()->size();
@@ -260,7 +260,7 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
     for (const auto & clustered_chunk : chunks) {
       if (clustered_chunk->size() == table->target_chunk_size()) {
         full_chunks.push_back(clustered_chunk);
-        std::cout << "found a full chunk" << std::endl;
+        //std::cout << "found a full chunk" << std::endl;
       } else {
         partially_filled_chunks.push_back(clustered_chunk);
       }
@@ -306,106 +306,122 @@ void DisjointClustersAlgo::_perform_clustering() {
     std::vector<ColumnID> clustering_column_ids;
     std::vector<size_t> num_clusters_per_dimension;
     for (const auto& clustering_dimension : clustering_config) {
-      clustering_column_ids.push_back(table->column_id_by_name(clustering_dimension.first));
-      num_clusters_per_dimension.push_back(clustering_dimension.second);
+      // When there is a cluster size of 1, it means the table should be sorted after this column
+      if (clustering_dimension.second > 1) {
+        clustering_column_ids.push_back(table->column_id_by_name(clustering_dimension.first));
+        num_clusters_per_dimension.push_back(clustering_dimension.second);
+      }
     }
 
-    const auto& clustering_dimension = clustering_config[0];  // TODO multiple dimensions
-    const auto& clustering_column = clustering_dimension.first;
-    const auto  num_clusters = clustering_dimension.second;
     const auto row_count = table->row_count();
 
     const auto& sort_column_name = clustering_config.back().first;
     const auto sort_column_id = table->column_id_by_name(sort_column_name);
 
-    const auto column_data_type = table->column_data_type(table->column_id_by_name(clustering_column));
-    resolve_data_type(column_data_type, [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      const auto histogram = _get_histogram<ColumnDataType>(table, clustering_column);
+    
+    // calculate boundaries
+    std::vector<std::vector<std::pair<AllTypeVariant, AllTypeVariant>>> cluster_boundaries;
+    for (size_t dimension = 0; dimension < clustering_column_ids.size(); dimension++) {
+      const auto num_clusters = num_clusters_per_dimension[dimension];
+      const auto clustering_column_id = clustering_column_ids[dimension];
+      const auto column_data_type = table->column_data_type(clustering_column_id);
+      resolve_data_type(column_data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        const auto clustering_column = table->column_name(clustering_column_id);
+        
 
-            
-      std::cout << clustering_column << " (" << table_name << ") has " << row_count - (histogram->total_count()) << " NULL values" << std::endl;
-      // TODO: proper NULL handling
-      const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters);
-      std::cout << "computed boundaries" << std::endl;
+        const auto histogram = _get_histogram<ColumnDataType>(table, clustering_column);
+              
+        std::cout << clustering_column << " (" << table_name << ") has " << row_count - (histogram->total_count()) << " NULL values" << std::endl;
+        // TODO: proper NULL handling
+        const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters);
 
-      auto tmp = 0;
-      for (const auto& boundary : boundaries) {
-        std::cout << "boundary " << tmp << ": [" << boundary.first << ", " << boundary.second << "]" << std::endl;
-        tmp++;
-      }
+        cluster_boundaries.push_back(boundaries);
 
-      std::cout << "requested " << num_clusters << " boundaries, got " << boundaries.size() << " (" << 100.0 * boundaries.size() / num_clusters << "%)" << std::endl;
+        // debug prints
+        std::cout << "computed boundaries for " << clustering_column << std::endl;
+        auto boundary_index = 0;
+        for (const auto& boundary : boundaries) {
+          std::cout << "boundary " << boundary_index << ": [" << boundary.first << ", " << boundary.second << "]" << std::endl;
+          boundary_index++;
+        }
+        std::cout << "requested " << num_clusters << " boundaries, got " << boundaries.size() << " (" << 100.0 * boundaries.size() / num_clusters << "%)" << std::endl;
+      });
+    
+    }
 
-      std::vector<std::shared_ptr<Chunk>> partially_filled_chunks;
-      std::vector<std::shared_ptr<Chunk>> previously_partially_filled_chunks;
-      std::vector<ChunkID> temporary_chunk_ids;
 
-      const auto chunk_count_before_clustering = table->chunk_count();
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
-        const auto initial_chunk = table->get_chunk(chunk_id);
-        bool last_chunk_to_cluster = chunk_id + 1 == chunk_count_before_clustering;
-        if (initial_chunk) {
-          auto filled_chunks = _distribute_chunk(initial_chunk, table, std::vector<std::vector<std::pair<AllTypeVariant, AllTypeVariant>>>{ boundaries }, partially_filled_chunks, previously_partially_filled_chunks, clustering_column_ids);
+    
 
-          // since we do just one pass over the table, we can sort and finalize the chunks immediately
-          const auto& post_processed_chunks = _sort_and_encode_chunks(filled_chunks, sort_column_id, table);
+    std::vector<std::shared_ptr<Chunk>> partially_filled_chunks;
+    std::vector<std::shared_ptr<Chunk>> previously_partially_filled_chunks;
+    std::vector<ChunkID> temporary_chunk_ids;
 
-          //TODO MVCC check and transaction-like move, repeat on failure
-          constexpr bool CHUNK_UNCHANGED = true;        
-          if (CHUNK_UNCHANGED) {
-            table->remove_chunk(chunk_id);
-            for (const auto temporary_chunk_id : temporary_chunk_ids) {
-              table->remove_chunk(temporary_chunk_id);
-            }
+    const auto chunk_count_before_clustering = table->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
+      const auto initial_chunk = table->get_chunk(chunk_id);
+      bool last_chunk_to_cluster = chunk_id + 1 == chunk_count_before_clustering;
+      if (initial_chunk) {
+        auto filled_chunks = _distribute_chunk(initial_chunk, table, cluster_boundaries, partially_filled_chunks, previously_partially_filled_chunks, clustering_column_ids);
 
-            _append_sorted_chunks_to_table(post_processed_chunks, table, false);
-            std::cout << "added full chunks" << std::endl;
-            
+        // since we do just one pass over the table, we can sort and finalize the chunks immediately
+        const auto& post_processed_chunks = _sort_and_encode_chunks(filled_chunks, sort_column_id, table);
 
-            // TODO do transactions guarantee that no new chunks are added? Probably not -> assert
-            const auto first_inserted_chunk_id = table->chunk_count();
-            if (last_chunk_to_cluster) {
-              const auto post_processed_last_chunks = _sort_and_encode_chunks(partially_filled_chunks, sort_column_id, table);
-              for (const auto& c : post_processed_last_chunks) {
-                Assert(!c->is_mutable(), "mutable chunk");
-              }
-              _append_sorted_chunks_to_table(post_processed_last_chunks, table, false);
-
-              size_t rows_in_unfull_chunks = 0;
-              for (const auto& c : post_processed_last_chunks) {
-                rows_in_unfull_chunks += c->size();
-              }
-
-              const auto num_unfull_chunks = post_processed_last_chunks.size();
-              const auto avg_rows_in_unfull_chunks = rows_in_unfull_chunks / num_unfull_chunks;
-              std::cout << "There are "  << num_unfull_chunks << " chunks that are not full. On average, they have "
-                        << avg_rows_in_unfull_chunks << " rows (" << 100 * avg_rows_in_unfull_chunks / table->target_chunk_size()
-                        << "% of the target chunk size " << table->target_chunk_size() << ")" << std::endl;
-            } else {
-              for (const auto& c : partially_filled_chunks) {
-                Assert(c->size() < 25000, "partially filled != full");
-              }
-
-              _append_chunks_to_table(partially_filled_chunks, table, true);
-              std::cout << "added partially filled chunks" << std::endl;
-              temporary_chunk_ids.clear();
-              for (auto inserted_chunk_id = first_inserted_chunk_id; inserted_chunk_id < table->chunk_count(); inserted_chunk_id++) {
-                temporary_chunk_ids.push_back(inserted_chunk_id);
-              }
-            }
-            
-            Assert(temporary_chunk_ids.size() == partially_filled_chunks.size(), "incorrect number of chunks");
-            Assert(first_inserted_chunk_id + partially_filled_chunks.size() == size_t{table->chunk_count()}, "some additional chunk appeared");
-
-            previously_partially_filled_chunks = partially_filled_chunks;
-            partially_filled_chunks = {};
+        //TODO MVCC check and transaction-like move, repeat on failure
+        constexpr bool CHUNK_UNCHANGED = true;        
+        if (CHUNK_UNCHANGED) {
+          table->remove_chunk(chunk_id);
+          for (const auto temporary_chunk_id : temporary_chunk_ids) {
+            table->remove_chunk(temporary_chunk_id);
           }
-          // TODO last chunk handling
-        }        
-      }
 
-    });
+          _append_sorted_chunks_to_table(post_processed_chunks, table, false);
+          //std::cout << "added full chunks" << std::endl;
+          
+
+          // TODO do transactions guarantee that no new chunks are added? Probably not -> assert
+          const auto first_inserted_chunk_id = table->chunk_count();
+          if (last_chunk_to_cluster) {
+            const auto post_processed_last_chunks = _sort_and_encode_chunks(partially_filled_chunks, sort_column_id, table);
+            for (const auto& c : post_processed_last_chunks) {
+              Assert(!c->is_mutable(), "mutable chunk");
+            }
+            _append_sorted_chunks_to_table(post_processed_last_chunks, table, false);
+
+            size_t rows_in_unfull_chunks = 0;
+            for (const auto& c : post_processed_last_chunks) {
+              rows_in_unfull_chunks += c->size();
+            }
+
+            const auto num_unfull_chunks = post_processed_last_chunks.size();
+            const auto avg_rows_in_unfull_chunks = rows_in_unfull_chunks / num_unfull_chunks;
+            std::cout << "There are "  << num_unfull_chunks << " chunks that are not full. On average, they have "
+                      << avg_rows_in_unfull_chunks << " rows (" << 100 * avg_rows_in_unfull_chunks / table->target_chunk_size()
+                      << "% of the target chunk size " << table->target_chunk_size() << ")" << std::endl;
+          } else {
+            for (const auto& c : partially_filled_chunks) {
+              Assert(c->size() < 25000, "partially filled != full");
+            }
+
+            _append_chunks_to_table(partially_filled_chunks, table, true);
+            //std::cout << "added partially filled chunks" << std::endl;
+            temporary_chunk_ids.clear();
+            for (auto inserted_chunk_id = first_inserted_chunk_id; inserted_chunk_id < table->chunk_count(); inserted_chunk_id++) {
+              temporary_chunk_ids.push_back(inserted_chunk_id);
+            }
+          }
+          
+          Assert(temporary_chunk_ids.size() == partially_filled_chunks.size(), "incorrect number of chunks");
+          Assert(first_inserted_chunk_id + partially_filled_chunks.size() == size_t{table->chunk_count()}, "some additional chunk appeared");
+
+          previously_partially_filled_chunks = partially_filled_chunks;
+          partially_filled_chunks = {};
+        }
+        // TODO last chunk handling
+      }        
+    }
+
+    
   }
 }
 
