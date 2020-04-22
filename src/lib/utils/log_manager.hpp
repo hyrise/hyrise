@@ -18,22 +18,13 @@ struct LogEntry {
 
 class LogManager : public Noncopyable {
  public:
-  constexpr static LogLevel DEFAULT_LOG_LEVEL = LogLevel::Info;
-  constexpr static char LOG_LEVEL_SETTING_NAME[] = "LogManager.log_level";
-
   void add_message(const std::string& reporter, const std::string& message, const LogLevel log_level = LogLevel::Debug);
 
   const tbb::concurrent_vector<LogEntry>& log_entries() const;
 
  protected:
   friend class Hyrise;
-  friend class LogLevelSetting;
   friend class LogManagerTest;
-  friend class LogLevelSettingTest;
-
-  explicit LogManager(SettingsManager& settings_manager, LogLevel log_level = DEFAULT_LOG_LEVEL);
-
-  LogLevel _log_level;
 
  private:
   tbb::concurrent_vector<LogEntry> _log_entries;

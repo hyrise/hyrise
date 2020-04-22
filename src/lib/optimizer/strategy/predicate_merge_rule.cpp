@@ -98,7 +98,8 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
         break;
       }
 
-      default: {}
+      default: {
+      }
     }
   }
 }

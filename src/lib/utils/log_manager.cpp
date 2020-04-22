@@ -5,16 +5,7 @@
 
 namespace opossum {
 
-LogManager::LogManager(SettingsManager& settings_manager, LogLevel log_level) : _log_level(log_level) {
-  if (!settings_manager.has_setting(LOG_LEVEL_SETTING_NAME)) {
-    auto log_level_setting = std::make_shared<LogLevelSetting>(LOG_LEVEL_SETTING_NAME);
-    log_level_setting->register_at(settings_manager);
-  }
-}
-
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {
-  if (log_level < _log_level) return;
-
   const auto now = std::chrono::system_clock::now();
   const LogEntry log_entry{now, log_level, reporter, message};
   _log_entries.emplace_back(log_entry);

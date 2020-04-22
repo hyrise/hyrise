@@ -608,8 +608,6 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
-    utils/settings/log_level_setting.cpp
-    utils/settings/log_level_setting.hpp
     utils/settings_manager.cpp
     utils/settings_manager.hpp
     utils/singleton.hpp

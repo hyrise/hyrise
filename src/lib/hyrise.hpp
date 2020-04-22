@@ -37,10 +37,8 @@ class Hyrise : public Singleton<Hyrise> {
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   SettingsManager settings_manager;
+  LogManager log_manager;
   Topology topology;
-
-  // We need to pass the SettingsManager here to allow the correct registration of LogManager's setting.
-  LogManager log_manager{settings_manager};
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.

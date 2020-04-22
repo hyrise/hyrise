@@ -46,7 +46,7 @@ const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileT
     {{FileType::Tbl, "Tbl"}, {FileType::Csv, "Csv"}, {FileType::Binary, "Binary"}, {FileType::Auto, "Auto"}});
 
 const boost::bimap<LogLevel, std::string> log_level_to_string = make_bimap<LogLevel, std::string>(
-    {{LogLevel::Debug, "Debug"}, {LogLevel::Info, "Info"}, {LogLevel::Warning, "Warning"}, {LogLevel::Error, "Error"}});
+    {{LogLevel::Debug, "Debug"}, {LogLevel::Info, "Info"}, {LogLevel::Warning, "Warning"}});
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({

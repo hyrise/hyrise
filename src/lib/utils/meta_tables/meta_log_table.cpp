@@ -9,6 +9,7 @@ namespace opossum {
 MetaLogTable::MetaLogTable()
     : AbstractMetaTable(TableColumnDefinitions{{"timestamp", DataType::String, false},
                                                {"log_level", DataType::String, false},
+                                               {"log_level_id", DataType::Int, false},
                                                {"reporter", DataType::String, false},
                                                {"message", DataType::String, false}}) {}
 
@@ -22,10 +23,12 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
 
   for (const auto& entry : Hyrise::get().log_manager.log_entries()) {
     std::ostringstream timestamp;
-    auto t_c = std::chrono::system_clock::to_time_t(entry.timestamp);
-    timestamp << std::put_time(std::localtime(&t_c), "%F %T");
+    auto time = std::chrono::system_clock::to_time_t(entry.timestamp);
+    struct tm buffer;
+    timestamp << std::put_time(localtime_r(&time, &buffer), "%F %T");
     output_table->append({pmr_string{timestamp.str()}, pmr_string{log_level_to_string.left.at(entry.log_level)},
-                          pmr_string{entry.reporter}, pmr_string{entry.message}});
+                          static_cast<int32_t>(entry.log_level), pmr_string{entry.reporter},
+                          pmr_string{entry.message}});
   }
 
   return output_table;
