@@ -77,7 +77,7 @@ void BenchmarkSQLExecutor::rollback() {
   Assert(transaction_context && !transaction_context->is_auto_commit(),
          "Can only explicitly roll back transaction if auto-commit is disabled");
   Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
-  transaction_context->rollback(RollBackReason::RollBackByUser);
+  transaction_context->rollback(RollbackReason::User);
   if (_sqlite_connection) {
     _sqlite_transaction_open = false;
     _sqlite_connection->raw_execute_query("ROLLBACK TRANSACTION");

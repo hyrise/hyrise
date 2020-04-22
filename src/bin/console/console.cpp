@@ -873,7 +873,7 @@ int Console::_rollback_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _explicitly_created_transaction_context->rollback(RollBackReason::RollBackByUser);
+  _explicitly_created_transaction_context->rollback(RollbackReason::User);
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("Transaction (" + transaction_id + ") has been rolled back.\n");

@@ -71,8 +71,8 @@ bool TransactionContext::aborted() const {
   return (phase == TransactionPhase::Aborted) || (phase == TransactionPhase::RolledBackAfterConflict);
 }
 
-void TransactionContext::rollback(RollBackReason rollback_reason) {
-  if (rollback_reason == RollBackReason::RollBackAfterConflict) {
+void TransactionContext::rollback(RollbackReason rollback_reason) {
+  if (rollback_reason == RollbackReason::Conflict) {
     _abort();
   }
 
@@ -117,7 +117,7 @@ void TransactionContext::_abort() {
   _wait_for_active_operators_to_finish();
 }
 
-void TransactionContext::_mark_as_rolled_back(RollBackReason rollback_reason) {
+void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
                   if (op->state() != ReadWriteOperatorState::RolledBack) return false;
@@ -126,11 +126,10 @@ void TransactionContext::_mark_as_rolled_back(RollBackReason rollback_reason) {
               }()),
               "All read/write operators need to have been rolled back.");
 
-  if (rollback_reason == RollBackReason::RollBackByUser) {
+  if (rollback_reason == RollbackReason::User) {
     _transition(TransactionPhase::Active, TransactionPhase::RolledBackByUser);
   } else {
-    DebugAssert(rollback_reason == RollBackReason::RollBackAfterConflict,
-                "RollBackReason must be ByUser or AfterConflict");
+    DebugAssert(rollback_reason == RollbackReason::Conflict, "RollbackReason must be ByUser or AfterConflict");
     _transition(TransactionPhase::Aborted, TransactionPhase::RolledBackAfterConflict);
   }
 }

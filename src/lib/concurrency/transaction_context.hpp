@@ -105,7 +105,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * the database user or due to a transaction conflict. We need to know this in order to transition into
    * the correct transaction phase.
    */
-  void rollback(RollBackReason rollback_reason = RollBackReason::RollBackAfterConflict);
+  void rollback(RollbackReason rollback_reason = RollbackReason::Conflict);
 
   /**
    * Commits the transaction.
@@ -164,7 +164,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Sets the transaction phase to RolledBack.
    */
-  void _mark_as_rolled_back(RollBackReason rollback_reason = RollBackReason::RollBackAfterConflict);
+  void _mark_as_rolled_back(RollbackReason rollback_reason = RollbackReason::Conflict);
 
   /**
    * Sets transaction phase to Committing.
