@@ -222,7 +222,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         std::array<float, 2> indexed_segment_shares{1.0f, .1f};
 
         std::vector<JoinTestConfiguration> variations{};
-        variations.reserve(all_index_sides.size() * 2);
+        variations.reserve(all_index_sides.size() * indexed_segment_shares.size());
         for (const auto& index_side : all_index_sides) {
           // calculate index chunk counts, eliminate duplicates by using the unordered set
           auto& indexed_input = index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
