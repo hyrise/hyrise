@@ -86,7 +86,7 @@ struct JoinTestConfiguration {
   std::optional<size_t> radix_bits;
 
   // Only for JoinIndex
-  std::optional<IndexSide> index_side{std::nullopt};
+  std::optional<IndexSide> index_side;
 
   void swap_input_sides() {
     std::swap(input_left, input_right);
