@@ -90,7 +90,7 @@ void OperatorTask::_on_execute() {
   if (rw_operator && rw_operator->execute_failed()) {
     Assert(context, "Read/Write operator cannot have been executed without a context.");
 
-    context->rollback();
+    context->rollback(RollbackReason::Conflict);
   }
 
   // Get rid of temporary tables that are not needed anymore

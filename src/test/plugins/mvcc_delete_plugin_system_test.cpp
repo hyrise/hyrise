@@ -90,7 +90,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     if (update->execute_failed()) {
       // Collided with the plugin rewriting a chunk
-      transaction_context->rollback();
+      transaction_context->rollback(RollbackReason::Conflict);
     } else {
       transaction_context->commit();
       _counter++;

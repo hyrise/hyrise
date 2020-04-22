@@ -153,7 +153,7 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
 
 TEST_F(TransactionContextTest, CommitWithFailedOperator) {
   auto context = manager().new_transaction_context(AutoCommit::No);
-  context->rollback();
+  context->rollback(RollbackReason::Conflict);
   EXPECT_ANY_THROW(context->commit());
 }
 

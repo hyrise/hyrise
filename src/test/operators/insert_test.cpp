@@ -162,7 +162,7 @@ TEST_F(OperatorsInsertTest, Rollback) {
   };
   check();
 
-  context1->rollback();
+  context1->rollback(RollbackReason::User);
   check();
 }
 
@@ -190,7 +190,7 @@ TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{0});
 
   // Rollback Insert - invalidate inserted rows
-  context1->rollback();
+  context1->rollback(RollbackReason::User);
 
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), uint32_t{0});
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{1})->invalid_row_count(), uint32_t{3});
@@ -268,7 +268,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   insert->set_transaction_context(context);
   EXPECT_THROW(insert->execute(), std::logic_error);
-  context->rollback();
+  context->rollback(RollbackReason::Conflict);
 }
 
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {

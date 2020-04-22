@@ -65,7 +65,7 @@ void OperatorsDeleteTest::helper(bool commit) {
     transaction_context->commit();
     expected_end_cid = transaction_context->commit_id();
   } else {
-    transaction_context->rollback();
+    transaction_context->rollback(RollbackReason::User);
     expected_end_cid = MvccData::MAX_COMMIT_ID;
   }
 
@@ -130,7 +130,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 
   // MVCC commit.
   t1_context->commit();
-  t2_context->rollback();
+  t2_context->rollback(RollbackReason::Conflict);
 
   // Get validated table which should have only one row deleted.
   auto t_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -213,7 +213,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   update_op->execute();
   EXPECT_TRUE(update_op->execute_failed());
 
-  t2_context->rollback();
+  t2_context->rollback(RollbackReason::Conflict);
 }
 
 TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
@@ -264,7 +264,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     EXPECT_EQ(table_scan2->get_output()->row_count(), 0);
 
     if (value == 456.7f) {
-      context->rollback();
+      context->rollback(RollbackReason::User);
     } else {
       context->commit();
     }
@@ -286,7 +286,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 
     EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
 
-    context->rollback();
+    context->rollback(RollbackReason::User);
   }
 }
 
@@ -336,7 +336,7 @@ TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
   // This one should fail because the rows should have been filtered out by a validate and should not be visible
   // to the delete operator in the first place.
   EXPECT_THROW(delete_op2->execute(), std::logic_error);
-  t2_context->rollback();
+  t2_context->rollback(RollbackReason::Conflict);
 }
 
 TEST_F(OperatorsDeleteTest, PrunedInputTable) {

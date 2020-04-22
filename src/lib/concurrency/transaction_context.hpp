@@ -101,11 +101,11 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   /**
    * Aborts and rolls back the transaction.
-   * @param rollback_reason Specifies whether the rollback happens due to an explicit ROLLBACK; command by
+   * @param rollback_reason specifies whether the rollback happens due to an explicit ROLLBACK; command by
    * the database user or due to a transaction conflict. We need to know this in order to transition into
    * the correct transaction phase.
    */
-  void rollback(RollbackReason rollback_reason = RollbackReason::Conflict);
+  void rollback(RollbackReason rollback_reason);
 
   /**
    * Commits the transaction.
@@ -164,7 +164,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Sets the transaction phase to RolledBack.
    */
-  void _mark_as_rolled_back(RollbackReason rollback_reason = RollbackReason::Conflict);
+  void _mark_as_rolled_back(RollbackReason rollback_reason);
 
   /**
    * Sets transaction phase to Committing.

@@ -77,7 +77,7 @@ TEST_F(CreateTableTest, TableAlreadyExists) {
   context_2->commit();
 
   EXPECT_THROW(create_same_table->execute(), std::logic_error);
-  context_3->rollback();
+  context_3->rollback(RollbackReason::Conflict);
 }
 
 TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
@@ -198,7 +198,7 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   const auto table_3 = Hyrise::get().storage_manager.get_table("test_3");
   EXPECT_EQ(table_3->row_count(), 0);
 
-  context_2->rollback();
+  context_2->rollback(RollbackReason::User);
 
   const auto get_table_3 = std::make_shared<GetTable>("test_2");
   get_table_3->set_transaction_context(context_3);

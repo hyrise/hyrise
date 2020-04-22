@@ -88,7 +88,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   ins->set_transaction_context(context);
   ins->execute();
-  context->rollback();
+  context->rollback(RollbackReason::User);
 
   ASSERT_EQ(table->chunk_count(), 4u);
 
