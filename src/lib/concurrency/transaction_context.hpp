@@ -62,8 +62,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id,
-                     AutoCommit is_auto_commit = AutoCommit::No);
+  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id, AutoCommit is_auto_commit);
   ~TransactionContext();
 
   /**

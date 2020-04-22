@@ -77,7 +77,7 @@ void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID 
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -89,7 +89,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result =
       load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", 2u);
@@ -207,7 +207,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // This optimization is possible, if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
