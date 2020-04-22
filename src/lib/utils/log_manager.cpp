@@ -1,8 +1,5 @@
 #include "log_manager.hpp"
 
-#include "constant_mappings.hpp"
-#include "utils/settings/log_level_setting.hpp"
-
 namespace opossum {
 
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {
