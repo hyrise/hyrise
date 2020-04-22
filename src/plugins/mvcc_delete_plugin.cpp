@@ -87,9 +87,9 @@ void MvccDeletePlugin::_logical_delete_loop() {
     }
     if (saved_memory > 0) {
       std::ostringstream message;
-      double saved_mb = std::round(static_cast<float>(saved_memory) / (10000.0)) / 100.0;
-      message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", saved approx. " << saved_mb
-              << " MB";
+      double saved_mb = static_cast<float>(saved_memory) / (1000.0 * 1000.0);
+      message << "Consolidated " << num_chunks << " chunk(s) of " << table_name << ", saved approx. "
+              << std::setprecision(2) << saved_mb << " MB";
       Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Info);
     }
   }
