@@ -5,7 +5,6 @@
 #include <functional>
 
 #include "types.hpp"
-#include "utils/settings_manager.hpp"
 
 namespace opossum {
 
