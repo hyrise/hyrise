@@ -197,6 +197,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       PredicateCondition::Equals,
       all_secondary_predicate_sets.front(),
       std::make_shared<JoinOperatorFactory<JoinOperator>>(),
+      std::nullopt,
       std::nullopt
     };
     // clang-format on
