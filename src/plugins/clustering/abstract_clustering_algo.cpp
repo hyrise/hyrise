@@ -6,12 +6,15 @@
 #include <vector>
 
 #include "hyrise.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 
 #define VERBOSE false
 
@@ -69,8 +72,8 @@ void AbstractClusteringAlgo::_run_assertions() const {
     for (ChunkID chunk_id{0};chunk_id < table->chunk_count();chunk_id++) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk) {
+        Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
-        Assert(!chunk->is_mutable(), "chunk is still mutable");
         if (ordered_by_column_id) {
           Assert(chunk->ordered_by(), "chunk should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
           Assert((*chunk->ordered_by()).first == *ordered_by_column_id, "chunk should be ordered by " + table->column_name(*ordered_by_column_id) 
@@ -146,6 +149,106 @@ void AbstractClusteringAlgo::run() {
   _perform_clustering();
 
   _run_assertions();
+}
+
+std::shared_ptr<Chunk> AbstractClusteringAlgo::_create_empty_chunk(const std::shared_ptr<const Table>& table, const size_t rows_per_chunk) const {
+  Segments segments;
+  const auto column_definitions = table->column_definitions();
+  for (const auto& column_definition : column_definitions) {
+    resolve_data_type(column_definition.data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      segments.push_back(
+          std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, rows_per_chunk));
+    });
+  }
+
+  std::shared_ptr<MvccData> mvcc_data;
+  if (table->uses_mvcc() == UseMvcc::Yes) {
+    mvcc_data = std::make_shared<MvccData>(rows_per_chunk, MvccData::MAX_COMMIT_ID);
+  }
+  return std::make_shared<Chunk>(segments, mvcc_data);
+}
+
+Segments AbstractClusteringAlgo::_get_segments(const std::shared_ptr<const Chunk> chunk) const {
+  Segments segments;
+  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
+    segments.push_back(chunk->get_segment(column_id));
+  }
+  return segments;
+}
+
+//TODO threadsafe?
+void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table, bool allow_mutable) const {
+  Assert(chunk, "chunk is nullptr");
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+  if (!allow_mutable) {
+    Assert(!chunk->is_mutable(), "chunk must not be mutable");
+  }
+
+  Segments segments;
+  for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
+    segments.push_back(chunk->get_segment(column_id));
+  }
+  table->append_chunk(segments, chunk->mvcc_data());
+  Assert(table->last_chunk()->mvcc_data(), "MVCC data disappeared");
+
+  if (chunk->ordered_by()) {
+    const auto ordered_by = *chunk->ordered_by();
+    table->last_chunk()->set_ordered_by(ordered_by);
+  }
+
+  if (!chunk->is_mutable()) {
+    table->last_chunk()->finalize();
+  }
+}
+
+
+void AbstractClusteringAlgo::_append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table, bool allow_mutable) const {
+  Assert(chunk, "chunk is nullptr");
+  Assert(chunk->ordered_by(), "chunk has no ordering information");
+  _append_chunk_to_table(chunk, table, allow_mutable);
+}
+
+void AbstractClusteringAlgo::_append_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::shared_ptr<Table> table, bool allow_mutable) const {
+  for (const auto& chunk : chunks) {
+    _append_chunk_to_table(chunk, table, allow_mutable);
+  }
+}
+
+void AbstractClusteringAlgo::_append_sorted_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::shared_ptr<Table> table, bool allow_mutable) const {
+  for (const auto& chunk : chunks) {
+    _append_sorted_chunk_to_table(chunk, table, allow_mutable);
+  }
+}
+
+std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk> chunk, const ColumnID sort_column, const TableColumnDefinitions& column_definitions) const {
+  Assert(chunk, "chunk is nullptr");
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+
+  const auto size_before_sort = chunk->size();
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk->size(), UseMvcc::Yes);
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+  _append_chunk_to_table(chunk, table);
+  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
+  auto wrapper = std::make_shared<TableWrapper>(table);
+  wrapper->execute();
+  Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
+  auto sort = std::make_shared<Sort>(wrapper, sort_column, OrderByMode::Ascending, size_before_sort);
+  sort->execute();
+
+  const auto& sort_result = sort->get_output();
+  const auto size_after_sort = sort_result->row_count();
+  Assert(size_before_sort == size_after_sort, "chunk size changed during sorting");
+  Assert(sort_result->chunk_count() == 1, "expected exactly 1 chunk");
+
+  const auto sorted_const_chunk = sort_result->get_chunk(ChunkID{0});
+  Assert(!sorted_const_chunk->mvcc_data(), "sort result has mvcc data now - what changed?");
+  const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+
+  auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
+  sorted_chunk_with_mvcc->set_ordered_by(*sorted_const_chunk->ordered_by());
+  return sorted_chunk_with_mvcc;
 }
 
 } // namespace opossum

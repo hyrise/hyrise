@@ -107,14 +107,6 @@ size_t _insertion_index(const std::vector<std::pair<ColumnDataType, ColumnDataTy
   Fail("No boundary matched");
 }
 
-Segments _get_segments(std::shared_ptr<const Chunk> chunk) {
-  Segments segments;
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    segments.push_back(chunk->get_segment(column_id));
-  }
-  return segments;
-}
-
 template <typename ColumnDataType>
 void _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::shared_ptr<Chunk>>& target_chunks, const std::vector<std::pair<ColumnDataType, ColumnDataType>>& boundaries, const size_t rows_per_chunk, const ColumnID clustering_column, std::shared_ptr<Table>& trash_table) {
   Assert(target_chunks.size() == boundaries.size(), "mismatching input sizes");
@@ -173,82 +165,6 @@ void _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::sha
       target_chunks[insertion_index]->append(insertion_values);
     }
   }
-}
-
-std::shared_ptr<Chunk> _create_empty_chunk(const std::shared_ptr<const Table>& table, const size_t rows_per_chunk) {
-  Segments segments;
-  const auto column_definitions = table->column_definitions();
-  for (const auto& column_definition : column_definitions) {
-    resolve_data_type(column_definition.data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(
-          std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, rows_per_chunk));
-    });
-  }
-
-  std::shared_ptr<MvccData> mvcc_data;
-  if (table->uses_mvcc() == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(rows_per_chunk, MvccData::MAX_COMMIT_ID);
-  }
-  return std::make_shared<Chunk>(segments, mvcc_data);
-}
-
-void _append_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table) {
-  Assert(chunk, "chunk is nullptr");
-  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
-  Segments segments;
-  for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
-    segments.push_back(chunk->get_segment(column_id));
-  }
-  table->append_chunk(segments, chunk->mvcc_data());
-  Assert(table->last_chunk()->mvcc_data(), "MVCC data disappeared");
-
-  if (chunk->ordered_by()) {
-    const auto ordered_by = *chunk->ordered_by();
-    table->last_chunk()->set_ordered_by(ordered_by);
-  }
-}
-
-void _append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table) {
-  Assert(chunk, "chunk is nullptr");
-  Assert(chunk->ordered_by(), "chunk has no ordering information");
-  _append_chunk_to_table(chunk, table);
-}
-
-void _append_chunks_to_table(const std::vector<std::shared_ptr<Chunk>> chunks, const std::shared_ptr<Table> table) {
-  for (const auto& chunk : chunks) {
-    _append_chunk_to_table(chunk, table);
-  }
-}
-
-std::shared_ptr<Chunk> _sort_chunk(std::shared_ptr<Chunk> chunk, const ColumnID sort_column, const TableColumnDefinitions& column_definitions) {
-  Assert(chunk, "chunk is nullptr");
-  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
-
-  const auto size_before_sort = chunk->size();
-
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk->size(), UseMvcc::Yes);
-  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
-  _append_chunk_to_table(chunk, table);
-  Assert(chunk->mvcc_data(), "chunk has no mvcc data");
-  auto wrapper = std::make_shared<TableWrapper>(table);
-  wrapper->execute();
-  Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
-  auto sort = std::make_shared<Sort>(wrapper, sort_column, OrderByMode::Ascending, size_before_sort);
-  sort->execute();
-
-  const auto& sort_result = sort->get_output();
-  const auto size_after_sort = sort_result->row_count();
-  Assert(size_before_sort == size_after_sort, "chunk size changed during sorting");
-  Assert(sort_result->chunk_count() == 1, "expected exactly 1 chunk");
-
-  const auto sorted_const_chunk = sort_result->get_chunk(ChunkID{0});
-  Assert(!sorted_const_chunk->mvcc_data(), "sort result has mvcc data now - what changed?");
-  const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
-
-  auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
-  sorted_chunk_with_mvcc->set_ordered_by(*sorted_const_chunk->ordered_by());
-  return sorted_chunk_with_mvcc;
 }
 
 void ChunkwiseClusteringAlgo::_perform_clustering() {

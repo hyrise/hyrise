@@ -7,6 +7,7 @@
 #include "clustering/abstract_clustering_algo.hpp"
 #include "clustering/simple_clustering_algo.hpp"
 #include "clustering/chunkwise_clustering_algo.hpp"
+#include "clustering/disjoint_clusters_algo.hpp"
 #include "nlohmann/json.hpp"
 
 namespace opossum {
@@ -15,7 +16,7 @@ const std::string ClusteringPlugin::description() const { return "This is the Hy
 
 void ClusteringPlugin::start() {
   const auto clustering_config = _read_clustering_config();
-  std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<ChunkwiseClusteringAlgo>(ChunkwiseClusteringAlgo(storage_manager, clustering_config));
+  std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<DisjointClustersAlgo>(DisjointClustersAlgo(storage_manager, clustering_config));
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << clustering_algo->description() << std::endl;
 
