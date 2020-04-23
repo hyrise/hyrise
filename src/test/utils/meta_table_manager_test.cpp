@@ -3,10 +3,58 @@
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
+#include "utils/meta_tables/meta_chunks_table.hpp"
+#include "utils/meta_tables/meta_columns_table.hpp"
+#include "utils/meta_tables/meta_log_table.hpp"
+#include "utils/meta_tables/meta_plugins_table.hpp"
+#include "utils/meta_tables/meta_segments_accurate_table.hpp"
+#include "utils/meta_tables/meta_segments_table.hpp"
+#include "utils/meta_tables/meta_settings_table.hpp"
+#include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
 
-class MetaTableManagerTest : public BaseTest {};
+using MetaTable = std::shared_ptr<AbstractMetaTable>;
+using MetaTables = std::vector<MetaTable>;
+using MetaTableNames = std::vector<std::string>;
+
+class MetaTableManagerTest : public BaseTest {
+ public:
+  static MetaTables meta_tables() {
+    return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
+            std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
+            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>(),
+            std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>(),
+            std::make_shared<MetaLogTable>()};
+  }
+
+  static MetaTableNames meta_table_names() {
+    MetaTableNames names;
+    for (auto& table : MetaTableManagerTest::meta_tables()) {
+      names.push_back(table->name());
+    }
+
+    return names;
+  }
+
+  // We need this as the add method of MetaTableManager is protected.
+  // Won't compile if add is not called by test class, which is a friend of MetaTableManager.
+  static void add_meta_table(const MetaTable& table) { Hyrise::get().meta_table_manager._add(table); }
+
+ protected:
+  std::shared_ptr<const Table> mock_manipulation_values;
+
+  void SetUp() {
+    Hyrise::reset();
+
+    const auto column_definitions = MetaMockTable().column_definitions();
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    table->append({pmr_string{"foo"}});
+    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+    table_wrapper->execute();
+    mock_manipulation_values = table_wrapper->get_output();
+  }
 
 TEST_F(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.

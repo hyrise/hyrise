@@ -157,12 +157,14 @@ class BinaryWriter {
    * Width of offset vector      | AttributeVectorWidth                | 1
    * Number of Blocks            | uint32_t                            | 4
    * Block minima                | T                                   | Number of blocks * sizeof(T)
-   * Size                        | uint32_t                            | 4
-   * NULL values                 | vector<bool> (BoolAsByteType)       | size * 1
+   * Stores NULL values          | bool (stored as BoolAsByteType)     | 1
+   * NULL values¹                | vector<bool> (BoolAsByteType)       | size * 1
    * Offset values               | uint32_t                            | size * 4
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
+   *
+   * ¹: This field is only written when the optional NULL values are stored
    */
   template <typename T>
   static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, std::ofstream& ofstream);
@@ -179,7 +181,7 @@ class BinaryWriter {
    * Last Block size             | uint32_t                            | 4
    * lz4 Block sizes             | vector<uint32_t>                    | Number of blocks * 4
    * lz4 Blocks                  | vector<vector<char>>                | Sum(lz4 block sizes)
-   * NULL values size            | uint32_t                            | 4
+   * NULL values' size           | uint32_t                            | 4
    * NULL values²                | vector<bool> (BoolAsByteType)       | Size * 1
    * Dictionary size             | uint32_t                            | 4
    * Dictionary                  | vector<char>                        | Dictionary size * 1
@@ -192,7 +194,7 @@ class BinaryWriter {
    *
    * ¹: This field is written if the number of blocks is greater than 1. Otherwise "Last Block Size" contains the
    *    size of the single block or 0 if there are no blocks
-   * ²: This field is only written if NULL value size is not 0
+   * ²: This field is only written if NULL values' size is not 0
    * ³: These fields are only written if string offset size is not 0
    */
   template <typename T>

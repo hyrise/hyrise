@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
