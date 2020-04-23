@@ -29,6 +29,7 @@ RUN apt-get update \
         libsqlite3-dev \
         libtbb-dev \
         lld \
+        lsb-release \
         man \
         parallel \
         postgresql-server-dev-all \
