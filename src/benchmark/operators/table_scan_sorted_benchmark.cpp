@@ -233,7 +233,7 @@ void registerTableScanSortedBenchmarks() {
     for (const auto selectivity : selectivities) {
       for (const auto& data_type : supported_data_types) {
         for (const auto& mode : modes) {
-          for (const auto& is_reference_scan : {false, true}) {
+          for (const auto is_reference_scan : {false, true}) {
             for (const auto is_between_scan : {false, true}) {
               const auto& table_generator = table_types.at(data_type);
 
