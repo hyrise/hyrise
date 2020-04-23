@@ -3,7 +3,7 @@
 | Name                      | Version          | Platform |                              Optional |
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
-| boost                     | >= 1.65.0        |    All   |                                    No |
+| boost                     | >= 1.70.0        |    All   |                                    No |
 | clang                     | >= 9.0           |    All   |                 Yes, if gcc installed |
 | clang-format              | >= 9.0           |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 9.0           |    All   |                         Yes (linting) |

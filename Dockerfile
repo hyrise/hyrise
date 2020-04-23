@@ -3,9 +3,6 @@
 FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
-    && apt-get install -y software-properties-common \
-    && add-apt-repository -y ppa:mhier/libboost-latest \
-    && apt-get update \
     && apt-get install -y \
         autoconf \
         bash-completion \
@@ -21,7 +18,7 @@ RUN apt-get update \
         gcovr \
         git \
         graphviz \
-        libboost1.70-dev \
+        libboost1.71-all-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \
