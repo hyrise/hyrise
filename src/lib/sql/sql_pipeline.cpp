@@ -25,9 +25,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
       _transaction_context(transaction_context),
       _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
-              "The transaction context cannot have been committed already.");
+              "The transaction context has to be active.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
               "Transaction context without MVCC enabled makes no sense");
+  DebugAssert(!_transaction_context || !_transaction_context->is_auto_commit(),
+              "Auto-commit transactions are created internally and should not be passed in.");
 
   hsql::SQLParserResult parse_result;
 
@@ -83,10 +85,6 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
     auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
                                                                      use_mvcc, optimizer, pqp_cache, lqp_cache);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
-  }
-
-  if (statement_count() > 0) {
-    _sql_pipeline_statements.front()->set_transaction_context(transaction_context);
   }
 
   // If we see at least one structure altering statement and we have more than one statement, we require execution of a
@@ -240,22 +238,28 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
       return {SQLPipelineStatus::Failure, _result_tables};
     }
 
-    DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+    Assert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
     _result_tables.emplace_back(table);
 
-    const auto& previous_transaction_context = pipeline_statement->transaction_context();
+    const auto& new_transaction_context = pipeline_statement->transaction_context();
 
-    if (previous_transaction_context->is_auto_commit()) {
-      DebugAssert(previous_transaction_context->phase() == TransactionPhase::Committed ||
-                      previous_transaction_context->phase() == TransactionPhase::RolledBackByUser,
-                  "Auto-commit statements should always be committed or rolled back at this point");
+    if (new_transaction_context->is_auto_commit()) {
+      Assert(new_transaction_context->phase() == TransactionPhase::Committed,
+             "Auto-commit statements should always be committed at this point");
+      // Auto-commit transaction context should not be available anymore
       _transaction_context = nullptr;
-    } else if (previous_transaction_context->phase() == TransactionPhase::Committed ||
-               previous_transaction_context->phase() == TransactionPhase::RolledBackByUser) {
-      _transaction_context = nullptr;
+    } else if (new_transaction_context->phase() == TransactionPhase::Active) {
+      // If a new transaction was started (BEGIN), allow the caller to retrieve it so that it can be passed into the
+      // following SQLPipeline
+      _transaction_context = new_transaction_context;
     } else {
-      _transaction_context = previous_transaction_context;
+      // The previous, user-created transaction was sucessfully committed or rolled back due to the user's request.
+      // Clear it so that the next statement can either start a new transaction or run in auto-commit mode
+      Assert(new_transaction_context->phase() == TransactionPhase::Committed ||
+                 new_transaction_context->phase() == TransactionPhase::RolledBackByUser,
+             "Invalid state for non-auto-commit transaction after succesful statement");
+      _transaction_context = nullptr;
     }
   }
 

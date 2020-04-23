@@ -10,8 +10,7 @@ namespace opossum {
 Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
-      _send_execution_info(send_execution_info),
-      _transaction_context(nullptr) {}
+      _send_execution_info(send_execution_info) {}
 
 std::shared_ptr<Socket> Session::socket() { return _socket; }
 
@@ -106,7 +105,9 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto [execution_information, transaction_context] =
+  ExecutionInformation execution_information;
+
+  std::tie(execution_information, _transaction_context) =
       QueryHandler::execute_pipeline(query, _send_execution_info, _transaction_context);
 
   if (!execution_information.error_message.empty()) {
@@ -126,8 +127,6 @@ void Session::_handle_simple_query() {
     _postgres_protocol_handler->send_command_complete(
         ResultSerializer::build_command_complete_message(execution_information, row_count));
   }
-
-  _transaction_context = transaction_context;
 
   _postgres_protocol_handler->send_ready_for_query();
 }
@@ -192,8 +191,9 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction_context)
+  if (!_transaction_context) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  }
   physical_plan->set_transaction_context_recursively(_transaction_context);
 
   const auto result_table = QueryHandler::execute_prepared_plan(physical_plan);

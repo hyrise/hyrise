@@ -45,7 +45,7 @@ TransactionContext::~TransactionContext() {
                 // Note: When thrown during stack unwinding, this exception might hide previous exceptions. If you are
                 // seeing this, either use a debugger and break on exceptions or disable this exception as a trial.
               }()),
-              "Has registered operators but has neither been committed nor rolled back.");
+              "Has registered operators but has neither been committed nor rolled back (see comment in code!).");
 
   /**
    * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
@@ -68,12 +68,15 @@ TransactionPhase TransactionContext::phase() const { return _phase; }
 
 bool TransactionContext::aborted() const {
   const auto phase = _phase.load();
-  return (phase == TransactionPhase::Aborted) || (phase == TransactionPhase::RolledBackAfterConflict);
+  return (phase == TransactionPhase::Conflicted) || (phase == TransactionPhase::RolledBackAfterConflict);
 }
 
 void TransactionContext::rollback(RollbackReason rollback_reason) {
   if (rollback_reason == RollbackReason::Conflict) {
-    _abort();
+    _mark_as_conflicted();
+  } else {
+    // We directly go to RolledBackByUser, skipping Conflicted
+    Assert(_num_active_operators == 0, "For a user-initiated rollback, no operators should be active");
   }
 
   for (const auto& op : _read_write_operators) {
@@ -111,8 +114,8 @@ void TransactionContext::commit() {
   committed_future.wait();
 }
 
-void TransactionContext::_abort() {
-  _transition(TransactionPhase::Active, TransactionPhase::Aborted);
+void TransactionContext::_mark_as_conflicted() {
+  _transition(TransactionPhase::Active, TransactionPhase::Conflicted);
 
   _wait_for_active_operators_to_finish();
 }
@@ -129,8 +132,8 @@ void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
   if (rollback_reason == RollbackReason::User) {
     _transition(TransactionPhase::Active, TransactionPhase::RolledBackByUser);
   } else {
-    DebugAssert(rollback_reason == RollbackReason::Conflict, "RollbackReason must be ByUser or AfterConflict");
-    _transition(TransactionPhase::Aborted, TransactionPhase::RolledBackAfterConflict);
+    DebugAssert(rollback_reason == RollbackReason::Conflict, "Invalid RollbackReason");
+    _transition(TransactionPhase::Conflicted, TransactionPhase::RolledBackAfterConflict);
   }
 }
 
@@ -192,6 +195,8 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
 }
 
 void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase) {
+  DebugAssert(_is_auto_commit == AutoCommit::No || to_phase != TransactionPhase::RolledBackByUser,
+              "Auto-commit transactions cannot be manually rolled back");
   const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
   Assert(success, "Illegal phase transition detected.");
 }
@@ -201,8 +206,8 @@ std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {
     case TransactionPhase::Active:
       stream << "Active";
       break;
-    case TransactionPhase::Aborted:
-      stream << "Aborted";
+    case TransactionPhase::Conflicted:
+      stream << "Conflicted";
       break;
     case TransactionPhase::RolledBackAfterConflict:
       stream << "RolledBackAfterConflict";

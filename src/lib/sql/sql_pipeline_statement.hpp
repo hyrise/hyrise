@@ -58,7 +58,7 @@ class SQLPipelineStatement : public Noncopyable {
                        const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                        const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);
 
-  // Set the transaction context.
+  // Set the transaction context if this SQLPipelineStatement should not auto-commit.
   void set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
 
   // Returns the raw SQL string.
@@ -128,8 +128,9 @@ class SQLPipelineStatement : public Noncopyable {
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
-  // Might be the statement's own transaction context (if in auto-commit mode), or the one shared by all statements in
-  // a pipeline.
+  // Either a multi-statement transaction context that was passed in using set_transaction_context or an auto-commit
+  // transaction context created by the SQLPipelineStatement itself. Might be changed during the execution of this
+  // statement, e.g., if it is a BEGIN statement.
   std::shared_ptr<TransactionContext> _transaction_context = nullptr;
 };
 

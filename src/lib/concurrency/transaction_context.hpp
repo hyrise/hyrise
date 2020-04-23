@@ -26,9 +26,9 @@ class CommitContext;
  *           |                          Finish Transaction -----------------------+
  *           |                                 |                                  |
  *           |                                 | IF (User requests Commit         | ELSE (User requests Rollback)
- *       +---------+                           |     or Auto-Commit-Mode)         |
- *       | Aborted |                     +------------+                   +------------------+
- *       +---------+                     | Committing |                   | RolledBackByUser |
+ *     +------------+                          |     or Auto-Commit-Mode)         |
+ *     | Conflicted |                    +------------+                   +------------------+
+ *     +------------+                    | Committing |                   | RolledBackByUser |
  *           |                           +------------+                   +------------------+
  *   Rollback operators                        |
  *           |                           Commit operators
@@ -46,7 +46,7 @@ class CommitContext;
  */
 enum class TransactionPhase {
   Active,                   // Transaction has just been created. Operators may be executed.
-  Aborted,                  // One of the operators failed. Transaction needs to be rolled back.
+  Conflicted,               // One of the operators ran into a conflict. Transaction needs to be rolled back.
   RolledBackAfterConflict,  // Transaction has been rolled back because an operator failed. (Considered a failure)
   RolledBackByUser,         // Transaction has been rolled back due to ROLLBACK;-statement. (Considered a success)
   Committing,               // Commit ID has been assigned. Operators may commit records.
@@ -94,13 +94,13 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   TransactionPhase phase() const;
 
   /**
-   * Returns true if transaction is aborted or has been rolled back because an operator failed.
+   * Returns true if transaction has run into a conflict or was manually rolled back by the user.
    */
   bool aborted() const;
 
   /**
    * Aborts and rolls back the transaction.
-   * @param rollback_reason specifies whether the rollback happens due to an explicit ROLLBACK; command by
+   * @param rollback_reason specifies whether the rollback happens due to an explicit ROLLBACK command by
    * the database user or due to a transaction conflict. We need to know this in order to transition into
    * the correct transaction phase.
    */
@@ -143,8 +143,9 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**@}*/
 
   /**
-   * Returns information, whether the transaction context is automatically generated or explicitly created in order to
-   * keep the transaction context alive for multiple statements in one session.
+   * Returns whether the transaction is created (and will also commit) automatically. The alternative would be that it
+   * was created through a user command (BEGIN). This information is used by the SQLPipelineStatement to auto-commit the
+   * transaction - the transaction does not commit itself.
    */
   bool is_auto_commit();
 
@@ -155,10 +156,10 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    */
 
   /**
-   * Sets the transaction phase to Aborted.
+   * Sets the transaction phase to Conflicted and waits for operators to finish.
    * Should be called if an operator fails.
    */
-  void _abort();
+  void _mark_as_conflicted();
 
   /**
    * Sets the transaction phase to RolledBack.

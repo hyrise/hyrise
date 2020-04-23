@@ -13,6 +13,9 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
+  DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
+              "Auto-commit transaction contexts should not be passed around this far");
+
   auto execution_info = ExecutionInformation();
   auto sql_pipeline = SQLPipelineBuilder{query}.with_transaction_context(transaction_context).create_pipeline();
 
@@ -94,7 +97,8 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
   auto sql_statement = sql_pipeline.get_parsed_sql_statements().back();
   auto& statements = sql_statement->getStatements();
 
-  if (statements.front()->isType(hsql::StatementType::kStmtTransaction)) {
+  DebugAssert(statements.size() == 1, "SQL statements were not properly split");
+  if (statements[0]->isType(hsql::StatementType::kStmtTransaction)) {
     const auto& transaction_statement = dynamic_cast<hsql::TransactionStatement&>(*statements.front());
 
     switch (transaction_statement.command) {

@@ -62,8 +62,7 @@ void OperatorTask::_on_execute() {
         // the expected default case
         break;
 
-      case TransactionPhase::Aborted:
-      case TransactionPhase::RolledBackByUser:
+      case TransactionPhase::Conflicted:
       case TransactionPhase::RolledBackAfterConflict:
         // The transaction already failed. No need to execute this.
         if (auto read_write_operator = std::dynamic_pointer_cast<AbstractReadWriteOperator>(_op)) {
@@ -75,7 +74,10 @@ void OperatorTask::_on_execute() {
 
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
-        Fail("Trying to execute operators for a transaction that is already committed");
+        Fail("Trying to execute an operator for a transaction that is already committed");
+
+      case TransactionPhase::RolledBackByUser:
+        Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
     }
   }
 

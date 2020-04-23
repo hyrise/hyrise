@@ -45,6 +45,11 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
 }
 
 void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context) {
+  Assert(!_transaction_context, "SQLPipelineStatement already has a transaction context");
+  Assert(!transaction_context || !transaction_context->is_auto_commit(),
+         "Auto-commit transaction contexts should be created by the SQLPipelineStatement itself");
+  Assert(_use_mvcc == UseMvcc::Yes || !transaction_context,
+         "Can only set transaction context for MVCC-enabled statements");
   _transaction_context = transaction_context;
 }
 
@@ -206,8 +211,9 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
 std::vector<std::shared_ptr<AbstractTask>> SQLPipelineStatement::_get_transaction_tasks() {
   const auto& sql_statement = get_parsed_sql_statement();
   const std::vector<hsql::SQLStatement*>& statements = sql_statement->getStatements();
-  auto* transaction_statement = dynamic_cast<hsql::TransactionStatement*>(statements.front());
-  switch (transaction_statement->command) {
+  const auto& transaction_statement = static_cast<const hsql::TransactionStatement&>(*statements.front());
+
+  switch (transaction_statement.command) {
     case hsql::kBeginTransaction:
       AssertInput(!_transaction_context || _transaction_context->is_auto_commit(),
                   "Cannot begin transaction inside an active transaction.");
@@ -278,7 +284,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   // Get output from the last task if the task was an actual operator and not a transaction statement
   if (!_is_transaction_statement()) {
-    _result_table = std::dynamic_pointer_cast<OperatorTask>(tasks.back())->get_operator()->get_output();
+    _result_table = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
   }
 
   if (!_result_table) _query_has_output = false;
