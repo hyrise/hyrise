@@ -28,7 +28,7 @@
 
 namespace opossum {
 
-ChunkwiseClusteringAlgo::ChunkwiseClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering) : AbstractClusteringAlgo(storage_manager, clustering) {}
+ChunkwiseClusteringAlgo::ChunkwiseClusteringAlgo(ClusteringByTable clustering) : AbstractClusteringAlgo(clustering) {}
 
 const std::string ChunkwiseClusteringAlgo::description() const {
   return "ChunkwiseClusteringAlgo";

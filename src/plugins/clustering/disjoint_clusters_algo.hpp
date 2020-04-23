@@ -14,10 +14,10 @@ namespace opossum {
 
 class DisjointClustersAlgo : public AbstractClusteringAlgo {
  public:
-  // TODO sm
-  DisjointClustersAlgo(StorageManager& storage_manager, ClusteringByTable clustering);
 
-  const std::string description() const override;  
+  DisjointClustersAlgo(ClusteringByTable clustering);
+
+  const std::string description() const override;
 
  protected:
   

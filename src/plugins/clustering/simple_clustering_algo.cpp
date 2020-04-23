@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-SimpleClusteringAlgo::SimpleClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering) : AbstractClusteringAlgo(storage_manager, clustering) {}
+SimpleClusteringAlgo::SimpleClusteringAlgo(ClusteringByTable clustering) : AbstractClusteringAlgo(clustering) {}
 
 const std::string SimpleClusteringAlgo::description() const {
   return "SimpleClusteringAlgo";
@@ -100,6 +100,7 @@ void SimpleClusteringAlgo::_append_chunk(const std::shared_ptr<const Chunk> chun
 
 void SimpleClusteringAlgo::_perform_clustering() {
   // TODO do we need a timer here?
+  auto& storage_manager = Hyrise::get().storage_manager;
   Timer timer;
 
   if (!clustering_by_table.empty()) {

@@ -15,7 +15,7 @@ namespace opossum {
 class ChunkwiseClusteringAlgo : public AbstractClusteringAlgo {
  public:
   // TODO sm
-  ChunkwiseClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering);
+  ChunkwiseClusteringAlgo(ClusteringByTable clustering);
 
   const std::string description() const override;  
 

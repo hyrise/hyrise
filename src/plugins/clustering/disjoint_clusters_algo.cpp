@@ -28,7 +28,7 @@
 
 namespace opossum {
 
-DisjointClustersAlgo::DisjointClustersAlgo(StorageManager& storage_manager, ClusteringByTable clustering) : AbstractClusteringAlgo(storage_manager, clustering) {}
+DisjointClustersAlgo::DisjointClustersAlgo(ClusteringByTable clustering) : AbstractClusteringAlgo(clustering) {}
 
 const std::string DisjointClustersAlgo::description() const {
   return "DisjointClustersAlgo";

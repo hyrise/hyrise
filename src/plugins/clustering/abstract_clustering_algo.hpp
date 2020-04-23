@@ -16,7 +16,7 @@ using ClusteringByTable = std::map<std::string, std::vector<std::pair<std::strin
 class AbstractClusteringAlgo {
  public:
 
-  AbstractClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering) : storage_manager(storage_manager), clustering_by_table(clustering) {}
+  AbstractClusteringAlgo(ClusteringByTable clustering) : clustering_by_table(clustering) {}
 
   virtual ~AbstractClusteringAlgo() = default;
 
@@ -24,7 +24,6 @@ class AbstractClusteringAlgo {
 
   void run();
 
-  StorageManager& storage_manager;
   ClusteringByTable clustering_by_table;
 
  protected:

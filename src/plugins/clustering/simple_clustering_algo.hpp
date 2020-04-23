@@ -13,7 +13,7 @@ namespace opossum {
 class SimpleClusteringAlgo : public AbstractClusteringAlgo {
  public:
 
-  SimpleClusteringAlgo(StorageManager& storage_manager, ClusteringByTable clustering);
+  SimpleClusteringAlgo(ClusteringByTable clustering);
 
   const std::string description() const override;
 
