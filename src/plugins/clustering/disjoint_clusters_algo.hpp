@@ -5,7 +5,6 @@
 #include <string>
 
 #include "abstract_clustering_algo.hpp"
-#include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -22,9 +21,6 @@ class DisjointClustersAlgo : public AbstractClusteringAlgo {
  protected:
   
   void _perform_clustering() override;
-
-  template <typename ColumnDataType>
-  std::shared_ptr<const AbstractHistogram<ColumnDataType>> _get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) const;
 
   template <typename ColumnDataType>
   std::vector<std::pair<AllTypeVariant, AllTypeVariant>> _get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters) const;

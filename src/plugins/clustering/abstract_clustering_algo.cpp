@@ -8,6 +8,12 @@
 #include "hyrise.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
+
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/base_attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -249,6 +255,19 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
   sorted_chunk_with_mvcc->set_ordered_by(*sorted_const_chunk->ordered_by());
   return sorted_chunk_with_mvcc;
+}
+
+template <typename ColumnDataType>
+std::shared_ptr<const AbstractHistogram<ColumnDataType>> AbstractClusteringAlgo::_get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) const {
+  const auto table_statistics = table->table_statistics();
+  const auto column_id = table->column_id_by_name(column_name);
+  const auto base_attribute_statistics = table_statistics->column_statistics[column_id];
+
+  const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
+  Assert(attribute_statistics, "could not cast to AttributeStatistics");
+  const auto histogram = attribute_statistics->histogram;
+  Assert(histogram, "no histogram available for column "  + column_name);
+  return histogram;
 }
 
 } // namespace opossum

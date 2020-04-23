@@ -20,10 +20,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
-#include "statistics/attribute_statistics.hpp"
-#include "statistics/base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-#include "statistics/table_statistics.hpp"
 
 
 namespace opossum {
@@ -34,18 +31,6 @@ const std::string DisjointClustersAlgo::description() const {
   return "DisjointClustersAlgo";
 }
 
-template <typename ColumnDataType>
-std::shared_ptr<const AbstractHistogram<ColumnDataType>> DisjointClustersAlgo::_get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) const {
-  const auto table_statistics = table->table_statistics();        
-  const auto column_id = table->column_id_by_name(column_name);  
-  const auto base_attribute_statistics = table_statistics->column_statistics[column_id];
-    
-  const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
-  Assert(attribute_statistics, "could not cast to AttributeStatistics");
-  const auto histogram = attribute_statistics->histogram;  
-  Assert(histogram, "no histogram available for column "  + column_name);
-  return histogram;
-}
 
 // NOTE: num_clusters is just an estimate.
 // The greedy logic that computes the boundaries currently sacrifices exact cluster count rather than balanced clusters

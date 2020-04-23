@@ -6,8 +6,11 @@
 #include <vector>
 #include <utility>
 
+#include "statistics/statistics_objects/abstract_histogram.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -29,6 +32,9 @@ class AbstractClusteringAlgo {
  protected:
   void _run_assertions() const;
   virtual void _perform_clustering() = 0;
+
+  template <typename ColumnDataType>
+  std::shared_ptr<const AbstractHistogram<ColumnDataType>> _get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) const;
 
   // helper functions
   std::shared_ptr<Chunk> _create_empty_chunk(const std::shared_ptr<const Table>& table, const size_t rows_per_chunk) const;
