@@ -22,7 +22,8 @@ void test_hash_map(const std::vector<T>& values) {
     partition.null_values.emplace_back(false);
   }
 
-  // Build a BloomFilter that cannot be used to skip any entries
+  // Build a BloomFilter that cannot be used to skip any entries by creating a BloomFilter with every value being false
+  // and using bitwise negation (~x).
   auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
   auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0, bloom_filter);

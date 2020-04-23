@@ -101,7 +101,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   const size_t radix_bit_count = 0;
   std::vector<std::vector<size_t>> histograms;
 
-  // BloomFilters are gnored in this test
+  // BloomFilters are ignored in this test
   BloomFilter bloom_filter_with_nulls;
   BloomFilter bloom_filter_without_nulls;
 
@@ -157,7 +157,8 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
     });
   }
 
-  // Build a BloomFilter that cannot be used to skip any entries
+  // Build a BloomFilter that cannot be used to skip any entries by creating a BloomFilter with every value being false
+  // and using bitwise negation (~x).
   auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
 
   // Build phase: NULLs should be discarded

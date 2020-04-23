@@ -338,7 +338,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     /**
-     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step.
+     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
+     *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
+     *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
+     *    within partition_by_radix.
      */
 
     if (_radix_bits > 0) {
