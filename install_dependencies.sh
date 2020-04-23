@@ -54,13 +54,13 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
-                if [ ! "$(lsb_release -sr)" > "19.10" ]; then
+                if [[ "$(lsb_release -sr)" < "20.04" ]]; then
                     # Ubuntu versions before 20.04 do not have a compatible boost version. Manually retrieve it
                     sudo add-apt-repository -y ppa:mhier/libboost-latest
                     sudo apt-get update
-                    sudo apt-get install libboost1.70-dev
+                    sudo apt-get install --no-install-recommends -y libboost1.70-dev
                 else 
-                    sudo apt-get install libboost1.71-all-dev
+                    sudo apt-get install --no-install-recommends -y libboost1.71-all-dev
                 fi
 
                 # packages added here should also be added to the Dockerfile
