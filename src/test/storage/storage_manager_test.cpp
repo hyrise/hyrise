@@ -30,6 +30,15 @@ class StorageManagerTest : public BaseTest {
 
     sm.add_view("first_view", std::move(v1));
     sm.add_view("second_view", std::move(v2));
+
+    const auto pp1_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+    const auto pp1 = std::make_shared<PreparedPlan>(pp1_lqp, std::vector<ParameterID>{});
+
+    const auto pp2_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Float, "b"}}, "b");
+    const auto pp2 = std::make_shared<PreparedPlan>(pp2_lqp, std::vector<ParameterID>{});
+
+    sm.add_prepared_plan("first_prepared_plan", std::move(pp1));
+    sm.add_prepared_plan("second_prepared_plan", std::move(pp2));
   }
 };
 
@@ -59,7 +68,9 @@ TEST_F(StorageManagerTest, GetTable) {
   auto t4 = sm.get_table("second_table");
   EXPECT_THROW(sm.get_table("third_table"), std::exception);
   auto names = std::vector<std::string>{"first_table", "second_table"};
-  EXPECT_EQ(sm.table_names(), names);
+  auto sm_names = sm.table_names();
+  std::sort(sm_names.begin(), sm_names.end());
+  EXPECT_EQ(sm_names, names);
 }
 
 TEST_F(StorageManagerTest, DropTable) {
@@ -67,6 +78,9 @@ TEST_F(StorageManagerTest, DropTable) {
   sm.drop_table("first_table");
   EXPECT_THROW(sm.get_table("first_table"), std::exception);
   EXPECT_THROW(sm.drop_table("first_table"), std::exception);
+
+  sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
+  EXPECT_TRUE(sm.has_table("first_table"));
 }
 
 TEST_F(StorageManagerTest, DoesNotHaveTable) {
@@ -100,6 +114,11 @@ TEST_F(StorageManagerTest, DropView) {
   sm.drop_view("first_view");
   EXPECT_THROW(sm.get_view("first_view"), std::exception);
   EXPECT_THROW(sm.drop_view("first_view"), std::exception);
+
+  const auto v1_lqp = StoredTableNode::make("first_table");
+  const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
+  sm.add_view("first_view", v1);
+  EXPECT_TRUE(sm.has_view("first_view"));
 }
 
 TEST_F(StorageManagerTest, ResetView) {
@@ -162,6 +181,45 @@ TEST_F(StorageManagerTest, ExportTables) {
   const std::string filename = opossum::test_data_path + "/third_table.csv";
   EXPECT_TRUE(std::filesystem::exists(filename));
   std::filesystem::remove(filename);
+}
+
+TEST_F(StorageManagerTest, AddPreparedPlanTwice) {
+  auto& sm = Hyrise::get().storage_manager;
+
+  const auto pp1_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+  const auto pp1 = std::make_shared<PreparedPlan>(pp1_lqp, std::vector<ParameterID>{});
+
+  EXPECT_THROW(sm.add_prepared_plan("first_prepared_plan", pp1), std::exception);
+}
+
+TEST_F(StorageManagerTest, GetPreparedPlan) {
+  auto& sm = Hyrise::get().storage_manager;
+  auto pp3 = sm.get_prepared_plan("first_prepared_plan");
+  auto pp4 = sm.get_prepared_plan("second_prepared_plan");
+  EXPECT_THROW(sm.get_prepared_plan("third_prepared_plan"), std::exception);
+}
+
+TEST_F(StorageManagerTest, DropPreparedPlan) {
+  auto& sm = Hyrise::get().storage_manager;
+  sm.drop_prepared_plan("first_prepared_plan");
+  EXPECT_THROW(sm.get_prepared_plan("first_prepared_plan"), std::exception);
+  EXPECT_THROW(sm.drop_prepared_plan("first_prepared_plan"), std::exception);
+
+  const auto pp_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+  const auto pp = std::make_shared<PreparedPlan>(pp_lqp, std::vector<ParameterID>{});
+
+  sm.add_prepared_plan("first_prepared_plan", pp);
+  EXPECT_TRUE(sm.has_prepared_plan("first_prepared_plan"));
+}
+
+TEST_F(StorageManagerTest, DoesNotHavePreparedPlan) {
+  auto& sm = Hyrise::get().storage_manager;
+  EXPECT_EQ(sm.has_prepared_plan("third_prepared_plan"), false);
+}
+
+TEST_F(StorageManagerTest, HasPreparedPlan) {
+  auto& sm = Hyrise::get().storage_manager;
+  EXPECT_EQ(sm.has_prepared_plan("first_prepared_plan"), true);
 }
 
 }  // namespace opossum

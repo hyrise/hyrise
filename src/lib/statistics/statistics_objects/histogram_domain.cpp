@@ -24,7 +24,8 @@ size_t HistogramDomain<pmr_string>::character_range_width() const {
 HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::string_to_number(
     const pmr_string& string_value) const {
   // The prefix length must not overflow for the number of supported characters when representing strings as numbers.
-  DebugAssert(prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(character_range_width() + 1),
+  DebugAssert(prefix_length <= static_cast<size_t>(std::log(std::numeric_limits<uint64_t>::max()) /
+                                                   std::log(character_range_width() + 1)),
               "String prefix too long");
   if (!contains(string_value)) {
     return string_to_number(string_to_domain(string_value));

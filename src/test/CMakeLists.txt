@@ -40,6 +40,7 @@ set(
     lib/null_value_test.cpp
     lib/entire_chunk_pos_list_test.cpp
     lib/utils/load_table_test.cpp
+    lib/utils/log_manager_test.cpp
     lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
@@ -208,6 +209,7 @@ set(
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
     utils/meta_table_manager_test.cpp
+    utils/meta_tables/meta_log_test.cpp
     utils/meta_tables/meta_mock_table.cpp
     utils/meta_tables/meta_mock_table.hpp
     utils/meta_tables/meta_table_test.cpp
