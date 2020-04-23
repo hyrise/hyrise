@@ -22,6 +22,7 @@
 
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 
+#define SORT_WITHIN_CLUSTERS true
 
 namespace opossum {
 
@@ -35,14 +36,14 @@ const std::string DisjointClustersAlgo::description() const {
 // NOTE: num_clusters is just an estimate.
 // The greedy logic that computes the boundaries currently sacrifices exact cluster count rather than balanced clusters
 template <typename ColumnDataType>
-std::vector<std::pair<AllTypeVariant, AllTypeVariant>> DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters) const {
+ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters) const {
   Assert(histogram, "histogram was null");
   Assert(histogram->total_count() == row_count, "NULL values are not yet supported");
   Assert(num_clusters > 1, "having less than 2 clusters does not make sense (" + std::to_string(num_clusters) + " cluster(s) requested)");
   Assert(num_clusters < histogram->bin_count(), "more clusters (" + std::to_string(num_clusters) + ") than histogram bins (" + std::to_string(histogram->bin_count()) + ")");
 
   // TODO handle NULL values  
-  std::vector<std::pair<AllTypeVariant, AllTypeVariant>> boundaries(num_clusters);
+  ClusterBoundaries boundaries(num_clusters);
 
   const auto ideal_rows_per_cluster = std::max(size_t{1}, row_count / num_clusters);
   size_t boundary_index = 0;
@@ -94,7 +95,7 @@ std::vector<std::pair<AllTypeVariant, AllTypeVariant>> DisjointClustersAlgo::_ge
 
 
 template <typename ColumnDataType>
-size_t _get_cluster_index(const std::vector<std::pair<AllTypeVariant, AllTypeVariant>>& cluster_boundaries, const std::optional<ColumnDataType>& optional_value) {
+size_t _get_cluster_index(const ClusterBoundaries& cluster_boundaries, const std::optional<ColumnDataType>& optional_value) {
   size_t cluster_index = 0;
   
   if (!optional_value) {
@@ -122,18 +123,42 @@ size_t _get_cluster_index(const std::vector<std::pair<AllTypeVariant, AllTypeVar
 }
 
 
+std::vector<size_t> _clustering_key_for_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<ClusterBoundaries>& boundaries, const std::shared_ptr<Table>& table, const std::vector<ColumnID>& clustering_column_ids) {
+  std::vector<size_t> indices;
+  for (size_t index{0}; index < boundaries.size(); index++) {
+    const auto clustering_column_id = clustering_column_ids[index];
+    const auto column_data_type = table->column_data_type(clustering_column_id);
+    const auto& cluster_boundaries = boundaries[index];
+
+    resolve_data_type(column_data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      const auto segment = chunk->get_segment(clustering_column_id);
+      Assert(segment, "segment was null");
+      
+      //TODO handle null
+      const auto& value = boost::lexical_cast<ColumnDataType>((*segment)[0]);
+      indices.push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
+    });      
+  }
+  return indices;
+}
+
 // TODO: maybe get rid of AllTypeVariant
-std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(const std::shared_ptr<Chunk>& chunk, const std::shared_ptr<Table>& table, const std::vector<std::vector<std::pair<AllTypeVariant, AllTypeVariant>>>& boundaries, std::vector<std::shared_ptr<Chunk>>& partially_filled_chunks, const std::vector<std::shared_ptr<Chunk>>& previously_partially_filled_chunks, const std::vector<ColumnID>& clustering_column_ids) {
+std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(const std::shared_ptr<Chunk>& chunk, const std::shared_ptr<Table>& table, const std::vector<ClusterBoundaries>& boundaries, std::vector<std::shared_ptr<Chunk>>& partially_filled_chunks, const std::vector<std::shared_ptr<Chunk>>& previously_partially_filled_chunks, const std::vector<ColumnID>& clustering_column_ids) {
   Assert(partially_filled_chunks.empty(), "'partially_filled_chunks' should be empty");
   Assert(boundaries.size() == clustering_column_ids.size(), "we need one boundary per clustering column");
 
+
+
   std::vector<std::vector<size_t>> cluster_indices(chunk->size());
 
+  // for assertions
   size_t previously_partially_filled_chunk_row_count = 0;
   for (const auto& c: previously_partially_filled_chunks) {
     previously_partially_filled_chunk_row_count += c->size();
   }
 
+  // calculate the clustering keys for each row in the chunk
   for (size_t index{0}; index < boundaries.size(); index++) {
     const auto clustering_column_id = clustering_column_ids[index];
     const auto column_data_type = table->column_data_type(clustering_column_id);
@@ -156,45 +181,30 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
     });
   }
 
-  
-
-
-  // über clustering_columns iterieren, über segmente iterieren, für jede Zeile linear die Boundaries durchlaufen und treffer-index in cluster_indices schreiben
-
-  // previously_... und cluster_indices in clusters einpflegen
+  // start filling the clusters by copying the chunks that were only partially filled in the previous clustering steps
   std::map<std::vector<size_t>, std::vector<std::shared_ptr<Chunk>>> clusters;
   for (const auto& previously_partially_filled_chunk : previously_partially_filled_chunks) {
-    std::vector<size_t> indices;
-    for (size_t index{0}; index < boundaries.size(); index++) {
-      const auto clustering_column_id = clustering_column_ids[index];
-      const auto column_data_type = table->column_data_type(clustering_column_id);
-      const auto& cluster_boundaries = boundaries[index];
-
-      resolve_data_type(column_data_type, [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        const auto segment = previously_partially_filled_chunk->get_segment(clustering_column_id);
-        Assert(segment, "segment was null");
-        
-        const auto& value = boost::lexical_cast<ColumnDataType>((*segment)[0]);
-        indices.push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
-      });      
-    }
-    Assert(indices.size() == boundaries.size(), "index calculation broken: " + std::to_string(indices.size()) + " indices when there should be " + std::to_string(boundaries.size()));
+    const std::vector<size_t> chunk_clustering_key = _clustering_key_for_chunk(previously_partially_filled_chunk, boundaries, table, clustering_column_ids);
+    Assert(chunk_clustering_key.size() == boundaries.size(), "clustering key calculation broken: got " + std::to_string(chunk_clustering_key.size()) + " indices when there should be " + std::to_string(boundaries.size()));
+    
     const auto segments = _get_segments(previously_partially_filled_chunk);
     auto copied_chunk = std::make_shared<Chunk>(segments, previously_partially_filled_chunk->mvcc_data());
-    //std::cout << "starting with a partially filled chunk (id: " << indices[0] << "), size is: " << copied_chunk->size() << std::endl;
-    clusters[indices] = { copied_chunk };
+    
+    clusters[chunk_clustering_key] = { copied_chunk };
   }
   Assert(clusters.size() == previously_partially_filled_chunks.size(), "did not copy all chunks into the cluster");
 
-    size_t rows_loaded = 0;
-    for (const auto& [key, chunk_vector] : clusters) {
-      Assert(chunk_vector.size() == 1, "expected just one chunk");
-      rows_loaded += chunk_vector[0]->size();
-    }
-    Assert(rows_loaded == previously_partially_filled_chunk_row_count, "should have " + std::to_string(previously_partially_filled_chunk_row_count)
-      + " rows, but got " + std::to_string(rows_loaded));
+  // for assertions
+  size_t rows_loaded = 0;
+  for (const auto& [key, chunk_vector] : clusters) {
+    Assert(chunk_vector.size() == 1, "expected just one chunk");
+    rows_loaded += chunk_vector[0]->size();
+  }
+  Assert(rows_loaded == previously_partially_filled_chunk_row_count, "should have " + std::to_string(previously_partially_filled_chunk_row_count)
+    + " rows, but got " + std::to_string(rows_loaded));
 
+
+  // start distributing the rows
   for (ChunkOffset chunk_offset{0}; chunk_offset < chunk->size(); chunk_offset++) {
     const auto cluster_index = cluster_indices[chunk_offset];
 
@@ -208,15 +218,7 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
 
     if (clusters.find(cluster_index) == clusters.end()) {
       clusters[cluster_index] = { _create_empty_chunk(table, table->target_chunk_size()) };
-      //std::cout << "creating new empty chunk with id ";
-      //for (const auto ci : cluster_index) {std::cout << ci << " ";}
-      //std::cout << std::endl;
     } else {
-      //std::cout << "chunk with id ";
-      //for (const auto ci : cluster_index) {std::cout << ci << " ";}
-      //std::cout << std::endl;
-
-
       const auto& insertion_chunk_vector = clusters[cluster_index];
       Assert(table->target_chunk_size() == 25000, "wrong target chunk size");
       Assert(table->target_chunk_size() >= insertion_chunk_vector.back()->size(), "chunk is larger than allowed");
@@ -230,22 +232,22 @@ std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(cons
     Assert(rows + 1 == clusters[cluster_index].back()->size(), "append did not work");
   }
 
-    size_t total_rows = 0;
-    for (const auto& [key, chunk_vector] : clusters) {
-      for (const auto& c : chunk_vector) {
-        total_rows += c->size();
-      }
-    
+  // for assertions
+  size_t total_rows = 0;
+  for (const auto& [key, chunk_vector] : clusters) {
+    for (const auto& c : chunk_vector) {
+      total_rows += c->size();
     }
-    Assert(total_rows == previously_partially_filled_chunk_row_count + chunk->size(), "wrong number of rows");
+  
+  }
+  Assert(total_rows == previously_partially_filled_chunk_row_count + chunk->size(), "wrong number of rows");
 
-  // über clusters drübergehen, aufteilen in volle Chunks und partially_...
+  // split clustered chunks into full and partially filled chunks
   std::vector<std::shared_ptr<Chunk>> full_chunks;
   for (const auto& [clustering_key, chunks] : clusters) {
     for (const auto & clustered_chunk : chunks) {
       if (clustered_chunk->size() == table->target_chunk_size()) {
         full_chunks.push_back(clustered_chunk);
-        //std::cout << "found a full chunk" << std::endl;
       } else {
         partially_filled_chunks.push_back(clustered_chunk);
       }
@@ -305,7 +307,7 @@ void DisjointClustersAlgo::_perform_clustering() {
 
     
     // calculate boundaries
-    std::vector<std::vector<std::pair<AllTypeVariant, AllTypeVariant>>> cluster_boundaries;
+    std::vector<ClusterBoundaries> cluster_boundaries;
     for (size_t dimension = 0; dimension < clustering_column_ids.size(); dimension++) {
       const auto num_clusters = num_clusters_per_dimension[dimension];
       const auto clustering_column_id = clustering_column_ids[dimension];
@@ -402,11 +404,53 @@ void DisjointClustersAlgo::_perform_clustering() {
           previously_partially_filled_chunks = partially_filled_chunks;
           partially_filled_chunks = {};
         }
-        // TODO last chunk handling
+        
+
+        //
       }        
     }
+ 
+    // sort within clusters
+    // TODO mvcc correctness - needs its own transaction? what about newly added chunks, between the clustering and the sorting?
+    // for now, just assume it does not happen
+    if (SORT_WITHIN_CLUSTERS) {
+      std::map<std::vector<size_t>, std::vector<std::shared_ptr<Chunk>>> chunks_per_cluster;
 
-    
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+        const auto& chunk = table->get_chunk(chunk_id);
+        if (chunk) {
+          const auto& clustering_key = _clustering_key_for_chunk(chunk, cluster_boundaries, table, clustering_column_ids);
+          if (chunks_per_cluster.find(clustering_key) == chunks_per_cluster.end()) {
+            chunks_per_cluster[clustering_key] = std::vector<std::shared_ptr<Chunk>>();
+          }
+          chunks_per_cluster[clustering_key].push_back(chunk);
+        }
+        // TODO deleting clusterwise would be smarter, because only the chunks of that cluster must not change during that
+        table->remove_chunk(chunk_id);
+      }
+
+      for (const auto& [key, chunks] : chunks_per_cluster) {
+        auto sorting_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, table->target_chunk_size(), UseMvcc::Yes);
+        _append_chunks_to_table(chunks, sorting_table);
+
+        auto table_wrapper = std::make_shared<TableWrapper>(sorting_table);
+        table_wrapper->execute();
+        auto sort = std::make_shared<Sort>(table_wrapper, sort_column_id, OrderByMode::Ascending, table->target_chunk_size());
+        sort->execute();
+        const auto& sorted_table = sort->get_output();
+        for (ChunkID cid{0}; cid < sorted_table->chunk_count(); cid++) {
+          const auto& sorted_chunk = sorted_table->get_chunk(cid);
+          Assert(sorted_chunk, "chunk disappeared");
+
+          auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_chunk), std::make_shared<MvccData>(sorted_chunk->size(), MvccData::MAX_COMMIT_ID));
+          sorted_chunk_with_mvcc->finalize();
+
+          ChunkEncoder::encode_chunk(sorted_chunk_with_mvcc, table->column_data_types(), EncodingType::Dictionary);
+          _append_chunk_to_table(sorted_chunk_with_mvcc, table, false);
+        }
+      }
+
+    }
   }
 }
 
