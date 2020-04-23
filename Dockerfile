@@ -12,6 +12,7 @@ RUN apt-get update \
         clang-10 \
         clang-format-9 \
         clang-tidy-9 \
+        cmake \
         curl \
         g++-9 \
         gcc-9 \
