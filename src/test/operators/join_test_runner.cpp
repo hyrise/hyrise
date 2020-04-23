@@ -543,8 +543,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       /**
        * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original data table. This tests the
        * writing of the output table in the JoinOperator, which has to make sure not to create ReferenceSegments
-       * pointing to ReferenceSegments. In addition, special index join executions are tested. The first
-       * 0.5 * indexed_chunk_range segments provide the guarantee referencing only a single chunk.
+       * pointing to ReferenceSegments. In addition, special index join executions are tested.
        */
       std::shared_ptr<Table> reference_table = nullptr;
 
