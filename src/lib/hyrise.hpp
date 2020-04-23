@@ -6,6 +6,7 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/log_manager.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/settings_manager.hpp"
@@ -40,6 +41,7 @@ class Hyrise : public Singleton<Hyrise> {
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   SettingsManager settings_manager;
+  LogManager log_manager;
   Topology topology;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
