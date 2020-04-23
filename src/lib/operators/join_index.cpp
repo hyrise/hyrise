@@ -423,8 +423,11 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
+  if (is_semi_or_anti_join) Assert(_index_side == IndexSide::Right,
+    "Semi or Anti* joins with indexes on the right input side are not supported.");
+
   // Remember the matches for non-inner joins
-  if (is_semi_or_anti_join /*implies that index side is Right due the restrictions of supported configurations*/ ||
+  if (is_semi_or_anti_join ||
       (_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {

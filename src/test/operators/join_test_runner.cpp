@@ -227,12 +227,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (const auto& index_side : all_index_sides) {
           // calculate index chunk counts, eliminate duplicates by using the unordered set
           auto& indexed_input = index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
-          const auto chunk_count =
+          const auto chunk_count = indexed_input.table_size == 0 ? uint32_t{0} :
               static_cast<uint32_t>(std::ceil(static_cast<float>(indexed_input.table_size) / indexed_input.chunk_size));
 
           auto indexed_chunk_counts = std::unordered_set<uint32_t>{};
           for (const auto indexed_share : indexed_segment_shares) {
-            indexed_chunk_counts.insert(static_cast<uint32_t>(indexed_share * chunk_count));
+            indexed_chunk_counts.insert(static_cast<uint32_t>(std::ceil(indexed_share * chunk_count)));
           }
 
           for (const auto indexed_chunk_count : indexed_chunk_counts) {
