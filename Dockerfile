@@ -1,6 +1,6 @@
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y software-properties-common \
@@ -12,6 +12,7 @@ RUN apt-get update \
         bc \
         ccache \
         clang-9 \
+        clang-10 \
         clang-format-9 \
         clang-tidy-9 \
         curl \
