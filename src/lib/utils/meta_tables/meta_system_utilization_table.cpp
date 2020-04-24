@@ -39,13 +39,9 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
 
-  output_table->append({static_cast<int64_t>(system_cpu_ticks),
-                        static_cast<int64_t>(process_cpu_ticks),
-                        static_cast<int64_t>(total_ticks),
-                        load_avg.load_1_min,
-                        load_avg.load_5_min,
-                        load_avg.load_15_min,
-                        static_cast<int64_t>(system_memory_usage.free_memory),
+  output_table->append({static_cast<int64_t>(system_cpu_ticks), static_cast<int64_t>(process_cpu_ticks),
+                        static_cast<int64_t>(total_ticks), load_avg.load_1_min, load_avg.load_5_min,
+                        load_avg.load_15_min, static_cast<int64_t>(system_memory_usage.free_memory),
                         static_cast<int64_t>(system_memory_usage.available_memory),
                         static_cast<int64_t>(process_memory_usage.virtual_memory),
                         static_cast<int64_t>(process_memory_usage.physical_memory)});
@@ -62,7 +58,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   load_avg_file.open("/proc/loadavg", std::ifstream::in);
   DebugAssert(load_avg_file.is_open(), "Failed to open /proc/loadavg");
 
-  std::array<float, 3> load_avg_values;
+  std::array<float, 3> load_avg_values{};
   std::string load_avg_string;
   for (auto& load_avg_value : load_avg_values) {
     std::getline(load_avg_file, load_avg_string, ' ');
@@ -100,7 +96,7 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
  * does not count time that the system is suspended.
 */
 #ifdef __linux__
-  struct timespec time_spec;
+  struct timespec time_spec {};
   const auto ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time_spec);
   DebugAssert(ret == 0, "Failed in clock_gettime");
 
@@ -156,12 +152,12 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __APPLE__
   host_cpu_load_info_data_t cpu_info;
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
-  const auto ret = host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
+  const auto ret =
+      host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics");
 
-  const auto active_ticks = cpu_info.cpu_ticks[CPU_STATE_SYSTEM] +
-                            cpu_info.cpu_ticks[CPU_STATE_USER] +
-                            cpu_info.cpu_ticks[CPU_STATE_NICE];
+  const auto active_ticks =
+      cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE];
 
   // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks.
   // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
@@ -181,7 +177,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
   // Per-process CPU-time clock (measures CPU time consumed by all threads in the process).
 #ifdef __linux__
-  struct timespec time_spec;
+  struct timespec time_spec {};
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
   DebugAssert(ret == 0, "Failed in clock_gettime");
 

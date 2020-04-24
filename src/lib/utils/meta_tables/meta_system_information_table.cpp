@@ -28,7 +28,10 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   auto numa_cpus = cpus;
 #ifdef __linux__
   if (numa_available() != -1) {
-    numa_cpus = numa_num_task_cpus();
+    auto* cpu_mask = numa_allocate_cpumask();
+    numa_sched_getaffinity(0, cpu_mask);
+    numa_cpus = numa_bitmask_weight(cpu_mask);
+    numa_free_cpumask(cpu_mask);
   }
 #endif
 
@@ -49,16 +52,13 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 
   const auto cpu_model = _cpu_model();
 
-  output_table->append({static_cast<int32_t>(cpus), 
-                        static_cast<int64_t>(ram), 
-                        static_cast<int32_t>(numa_cpus), 
+  output_table->append({static_cast<int32_t>(cpus), static_cast<int64_t>(ram), static_cast<int32_t>(numa_cpus),
                         static_cast<pmr_string>(cpu_model)});
 
   return output_table;
 }
 
-
-// Returns the CPU model string 
+// Returns the CPU model string
 std::string MetaSystemInformationTable::_cpu_model() {
 #ifdef __linux__
   std::ifstream cpuinfo_file;

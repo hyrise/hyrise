@@ -14,6 +14,7 @@ class MetaSystemInformationTable : public AbstractMetaSystemTable {
   const std::string& name() const final;
 
  protected:
+  friend class MetaSystemInformationTest;
   std::shared_ptr<Table> _on_generate() const final;
 
   static std::string _cpu_model();
