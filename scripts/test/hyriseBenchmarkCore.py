@@ -42,5 +42,5 @@ def initialize(arguments, benchmark_name, verbose):
 
   benchmark = pexpect.spawn(build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=1000, dimensions=(200, 64))
   if verbose:
-    benchmark.logfile = sys.stdout
+    benchmark.logfile = sys.stdout.buffer
   return benchmark

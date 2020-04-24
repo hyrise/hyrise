@@ -55,7 +55,7 @@ def main():
 
   return_error = check_json(not output["summary"]["table_size_in_bytes"], 0, "Table size is zero.", return_error)
   return_error = check_json(output["context"]["scale_factor"], float(arguments["--scale"]), "Scale factor doesn't match with JSON:", return_error, 0.001)
-  for i in xrange(0,3):
+  for i in range(0,3):
     return_error = check_json(output["benchmarks"][i]["name"].replace('TPC-H 0', '').replace('TPC-H ', ''), arguments["--queries"].replace("'", '').split(',')[i], "Query doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_duration"], int(arguments["--time"]) * 1e9, "Max duration doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_runs"], int(arguments["--runs"]), "Max runs don't match with JSON:", return_error)
