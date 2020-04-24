@@ -33,8 +33,8 @@ RUN apt-get update \
         man \
         parallel \
         postgresql-server-dev-all \
-        python2.7 \
-        python-pexpect \
+        python3 \
+        python3-pexpect \
         sudo \
         systemtap \
         systemtap-sdt-dev \

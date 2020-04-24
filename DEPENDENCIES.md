@@ -18,7 +18,7 @@
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |
-| python                    | >= 2.7 && < 3    |    All   |         Yes (linting and tests in CI) |
+| python                    | 3                |    All   |         Yes (linting and tests in CI) |
 | readline                  | >= 7             |    All   |                                    No |
 | sqlite3                   | >= 3             |    All   |                                    No |
 | systemtap                 | any              |    Linux |                                    No |
