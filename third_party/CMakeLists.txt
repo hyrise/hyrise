@@ -132,30 +132,44 @@ target_compile_options(lz4 PRIVATE -fPIC)
 set(ZSTD_LIBRARY_DIR zstd/lib)
 
 add_library (zstd
-    ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.c
-    ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
-    ${ZSTD_LIBRARY_DIR}/compress/zstd_double_fast.c
-    ${ZSTD_LIBRARY_DIR}/compress/zstd_fast.c
-    ${ZSTD_LIBRARY_DIR}/compress/hist.c
+    ${ZSTD_LIBRARY_DIR}/common/debug.c
+    ${ZSTD_LIBRARY_DIR}/common/entropy_common.c
+    ${ZSTD_LIBRARY_DIR}/common/error_private.c
+    ${ZSTD_LIBRARY_DIR}/common/fse_decompress.c
+    ${ZSTD_LIBRARY_DIR}/common/pool.c
+    ${ZSTD_LIBRARY_DIR}/common/threading.c
+    ${ZSTD_LIBRARY_DIR}/common/xxhash.c
+    ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
-    ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
+    ${ZSTD_LIBRARY_DIR}/compress/hist.c
+    ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_literals.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_sequences.c
-    ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_double_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
-    ${ZSTD_LIBRARY_DIR}/common/xxhash.c
-    ${ZSTD_LIBRARY_DIR}/common/fse_decompress.c
-    ${ZSTD_LIBRARY_DIR}/common/pool.c
-    ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
-    ${ZSTD_LIBRARY_DIR}/common/error_private.c
-    ${ZSTD_LIBRARY_DIR}/common/debug.c
-    ${ZSTD_LIBRARY_DIR}/common/threading.c
-    ${ZSTD_LIBRARY_DIR}/common/entropy_common.c
-    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
-    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
+    ${ZSTD_LIBRARY_DIR}/decompress/huf_decompress.c
+    ${ZSTD_LIBRARY_DIR}/decompress/zstd_ddict.c
+    ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress.c
+    ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_block.c
+    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff_common.c
+    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff_compress.c
+    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff_decompress.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v01.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v02.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v03.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v04.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v05.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v06.c
+    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v07.c
 )
 
 target_include_directories(
