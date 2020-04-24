@@ -185,7 +185,6 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_block.c
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_block.h
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_internal.h
-    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
