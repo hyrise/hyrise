@@ -425,7 +425,7 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
 
   if (is_semi_or_anti_join) {
     Assert(_index_side == IndexSide::Right,
-           "Semi or Anti* joins with indexes on the right input side are not supported.");
+           "For Semi or Anti* joins, the left side is the probe side, so the index needs to be on the right.");
   }
 
   // Remember the matches for non-inner joins
