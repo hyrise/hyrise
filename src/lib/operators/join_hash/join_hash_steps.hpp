@@ -184,11 +184,19 @@ class PosHashTable {
 };
 
 // The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
-// `hash_function(value) % BLOOM_FILTER_SIZE`. Much of this could be improved, for example by (1) dynamically checking
-// whether bloom filters make sense, (2) choosing an appropriate filter size, and (3) working with multiple hash
-// functions.
-static constexpr auto BLOOM_FILTER_BITS = 20;
-static constexpr auto BLOOM_FILTER_SIZE = 1 << BLOOM_FILTER_BITS;
+// `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
+// (1) Dynamically check whether bloom filters make sense. For a join of two unfiltered tables, it does not. This could
+//     be based on the input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
+// (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
+//     not optimal in every situation.
+// (3) Check whether using multiple hash functions (k>1) brings any improvement.
+// (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
+//     intermediary results. When a bloom filter-supported materialization has been done (i.e., materialization has not
+//     been skipped), we do not need to use a bloom filter in the build phase anymore.
+// Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
+// We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
+// time to improving it.
+static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
