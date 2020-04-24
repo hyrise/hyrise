@@ -65,12 +65,6 @@
 {
    <PR_1851_memcheck>
    Memcheck:Cond
-   fun:__vfprintf_internal
-   fun:__vsnprintf_internal
-   fun:snprintf
+   ...
    fun:_ZN7testing9internal220PrintBytesInObjectToEPKhmPSo
-   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
-   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
-   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
-   fun:main
 }
