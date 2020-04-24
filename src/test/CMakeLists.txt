@@ -102,6 +102,7 @@ set(
     operators/maintenance/drop_table_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/operator_join_predicate_test.cpp
+    operators/operator_performance_data_test.cpp
     operators/operator_scan_predicate_test.cpp
     operators/print_test.cpp
     operators/product_test.cpp
