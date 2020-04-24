@@ -9,8 +9,9 @@ def close_benchmark(benchmark):
   benchmark.close()
 
 def check_exit_status(benchmark):
-  if benchmark.exitstatus == None:
-    sys.exit(benchmark.signalstatus)
+  if benchmark.exitstatus != 0 or benchmark.signalstatus != None:
+    print("Benchmark failed with exit status " + str(benchmark.exitstatus) + " and signal status " + str(benchmark.signalstatus))
+    sys.exit(1)
 
 def check_json(json, argument, error, return_error, difference=None):
   if type(json) is not float:

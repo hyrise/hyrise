@@ -100,9 +100,6 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-  if benchmark.before.count('Verification failed'):
-    return_error = True
-
   if return_error:
     sys.exit(1)
 
