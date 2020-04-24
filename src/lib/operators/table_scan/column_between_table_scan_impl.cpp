@@ -40,7 +40,8 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
   const auto chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
   const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
-  if (chunk_sorted_by && !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {
+  if (chunk_sorted_by &&
+      !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {
     // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
     // dictionary segments with string data and a given position list. In this case, the optimized
     // _scan_dictionary_segment() path if faster than the sorted search.

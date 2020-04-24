@@ -169,14 +169,12 @@ void BM_TableScanSorted(
 
     if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
       auto reference_scan_value = pad_string(std::to_string(0), STRING_SIZE);
-      reference_scan_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan,
-                                                                             column_expression,
-                                                                             value_(reference_scan_value));
+      reference_scan_predicate = std::make_shared<BinaryPredicateExpression>(
+          PredicateCondition::GreaterThan, column_expression, value_(reference_scan_value));
     } else {
       auto reference_scan_value = static_cast<ColumnDataType>(0);
-      reference_scan_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan,
-                                                                             column_expression,
-                                                                             value_(reference_scan_value));
+      reference_scan_predicate = std::make_shared<BinaryPredicateExpression>(
+          PredicateCondition::GreaterThan, column_expression, value_(reference_scan_value));
     }
   });
 
@@ -239,11 +237,12 @@ void registerTableScanSortedBenchmarks() {
 
               const std::string between_label = is_between_scan ? "Between" : "";
               const std::string ref_scan_label = is_reference_scan ? "ReferenceTableScan" : "DataTableScan";
-              benchmark::RegisterBenchmark(("BM_Table" + between_label + "ScanSorted/" + ref_scan_label + "/" +
-                                            encoding_name + "/" + std::to_string(selectivity) + "/" + data_type +
-                                            "/" + mode).c_str(),
-                                           BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan,
-                                           is_reference_scan, table_generator);
+              benchmark::RegisterBenchmark(
+                  ("BM_Table" + between_label + "ScanSorted/" + ref_scan_label + "/" + encoding_name + "/" +
+                   std::to_string(selectivity) + "/" + data_type + "/" + mode)
+                      .c_str(),
+                  BM_TableScanSorted, ROWS, selectivity, encoding_type, mode, is_between_scan, is_reference_scan,
+                  table_generator);
             }
           }
         }

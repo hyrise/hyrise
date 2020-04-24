@@ -192,7 +192,7 @@ TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
   EXPECT_EQ(output_attribute_vector_decompressor->get(0), ValueID{1});
 }
 
-TEST_F(OperatorsProjectionTest, ForwardOrderByFlag) {
+TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   // Verify that the sorted_by flag is not set when it's not present in left input.
   const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
   projection_a_unsorted->execute();

@@ -234,7 +234,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       }
     }
 
-    if (!pos_list_out->empty() > 0) {
+    if (!pos_list_out->empty()) {
       std::lock_guard<std::mutex> lock(output_mutex);
       // The validate operator does not affect sorted_by property
       // If a chunk was ordered before, it still is after the validate

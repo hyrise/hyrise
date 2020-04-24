@@ -1165,7 +1165,7 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
   }
 }
 
-TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
+TEST_P(OperatorsTableScanTest, ForwardSortedByFlag) {
   /* In the current implementation, scans on tables that do not contain ReferenceSegments
    * are executed chunk-by-chunk. As such, they maintain the ordering that was initially
    * set in the original setting and forward the ordered_by flag. 
@@ -1176,7 +1176,7 @@ TEST_P(OperatorsTableScanTest, ForwardOrderByFlag) {
   scan_and_check_sorted_by(get_int_sorted_op());
 }
 
-TEST_P(OperatorsTableScanTest, ForwardOrderByFlagReferencing) {
+TEST_P(OperatorsTableScanTest, ForwardSortedByFlagReferencing) {
   /* Tables with ReferenceSegments are first separated by the ChunkID
    * (see AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) 
    * and the order may be disturbed.

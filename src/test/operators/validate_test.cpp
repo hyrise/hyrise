@@ -239,7 +239,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 }
 
-TEST_F(OperatorsValidateTest, ForwardOrderByFlag) {
+TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
   const auto context = std::make_shared<TransactionContext>(1u, 3u);
 
   const auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
