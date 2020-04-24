@@ -1,6 +1,3 @@
-# Make sure that no seemingly unused symbols are stripped
-set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
-
 # Disable some warnings for the third-party subfolder
 add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -135,44 +132,68 @@ target_compile_options(lz4 PRIVATE -fPIC)
 set(ZSTD_LIBRARY_DIR zstd/lib)
 
 add_library (zstd
+    ${ZSTD_LIBRARY_DIR}/common/bitstream.h
+    ${ZSTD_LIBRARY_DIR}/common/compiler.h
+    ${ZSTD_LIBRARY_DIR}/common/cpu.h
     ${ZSTD_LIBRARY_DIR}/common/debug.c
+    ${ZSTD_LIBRARY_DIR}/common/debug.h
     ${ZSTD_LIBRARY_DIR}/common/entropy_common.c
     ${ZSTD_LIBRARY_DIR}/common/error_private.c
+    ${ZSTD_LIBRARY_DIR}/common/error_private.h
+    ${ZSTD_LIBRARY_DIR}/common/fse.h
     ${ZSTD_LIBRARY_DIR}/common/fse_decompress.c
+    ${ZSTD_LIBRARY_DIR}/common/huf.h
+    ${ZSTD_LIBRARY_DIR}/common/mem.h
     ${ZSTD_LIBRARY_DIR}/common/pool.c
+    ${ZSTD_LIBRARY_DIR}/common/pool.h
     ${ZSTD_LIBRARY_DIR}/common/threading.c
+    ${ZSTD_LIBRARY_DIR}/common/threading.h
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c
+    ${ZSTD_LIBRARY_DIR}/common/xxhash.h
     ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
+    ${ZSTD_LIBRARY_DIR}/common/zstd_errors.h
+    ${ZSTD_LIBRARY_DIR}/common/zstd_internal.h
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/hist.c
+    ${ZSTD_LIBRARY_DIR}/compress/hist.h
     ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_internal.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_literals.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_literals.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_sequences.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_sequences.h
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_superblock.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_superblock.h
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_cwksp.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_double_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_double_fast.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_fast.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_fast.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.h
     ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.h
     ${ZSTD_LIBRARY_DIR}/decompress/huf_decompress.c
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_ddict.c
+    ${ZSTD_LIBRARY_DIR}/decompress/zstd_ddict.h
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress.c
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_block.c
-    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff_common.c
-    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff_compress.c
-    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff_decompress.c
+    ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_block.h
+    ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress_internal.h
+    ${ZSTD_LIBRARY_DIR}/deprecated/zbuff.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v01.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v02.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v03.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v04.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v05.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v06.c
-    ${ZSTD_LIBRARY_DIR}/legacy/zstd_v07.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.h
+    ${ZSTD_LIBRARY_DIR}/zstd.h
 )
 
 target_include_directories(
