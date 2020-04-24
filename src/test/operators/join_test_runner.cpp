@@ -89,7 +89,7 @@ struct JoinTestConfiguration {
   std::optional<size_t> radix_bits;
 
   // Only for JoinIndex
-  IndexSide index_side;
+  std::optional<IndexSide> index_side;
 
   void swap_input_sides() {
     std::swap(input_left, input_right);
@@ -134,7 +134,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT(readability/braces)
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
-                                         configuration.secondary_predicates, configuration.index_side);
+                                         configuration.secondary_predicates, *configuration.index_side);
     } else {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates);
@@ -201,7 +201,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       all_secondary_predicate_sets.front(),
       std::make_shared<JoinOperatorFactory<JoinOperator>>(),
       std::nullopt,
-      IndexSide::None
+      std::nullopt
     };
     // clang-format on
 
@@ -718,7 +718,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     FAIL();
   }
 
-  if (configuration.index_side != IndexSide::None) {  // configuration is a specialized JoinIndex configuration
+  if (configuration.index_side) {  // configuration is a specialized JoinIndex configuration
     auto& indexed_input =
         configuration.index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
 
