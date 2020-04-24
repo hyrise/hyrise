@@ -23,7 +23,7 @@ MetaTableManager::MetaTableManager() {
                                                                        std::make_shared<MetaSegmentsTable>(),
                                                                        std::make_shared<MetaSegmentsAccurateTable>(),
                                                                        std::make_shared<MetaPluginsTable>(),
-                                                                       std::make_shared<MetaSettingsTable>()};
+                                                                       std::make_shared<MetaSettingsTable>(),
                                                                        std::make_shared<MetaSystemInformationTable>(),
                                                                        std::make_shared<MetaSystemUtilizationTable>()};
 
