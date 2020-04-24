@@ -43,13 +43,18 @@ class Server {
   // Shutdown Hyrise server.
   void shutdown();
 
+  // Indicates if setup is completed.
+  bool is_initialized() const;
+
  private:
   void _accept_new_session();
 
   void _start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error);
 
+  std::atomic<uint64_t> _num_running_sessions{0};
   boost::asio::io_service _io_service;
   boost::asio::ip::tcp::acceptor _acceptor;
   const SendExecutionInfo _send_execution_info;
+  std::atomic_bool _is_initialized{false};
 };
 }  // namespace opossum

@@ -27,6 +27,7 @@ extern const boost::bimap<FunctionType, std::string> function_type_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
 extern const boost::bimap<EncodingType, std::string> encoding_type_to_string;
 extern const boost::bimap<FileType, std::string> file_type_to_string;
+extern const boost::bimap<LogLevel, std::string> log_level_to_string;
 extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
@@ -34,6 +35,7 @@ std::ostream& operator<<(std::ostream& stream, const FunctionType function_type)
 std::ostream& operator<<(std::ostream& stream, const DataType data_type);
 std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type);
 std::ostream& operator<<(std::ostream& stream, const FileType file_type);
+std::ostream& operator<<(std::ostream& stream, const LogLevel log_level);
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
 

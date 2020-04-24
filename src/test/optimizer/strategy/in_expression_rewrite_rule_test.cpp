@@ -107,7 +107,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
       ASSERT_EQ(current_node->type, LQPNodeType::Union);
       auto union_node = std::dynamic_pointer_cast<UnionNode>(current_node);
       ASSERT_TRUE(union_node);
-      EXPECT_EQ(union_node->union_mode, UnionMode::All);
+      EXPECT_EQ(union_node->set_operation_mode, SetOperationMode::All);
 
       verify_predicate_node(union_node->right_input());
 
@@ -131,7 +131,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     // clang-format off
     const auto expected_lqp =
-      UnionNode::make(UnionMode::All,
+      UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, 2), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
@@ -155,7 +155,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     // clang-format off
     const auto expected_lqp =
-      UnionNode::make(UnionMode::All,
+      UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, NULL_VALUE), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
@@ -307,7 +307,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     // clang-format off
     const auto expected_lqp =
-      UnionNode::make(UnionMode::All,
+      UnionNode::make(SetOperationMode::All,
         PredicateNode::make(equals_(col_a, NULL_VALUE), node),
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
