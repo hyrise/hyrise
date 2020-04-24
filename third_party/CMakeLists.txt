@@ -1,3 +1,6 @@
+# Make sure that no seemingly unused symbols are stripped
+set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
+
 # Disable some warnings for the third-party subfolder
 add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
