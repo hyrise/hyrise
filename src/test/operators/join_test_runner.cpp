@@ -658,10 +658,10 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
     std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.input_left.indexed_chunk_range.first << ", "
-              << configuration.input_left.indexed_chunk_range.second << "]" << std::endl;
+              << configuration.input_left.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: ["
               << configuration.input_left.single_chunk_reference_range.first << ", "
-              << configuration.input_left.single_chunk_reference_range.second << "]" << std::endl;
+              << configuration.input_left.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
@@ -669,10 +669,10 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
     std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.input_right.indexed_chunk_range.first << ", "
-              << configuration.input_right.indexed_chunk_range.second << "]" << std::endl;
+              << configuration.input_right.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: ["
               << configuration.input_right.single_chunk_reference_range.first << ", "
-              << configuration.input_right.single_chunk_reference_range.second << "]" << std::endl;
+              << configuration.input_right.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
