@@ -287,7 +287,7 @@ sELEcT Sum(b + b) AS sum_b_b from mixed;
 
 -- Aggregates with NULL
 SELECT a, MAX(b) FROM mixed_null GROUP BY a;
-SELECT a, MAX(b) FROM mixed_null GROUP BY a ORDER BY MAX(b) DESC;
+SELECT a, MAX(b) FROM mixed_null GROUP BY a ORDER BY MAX(b), a DESC;
 SELECT a, MIN(b) FROM mixed_null GROUP BY a;
 SELECT a, SUM(b) FROM mixed_null GROUP BY a;
 SELECT a, AVG(b) FROM mixed_null GROUP BY a;

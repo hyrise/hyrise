@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from hyriseBenchmarkCore import *
 
@@ -53,7 +53,7 @@ def main():
     output = json.load(f)
 
   return_error = check_json(not output["summary"]["table_size_in_bytes"], 0, "Table size is zero.", return_error)
-  for i in xrange(0,4):
+  for i in range(0,4):
     return_error = check_json(output["benchmarks"][i]["name"], arguments["--queries"].replace("'", '').split(',')[i], "Query doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_duration"], int(arguments["--time"]) * 1e9, "Max duration doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_runs"], int(arguments["--runs"]), "Max runs don't match with JSON:", return_error)
@@ -99,9 +99,6 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   if return_error:
     sys.exit(1)

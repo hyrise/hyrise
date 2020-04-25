@@ -233,11 +233,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           const auto chunk_count = indexed_input.table_size == 0
                                        ? uint32_t{0}
                                        : static_cast<uint32_t>(std::ceil(static_cast<float>(indexed_input.table_size) /
-                                                                         indexed_input.chunk_size));
+                                                                         static_cast<float>(indexed_input.chunk_size)));
 
           auto indexed_chunk_ranges = std::set<ChunkRange>{};
           for (const auto indexed_share : indexed_segment_shares) {
-            indexed_chunk_ranges.insert(ChunkRange{0, static_cast<uint32_t>(std::ceil(indexed_share * chunk_count))});
+            indexed_chunk_ranges.insert(
+                ChunkRange{0, static_cast<uint32_t>(std::ceil(indexed_share * static_cast<float>(chunk_count)))});
           }
 
           for (const auto& indexed_chunk_range : indexed_chunk_ranges) {
