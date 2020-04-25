@@ -44,53 +44,7 @@ You can start the container via
 docker run -it hyrise
 ```
 
-Inside the container, you can then checkout Hyrise and run `./install_dependencies.sh` to download the required submodules.
-
-
-## Development inside Docker container using CLion
-
-The recommended way of developing with CLion on unsupported OS versions is to use the remote debugging capabilities of 
-the IDE. Using this approach, the docker container is treated as a remote instance of the system that is controlled by 
-CLion using ssh. You can achieve this by following these steps:
-
-0. Make sure that you checked out the git submodules  by running `git submodule update --init --recursive` (in project root)
-1. Build docker image using `docker build . -t hyrise` (in project root)
-2. Running container and keep it alive in the background, so you can connect later:
-
-```bash
-docker run --name hyrise_dev_env --cap-add sys_ptrace -p 2222:22 -d -it hyrise sleep infinity
-``` 
-
-(this includes the [recommended](https://blog.jetbrains.com/clion/2020/01/using-docker-with-clion/) flags to use debugging within the container)
-
-3. Add SSH and rsync to environment 
-
-```bash
-docker exec -it hyrise_dev_env apt-get install ssh rsync -y
-```
-
-4. Add local public key to docker containers authorized ssh keys (Assuming, your public key is located in `~/.ssh/id_rsa.pub`)
-
-```bash
-docker exec -it hyrise_dev_env mkdir /root/.ssh
-docker exec -it hyrise_dev_env bash -c "echo $(cat ~/.ssh/id_rsa.pub) > /root/.ssh/authorized_keys"
-docker exec -it hyrise_dev_env service ssh start
-```
-   
-5. Add Remote Debugging environment to CLion
-    - Go to `File | Settings | Build, Execution, Deployment | Toolchains`
-    - Click `+ Add` and `Remote Host`
-    - In the `Configure Remote Credentials` dialog (little gear next to host), enter as host `localhost`, port `2222` and choose as authentication type `OpenSSH config`
-    - Click `Apply` (**Do not yet click `OK`**)
-6. Configure a remote deployment in CLion
-    - Go to `File | Settings | Build, Execution, Deployment | Deployment | Options`
-    - Change `Preserve original file permissions` to `Yes`
-    - Click `OK`
-    - The files of the project will now be 'uploaded' to the docker container 
-7. Run CMake, and build the project and you're good to go.
-8. When you restart your system, you can bring back the development environment with `docker start -d hyrise_dev_env` or
-[change the restart policy](https://docs.docker.com/config/containers/start-containers-automatically/#use-a-restart-policy) to permanently run in the background.
-
+Inside the container, you can then checkout Hyrise and run `./install_dependencies.sh` to download the required submodules
 
 ## Building and Tooling
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
