@@ -1,4 +1,5 @@
 #include <fstream>
+#include <set>
 
 #include "base_test.hpp"
 #include "nlohmann/json.hpp"
@@ -9,6 +10,8 @@
 #include "operators/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -23,6 +26,8 @@ using namespace std::string_literals;  // NOLINT
 namespace {
 
 using namespace opossum;  // NOLINT
+
+using ChunkRange = std::pair<ChunkID, ChunkID>;
 
 enum class InputSide { Left, Right };
 
@@ -49,7 +54,14 @@ struct InputTableConfiguration {
   InputTableType table_type{};
   EncodingType encoding_type{EncodingType::Unencoded};
 
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type); }
+  // Only for JoinIndex
+  ChunkRange indexed_chunk_range{};           // chunk range of indexed join column segments
+  ChunkRange single_chunk_reference_range{};  // chunk range of join column segments that reference only one chunk
+
+  auto to_tuple() const {
+    return std::tie(side, chunk_size, table_size, table_type, encoding_type, indexed_chunk_range,
+                    single_chunk_reference_range);
+  }
 };
 
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
@@ -75,6 +87,9 @@ struct JoinTestConfiguration {
 
   // Only for JoinHash
   std::optional<size_t> radix_bits;
+
+  // Only for JoinIndex
+  std::optional<IndexSide> index_side;
 
   void swap_input_sides() {
     std::swap(input_left, input_right);
@@ -116,6 +131,10 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates, configuration.radix_bits);
+    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT(readability/braces)
+      Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
+      return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
+                                         configuration.secondary_predicates, *configuration.index_side);
     } else {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates);
@@ -162,6 +181,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}};
+    const auto all_index_sides = std::vector{IndexSide::Left, IndexSide::Right};
 
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
@@ -180,20 +200,99 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       PredicateCondition::Equals,
       all_secondary_predicate_sets.front(),
       std::make_shared<JoinOperatorFactory<JoinOperator>>(),
+      std::nullopt,
       std::nullopt
     };
     // clang-format on
 
-    const auto add_configuration_if_supported = [&](const auto& configuration) {
-      // String vs non-String comparisons are not supported in Hyrise and therefore cannot be tested
-      if ((configuration.data_type_left == DataType::String) != (configuration.data_type_right == DataType::String)) {
-        return;
-      }
+    /**
+     * Returns a set of adapted configurations if the join type provides further configuration possibilities that
+     * should be tested. Otherwise, a vector containing only the passed configuration is returned.
+     */
+    const auto build_join_type_specific_variations = [&](const auto& configuration) {
+      if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
+        // Currently the Index Join cannot deal with configurations where the join column
+        // data types are different, see Issue #2077
+        if (configuration.data_type_left != configuration.data_type_right) {
+          return std::vector<JoinTestConfiguration>{};
+        }
 
-      if (JoinOperator::supports({configuration.join_mode, configuration.predicate_condition,
-                                  configuration.data_type_left, configuration.data_type_right,
-                                  !configuration.secondary_predicates.empty()})) {
-        configurations.emplace_back(configuration);
+        // For the JoinIndex, additional parameters influence its execution behavior:
+        //  - index side (left or right)
+        //  - availability of an index for a join column segment
+        //  - presence of "single chunk reference guarantee" for join column reference segments
+
+        // share of indexed segments; 1 means all segments are indexed
+        std::array<float, 2> indexed_segment_shares{1.0f, .1f};
+
+        std::vector<JoinTestConfiguration> variations{};
+        variations.reserve(all_index_sides.size() * indexed_segment_shares.size());
+        for (const auto& index_side : all_index_sides) {
+          // calculate index chunk counts, eliminate duplicates by using the unordered set
+          auto& indexed_input = index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
+          const auto chunk_count = indexed_input.table_size == 0
+                                       ? uint32_t{0}
+                                       : static_cast<uint32_t>(std::ceil(static_cast<float>(indexed_input.table_size) /
+                                                                         indexed_input.chunk_size));
+
+          auto indexed_chunk_ranges = std::set<ChunkRange>{};
+          for (const auto indexed_share : indexed_segment_shares) {
+            indexed_chunk_ranges.insert(ChunkRange{0, static_cast<uint32_t>(std::ceil(indexed_share * chunk_count))});
+          }
+
+          for (const auto& indexed_chunk_range : indexed_chunk_ranges) {
+            auto variation = configuration;
+            auto& variation_indexed_input =
+                index_side == IndexSide::Left ? variation.input_left : variation.input_right;
+            variation.index_side = index_side;
+            variation_indexed_input.indexed_chunk_range = indexed_chunk_range;
+
+            if (variation_indexed_input.table_type != InputTableType::Data && variation.join_mode == JoinMode::Inner) {
+              variation_indexed_input.single_chunk_reference_range = indexed_chunk_range;
+
+              if ((indexed_chunk_range.second - indexed_chunk_range.first) > 1) {
+                ++variation_indexed_input.single_chunk_reference_range.first;
+              }
+
+              if ((chunk_count - indexed_chunk_range.second) > 1) {
+                // Leads to the creation of a reference segment that references a single chunk but the referenced
+                // data segment is not indexed.
+                ++variation_indexed_input.single_chunk_reference_range.second;
+              }
+            }
+            variations.emplace_back(variation);
+          }
+        }
+        variations.shrink_to_fit();
+        return variations;
+      }
+      return std::vector{configuration};
+    };
+
+    const auto add_configurations_if_supported = [&](const auto& configuration_candidates) {
+      for (const auto& configuration : configuration_candidates) {
+        // String vs non-String comparisons are not supported in Hyrise and therefore cannot be tested
+        if ((configuration.data_type_left == DataType::String) != (configuration.data_type_right == DataType::String)) {
+          return;
+        }
+
+        const auto table_type_left =
+            (configuration.input_left.table_type == InputTableType::Data ? TableType::Data : TableType::References);
+        const auto table_type_right =
+            (configuration.input_right.table_type == InputTableType::Data ? TableType::Data : TableType::References);
+
+        JoinConfiguration support_configuration{configuration.join_mode,
+                                                configuration.predicate_condition,
+                                                configuration.data_type_left,
+                                                configuration.data_type_right,
+                                                !configuration.secondary_predicates.empty(),
+                                                table_type_left,
+                                                table_type_right,
+                                                configuration.index_side};
+
+        if (JoinOperator::supports(support_configuration)) {
+          configurations.emplace_back(configuration);
+        }
       }
     };
 
@@ -206,7 +305,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         join_test_configuration.data_type_left = data_type_left;
         join_test_configuration.data_type_right = data_type_right;
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -224,14 +323,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               join_test_configuration.input_right.table_size = right_table_size;
               join_test_configuration.secondary_predicates = secondary_predicates;
 
-              add_configuration_if_supported(join_test_configuration);
+              add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
             }
           }
         }
       }
     }
 
-    // Anti* joins have different behaviours with NULL values.
+    // Anti* joins have different behaviors with NULL values.
     // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
     // would get emitted.
     for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
@@ -244,7 +343,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           join_test_configuration.input_left.table_size = left_table_size;
           join_test_configuration.input_right.table_size = right_table_size;
 
-          add_configuration_if_supported(join_test_configuration);
+          add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
         }
       }
     }
@@ -260,7 +359,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           join_test_configuration.input_left.chunk_size = chunk_size;
           join_test_configuration.input_right.chunk_size = chunk_size;
 
-          add_configuration_if_supported(join_test_configuration);
+          add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
         }
       }
     }
@@ -274,7 +373,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         join_test_configuration.data_type_right = data_type;
         join_test_configuration.join_mode = join_mode;
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -289,7 +388,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         join_test_configuration.nullable_right = true;
         join_test_configuration.predicate_condition = predicate_condition;
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -304,7 +403,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
         join_test_configuration.swap_input_sides();
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -318,7 +417,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           join_test_configuration.input_right.table_type = right_input_table_type;
           join_test_configuration.input_right.table_size = table_size;
 
-          add_configuration_if_supported(join_test_configuration);
+          add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
         }
       }
     }
@@ -338,7 +437,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               join_test_configuration.swap_input_sides();
             }
 
-            add_configuration_if_supported(join_test_configuration);
+            add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
           }
         }
       }
@@ -364,7 +463,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               join_test_configuration.nullable_right = nullable;
               join_test_configuration.predicate_condition = predicate_condition;
 
-              add_configuration_if_supported(join_test_configuration);
+              add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
             }
           }
         }
@@ -390,7 +489,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                   join_test_configuration.input_right.chunk_size = chunk_size;
                   join_test_configuration.radix_bits = radix_bits;
 
-                  add_configuration_if_supported(join_test_configuration);
+                  add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
                 }
               }
             }
@@ -406,7 +505,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_range,
+                 single_chunk_reference_range] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -417,38 +517,41 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_range,
+                   single_chunk_reference_range] = key;
       std::ignore = side;
       std::ignore = table_size;
 
-      auto table = load_table(get_table_path(key), chunk_size);
+      auto data_table = load_table(get_table_path(key), chunk_size);
 
       /**
-       * Encode the table, if requested. Encode only those columns whose DataTypes are supported by the requested
+       * Encode the data table, if requested. Encode only those columns whose DataTypes are supported by the requested
        * encoding.
        */
       if (key.encoding_type != EncodingType::Unencoded) {
-        auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count()};
-        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-          if (encoding_supports_data_type(key.encoding_type, table->column_data_type(column_id))) {
+        auto chunk_encoding_spec = ChunkEncodingSpec{data_table->column_count()};
+        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+          if (encoding_supports_data_type(key.encoding_type, data_table->column_data_type(column_id))) {
             chunk_encoding_spec[column_id] = {key.encoding_type};
           } else {
             chunk_encoding_spec[column_id] = {EncodingType::Unencoded};
           }
         }
-        ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
+        ChunkEncoder::encode_all_chunks(data_table, chunk_encoding_spec);
       }
 
       /**
-       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original table. This tests the
+       * Create a Reference-Table pointing 1-to-1 and in-order to the rows in the original data table. This tests the
        * writing of the output table in the JoinOperator, which has to make sure not to create ReferenceSegments
-       * pointing to ReferenceSegments.
+       * pointing to ReferenceSegments. In addition, special index join executions are tested.
        */
-      if (input_table_type != InputTableType::Data) {
-        const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
+      std::shared_ptr<Table> reference_table = nullptr;
 
-        for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-          const auto input_chunk = table->get_chunk(chunk_id);
+      if (input_table_type != InputTableType::Data) {
+        reference_table = std::make_shared<Table>(data_table->column_definitions(), TableType::References);
+
+        for (auto chunk_id = ChunkID{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
+          const auto input_chunk = data_table->get_chunk(chunk_id);
 
           Segments reference_segments;
 
@@ -458,28 +561,52 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
-            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
+            if (chunk_id >= single_chunk_reference_range.first && chunk_id < single_chunk_reference_range.second) {
+              pos_list->guarantee_single_chunk();
+            }
+
+            for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
+              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
             }
 
           } else if (input_table_type == InputTableType::IndividualPosLists) {
-            for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+            for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
               const auto pos_list = std::make_shared<RowIDPosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
-
-              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
+              if (chunk_id >= single_chunk_reference_range.first && chunk_id < single_chunk_reference_range.second) {
+                pos_list->guarantee_single_chunk();
+              }
+              reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
             }
           }
 
           reference_table->append_chunk(reference_segments);
         }
-
-        table = reference_table;
       }
 
-      input_table_iter = input_tables.emplace(key, table).first;
+      /**
+       * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the configuration,
+       * indexes for the data table are created. The index type is either GroupKeyIndex for dictionary segments or BTreeIndex
+       * for non-dictionary segments.
+       */
+
+      for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
+        for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
+          if (encoding_type == EncodingType::Dictionary) {
+            data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
+          } else {
+            data_table->get_chunk(chunk_id)->create_index<BTreeIndex>(std::vector<ColumnID>{column_id});
+          }
+        }
+      }
+
+      if (reference_table) {
+        input_table_iter = input_tables.emplace(key, reference_table).first;
+      } else {
+        input_table_iter = input_tables.emplace(key, data_table).first;
+      }
     }
 
     return input_table_iter->second;
@@ -530,12 +657,22 @@ TEST_P(JoinTestRunner, TestJoin) {
     Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
     std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
+    std::cout << "Indexed chunk range: [" << configuration.input_left.indexed_chunk_range.first << ", "
+              << configuration.input_left.indexed_chunk_range.second << ")" << std::endl;
+    std::cout << "Chunk range with single chunk ref. guarantee: ["
+              << configuration.input_left.single_chunk_reference_range.first << ", "
+              << configuration.input_left.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
     std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
+    std::cout << "Indexed chunk range: [" << configuration.input_right.indexed_chunk_range.first << ", "
+              << configuration.input_right.indexed_chunk_range.second << ")" << std::endl;
+    std::cout << "Chunk range with single chunk ref. guarantee: ["
+              << configuration.input_right.single_chunk_reference_range.first << ", "
+              << configuration.input_right.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
@@ -580,6 +717,29 @@ TEST_P(JoinTestRunner, TestJoin) {
     print_configuration_info();
     FAIL();
   }
+
+  if (configuration.index_side) {  // configuration is a specialized JoinIndex configuration
+    auto& indexed_input =
+        configuration.index_side == IndexSide::Left ? configuration.input_left : configuration.input_right;
+
+    // verify correctness of index usage
+    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join_op->performance_data());
+
+    auto indexed_used_count = indexed_input.indexed_chunk_range.second - indexed_input.indexed_chunk_range.first;
+
+    if (indexed_input.table_type != InputTableType::Data) {
+      auto range_begin =
+          std::max(indexed_input.indexed_chunk_range.first, indexed_input.single_chunk_reference_range.first);
+      auto range_end =
+          std::min(indexed_input.indexed_chunk_range.second, indexed_input.single_chunk_reference_range.second);
+      indexed_used_count = range_end - range_begin;
+    }
+
+    EXPECT_EQ(performance_data.chunks_scanned_with_index, indexed_used_count);
+    if (performance_data.chunks_scanned_with_index != indexed_used_count) {
+      print_configuration_info();
+    }
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
@@ -588,7 +748,7 @@ INSTANTIATE_TEST_SUITE_P(JoinHash, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()));
 INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()));
-// INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
-//                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
+INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
 
 }  // namespace opossum

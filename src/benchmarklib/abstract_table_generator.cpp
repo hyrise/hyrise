@@ -65,6 +65,8 @@ void AbstractTableGenerator::generate_and_store() {
                   is_sorted = false;
                   break;
                 }
+
+                ++it;
                 continue;
               }
 

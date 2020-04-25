@@ -32,7 +32,9 @@ class ServerTestRunner : public BaseTest {
     std::remove(_export_filename.c_str());
 
     // Wait to run the server and set the scheduler
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    while (!_server->is_initialized()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
   }
 
   void TearDown() override {

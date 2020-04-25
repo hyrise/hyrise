@@ -574,6 +574,8 @@ set(
     utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/log_manager.cpp
+    utils/log_manager.hpp
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
@@ -587,6 +589,8 @@ set(
     utils/meta_tables/meta_chunks_table.hpp
     utils/meta_tables/meta_columns_table.cpp
     utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_log_table.cpp
+    utils/meta_tables/meta_log_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
     utils/meta_tables/meta_plugins_table.hpp
     utils/meta_tables/meta_segments_accurate_table.cpp
@@ -606,8 +610,8 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
-    utils/settings/abstract_setting.hpp
     utils/settings/abstract_setting.cpp
+    utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
     utils/settings_manager.hpp
     utils/singleton.hpp
@@ -699,9 +703,15 @@ set_source_files_properties(
     SKIP_PRECOMPILE_HEADERS TRUE
 )
 
-# Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
-# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
+target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
+
+if(NOT "${ENABLE_THREAD_SANITIZATION}")
+    # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
+    # -rdynamic tells the linker to export the library's symbols so that plugins can use them. Do not use it for
+    # thread sanitization as tsan on Mac works better with its own allocator.
+    target_link_libraries(hyrise_impl INTERFACE custom_jemalloc -rdynamic)
+endif()
+
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
