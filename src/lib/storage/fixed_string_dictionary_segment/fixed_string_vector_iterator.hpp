@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/stl_interfaces/iterator_interface.hpp>
+
 #include "fixed_string.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -17,8 +19,9 @@ namespace opossum {
 template <bool OnConstStorage,
           typename Storage = std::conditional_t<OnConstStorage, const pmr_vector<char>, pmr_vector<char>>,
           typename DereferenceValue = std::conditional_t<OnConstStorage, const std::string_view, FixedString>>
-class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<OnConstStorage>, DereferenceValue,
-                                                          std::random_access_iterator_tag, DereferenceValue> {
+class FixedStringIterator
+    : public boost::stl_interfaces::proxy_iterator_interface<FixedStringIterator<OnConstStorage>,
+                                                             std::random_access_iterator_tag, DereferenceValue> {
   using ValueType = std::string_view;
 
  public:
@@ -33,6 +36,15 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
     _pos = other._pos;
     return *this;
   }
+
+  auto operator*() const { return dereference(); }
+
+  auto& operator+=(std::ptrdiff_t i) {
+    advance(i);
+    return *this;
+  }
+
+  auto operator-(const FixedStringIterator& other) const { return -distance_to(other); }
 
  private:
   friend class boost::iterator_core_access;
