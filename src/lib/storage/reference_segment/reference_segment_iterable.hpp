@@ -193,6 +193,15 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           _pos_list_it{pos_list_it},
           _accessors{accessors} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      advance(i);
+      return *this;
+    }
+
+    auto operator-(const MultipleChunkIterator& other) const { return -distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 

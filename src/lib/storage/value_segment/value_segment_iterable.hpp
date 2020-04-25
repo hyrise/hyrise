@@ -68,6 +68,15 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
         : _value_it{std::move(value_it)},
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const NonNullIterator& other) const { return -distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -109,6 +118,15 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
         : _value_it(std::move(value_it)),
           _null_value_it{std::move(null_value_it)},
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const Iterator& other) const { return -distance_to(other); }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -160,6 +178,15 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                                               std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const NonNullPointAccessIterator& other) const { return -this->distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -190,6 +217,15 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                                               std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
           _null_values_begin_it{std::move(null_values_begin_it)} {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const PointAccessIterator& other) const { return -this->distance_to(other); }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

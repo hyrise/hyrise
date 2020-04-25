@@ -101,6 +101,15 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset)
         : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      advance(i);
+      return *this;
+    }
+
+    auto operator-(const Iterator& other) const { return -distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -155,6 +164,15 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
                                                               std::move(position_filter_it)},
           _data_it{std::move(data_it)},
           _null_value_it{std::move(null_value_it)} {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const PointAccessIterator& other) const { return -this->distance_to(other); }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

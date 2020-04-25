@@ -72,6 +72,15 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
           _offset_value_decompressor{std::move(offset_value_decompressor)},
           _chunk_offset{chunk_offset} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      advance(i);
+      return *this;
+    }
+
+    auto operator-(const Iterator& other) const { return -distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -122,6 +131,15 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{std::move(offset_value_decompressor)} {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const PointAccessIterator& other) const { return -this->distance_to(other); }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

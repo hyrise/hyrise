@@ -125,6 +125,15 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
     return *this;
   }
 
+  auto operator*() const { return dereference(); }
+
+  auto& operator+=(std::ptrdiff_t i) {
+    this->advance(i);
+    return *this;
+  }
+
+  auto operator-(const AnySegmentIterator& other) const { return -distance_to(other); }
+
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 

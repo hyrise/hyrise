@@ -45,6 +45,15 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const Iterator& other) const { return -this->distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -78,6 +87,15 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
                                          PosListIteratorType>{std::move(position_filter_begin),
                                                               std::move(position_filter_it)},
           _null_values{null_values} {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const PointAccessIterator& other) const { return -this->distance_to(other); }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

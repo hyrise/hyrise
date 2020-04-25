@@ -54,6 +54,15 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     explicit Iterator(const ValueID null_value_id, ZsIteratorType&& attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
 
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      advance(i);
+      return *this;
+    }
+
+    auto operator-(const Iterator& other) const { return -distance_to(other); }
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -103,6 +112,15 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
                                                                                         std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{std::move(attribute_decompressor)} {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      this->advance(i);
+      return *this;
+    }
+
+    auto operator-(const PointAccessIterator& other) const { return -this->distance_to(other); }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

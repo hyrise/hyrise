@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/iterator/iterator_facade.hpp>
+#include <boost/stl_interfaces/iterator_interface.hpp>
 
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables/segment_positions.hpp"
@@ -39,7 +39,7 @@ namespace opossum {
  */
 template <typename Derived, typename Value>
 class BaseSegmentIterator
-    : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {};
+    : public boost::stl_interfaces::proxy_iterator_interface<Derived, std::random_access_iterator_tag, Value> {};
 
 /**
  * Mapping between chunk offset into a reference segment and
@@ -67,14 +67,14 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
                                           PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
- protected:
+  // protected:
   const ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
     return {static_cast<ChunkOffset>(_position_filter_it - _position_filter_begin), _position_filter_it->chunk_offset};
   }
 
- private:
+ protected:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_position_filter_it; }
