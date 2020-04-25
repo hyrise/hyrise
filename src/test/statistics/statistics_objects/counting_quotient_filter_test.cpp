@@ -116,13 +116,13 @@ class CountingQuotientFilterTypedTest : public BaseTest {
         ++false_positives;
       }
     }
-    const auto false_positive_rate = false_positives / static_cast<float>(runs);
+    const auto false_positive_rate = static_cast<float>(false_positives) / static_cast<float>(runs);
     EXPECT_LT(false_positive_rate, 0.4f);
   }
 };
 
-using Types = ::testing::Types<int32_t, int64_t, pmr_string>;
-TYPED_TEST_SUITE(CountingQuotientFilterTypedTest, Types, );  // NOLINT(whitespace/parens)
+using CountingQuitenFilterTestTypes = ::testing::Types<int32_t, int64_t, pmr_string>;
+TYPED_TEST_SUITE(CountingQuotientFilterTypedTest, CountingQuitenFilterTestTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CountingQuotientFilterTypedTest, ValueCounts) {
   this->test_value_counts(this->cqf2);

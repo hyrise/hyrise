@@ -391,7 +391,7 @@ TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
                       _node_a);
 
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_equals_(_a_a, 300),
       predicate_node),
     PredicateNode::make(greater_than_equals_(_a_a, 400),

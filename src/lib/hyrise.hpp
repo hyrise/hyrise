@@ -6,6 +6,7 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/log_manager.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/settings_manager.hpp"
@@ -31,11 +32,16 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 
-  PluginManager plugin_manager;
+  // The order of these members is important because it defines in which order their destructors are called.
+  // For example, the StorageManager's destructor should not be called before the PluginManager's destructor.
+  // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
+  // could not work without the StorageManager still in place.
   StorageManager storage_manager;
+  PluginManager plugin_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   SettingsManager settings_manager;
+  LogManager log_manager;
   Topology topology;
 
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be

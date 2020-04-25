@@ -300,7 +300,7 @@ TEST_F(TPCCTest, NewOrder) {
       EXPECT_EQ(table->row_count(), 1);
       const auto i_price = *table->get_value<float>("I_PRICE", 0);
 
-      const auto expected_ol_amount = i_price * order_lines[line_idx].ol_quantity;
+      const auto expected_ol_amount = i_price * static_cast<float>(order_lines[line_idx].ol_quantity);
       EXPECT_EQ(order_line_row[8], AllTypeVariant{expected_ol_amount});  // OL_AMOUNT
     }
 
@@ -404,7 +404,7 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     // Customers start with C_BALANCE = -10, C_YTD_PAYMENT = 10, C_PAYMENT_CNT = 1
     EXPECT_FLOAT_EQ(*table->get_value<float>("C_BALANCE", 0), -10.0f - payment.h_amount);
     EXPECT_FLOAT_EQ(*table->get_value<float>("C_YTD_PAYMENT", 0), 10.0f + payment.h_amount);
-    EXPECT_FLOAT_EQ(*table->get_value<int32_t>("C_PAYMENT_CNT", 0), 2);
+    EXPECT_EQ(*table->get_value<int32_t>("C_PAYMENT_CNT", 0), 2);
   }
 
   // We do not test for C_DATA

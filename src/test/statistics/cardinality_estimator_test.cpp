@@ -868,7 +868,7 @@ TEST_F(CardinalityEstimatorTest, Union) {
 
   // clang-format off
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     node_a,
     node_b);
   // clang-format on

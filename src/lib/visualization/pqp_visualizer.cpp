@@ -58,7 +58,8 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     // Print third column (relative operator duration)
     operator_breakdown_stream << "|";
     for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
-      operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) / total_nanoseconds.count() * 100)
+      operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) /
+                                         static_cast<double>(total_nanoseconds.count()) * 100)
                                 << " %\\l";
     }
     operator_breakdown_stream << " \\l";
@@ -147,7 +148,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
     info.label = stream.str();
   }
 
-  info.pen_width = performance_data.output_row_count;
+  info.pen_width = static_cast<double>(performance_data.output_row_count);
   if (to->input_right() != nullptr) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
@@ -163,9 +164,9 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   if (performance_data.executed) {
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
-    info.pen_width = total.count();
+    info.pen_width = static_cast<double>(total.count());
   } else {
-    info.pen_width = 1;
+    info.pen_width = 1.0;
   }
 
   _duration_by_operator_name[op->name()] += performance_data.walltime;

@@ -194,7 +194,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         // to avoid large build partitions, this should never happen. Nonetheless, we better
         // assert since the effects of overflows will probably hard to debug.
         const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
-        Assert(static_cast<size_t>(build_input_table->row_count() / std::pow(2, *_radix_bits)) < max_partition_size,
+        Assert(static_cast<uint32_t>(static_cast<double>(build_input_table->row_count()) / std::pow(2, *_radix_bits)) <
+                   max_partition_size,
                "Partition count too small (potential overflows in hash map offsetting).");
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(

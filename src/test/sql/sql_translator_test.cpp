@@ -2,6 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
@@ -17,9 +18,11 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
@@ -43,18 +46,26 @@ namespace opossum {
 
 class SQLTranslatorTest : public BaseTest {
  public:
-  void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
-    Hyrise::get().storage_manager.add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
-    Hyrise::get().storage_manager.add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
-    Hyrise::get().storage_manager.add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
-    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+  static void SetUpTestSuite() {
+    int_float = load_table("resources/test_data/tbl/int_float.tbl");
+    int_string = load_table("resources/test_data/tbl/int_string.tbl");
+    int_float2 = load_table("resources/test_data/tbl/int_float2.tbl");
+    int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
+    int_int_int = load_table("resources/test_data/tbl/int_int_int.tbl");
+  }
 
+  void SetUp() override {
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
     stored_table_node_int_float2 = StoredTableNode::make("int_float2");
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
+
+    Hyrise::get().storage_manager.add_table("int_float", int_float);
+    Hyrise::get().storage_manager.add_table("int_string", int_string);
+    Hyrise::get().storage_manager.add_table("int_float2", int_float2);
+    Hyrise::get().storage_manager.add_table("int_float5", int_float5);
+    Hyrise::get().storage_manager.add_table("int_int_int", int_int_int);
 
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
@@ -95,11 +106,9 @@ class SQLTranslatorTest : public BaseTest {
     return {lqps.at(0), translation_result.translation_info.parameter_ids_of_value_placeholders};
   }
 
-  std::shared_ptr<StoredTableNode> stored_table_node_int_float;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_string;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
-  std::shared_ptr<StoredTableNode> stored_table_node_int_int_int;
+  static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
+  static inline std::shared_ptr<StoredTableNode> stored_table_node_int_float, stored_table_node_int_string,
+      stored_table_node_int_float2, stored_table_node_int_float5, stored_table_node_int_int_int;
   LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d, int_float2_a,
       int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
 };
@@ -2724,6 +2733,84 @@ TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
   const auto expected_lqp =
     ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
       stored_table_node_int_int_int);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
+  const auto actual_lqp = compile_query(
+      "SELECT a FROM int_float "
+      "EXCEPT "
+      "SELECT a FROM int_float2;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ExceptNode::make(SetOperationMode::Unique,
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
+      ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
+  const auto actual_lqp = compile_query(
+      "SELECT a FROM int_float "
+      "INTERSECT "
+      "SELECT a FROM int_float2;");
+
+  // clang-format off
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Unique,
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
+      ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, MultiSetOperations) {
+  const auto actual_lqp = compile_query(
+      "SELECT a FROM int_int_int "
+      "INTERSECT "
+      "SELECT b FROM int_int_int "
+      "EXCEPT "
+      "SELECT c FROM int_int_int;");
+
+  // clang-format off
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Unique,
+    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int),
+      ExceptNode::make(SetOperationMode::Unique,
+        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
+          ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
+  const auto actual_lqp = compile_query(
+      "(SELECT a FROM int_int_int ORDER by a) "
+      "INTERSECT "
+      "(SELECT b FROM int_int_int "
+      "EXCEPT "
+      "(SELECT c FROM int_int_int ORDER by c) LIMIT 10) ORDER BY a");
+
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+    IntersectNode::make(SetOperationMode::Unique,
+      ProjectionNode::make(expression_vector(int_int_int_a),
+        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+                       stored_table_node_int_int_int)),
+      LimitNode::make(value_(10),
+        ExceptNode::make(SetOperationMode::Unique,
+          ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
+          ProjectionNode::make(expression_vector(int_int_int_c),
+            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending },
+                           stored_table_node_int_int_int))))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
