@@ -13,11 +13,12 @@ Hyrise::Hyrise() {
   // destructed last.
   boost::container::pmr::get_default_resource();
 
-  plugin_manager = PluginManager{};
   storage_manager = StorageManager{};
+  plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};
   settings_manager = SettingsManager{};
+  log_manager = LogManager{};
   topology = Topology{};
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
 }

@@ -232,7 +232,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = std::optional<AggregateType>();
     } else {
       // normal average calculation
-      current_primary_aggregate = *current_primary_aggregate / value_count;
+      current_primary_aggregate = *current_primary_aggregate / static_cast<AggregateType>(value_count);
     }
   }
   if constexpr (function == AggregateFunction::StandardDeviationSample &&

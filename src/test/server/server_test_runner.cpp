@@ -32,7 +32,9 @@ class ServerTestRunner : public BaseTest {
     std::remove(_export_filename.c_str());
 
     // Wait to run the server and set the scheduler
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    while (!_server->is_initialized()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
   }
 
   void TearDown() override {
@@ -431,7 +433,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   EXPECT_GE(conflicted_increments, 1);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
-  EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
+  EXPECT_EQ(final_sum - initial_sum, successful_increments);
 }
 
 }  // namespace opossum
