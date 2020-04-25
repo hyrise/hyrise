@@ -22,7 +22,7 @@
 
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 
-#define SORT_WITHIN_CLUSTERS true
+#define SORT_WITHIN_CLUSTERS false
 
 namespace opossum {
 
@@ -317,7 +317,7 @@ void DisjointClustersAlgo::_perform_clustering() {
         const auto clustering_column = table->column_name(clustering_column_id);
         
 
-        const auto histogram = _get_histogram<ColumnDataType>(table, clustering_column);
+        const auto histogram = opossum::detail::HistogramGetter<ColumnDataType>::get_histogram(table, clustering_column);
               
         std::cout << clustering_column << " (" << table_name << ") has " << row_count - (histogram->total_count()) << " NULL values" << std::endl;
         // TODO: proper NULL handling
@@ -429,7 +429,13 @@ void DisjointClustersAlgo::_perform_clustering() {
         table->remove_chunk(chunk_id);
       }
 
+      // some additional statistics
+      size_t highest_chunk_count = 0;
+
+      // sort and append chunks
       for (const auto& [key, chunks] : chunks_per_cluster) {
+        highest_chunk_count = std::max(highest_chunk_count, chunks.size());
+
         auto sorting_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, table->target_chunk_size(), UseMvcc::Yes);
         _append_chunks_to_table(chunks, sorting_table);
 
@@ -441,15 +447,17 @@ void DisjointClustersAlgo::_perform_clustering() {
         for (ChunkID cid{0}; cid < sorted_table->chunk_count(); cid++) {
           const auto& sorted_chunk = sorted_table->get_chunk(cid);
           Assert(sorted_chunk, "chunk disappeared");
+          Assert(sorted_chunk->ordered_by(), "chunk is not sorted");
 
-          auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_chunk), std::make_shared<MvccData>(sorted_chunk->size(), MvccData::MAX_COMMIT_ID));
+          auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_chunk), std::make_shared<MvccData>(sorted_chunk->size(), 0));
+          sorted_chunk_with_mvcc->set_ordered_by(*sorted_chunk->ordered_by());
           sorted_chunk_with_mvcc->finalize();
 
           ChunkEncoder::encode_chunk(sorted_chunk_with_mvcc, table->column_data_types(), EncodingType::Dictionary);
-          _append_chunk_to_table(sorted_chunk_with_mvcc, table, false);
+          _append_sorted_chunk_to_table(sorted_chunk_with_mvcc, table, false);
         }
       }
-
+      std::cout << "The highest amount of chunks to sort in one step was " << highest_chunk_count << std::endl;
     }
   }
 }

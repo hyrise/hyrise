@@ -26,6 +26,24 @@
 
 namespace opossum {
 
+namespace detail {
+
+template <typename ColumnDataType>
+std::shared_ptr<const AbstractHistogram<ColumnDataType>> HistogramGetter<ColumnDataType>::get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) {
+  const auto table_statistics = table->table_statistics();
+  const auto column_id = table->column_id_by_name(column_name);
+  const auto base_attribute_statistics = table_statistics->column_statistics[column_id];
+
+  const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
+  Assert(attribute_statistics, "could not cast to AttributeStatistics");
+  const auto histogram = attribute_statistics->histogram;
+  Assert(histogram, "no histogram available for column "  + column_name);
+  return histogram;
+}
+
+EXPLICITLY_INSTANTIATE_DATA_TYPES(HistogramGetter);
+} // namespace detail
+
 void AbstractClusteringAlgo::_run_assertions() const {
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
     if (VERBOSE) std::cout << "[" << description() << "] " << "- Running assertions for table " << table_name << std::endl;
@@ -255,19 +273,6 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
   sorted_chunk_with_mvcc->set_ordered_by(*sorted_const_chunk->ordered_by());
   return sorted_chunk_with_mvcc;
-}
-
-template <typename ColumnDataType>
-std::shared_ptr<const AbstractHistogram<ColumnDataType>> AbstractClusteringAlgo::_get_histogram(const std::shared_ptr<const Table>& table, const std::string& column_name) const {
-  const auto table_statistics = table->table_statistics();
-  const auto column_id = table->column_id_by_name(column_name);
-  const auto base_attribute_statistics = table_statistics->column_statistics[column_id];
-
-  const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
-  Assert(attribute_statistics, "could not cast to AttributeStatistics");
-  const auto histogram = attribute_statistics->histogram;
-  Assert(histogram, "no histogram available for column "  + column_name);
-  return histogram;
 }
 
 } // namespace opossum

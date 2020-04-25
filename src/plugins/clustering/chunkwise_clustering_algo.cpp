@@ -168,7 +168,7 @@ void ChunkwiseClusteringAlgo::_perform_clustering() {
     const auto column_data_type = table->column_data_type(table->column_id_by_name(clustering_column));
     resolve_data_type(column_data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      const auto histogram = _get_histogram<ColumnDataType>(table, clustering_column);
+      const auto histogram = opossum::detail::HistogramGetter<ColumnDataType>::get_histogram(table, clustering_column);
 
             
       std::cout << clustering_column << " (" << table_name << ") has " << row_count - (histogram->total_count()) << " NULL values" << std::endl;
