@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/stl_interfaces/iterator_interface.hpp>
+
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -16,11 +18,23 @@ class RowIDPosList;
 class AbstractPosList : private Noncopyable {
  public:
   template <typename PosListType = AbstractPosList, typename DereferenceReturnType = RowID>
-  class PosListIterator : public boost::iterator_facade<PosListIterator<PosListType, DereferenceReturnType>, RowID,
-                                                        boost::random_access_traversal_tag, DereferenceReturnType> {
+  class PosListIterator : public boost::stl_interfaces::iterator_interface<
+                              PosListIterator<PosListType, DereferenceReturnType>, std::random_access_iterator_tag,
+                              RowID, DereferenceReturnType,
+                              std::conditional_t<std::is_same_v<DereferenceReturnType, RowID>,
+                                                 boost::stl_interfaces::proxy_arrow_result<RowID>, RowID*>> {
    public:
     PosListIterator(const PosListType* pos_list, const ChunkOffset offset)
         : _pos_list(pos_list), _chunk_offset(offset) {}
+
+    auto operator*() const { return dereference(); }
+
+    auto& operator+=(std::ptrdiff_t i) {
+      advance(i);
+      return *this;
+    }
+
+    auto operator-(const PosListIterator& other) const { return -distance_to(other); }
 
     void increment() { ++_chunk_offset; }
 
