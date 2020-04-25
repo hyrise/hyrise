@@ -70,6 +70,7 @@ include_directories(
     SYSTEM
     ${TBB_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
+    ${PROJECT_SOURCE_DIR}/third_party/cppcoro/include
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
     ${PROJECT_SOURCE_DIR}/third_party/cqf/include
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include

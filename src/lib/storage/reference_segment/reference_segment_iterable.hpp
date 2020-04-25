@@ -4,6 +4,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <cppcoro/recursive_generator.hpp>
 
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -16,6 +17,25 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
+
+
+
+
+
+
+#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
+
+
+
+
+
+
+
+
+
+
+
+
 namespace opossum {
 
 template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
@@ -24,6 +44,23 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   using ValueType = T;
 
   explicit ReferenceSegmentIterable(const ReferenceSegment& segment) : _segment{segment} {}
+
+  cppcoro::recursive_generator<SegmentPosition<T>> generator(const auto& iterable, const std::shared_ptr<RowIDPosList>& pos_list) const {
+    iterable.with_iterators(pos_list, [&](auto it, const auto end) {
+      while (it != end) {
+        co_yield SegmentPosition(it->value(), it->is_null(), it->chunk_offset());
+        ++it;
+      }
+    });
+  }
+
+  auto generator2(auto it, const auto end) const {
+    while (it != end) {
+      std::cout << "# " << it->value();
+      co_yield SegmentPosition(it->value(), it->is_null(), it->chunk_offset());
+      ++it;
+    }
+  }
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -163,7 +200,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
               // Cannot insert *it here since it might hold other SegmentPositions types (NonNullSegmentPosition) and
               // we don't want to use a list of AbstractSegmentPositions.
               // single_chunk_segment_positions.emplace_back(it->value(), it->is_null(), it->chunk_offset());
-              segment_positions[write_offsets[current_write_offset]] = SegmentPosition(it->value(), it->is_null(), it->chunk_offset());
+              segment_positions[write_offsets[current_write_offset]] = SegmentPosition(it->value(), it->is_null(), ChunkOffset{static_cast<uint32_t>(current_write_offset)});
 
               ++it;
               ++current_write_offset;
@@ -174,34 +211,24 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             const auto iterable = create_iterable_from_segment<T>(typed_segment);
             using IterableType = std::decay_t<decltype(iterable)>;
             if constexpr (!std::is_same_v<IterableType, ReferenceSegmentIterable>) {
+              for (const auto& el : iterable.template with_generator<T>(iterable_pos_list)) {
+                std::cout << "%" << el.value() << std::endl;
+              }
               iterable.with_iterators(iterable_pos_list, write_segment_positions);
             } else {
               Fail("Cannot instantiate an interable with a position list.");
             }
           } else {
             const auto iterable = create_any_segment_iterable<T>(typed_segment);
+            for (const auto& el : iterable.template with_generator<T>(iterable_pos_list)) {
+              std::cout << "%" << el.value() << std::endl;
+            }
             iterable.with_iterators(iterable_pos_list, write_segment_positions);
           }
         });
       }
 
-      // auto chunk_offset = 0;
-      // std::vector<size_t> segment_position_list_offsets(max_chunk_id + 1, 0ul);
-      // for (auto iter = position_filter->cbegin(); iter != position_filter->cend(); ++iter) {
-      //   const auto& position = *iter;
-      //   if (position == NULL_ROW_ID) {
-      //     segment_positions.emplace_back(T{}, true, chunk_offset);
-      //     ++chunk_offset;
-      //     continue;
-      //   }
 
-      //   const auto chunk_id = position.chunk_id;
-      //   const auto& segment_position = segment_positions_per_segment[chunk_id][segment_position_list_offsets[chunk_id]];
-      //   segment_positions.emplace_back(segment_position.value(), segment_position.is_null(), chunk_offset);
-
-      //   ++segment_position_list_offsets[chunk_id];
-      //   ++chunk_offset;
-      // }
 
       DebugAssert(segment_positions.size() == position_filter->size(), "Sizes do not match");
 
@@ -210,6 +237,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       functor(begin, end);
     }
+  }
+
+  cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
+    Fail("That path should simply NOT.");
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -338,7 +370,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
   };
 
-  // The SegmentPositionVectorIterator is basically a wrapper around the std::vector of SegmentPositions. We cannot
+  // The SegmentPositionVectorIterator is basically a wrapper around an std::vector<SegmentPosition>. We cannot
   // directly use the vector's iterators as they lack type definitions (e.g., ::ValueType).
   class SegmentPositionVectorIterator : public BaseSegmentIterator<SegmentPositionVectorIterator, SegmentPosition<T>> {
    public:
@@ -366,7 +398,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
     SegmentPosition<T> dereference() const {
-      // std::cout << "dereference() >> " << (*_segment_positions)[_chunk_offset].chunk_offset() << " & " <<  _chunk_offset << std::endl;
       DebugAssert((*_segment_positions)[_chunk_offset].chunk_offset() == _chunk_offset, "Unexpected chunk offset.");
       return (*_segment_positions)[_chunk_offset];
     }

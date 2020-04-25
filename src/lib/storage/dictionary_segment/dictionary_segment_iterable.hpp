@@ -55,6 +55,68 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     });
   }
 
+  cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+    using DictionaryIteratorType = decltype(_dictionary->cbegin());
+    using PosListIteratorType = decltype(position_filter->cbegin());
+
+    switch (*_segment.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize4ByteAligned: {
+        const auto& vector = dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(*_segment.attribute_vector());
+
+        auto iter = PointAccessIterator<opossum::FixedSizeByteAlignedDecompressor<uint32_t>, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
+        const auto end = PointAccessIterator<opossum::FixedSizeByteAlignedDecompressor<uint32_t>, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      case CompressedVectorType::FixedSize2ByteAligned: {
+        const auto& vector = dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(*_segment.attribute_vector());
+
+        auto iter = PointAccessIterator<opossum::FixedSizeByteAlignedDecompressor<uint16_t>, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
+        const auto end = PointAccessIterator<opossum::FixedSizeByteAlignedDecompressor<uint16_t>, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      case CompressedVectorType::FixedSize1ByteAligned: {
+        const auto& vector = dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(*_segment.attribute_vector());
+
+        auto iter = PointAccessIterator<opossum::FixedSizeByteAlignedDecompressor<uint8_t>, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
+        const auto end = PointAccessIterator<opossum::FixedSizeByteAlignedDecompressor<uint8_t>, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      case CompressedVectorType::SimdBp128:
+        break;
+      default:
+        Fail("sasfdasdf");
+    }
+    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
+  }
+
   size_t _on_size() const { return _segment.size(); }
 
  private:

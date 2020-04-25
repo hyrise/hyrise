@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <cppcoro/recursive_generator.hpp>
 
 #include "storage/segment_iterables/base_segment_iterators.hpp"
 #include "resolve_type.hpp"
@@ -165,6 +166,16 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
         });
       }
     }
+  }
+
+  template <typename T>
+  cppcoro::recursive_generator<SegmentPosition<T>> with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    if (!position_filter) {
+      Fail("Unexpected");
+    }
+
+    DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
+    return _self()._on_with_generator(position_filter);
   }
 
   using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”

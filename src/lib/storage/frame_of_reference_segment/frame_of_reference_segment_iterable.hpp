@@ -52,6 +52,10 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     });
   }
 
+  cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
+  }
+
   size_t _on_size() const { return _segment.size(); }
 
  private:

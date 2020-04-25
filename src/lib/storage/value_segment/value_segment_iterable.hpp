@@ -51,6 +51,23 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
   }
 
+  cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+
+    using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
+
+    auto iter = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                          position_filter->cbegin(), position_filter->cbegin()};
+    const auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                        position_filter->cbegin(), position_filter->cend()};
+
+    // TODO: we should limit the code duplication with _on_with_iterators()
+    while (iter != end) {
+      co_yield *iter;
+      ++iter;
+    }
+  }
+
   size_t _on_size() const { return _segment.size(); }
 
  private:

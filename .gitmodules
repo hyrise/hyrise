@@ -49,3 +49,9 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "third_party/coro"]
+	path = third_party/coro
+	url = https://github.com/lewissbaker/cppcoro.git
+[submodule "third_party/cppcoro"]
+	path = third_party/cppcoro
+	url = https://github.com/lewissbaker/cppcoro.git

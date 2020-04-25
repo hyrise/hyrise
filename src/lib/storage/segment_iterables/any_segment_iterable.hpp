@@ -56,6 +56,7 @@ class BaseAnySegmentIterableWrapper {
   virtual void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
   virtual void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter,
                               const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
+  virtual cppcoro::recursive_generator<SegmentPosition<ValueType>> with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const = 0;
   virtual size_t size() const = 0;
 };
 
@@ -89,6 +90,12 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
       }
     } else {
       with_iterators(functor_wrapper);
+    }
+  }
+
+  cppcoro::recursive_generator<SegmentPosition<ValueType>> with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const override {
+    if constexpr (is_point_accessible_segment_iterable_v<UnerasedIterable>) {
+      co_yield iterable.template with_generator<ValueType>(position_filter);
     }
   }
 
@@ -133,6 +140,11 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   void _on_with_iterators(const std::shared_ptr<PosListType>& position_filter, const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
+  }
+
+  cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    co_yield _iterable_wrapper->with_generator(position_filter);
+    // co_yield SegmentPosition(T{}, false, ChunkOffset{0});
   }
 
   size_t _on_size() const { return _iterable_wrapper->size(); }

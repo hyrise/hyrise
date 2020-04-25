@@ -40,6 +40,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     });
   }
 
+  cppcoro::recursive_generator<SegmentPosition<ValueID>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    co_yield SegmentPosition(ValueID{}, false, ChunkOffset{0});
+  }
+
   size_t _on_size() const { return _attribute_vector.size(); }
 
  private:
