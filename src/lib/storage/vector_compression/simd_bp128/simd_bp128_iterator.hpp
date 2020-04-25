@@ -32,6 +32,15 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
 
   ~SimdBp128Iterator() = default;
 
+  auto operator*() const { return dereference(); }
+
+  auto& operator+=(std::ptrdiff_t i) {
+    advance(i);
+    return *this;
+  }
+
+  auto operator-(const SimdBp128Iterator& other) const { return -distance_to(other); }
+
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 

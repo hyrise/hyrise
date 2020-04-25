@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/stl_interfaces/iterator_interface.hpp>
 
 #include "base_vector_decompressor.hpp"
 #include "compressed_vector_type.hpp"
@@ -54,7 +55,7 @@ class BaseCompressedVector : private Noncopyable {
  */
 template <typename Derived>
 using BaseCompressedVectorIterator =
-    boost::iterator_facade<Derived, uint32_t, boost::random_access_traversal_tag, uint32_t>;
+    boost::stl_interfaces::iterator_interface<Derived, std::random_access_iterator_tag, uint32_t>;
 
 /**
  * @brief Implements the non-virtual interface of all vectors
