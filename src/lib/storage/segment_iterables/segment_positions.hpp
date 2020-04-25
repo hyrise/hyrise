@@ -26,6 +26,7 @@ class AbstractSegmentPosition {
  public:
   AbstractSegmentPosition() = default;
   AbstractSegmentPosition(const AbstractSegmentPosition&) = default;
+  AbstractSegmentPosition(AbstractSegmentPosition&&) = default;
   virtual ~AbstractSegmentPosition() = default;
 
   virtual const T& value() const = 0;
@@ -59,9 +60,9 @@ class SegmentPosition final : public AbstractSegmentPosition<T> {
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  alignas(8) const T _value;
-  alignas(8) const bool _null_value;
-  alignas(8) const ChunkOffset _chunk_offset;
+  alignas(8) T _value;
+  alignas(8) bool _null_value;
+  alignas(8) ChunkOffset _chunk_offset;
 };
 
 /**
@@ -83,8 +84,8 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
-  alignas(8) const T _value;
-  alignas(8) const ChunkOffset _chunk_offset;
+  alignas(8) T _value;
+  alignas(8) ChunkOffset _chunk_offset;
 };
 
 /**
@@ -108,8 +109,8 @@ class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank>
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
   static constexpr auto _blank = boost::blank{};
-  alignas(8) const bool _null_value;
-  alignas(8) const ChunkOffset _chunk_offset;
+  alignas(8) bool _null_value;
+  alignas(8) ChunkOffset _chunk_offset;
 };
 
 }  // namespace opossum
