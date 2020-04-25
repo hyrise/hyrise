@@ -128,8 +128,11 @@ class SortedSegmentSearch {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
     if (_begin == _end) return;
 
-    auto first_value = _begin->value();
-    auto last_value = (_end - 1)->value();
+    auto first_position = *_begin;
+    auto first_value = first_position.value();
+
+    auto last_position = *(_end - 1);
+    auto last_value = last_position.value();
 
     auto predicate_condition = _predicate_condition;
     auto first_search_value = _first_search_value;
@@ -207,7 +210,8 @@ class SortedSegmentSearch {
       return;
     }
 
-    if (first_bound->value() != _first_search_value) {
+    auto first_position = *first_bound;
+    if (first_position.value() != _first_search_value) {
       // If the first value >= _search_value is not equal to _search_value, then _search_value doesn't occur at all.
       // Call the result_consumer on the whole range and skip the call to _get_last_bound().
       result_consumer(_begin, _end);
@@ -298,10 +302,12 @@ class SortedSegmentSearch {
      */
     if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
       for (; begin != end; ++begin) {
-        matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
+        auto position = *begin;
+        matches[output_idx++] = RowID{chunk_id, position.chunk_offset()};
       }
     } else {
-      const auto first_offset = begin->chunk_offset();
+      const auto first_position = *begin;
+      const auto first_offset = first_position.chunk_offset();
       const auto distance = std::distance(begin, end);
 
       for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {

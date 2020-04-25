@@ -156,8 +156,8 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
     if constexpr (erase_comparator_type == EraseTypes::OnlyInDebugBuild) {
       return comparator;
     } else {
-      return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype(it1->value())>>&,
-                                const AbstractSegmentPosition<std::decay_t<decltype(it2->value())>>&)>{comparator};
+      return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype((*it1).value())>>&,
+                                const AbstractSegmentPosition<std::decay_t<decltype((*it2).value())>>&)>{comparator};
     }
   };
 

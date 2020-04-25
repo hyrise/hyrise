@@ -32,7 +32,8 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
 
       // Init is_current_null such that it does not equal the first entry
       auto current_value = T{};
-      auto is_current_null = !it->is_null();
+      const auto current_position = *it;
+      auto is_current_null = !current_position.is_null();
       auto current_index = 0u;
 
       for (; it != end; ++it) {

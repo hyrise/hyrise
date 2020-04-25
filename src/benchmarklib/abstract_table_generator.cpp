@@ -59,7 +59,8 @@ void AbstractTableGenerator::generate_and_store() {
           const auto& segment = table->get_chunk(chunk_id)->get_segment(sort_column_id);
           segment_with_iterators<ColumnDataType>(*segment, [&](auto it, const auto end) {
             while (it != end) {
-              if (it->is_null()) {
+              auto position = *it;
+              if (position.is_null()) {
                 if (last_value) {
                   // NULLs should come before all values
                   is_sorted = false;
@@ -70,8 +71,8 @@ void AbstractTableGenerator::generate_and_store() {
                 continue;
               }
 
-              if (!last_value || it->value() >= *last_value) {
-                last_value = it->value();
+              if (!last_value || position.value() >= *last_value) {
+                last_value = position.value();
               } else {
                 is_sorted = false;
                 break;

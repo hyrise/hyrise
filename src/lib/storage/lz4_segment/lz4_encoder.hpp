@@ -140,8 +140,9 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     auto num_chars = size_t{0u};
     segment_iterable.with_iterators([&](auto it, auto end) {
       for (; it != end; ++it) {
-        if (!it->is_null()) {
-          num_chars += it->value().size();
+        const auto position = *it;
+        if (!position.is_null()) {
+          num_chars += position.value().size();
         }
       }
     });

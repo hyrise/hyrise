@@ -51,7 +51,7 @@ class AbstractTableScanImpl {
     // To reduce compile time, SIMD scanning is not used for for ColumnVsColumnScans. Also, string comparisons are more
     // expensive than the scan itself, so we disable SIMD for these, too.
     if constexpr (std::is_same_v<RightIterator, std::false_type> &&
-                  !std::is_same_v<std::decay_t<decltype(left_it->value())>, pmr_string>) {
+                  !std::is_same_v<std::decay_t<decltype((*left_it).value())>, pmr_string>) {
       _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
     }
 
@@ -157,7 +157,8 @@ class AbstractTableScanImpl {
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup
-        const auto first_offset = left_it_for_offsets->chunk_offset();
+        const auto first_position = *left_it_for_offsets;
+        const auto first_offset = first_position.chunk_offset();
 
         // NOLINTNEXTLINE
         {}  // clang-format off
@@ -176,7 +177,8 @@ class AbstractTableScanImpl {
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
         for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-          offsets[i] = left_it_for_offsets->chunk_offset();
+          const auto position = *left_it_for_offsets;
+          offsets[i] = position.chunk_offset();
           ++left_it_for_offsets;
         }
       }

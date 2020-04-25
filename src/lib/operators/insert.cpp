@@ -54,9 +54,10 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
 
       // Copy values and null values
       for (auto index = ChunkOffset(0); index < length; index++) {
-        *target_iter = source_iter->value();
+        const auto source_position = *source_iter;
+        *target_iter = source_position.value();
 
-        if (source_iter->is_null()) {
+        if (source_position.is_null()) {
           // ValueSegments not being NULLable will be handled over there
           target_value_segment->set_null_value(target_begin_offset + index);
         }

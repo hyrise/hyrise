@@ -128,7 +128,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                     auto chunk_offset = ChunkOffset{0};
                     iterable.with_iterators(input_pos_list, [&](auto it, auto end) {
                       while (it != end) {
-                        filtered_attribute_vector[chunk_offset] = it->value();
+                        const auto position = *it;
+                        filtered_attribute_vector[chunk_offset] = position.value();
                         ++it;
                         ++chunk_offset;
                       }

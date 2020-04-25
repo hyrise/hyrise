@@ -39,7 +39,7 @@ namespace opossum {
  */
 template <typename Derived, typename Value>
 class BaseSegmentIterator
-    : public boost::stl_interfaces::proxy_iterator_interface<Derived, std::random_access_iterator_tag, Value> {};
+    : public boost::stl_interfaces::iterator_interface<Derived, std::random_access_iterator_tag, Value, Value, void> {};
 
 /**
  * Mapping between chunk offset into a reference segment and
