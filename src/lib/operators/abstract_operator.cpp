@@ -30,7 +30,7 @@ void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
-  DebugAssert(_performance_data->walltime.count() == 0, "Operator has already been executed");
+  DebugAssert(performance_data->walltime.count() == 0, "Operator has already been executed");
 
   Timer performance_timer;
 
