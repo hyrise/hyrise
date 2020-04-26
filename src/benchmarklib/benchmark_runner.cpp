@@ -369,10 +369,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     benchmarks.push_back(benchmark);
   }
 
-  // Gather information on the (estimated) table size
+  // Gather information on the table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled);
+    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   nlohmann::json summary{
