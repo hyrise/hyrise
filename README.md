@@ -34,7 +34,9 @@ See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use w
 Older versions may work, but are neither tested nor supported.
 
 ## Setup using Docker
-To get all dependencies of Hyrise in a docker image, run
+If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
+
+Otherwise, to get all dependencies of Hyrise into a Docker image, run
 ```
 docker build -t hyrise .
 ```
