@@ -185,8 +185,8 @@ class PosHashTable {
 
 // The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
 // `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
-// (1) Dynamically check whether bloom filters make sense. For a join of two unfiltered tables, it does not. This could
-//     be based on the input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
+// (1) Dynamically check whether bloom filters are worth the memory and computational costs This could be based on the
+//     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
 // (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
 //     not optimal in every situation.
 // (3) Check whether using multiple hash functions (k>1) brings any improvement.
