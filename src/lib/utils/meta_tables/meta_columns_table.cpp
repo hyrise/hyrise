@@ -15,7 +15,7 @@ const std::string& MetaColumnsTable::name() const {
   return name;
 }
 
-std::shared_ptr<Table> MetaColumnsTable::_on_generate() {
+std::shared_ptr<Table> MetaColumnsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {

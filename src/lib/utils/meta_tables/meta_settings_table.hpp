@@ -17,7 +17,7 @@ class MetaSettingsTable : public AbstractMetaTable {
 
  protected:
   friend class MetaSettingsTest;
-  std::shared_ptr<Table> _on_generate() final;
+  std::shared_ptr<Table> _on_generate() const final;
 
   void _on_update(const std::vector<AllTypeVariant>& selected_values,
                   const std::vector<AllTypeVariant>& update_values) final;

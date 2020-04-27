@@ -44,7 +44,7 @@ class AbstractMetaTable : public Noncopyable {
    * Generates the meta table on the fly by calling _on_generate().
    * It finalizes the last chunk of the table and sets table statistics.
    */
-  std::shared_ptr<Table> _generate();
+  std::shared_ptr<Table> _generate() const;
 
   /*
    * Manipulates the meta table by calling _on_insert() / _on_remove.
@@ -57,7 +57,7 @@ class AbstractMetaTable : public Noncopyable {
   void _validate_data_types(const std::vector<AllTypeVariant>& values) const;
 
   // These methods actually perform the table creation and manipulation.
-  virtual std::shared_ptr<Table> _on_generate() = 0;
+  virtual std::shared_ptr<Table> _on_generate() const = 0;
   virtual void _on_insert(const std::vector<AllTypeVariant>& values);
   virtual void _on_remove(const std::vector<AllTypeVariant>& values);
   virtual void _on_update(const std::vector<AllTypeVariant>& selected_values,

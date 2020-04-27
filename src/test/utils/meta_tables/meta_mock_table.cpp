@@ -28,7 +28,7 @@ const std::vector<AllTypeVariant> MetaMockTable::remove_values() const { return 
 const std::vector<AllTypeVariant> MetaMockTable::update_selected_values() const { return _update_selected_values; }
 const std::vector<AllTypeVariant> MetaMockTable::update_updated_values() const { return _update_updated_values; }
 
-std::shared_ptr<Table> MetaMockTable::_on_generate() {
+std::shared_ptr<Table> MetaMockTable::_on_generate() const {
   _generate_calls++;
   auto table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
   table->append({pmr_string{"mock_value"}});

@@ -17,7 +17,7 @@ class MetaSegmentsAccurateTable : public AbstractMetaTable {
   const std::string& name() const final;
 
  protected:
-  std::shared_ptr<Table> _on_generate() final;
+  std::shared_ptr<Table> _on_generate() const final;
 };
 
 }  // namespace opossum
