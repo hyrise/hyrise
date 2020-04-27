@@ -18,7 +18,7 @@ const std::string& MetaLogTable::name() const {
   return name;
 }
 
-std::shared_ptr<Table> MetaLogTable::_on_generate() const {
+std::shared_ptr<Table> MetaLogTable::_on_generate() {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& entry : Hyrise::get().log_manager.log_entries()) {

@@ -21,7 +21,7 @@ const std::string& MetaChunkSortOrdersTable::name() const {
  * is sorted on two columns). To prepare for this change, this additional table stores the sort orders and allows a
  * chunk to have multiple sort orders. Cascading sort orders for chunks are currently not planned.
  */
-std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
+std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {

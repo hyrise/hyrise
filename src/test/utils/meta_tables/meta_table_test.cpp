@@ -14,6 +14,8 @@
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
+#include "meta_mock_table.hpp"
+
 namespace opossum {
 
 using MetaTable = std::shared_ptr<AbstractMetaTable>;
@@ -79,6 +81,10 @@ class MetaTableTest : public BaseTest {
   }
 
   void TearDown() { Hyrise::reset(); }
+
+  void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
+    Hyrise::get().meta_table_manager._add(table);
+  }
 };
 
 class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
@@ -138,4 +144,18 @@ TEST_P(MultiMetaTablesTest, SQLFeatures) {
   EXPECT_EQ(result.second->row_count(), 1);
 }
 
+TEST_F(MetaTableTest, SingleGeneration) {
+  auto mock_table = std::make_shared<MetaMockTable>();
+  _add_meta_table(mock_table);
+
+  EXPECT_EQ(mock_table->generate_calls(), 0);
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 1);
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='abc'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 2);
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('foo')"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 3);
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='foo'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 4);
+}
 }  // namespace opossum

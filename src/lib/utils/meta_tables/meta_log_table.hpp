@@ -12,7 +12,7 @@ class MetaLogTable : public AbstractMetaTable {
 
  protected:
   friend class MetaLogTest;
-  std::shared_ptr<Table> _on_generate() const final;
+  std::shared_ptr<Table> _on_generate() final;
 };
 
 }  // namespace opossum

@@ -343,7 +343,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   std::shared_ptr<Table> target_table;
   if (is_meta_table) {
     AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
-    target_table = Hyrise::get().meta_table_manager.generate_table(table_name);
+    auto sql_identifier_resolver =
+        _sql_identifier_resolver ? _sql_identifier_resolver : std::make_shared<SQLIdentifierResolver>();
+    _translate_meta_table(table_name, sql_identifier_resolver);
+    target_table = (*_meta_tables)[_trim_meta_table_name(table_name)];
   } else {
     AssertInput(Hyrise::get().storage_manager.has_table(table_name),
                 std::string{"Did not find a table with name "} + table_name);
@@ -491,7 +494,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   std::shared_ptr<Table> target_table;
   if (is_meta_table) {
     AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
-    target_table = Hyrise::get().meta_table_manager.generate_table(table_name);
+    target_table = (*_meta_tables)[_trim_meta_table_name(table_name)];
   } else {
     AssertInput(Hyrise::get().storage_manager.has_table(table_name),
                 std::string{"Did not find a table with name "} + table_name);
@@ -733,7 +736,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   // that can change at any time
   _cacheable = false;
 
-  const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
+  const auto meta_table_name = _trim_meta_table_name(name);
 
   // Meta tables are integrated in the LQP as static table nodes in order to avoid regeneration at every
   // access in the pipeline afterwards.
@@ -1837,6 +1840,10 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
     expressions.emplace_back(element.expression);
   }
   return expressions;
+}
+
+std::string SQLTranslator::_trim_meta_table_name(const std::string& name) {
+  return name.substr(MetaTableManager::META_PREFIX.size());
 }
 
 SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression)
