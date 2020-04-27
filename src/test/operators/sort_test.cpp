@@ -36,9 +36,11 @@ TEST_P(SortTest, Sort) {
 
   if (param.input_is_empty) {
     if (param.input_is_reference) {
+      // Create an empty reference table
       input = std::make_shared<TableScan>(input, equals_(1, 2));
       input->execute();
     } else {
+      // Create an empty data table
       auto empty_table = Table::create_dummy_table(input_table->column_definitions());
       input = std::make_shared<TableWrapper>(empty_table);
       input->execute();
@@ -52,6 +54,7 @@ TEST_P(SortTest, Sort) {
   const auto& result = sort.get_output();
   EXPECT_TABLE_EQ_ORDERED(result, expected_table);
 
+  // Verify type of result table
   if (param.force_materialization == Sort::ForceMaterialization::Yes ||
       (param.input_is_empty && !param.input_is_reference)) {
     EXPECT_EQ(result->type(), TableType::Data);
@@ -59,6 +62,7 @@ TEST_P(SortTest, Sort) {
     EXPECT_EQ(result->type(), TableType::References);
   }
 
+  // Verify output chunk size
   if (result->chunk_count() > 0) {
     for (auto chunk_id = ChunkID{0}; chunk_id < result->chunk_count() - 1; ++chunk_id) {
       EXPECT_EQ(result->get_chunk(chunk_id)->size(), param.output_chunk_size);
@@ -108,6 +112,10 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}, SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}},           false, false, 33,                  Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}, SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}},           false, true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}, SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}},           false, true,  33,                  Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"}       // NOLINT
+
+                           // Empty input tables with forced materialization
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}},                                                                       true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},             // NOLINT
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}},                                                                       true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},             // NOLINT
                           ),  // NOLINT
                          sort_test_formatter);
 // clang-format on
@@ -129,13 +137,13 @@ TEST_F(SortTest, JoinProducesReferences) {
 
 TEST_F(SortTest, InputReferencesDifferentTables) {
   // When a single column in a table references different tables, we cannot output sorted ReferenceSegments.
-  // This tests simulates the output of a union on the first column.
+  // This test simulates the output of a union on the first column.
 
   const auto second_table = load_table("resources/test_data/tbl/sort/a_asc.tbl", 10);
   const auto second_table_wrapper = std::make_shared<TableWrapper>(second_table);
   second_table_wrapper->execute();
 
-  const auto reference_table = std::make_shared<Table>(
+  const auto union_table = std::make_shared<Table>(
       TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, true}}, TableType::References);
 
   auto pos_list = std::make_shared<RowIDPosList>();
@@ -144,12 +152,12 @@ TEST_F(SortTest, InputReferencesDifferentTables) {
   pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
 
   auto first_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{0}, pos_list);
-  reference_table->append_chunk(Segments{first_reference_segment});
+  union_table->append_chunk(Segments{first_reference_segment});
 
   auto second_reference_segment = std::make_shared<ReferenceSegment>(second_table, ColumnID{0}, pos_list);
-  reference_table->append_chunk(Segments{second_reference_segment});
+  union_table->append_chunk(Segments{second_reference_segment});
 
-  const auto reference_table_wrapper = std::make_shared<TableWrapper>(reference_table);
+  const auto union_table_wrapper = std::make_shared<TableWrapper>(union_table);
   reference_table_wrapper->execute();
 
   auto sort = Sort{reference_table_wrapper, {SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}};

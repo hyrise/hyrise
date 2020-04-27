@@ -10,7 +10,7 @@ using namespace opossum;  // NOLINT
 // creating chunks of output_chunk_size rows at maximum.
 std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
                                                        RowIDPosList pos_list, const ChunkOffset output_chunk_size) {
-  // First we create a new table as the output
+  // First, we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
 
@@ -123,8 +123,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   // Vector of segments for each chunk
   auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
 
-  if (input_pos_list.size() <= output_chunk_size && !resolve_indirection) {
-    // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection
+  if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
+    // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.
     const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list));
     auto& output_segments = output_segments_by_chunk.at(0);
     for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
@@ -132,14 +132,15 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
     }
   } else {
     for (ColumnID column_id{0u}; column_id < column_count; ++column_id) {
-      // We write the output ReferenceSegments column by column. This means that even if input ReferenceSegments share a
-      // PosList, the output will contain independent PosLists. While this is slightly more expensive to generate and
-      // slightly less efficient for following operators, we assume that the lion's share of the work has been done
-      // before the sort operator is executed and that the relative cost of this is acceptable. In the future, this
-      // could be improved.
+      // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
+      // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
+      // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
+      // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
+      // is acceptable. In the future, this could be improved.
       auto output_pos_list = std::make_shared<RowIDPosList>();
       output_pos_list->reserve(output_chunk_size);
 
+      // Collect all input segments for the current column
       const auto input_chunk_count = unsorted_table->chunk_count();
       auto input_segments = std::vector<std::shared_ptr<BaseSegment>>(input_chunk_count);
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
@@ -151,6 +152,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       const auto referenced_column_id =
           resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
 
+      // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
       auto output_chunk_id = ChunkID{0};
       const auto write_output_pos_list = [&] {
         DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
@@ -164,6 +166,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
         }
       };
 
+      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
+      // `output_chunk_size` rows.
       for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list.size();
            ++input_pos_list_offset) {
         const auto& row_id = input_pos_list[input_pos_list_offset];
@@ -259,9 +263,11 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     });
   }
 
-  // We have to materialize the output (i.e., write ValueSegments) if (a) it is requested by the user or (b) a column
-  // in the table references multiple tables itself (see write_reference_output_table for details). The latter can only
-  // occur if there is more than one ReferenceSegment in an input chunk.
+  // We have to materialize the output (i.e., write ValueSegments) if
+  //  (a) it is requested by the user,
+  //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
+  //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
+  // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
   auto must_materialize = _force_materialization == ForceMaterialization::Yes;
   const auto input_chunk_count = input_table->chunk_count();
   if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
