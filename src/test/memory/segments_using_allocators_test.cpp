@@ -27,11 +27,12 @@ class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resour
   bool do_is_equal(const memory_resource& other) const noexcept override { Fail("Not implemented"); }
 };
 
-class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType, SegmentEncodingSpec>> {
+class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType, SegmentEncodingSpec, bool>> {
  public:
   void SetUp() override {
     data_type = std::get<0>(GetParam());
     encoding_spec = std::get<1>(GetParam());
+    contains_null_values = std::get<2>(GetParam());
 
     resolve_data_type(data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
@@ -45,18 +46,24 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
         }
       };
 
-      original_segment = std::make_shared<ValueSegment<ColumnDataType>>(false, 300);
-      empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(false, 0);
+      original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, 300);
+      empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, 0);
       // original_segment contains the numbers from 0 to 99, then 100x100, then the numbers from 200 to 299.
       // This way, we can check if, e.g., run-length encoding properly handles the duplicate values
       for (auto i = 0; i <= 99; ++i) original_segment->append(convert_value(i));
-      for (auto i = 0; i < 100; ++i) original_segment->append(convert_value(100));
+      if (contains_null_values) {
+        for (auto i = 0; i < 80; ++i) original_segment->append(convert_value(100));
+        for (auto i = 0; i < 20; ++i) original_segment->append(opossum::NULL_VALUE);
+      } else {
+        for (auto i = 0; i < 100; ++i) original_segment->append(convert_value(100));
+      }
       for (auto i = 200; i <= 299; ++i) original_segment->append(convert_value(i));
     });
   }
 
   DataType data_type;
   SegmentEncodingSpec encoding_spec;
+  bool contains_null_values;
 
   std::shared_ptr<BaseValueSegment> original_segment;
   std::shared_ptr<BaseValueSegment> empty_original_segment;
@@ -120,24 +127,27 @@ TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
 }
 
 inline std::string segments_using_allocator_test_formatter(
-    const testing::TestParamInfo<std::tuple<DataType, SegmentEncodingSpec>>& param_info) {
+    const testing::TestParamInfo<std::tuple<DataType, SegmentEncodingSpec, bool>>& param_info) {
   std::stringstream stringstream;
   stringstream << std::get<0>(param_info.param);
   stringstream << all_segment_encoding_specs_formatter(
       testing::TestParamInfo<EncodingTest::ParamType>{std::get<1>(param_info.param), 0});
+  stringstream << (std::get<2>(param_info.param) ? "WithNulls" : "WithoutNulls");
   return stringstream.str();
 }
 
 INSTANTIATE_TEST_SUITE_P(Int, SegmentsUsingAllocatorsTest,
                          ::testing::Combine(::testing::Values(DataType::Int),
                                             ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int,
-                                                                                                       true))),
+                                                                                                       true)),
+                                            ::testing::Bool()),
                          segments_using_allocator_test_formatter);
 
 INSTANTIATE_TEST_SUITE_P(String, SegmentsUsingAllocatorsTest,
                          ::testing::Combine(::testing::Values(DataType::String),
                                             ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::String,
-                                                                                                       true))),
+                                                                                                       true)),
+                                            ::testing::Bool()),
                          segments_using_allocator_test_formatter);
 
 }  // namespace opossum

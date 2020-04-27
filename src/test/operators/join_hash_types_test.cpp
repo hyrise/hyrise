@@ -22,7 +22,11 @@ void test_hash_map(const std::vector<T>& values) {
     partition.null_values.emplace_back(false);
   }
 
-  auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0);
+  // Build a BloomFilter that cannot be used to skip any entries by creating a BloomFilter with every value being false
+  // and using bitwise negation (~x).
+  auto bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE);
+
+  auto hash_maps = build<T, HashType>(RadixContainer<T>{partition}, JoinHashBuildMode::AllPositions, 0, bloom_filter);
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_maps.size(), 1);
@@ -46,8 +50,8 @@ void test_hash_map(const std::vector<T>& values) {
   }
 }
 
-using DataTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_SUITE(JoinHashTypesTest, DataTypes, );  // NOLINT(whitespace/parens)
+using JoinHashTypesTestDataTypes = ::testing::Types<int, float, double>;
+TYPED_TEST_SUITE(JoinHashTypesTest, JoinHashTypesTestDataTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleValueLargePosList) {
   int test_item_count = 500;

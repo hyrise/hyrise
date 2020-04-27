@@ -10,7 +10,7 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 /**
- * Merge subplans that only consists of PredicateNodes and UnionNodes (with UnionMode::Positions) into a single
+ * Merge subplans that only consists of PredicateNodes and UnionNodes (with SetOperationMode::Positions) into a single
  * PredicateNode. A subplan consists of linear "chain" and forked "diamond" parts.
  *
  * EXAMPLE:
@@ -49,8 +49,10 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   // Step 1: Collect mergeable nodes
   visit_lqp(root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
-    // We need to check for UnionMode::Positions as other UnionModes are not guaranteed to represent a disjunction
-    if (node->type == LQPNodeType::Predicate || (union_node && union_node->union_mode == UnionMode::Positions)) {
+    // We need to check for SetOperationMode::Positions as other SetOperationModes are
+    // not guaranteed to represent a disjunction
+    if (node->type == LQPNodeType::Predicate ||
+        (union_node && union_node->set_operation_mode == SetOperationMode::Positions)) {
       const auto& outputs = node->outputs();
       const auto parent = std::find_if(outputs.begin(), outputs.end(),
                                        [&](const auto& output) { return node_to_topmost.count(output); });
@@ -98,7 +100,8 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
         break;
       }
 
-      default: {}
+      default: {
+      }
     }
   }
 }
@@ -107,7 +110,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
  * Merge "simple" diamonds, which only consist of one UnionNode, having two PredicateNodes as inputs
  */
 void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const {
-  Assert(union_node->union_mode == UnionMode::Positions, "Cannot merge union_node into disjunction");
+  Assert(union_node->set_operation_mode == SetOperationMode::Positions, "Cannot merge union_node into disjunction");
   const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->left_input());
   const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->right_input());
 
@@ -129,7 +132,7 @@ void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& un
   // Step 3: Try to merge other nodes
   // There could be another diamond that just became simple so that it can be merged.
   const auto parent_union_node = std::dynamic_pointer_cast<UnionNode>(merged_predicate_node->outputs().front());
-  if (parent_union_node && parent_union_node->union_mode == UnionMode::Positions) {
+  if (parent_union_node && parent_union_node->set_operation_mode == SetOperationMode::Positions) {
     _merge_disjunction(parent_union_node);
   }
 

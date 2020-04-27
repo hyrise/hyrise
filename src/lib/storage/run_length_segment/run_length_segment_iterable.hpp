@@ -78,7 +78,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     const auto chunk_size = end_positions->back();
     const auto run_count = end_positions->size();
 
-    const auto avg_elements_per_run = static_cast<float>(chunk_size) / run_count;
+    const auto avg_elements_per_run = static_cast<float>(chunk_size) / static_cast<float>(run_count);
     return static_cast<ChunkOffset>(LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * std::ceil(avg_elements_per_run));
   }
 

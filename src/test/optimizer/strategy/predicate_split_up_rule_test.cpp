@@ -65,7 +65,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
     node_a);
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_a, value_(3)),
       node_a),
     PredicateNode::make(greater_than_equals_(a_a, value_(5)),
@@ -85,13 +85,13 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
     node_a);
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(equals_(a_b, value_(7)),
       node_a),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(less_than_(a_a, value_(3)),
         node_a),
-      UnionNode::make(UnionMode::Positions,
+      UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(greater_than_equals_(a_a, value_(5)),
           node_a),
         PredicateNode::make(less_than_(9, a_b),
@@ -114,7 +114,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitBelowProjection) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a_a),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(value_(1),
         node_a),
       PredicateNode::make(greater_than_(value_(3), value_(2)),
@@ -149,7 +149,7 @@ TEST_F(PredicateSplitUpRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
       predicate_node));
 
   const auto union_node =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_(a_a, parameter0),
       node_a),
     PredicateNode::make(greater_than_(a_b, parameter1),
@@ -176,14 +176,14 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions)
     node_a);
 
   const auto lower_union_node =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_(a_a, value_(10)),
       node_a),
     PredicateNode::make(less_than_(a_a, value_(8)),
       node_a));
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_equals_(a_b, 7),
       lower_union_node),
     PredicateNode::make(equals_(value_(11), a_b),
@@ -213,15 +213,15 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
         node_a)));
 
   const auto lower_union_node =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_(a_a, value_(10)),
       sub_lqp),
     PredicateNode::make(less_than_(a_a, value_(8)),
       sub_lqp));
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
-    UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(less_than_equals_(a_b, 7),
         lower_union_node),
       PredicateNode::make(equals_(value_(11), a_b),

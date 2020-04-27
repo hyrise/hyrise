@@ -4,7 +4,7 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
-  node('master') {
+  node {
     stage ("Start") {
       // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
       if (env.CHANGE_ID) {
@@ -45,7 +45,7 @@ try {
   }
 
   node('linux') {
-    def oppossumCI = docker.image('hyrise/opossum-ci:19.10');
+    def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
     // create ccache volume on host using:
     // mkdir /mnt/ccache; mount -t tmpfs -o size=200G none /mnt/ccache
@@ -63,6 +63,7 @@ try {
           unity = '-DCMAKE_UNITY_BUILD=ON'
 
           clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+          clang10 = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
           debug = '-DCMAKE_BUILD_TYPE=Debug'
@@ -76,21 +77,22 @@ try {
           // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
           // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
 
-          sh "mkdir clang-debug && cd clang-debug &&                                                  ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
+          sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
 
           // Configure the rest in parallel
           // clang + precompiled headers + ccache is broken: https://gitlab.kitware.com/cmake/cmake/issues/19923
           // Some configurations don't use unity builds as this would break the ccache use across different PRs.
           // For clang-tidy, ccache does not have an effect, so we use unity there.
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                        ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                  ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers &&    ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&            ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release &&                                                  ${cmake}           ${release}        ${clang}          .. &\
-          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&  ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir gcc-debug && cd gcc-debug &&                                                          ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
-          mkdir gcc-release && cd gcc-release &&                                                      ${cmake} ${ccache} ${release}        ${gcc}            .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release &&                                                   ${cmake}           ${release}        ${clang}          .. &\
+          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
+          mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${ccache} ${release}        ${gcc}            .. &\
+          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake}           ${debug}          ${clang10}        .. &\
           wait"
         }
 
@@ -98,6 +100,11 @@ try {
           stage("clang-debug") {
             sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
             sh "./clang-debug/hyriseTest clang-debug"
+          }
+        }, clang10Debug: {
+          stage("clang-10-debug") {
+            sh "cd clang-10-debug && make all -j \$(( \$(nproc) / 4))"
+            sh "./clang-10-debug/hyriseTest clang-10-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
@@ -304,14 +311,14 @@ try {
           checkout scm
 
           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-          sh "git submodule update --init --recursive --jobs 4"
+          sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
-          sh "./scripts/test/hyriseConsole_test.py clang-debug"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {
           sh "ls -A1 | xargs rm -rf"
@@ -322,7 +329,7 @@ try {
     }
   }
 
-  node ('master') {
+  node {
     stage("Notify") {
       script {
         githubNotify context: 'CI Pipeline', status: 'SUCCESS'

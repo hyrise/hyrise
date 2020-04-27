@@ -14,6 +14,8 @@
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
+#include "meta_mock_table.hpp"
+
 namespace opossum {
 
 using MetaTable = std::shared_ptr<AbstractMetaTable>;
@@ -79,6 +81,10 @@ class MetaTableTest : public BaseTest {
   }
 
   void TearDown() { Hyrise::reset(); }
+
+  void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
+    Hyrise::get().meta_table_manager._add(table);
+  }
 };
 
 class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
@@ -106,6 +112,9 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
+
+  // The values in the AccessCounters depend on how the segments are accessed during the test. As such, the values in
+  // meta_segments*.tbl are fragile and may become outdated.
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
@@ -135,4 +144,51 @@ TEST_P(MultiMetaTablesTest, SQLFeatures) {
   EXPECT_EQ(result.second->row_count(), 1);
 }
 
+TEST_F(MetaTableTest, SingleGenerationInPipeline) {
+  auto mock_table = std::make_shared<MetaMockTable>();
+  _add_meta_table(mock_table);
+
+  EXPECT_EQ(mock_table->generate_calls(), 0);
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 1);
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='abc'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 2);
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('foo')"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 3);
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='foo'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 4);
+}
+
+TEST_F(MetaTableTest, IsNotCached) {
+  auto mock_table = std::make_shared<MetaMockTable>();
+  _add_meta_table(mock_table);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 1);
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 2);
+
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 3);
+  EXPECT_EQ(mock_table->insert_calls(), 1);
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 4);
+  EXPECT_EQ(mock_table->insert_calls(), 2);
+
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 5);
+  EXPECT_EQ(mock_table->remove_calls(), 1);
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 6);
+  EXPECT_EQ(mock_table->remove_calls(), 2);
+
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 7);
+  EXPECT_EQ(mock_table->update_calls(), 1);
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 8);
+  EXPECT_EQ(mock_table->update_calls(), 2);
+}
 }  // namespace opossum
