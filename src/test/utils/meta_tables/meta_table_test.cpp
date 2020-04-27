@@ -144,7 +144,7 @@ TEST_P(MultiMetaTablesTest, SQLFeatures) {
   EXPECT_EQ(result.second->row_count(), 1);
 }
 
-TEST_F(MetaTableTest, SingleGeneration) {
+TEST_F(MetaTableTest, SingleGenerationInPipeline) {
   auto mock_table = std::make_shared<MetaMockTable>();
   _add_meta_table(mock_table);
 
@@ -157,5 +157,38 @@ TEST_F(MetaTableTest, SingleGeneration) {
   EXPECT_EQ(mock_table->generate_calls(), 3);
   SQLPipelineBuilder{"UPDATE meta_mock SET mock='foo'"}.create_pipeline().get_result_table();
   EXPECT_EQ(mock_table->generate_calls(), 4);
+}
+
+TEST_F(MetaTableTest, IsNotCached) {
+  auto mock_table = std::make_shared<MetaMockTable>();
+  _add_meta_table(mock_table);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 1);
+  SQLPipelineBuilder{"SELECT * FROM meta_mock"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 2);
+
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 3);
+  EXPECT_EQ(mock_table->insert_calls(), 1);
+  SQLPipelineBuilder{"INSERT INTO meta_mock VALUES('bar')"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 4);
+  EXPECT_EQ(mock_table->insert_calls(), 2);
+
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 5);
+  EXPECT_EQ(mock_table->remove_calls(), 1);
+  SQLPipelineBuilder{"DELETE FROM meta_mock WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 6);
+  EXPECT_EQ(mock_table->remove_calls(), 2);
+
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 7);
+  EXPECT_EQ(mock_table->update_calls(), 1);
+  SQLPipelineBuilder{"UPDATE meta_mock SET mock='bar' WHERE mock='mock_value'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(mock_table->generate_calls(), 8);
+  EXPECT_EQ(mock_table->update_calls(), 2);
 }
 }  // namespace opossum
