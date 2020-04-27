@@ -195,7 +195,7 @@ class PosHashTable {
 //     been skipped), we do not need to use a bloom filter in the build phase anymore.
 // Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
 // We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
-// time to improving it.
+// resources to optimize it at the time.
 static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
 static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 
