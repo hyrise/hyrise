@@ -158,9 +158,9 @@ TEST_F(SortTest, InputReferencesDifferentTables) {
   union_table->append_chunk(Segments{second_reference_segment});
 
   const auto union_table_wrapper = std::make_shared<TableWrapper>(union_table);
-  reference_table_wrapper->execute();
+  union_table_wrapper->execute();
 
-  auto sort = Sort{reference_table_wrapper, {SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}};
+  auto sort = Sort{union_table_wrapper, {SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}};
   sort.execute();
 
   EXPECT_EQ(sort.get_output()->type(), TableType::Data);
@@ -170,7 +170,8 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
   // Similarly to InputReferencesDifferentTables, we cannot build a ReferenceSegment that references different columns
   // in the same table.
 
-  const auto reference_table = std::make_shared<Table>(
+  // This is not just a normal union_table but something weird that you probably won't see in the wild
+  const auto weird_table = std::make_shared<Table>(
       TableColumnDefinitions{TableColumnDefinition{"a", DataType::Int, true}}, TableType::References);
 
   auto pos_list = std::make_shared<RowIDPosList>();
@@ -179,15 +180,15 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
   pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
 
   auto first_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{0}, pos_list);
-  reference_table->append_chunk(Segments{first_reference_segment});
+  weird_table->append_chunk(Segments{first_reference_segment});
 
   auto second_reference_segment = std::make_shared<ReferenceSegment>(input_table, ColumnID{1}, pos_list);
-  reference_table->append_chunk(Segments{second_reference_segment});
+  weird_table->append_chunk(Segments{second_reference_segment});
 
-  const auto reference_table_wrapper = std::make_shared<TableWrapper>(reference_table);
-  reference_table_wrapper->execute();
+  const auto weird_table_wrapper = std::make_shared<TableWrapper>(weird_table);
+  weird_table_wrapper->execute();
 
-  auto sort = Sort{reference_table_wrapper, {SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}};
+  auto sort = Sort{weird_table_wrapper, {SortColumnDefinition{ColumnID{0}, OrderByMode::Descending}}};
   sort.execute();
 
   EXPECT_EQ(sort.get_output()->type(), TableType::Data);
