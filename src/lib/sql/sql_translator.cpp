@@ -342,10 +342,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 
   std::shared_ptr<Table> target_table;
   if (is_meta_table) {
-    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
     auto sql_identifier_resolver =
         _sql_identifier_resolver ? _sql_identifier_resolver : std::make_shared<SQLIdentifierResolver>();
     _translate_meta_table(table_name, sql_identifier_resolver);
+    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
     target_table = (*_meta_tables)[_trim_meta_table_name(table_name)];
   } else {
     AssertInput(Hyrise::get().storage_manager.has_table(table_name),
@@ -463,8 +463,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   std::shared_ptr<AbstractLQPNode> data_to_delete_node;
 
   if (is_meta_table) {
-    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
     data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
+    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
   } else {
     data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
     Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
@@ -730,7 +730,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
-  AssertInput(MetaTableManager::is_meta_table_name(name), std::string{"Did not find a meta table with name "} + name);
+  AssertInput(Hyrise::get().meta_table_manager.has_table(name), std::string{"Did not find a table with name "} + name);
 
   // MetaTables are non-cacheable because they might contain information about the general system state
   // that can change at any time
