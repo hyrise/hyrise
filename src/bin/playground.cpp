@@ -1,4 +1,5 @@
 #include <iostream>
+#include<fstream>
 
 #include "hyrise.hpp"
 #include "optimizer/optimizer.hpp"
@@ -9,12 +10,56 @@
 
 using namespace opossum;  // NOLINT
 
-void build_and_execute_query() {
+constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
+constexpr auto WORKLOAD_FILE = "../../data/workload_sql.csv";
+constexpr auto CONFIG_PATH = "../../data/config";
+constexpr auto CHUNK_SIZE = size_t{100'000};
+constexpr auto TABLE = "PING";
+
+// returns a vector with all lines of the file
+std::vector<std::vector<std::string>> read_file(const std::string file) {
+  std::ifstream f(file);
+  std::string line;
+  std::vector<std::vector<std::string>> file_values;
+
+  std::string header;
+  std::getline(f, header);
+
+  while (std::getline(f, line)){
+    std::vector<std::string> line_values;
+    std::istringstream linestream(line);
+    std::string value;
+
+    while (std::getline(linestream, value, ',')){
+     line_values.push_back(value);
+    }
+
+    file_values.push_back(line_values);
+  }
+
+  return file_values;  
+} 
+
+// returns all queries of a given workload file 
+std::vector<std::string> get_queries(const std::string workload_file) {
+  auto workload = read_file(workload_file);
+  std::vector<std::string> queries;
+
+  for(auto const& value: workload) {
+    queries.push_back(value[1]);
+  }
+
+  return queries;
+} 
+
+std::shared_ptr<Table> get_table(const std::string tbl_file, const size_t chunk_size) {
+  auto table = load_table(tbl_file, chunk_size);
+  return table;
+}
+
+void build_and_execute_query(const std::string query) {
 	const auto optimizer = Optimizer::create_default_optimizer();
-
-	// TODO: Determine predicate columns and predicate values and adapt query
-	const auto query = "SELECT captain_id FROM ping WHERE captain_id < 207";
-
+  std::cout << query << std::endl;
 	auto sql_pipeline = SQLPipelineBuilder{query}.with_optimizer(optimizer).disable_mvcc().create_pipeline_statement();
 
 	sql_pipeline.get_result_table();
@@ -26,19 +71,31 @@ void build_and_execute_query() {
 int main() {
 	auto& storage_manager = Hyrise::get().storage_manager;
 
-	constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
-	const auto CHUNK_SIZE = size_t{100'000};
+  const auto queries = get_queries(WORKLOAD_FILE);
 
-	auto ping_table = load_table(TBL_FILE, CHUNK_SIZE);
+  for (const auto& entry : std::filesystem::directory_iterator(CONFIG_PATH)) {
+    const auto conf_path = entry.path();
+    const auto conf_name = conf_path.stem();
+    const auto filename = conf_path.filename().string();
 
-	// Add table to storage manager create statistics.
-	storage_manager.add_table("ping", ping_table);
+    // check that file name is csv file
+    if (filename.find(".csv") == std::string::npos) {
+      std::cout << "Skipping " << conf_path << std::endl;
+      continue;
+    }
 
-	// for (query : queries) {
-	  // build_and_execute_query(query);
-	  build_and_execute_query();
-  // }
+    std::cout << "Benchmark for configuration: " << conf_name  << std::endl;
+    
+    // Add table to storage manager create statistics.
+    const auto table = get_table(TBL_FILE, CHUNK_SIZE);
+    storage_manager.add_table(TABLE, table);
 
+    for (auto const& query : queries) {
+      build_and_execute_query(query);
+    }
+
+    storage_manager.drop_table(TABLE);
+  }
   /**
    *	Die folgenden Lines sind aus meinem Compression Playground. Ich lese alle vorhandenen Configs aus dem path und
    *	vermesse dafür nach und nach den TPC-H. Die CSV wird einfach line pro line gelesen und nach Kommata gesplittet.
