@@ -238,6 +238,16 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
       const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
       Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
     }
+
+    // Check that existing chunks are not empty
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
+      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
+    }
   }
 
   // tbb::concurrent_vector does not guarantee that elements reported by size() are fully initialized yet:
