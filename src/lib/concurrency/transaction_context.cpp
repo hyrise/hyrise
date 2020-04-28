@@ -24,7 +24,7 @@ TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
                 auto an_operator_failed = false;
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() == ReadWriteOperatorState::Failed) {
+                  if (op->state() == ReadWriteOperatorState::Conflicted) {
                     an_operator_failed = true;
                     break;
                   }
