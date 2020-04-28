@@ -188,6 +188,8 @@ set(
     operators/alias_operator.hpp
     operators/change_meta_table.cpp
     operators/change_meta_table.hpp
+    operators/clustering.cpp
+    operators/clustering.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp

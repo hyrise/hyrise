@@ -13,6 +13,7 @@ namespace opossum {
 
 using ClusterBoundary = std::pair<AllTypeVariant, AllTypeVariant>;
 using ClusterBoundaries = std::vector<ClusterBoundary>;
+using ClusterKey = std::vector<size_t>;
 
 class DisjointClustersAlgo : public AbstractClusteringAlgo {
  public:
@@ -28,9 +29,21 @@ class DisjointClustersAlgo : public AbstractClusteringAlgo {
   template <typename ColumnDataType>
   ClusterBoundaries _get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters) const;
 
-  std::vector<std::shared_ptr<Chunk>> _distribute_chunk(const std::shared_ptr<Chunk>& chunk, const std::shared_ptr<Table>& table, const std::vector<ClusterBoundaries>& boundaries, std::vector<std::shared_ptr<Chunk>>& partially_filled_chunks, const std::vector<std::shared_ptr<Chunk>>& previously_partially_filled_chunks, const std::vector<ColumnID>& clustering_column_ids);
+  std::vector<ClusterBoundaries> _all_cluster_boundaries(const std::vector<size_t>& num_clusters_per_dimension) const;
 
-  std::vector<std::shared_ptr<Chunk>> _sort_and_encode_chunks(const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id, const std::shared_ptr<Table>& table) const;
+  const ClusterKey _clustering_key_for_chunk(const std::shared_ptr<Chunk>& chunk) const;
+  const std::vector<ClusterKey> _cluster_keys(const std::shared_ptr<Chunk>& chunk) const;
+
+
+
+  std::vector<std::shared_ptr<Chunk>> _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::shared_ptr<Chunk>>& partially_filled_chunks, const std::vector<std::shared_ptr<Chunk>>& previously_partially_filled_chunks);
+
+  std::vector<std::shared_ptr<Chunk>> _sort_and_encode_chunks(const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id) const;
+
+ private:
+  std::vector<ClusterBoundaries> _boundaries;
+  std::vector<ColumnID> _clustering_column_ids;
+  std::shared_ptr<Table> _table;
 };
 
 } // namespace opossum

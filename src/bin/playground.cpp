@@ -55,7 +55,9 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"));
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
+    ("cluster_only", "Do not benchmark, exit after the clustering", cxxopts::value<bool>()->default_value("false"));
+
   // clang-format on
 
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -65,6 +67,7 @@ int main(int argc, char* argv[]) {
   config->sql_metrics = true;
   Assert(config->output_file_path, "you must provide an output file");
   std::string output_file_path = *config->output_file_path;
+  const auto cluster_only = cli_parse_result["cluster_only"].as<bool>();
 
   // init benchmark runner
   bool plugin_loaded = false;
@@ -91,6 +94,10 @@ int main(int argc, char* argv[]) {
         const std::filesystem::path plugin_path(plugin_filename);
         Hyrise::get().plugin_manager.load_plugin(plugin_path);
         plugin_loaded = true;
+
+        if (cluster_only) {
+          return 0;
+        }
       }
 
       // actually run the benchmark
@@ -127,6 +134,10 @@ int main(int argc, char* argv[]) {
         const std::filesystem::path plugin_path(plugin_filename);
         Hyrise::get().plugin_manager.load_plugin(plugin_path);
         plugin_loaded = true;
+
+        if (cluster_only) {
+          return 0;
+        }
       }
 
       // actually run the benchmark

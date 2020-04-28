@@ -19,6 +19,7 @@ enum class OperatorType {
   Aggregate,
   Alias,
   ChangeMetaTable,
+  Clustering,
   Delete,
   Difference,
   Export,
