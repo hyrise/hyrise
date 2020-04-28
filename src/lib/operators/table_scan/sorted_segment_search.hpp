@@ -26,8 +26,7 @@ class SortedSegmentSearch {
         _first_search_value{search_value},
         _second_search_value{std::nullopt},
         _nullable{nullable},
-        _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
+        _is_ascending{order_by == OrderByMode::Ascending} {}
 
   // For SortedSegmentBetweenSearch
   SortedSegmentSearch(IteratorType begin, IteratorType end, const OrderByMode& order_by, const bool nullable,
@@ -39,8 +38,7 @@ class SortedSegmentSearch {
         _first_search_value{left_value},
         _second_search_value{right_value},
         _nullable{nullable},
-        _is_ascending{order_by == OrderByMode::Ascending || order_by == OrderByMode::AscendingNullsLast},
-        _is_nulls_first{order_by == OrderByMode::Ascending || order_by == OrderByMode::Descending} {}
+        _is_ascending{order_by == OrderByMode::Ascending} {}
 
  private:
   /**
@@ -242,29 +240,16 @@ class SortedSegmentSearch {
     if (_second_search_value) {
       // decrease the effective sort range by excluding null values based on their ordering (first or last)
       if (_nullable) {
-        if (_is_nulls_first) {
-          _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
-            return segment_position.is_null();
-          });
-        } else {
-          _end = std::lower_bound(_begin, _end, true, [](const auto& segment_position, const auto& _) {
-            return !segment_position.is_null();
-          });
-        }
+        _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
+          return segment_position.is_null();
+        });
       }
       _set_begin_and_end_positions_for_between_scan();
       result_consumer(_begin, _end);
     } else {
       // decrease the effective sort range by excluding null values based on their ordering
-      if (_is_nulls_first) {
-        _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
-          return segment_position.is_null();
-        });
-      } else {
-        _end = std::lower_bound(_begin, _end, true, [](const auto& segment_position, const auto& _) {
-          return !segment_position.is_null();
-        });
-      }
+      _begin = std::lower_bound(_begin, _end, false,
+                                [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
 
       if (_predicate_condition == PredicateCondition::NotEquals) {
         _handle_not_equals(result_consumer);
@@ -320,7 +305,6 @@ class SortedSegmentSearch {
   const std::optional<SearchValueType> _second_search_value;
   const bool _nullable;
   const bool _is_ascending;
-  const bool _is_nulls_first;
 };
 
 }  // namespace opossum

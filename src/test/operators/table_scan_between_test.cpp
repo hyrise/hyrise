@@ -35,11 +35,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
 
-    const bool descending =
-        ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
-    const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
-    const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
-    const int number_of_nulls_last = (nullable && !nulls_first) ? 3 : 0;
+    const bool descending = ordered_by_mode == OrderByMode::Descending;
+    const int number_of_nulls = (nullable && ordered_by_mode) ? 3 : 0;
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
 
@@ -48,8 +45,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
     resolve_data_type(data_type, [&, nullable = nullable, ordered_by_mode = ordered_by_mode](const auto type) {
       using Type = typename decltype(type)::type;
-      if (nullable && nulls_first) {
-        for (int i = 0; i < number_of_nulls_first; ++i) {
+      if (nullable && ordered_by_mode) {
+        for (int i = 0; i < number_of_nulls; ++i) {
           data_table->append({NullValue{}, i});
         }
       }
@@ -62,18 +59,13 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
         }
 
         if (nullable && !ordered_by_mode && i % 3 == 2) {
-          data_table->append({NullValue{}, i + number_of_nulls_first});
+          data_table->append({NullValue{}, i + number_of_nulls});
         } else {
           if constexpr (std::is_same_v<pmr_string, Type>) {
-            data_table->append({pmr_string{std::to_string(double_value)}, i + number_of_nulls_first});
+            data_table->append({pmr_string{std::to_string(double_value)}, i + number_of_nulls});
           } else {
-            data_table->append({static_cast<Type>(double_value), i + number_of_nulls_first});
+            data_table->append({static_cast<Type>(double_value), i + number_of_nulls});
           }
-        }
-      }
-      if (nullable && !nulls_first) {
-        for (int i = 0; i < number_of_nulls_last; ++i) {
-          data_table->append({NullValue{}, i});
         }
       }
     });
@@ -110,12 +102,9 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
     const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
-    const bool descending =
-        ordered_by_mode == OrderByMode::Descending || ordered_by_mode == OrderByMode::DescendingNullsLast;
-    const bool ascending =
-        ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::AscendingNullsLast;
-    const bool nulls_first = ordered_by_mode == OrderByMode::Ascending || ordered_by_mode == OrderByMode::Descending;
-    const int number_of_nulls_first = (nullable && nulls_first) ? 3 : 0;
+    const bool descending = ordered_by_mode == OrderByMode::Descending;
+    const bool ascending = ordered_by_mode == OrderByMode::Ascending;
+    const int number_of_nulls = (nullable && ordered_by_mode) ? 3 : 0;
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
@@ -161,11 +150,10 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
         if (descending) {
           // Since the data is stored in reverse order, we expect inverted indices (e.g. highest index instead of
           // lowest)
-          // We need to substract number_of_nulls_first as well because the expected values need to be shifted
-          // towards the added nulls. number_of_nulls_last is ok because the nulls at the end aren't processed by
-          // the between scan and thus shouldn't appear in the results (actual or expected).
+          // We need to substract number_of_nulls as well because the expected values need to be shifted
+          // towards the added nulls.
 
-          const int max_index = 10 + number_of_nulls_first;
+          const int max_index = 10 + number_of_nulls;
           std::transform(expected.begin(), expected.end(), expected.begin(),
                          [max_index](int expected_index) -> int { return max_index - expected_index; });
           std::reverse(expected.begin(), expected.end());
@@ -173,9 +161,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
         if (ascending) {
           // Since we prepended three Null values we need to correct our indices
-          std::transform(
-              expected.begin(), expected.end(), expected.begin(),
-              [number_of_nulls_first](int expected_index) -> int { return expected_index + number_of_nulls_first; });
+          std::transform(expected.begin(), expected.end(), expected.begin(),
+                         [number_of_nulls](int expected_index) -> int { return expected_index + number_of_nulls; });
         }
 
         if (nullable && !ascending && !descending) {

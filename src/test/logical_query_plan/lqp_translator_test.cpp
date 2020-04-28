@@ -310,7 +310,7 @@ TEST_F(LQPTranslatorTest, Sort) {
    */
 
   const auto order_by_modes =
-      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::AscendingNullsLast});
+      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::Ascending});
 
   // clang-format off
   const auto lqp =
@@ -338,7 +338,7 @@ TEST_F(LQPTranslatorTest, Sort) {
   EXPECT_EQ(sort->sort_definitions().at(1).order_by_mode, OrderByMode::Descending);
 
   EXPECT_EQ(sort->sort_definitions().at(2).column, ColumnID{2});
-  EXPECT_EQ(sort->sort_definitions().at(2).order_by_mode, OrderByMode::AscendingNullsLast);
+  EXPECT_EQ(sort->sort_definitions().at(2).order_by_mode, OrderByMode::Ascending);
 
   const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort->input_left());
   ASSERT_TRUE(projection_b);

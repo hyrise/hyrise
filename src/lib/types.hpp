@@ -211,7 +211,7 @@ enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue
 // see union_positions.hpp for details.
 enum class SetOperationMode { Unique, All, Positions };
 
-enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
+enum class OrderByMode { Ascending, Descending };
 
 enum class TableType { References, Data };
 

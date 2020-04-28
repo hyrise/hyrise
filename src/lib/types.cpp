@@ -153,12 +153,8 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
-const boost::bimap<OrderByMode, std::string> order_by_mode_to_string = make_bimap<OrderByMode, std::string>({
-    {OrderByMode::Ascending, "Ascending"},
-    {OrderByMode::Descending, "Descending"},
-    {OrderByMode::AscendingNullsLast, "AscendingNullsLast"},
-    {OrderByMode::DescendingNullsLast, "DescendingNullsLast"},
-});
+const boost::bimap<OrderByMode, std::string> order_by_mode_to_string = make_bimap<OrderByMode, std::string>(
+    {{OrderByMode::Ascending, "Ascending"}, {OrderByMode::Descending, "Descending"}});
 
 const boost::bimap<JoinMode, std::string> join_mode_to_string = make_bimap<JoinMode, std::string>({
     {JoinMode::Cross, "Cross"},

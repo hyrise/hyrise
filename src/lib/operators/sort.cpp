@@ -341,7 +341,7 @@ class Sort::SortImpl {
       std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
                        [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
     };
-    if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
+    if (_order_by_mode == OrderByMode::Ascending) {
       sort_with_comparator(std::less<>{});
     } else {
       sort_with_comparator(std::greater<>{});
@@ -349,13 +349,9 @@ class Sort::SortImpl {
 
     // 2b. Insert null rows if necessary
     if (!_null_value_rows.empty()) {
-      if (_order_by_mode == OrderByMode::AscendingNullsLast || _order_by_mode == OrderByMode::DescendingNullsLast) {
-        // NULLs last
-        _row_id_value_vector.insert(_row_id_value_vector.end(), _null_value_rows.begin(), _null_value_rows.end());
-      } else {
-        // NULLs first (default behavior)
-        _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
-      }
+      // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
+      // a NULLS LAST mode, but never used it over multiple years.
+      _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
     }
 
     RowIDPosList pos_list{};
