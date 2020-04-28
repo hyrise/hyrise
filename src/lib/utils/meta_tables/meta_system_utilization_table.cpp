@@ -6,6 +6,7 @@
 #include <mach/mach.h>
 #endif
 
+#include <chrono>
 #include <fstream>
 
 #include "meta_system_utilization_table.hpp"
@@ -74,7 +75,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
   // loadavg contains three integer load average values ldavg[3] that need to be divided
   // by the scaling factor fscale in order to obtain the correct load average values.
   size_t size = sizeof(load_avg);
-  const auto ret = sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0);
+  [[maybe_unused]] const auto ret = sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0);
   DebugAssert(ret == 0, "Failed to call sysctl vm.loadavg");
 
   return {static_cast<float>(load_avg.ldavg[0]) / static_cast<float>(load_avg.fscale),
@@ -86,32 +87,11 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 }
 
 /*
-  * Returns the time in ns since an arbitrary point in the past.
+  * Returns the time in ns since epch.
 */
 uint64_t MetaSystemUtilizationTable::_get_total_time() {
-/* CLOCK_MONOTONIC_RAW:
- * Similar to CLOCK_MONOTONIC, but provides access to a raw hard‐
- * ware-based time that is not subject to NTP adjustments or the
- * incremental adjustments performed by adjtime(3).  This clock
- * does not count time that the system is suspended.
-*/
-#ifdef __linux__
-  struct timespec time_spec {};
-  const auto ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time_spec);
-  DebugAssert(ret == 0, "Failed in clock_gettime");
-
-  const auto total_ns = time_spec.tv_sec * std::nano::den + time_spec.tv_nsec;
-
-  return total_ns;
-#endif
-
-#ifdef __APPLE__
-  const auto total_ns = clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW);
-  DebugAssert(total_ns != 0, "Failed in clock_gettime_nsec_np");
-  return total_ns;
-#endif
-
-  Fail("Method not implemented for this platform");
+  auto time = std::chrono::steady_clock::now().time_since_epoch();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 }
 
 /*
@@ -152,7 +132,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __APPLE__
   host_cpu_load_info_data_t cpu_info;
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
-  const auto ret =
+  [[maybe_unused]] const auto ret =
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics");
 
@@ -178,7 +158,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // Per-process CPU-time clock (measures CPU time consumed by all threads in the process).
 #ifdef __linux__
   struct timespec time_spec {};
-  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
+  [[maybe_unused]] const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
   DebugAssert(ret == 0, "Failed in clock_gettime");
 
   size_t cpu_count;
@@ -234,7 +214,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #ifdef __APPLE__
   int64_t physical_memory;
   size_t size = sizeof(physical_memory);
-  auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
+  [[maybe_unused]] auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
   DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
 
   vm_size_t page_size;
@@ -284,7 +264,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __APPLE__
   struct task_basic_info info;
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
-  const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
+  [[maybe_unused]] const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get task_info");
 
   return {info.virtual_size, info.resident_size};

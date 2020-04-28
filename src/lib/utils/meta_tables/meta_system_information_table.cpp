@@ -38,7 +38,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   uint64_t ram;
 #ifdef __linux__
   struct sysinfo memory_info {};
-  const auto ret = sysinfo(&memory_info);
+  [[maybe_unused]] const auto ret = sysinfo(&memory_info);
   DebugAssert(ret == 0, "Failed to get sysinfo");
 
   ram = memory_info.totalram * memory_info.mem_unit;
@@ -46,7 +46,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 
 #ifdef __APPLE__
   size_t size = sizeof(ram);
-  const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
+  [[maybe_unused]] const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
   DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
 #endif
 
