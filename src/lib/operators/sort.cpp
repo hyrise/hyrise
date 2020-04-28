@@ -42,7 +42,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       auto value_segment_null_vector = pmr_vector<bool>();
 
       {
-        const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), row_count);
+        const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
         value_segment_value_vector.reserve(next_chunk_size);
         value_segment_null_vector.reserve(next_chunk_size);
       }
@@ -74,7 +74,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           value_segment_value_vector = pmr_vector<ColumnDataType>();
           value_segment_null_vector = pmr_vector<bool>();
 
-          const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), row_count - row_index);
+          const auto next_chunk_size =
+              std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
           value_segment_value_vector.reserve(next_chunk_size);
           value_segment_null_vector.reserve(next_chunk_size);
 
