@@ -201,6 +201,8 @@ class SQLTranslator final {
   static std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
       const std::vector<SelectListElement>& select_list_elements);
 
+  static std::string _trim_meta_table_name(const std::string& name);
+
  private:
   const UseMvcc _use_mvcc;
 

@@ -30,6 +30,10 @@ void Hyrise::reset() {
 
 const std::shared_ptr<AbstractScheduler>& Hyrise::scheduler() const { return _scheduler; }
 
+bool Hyrise::is_multi_threaded() const {
+  return std::dynamic_pointer_cast<ImmediateExecutionScheduler>(_scheduler) == nullptr;
+}
+
 void Hyrise::set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler) {
   _scheduler->finish();
   _scheduler = new_scheduler;

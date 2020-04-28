@@ -2491,6 +2491,10 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("WITH q AS (SELECT * FROM int_float), q AS (SELECT b FROM q) SELECT * FROM q;"),
                InvalidInputException);
   EXPECT_THROW(compile_query("COPY no_such_table TO 'a_file.tbl';"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM meta_unknown;"), InvalidInputException);
+  EXPECT_THROW(compile_query("UPDATE meta_unknown SET a = 1;"), InvalidInputException);
+  EXPECT_THROW(compile_query("DELETE FROM meta_unknown;"), InvalidInputException);
+  EXPECT_THROW(compile_query("INSERT INTO meta_unknown (a) VALUES(1);"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
