@@ -48,7 +48,7 @@ try {
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
-    oppossumCI.inside() {
+    oppossumCI.inside("-u 0:0") {
       try {
         stage("Setup") {
           checkout scm
