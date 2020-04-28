@@ -114,7 +114,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     const auto test_table_part_compressed = _int_int_partly_compressed->get_output();
 
-    auto pos_list = std::make_shared<PosList>();
+    auto pos_list = std::make_shared<RowIDPosList>();
     pos_list->emplace_back(RowID{ChunkID{2}, 0});
     pos_list->emplace_back(RowID{ChunkID{1}, 1});
     pos_list->emplace_back(RowID{ChunkID{1}, 3});
@@ -155,7 +155,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table) {
-    auto pos_list = std::make_shared<PosList>();
+    auto pos_list = std::make_shared<RowIDPosList>();
     pos_list->reserve(table->row_count());
 
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -191,12 +191,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       ChunkEncoder::encode_all_chunks(table, _encoding_type);
     }
 
-    auto pos_list_a = std::make_shared<PosList>(
-        PosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
+    auto pos_list_a = std::make_shared<RowIDPosList>(
+        RowIDPosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
     auto ref_segment_a = std::make_shared<ReferenceSegment>(table, ColumnID{0u}, pos_list_a);
 
-    auto pos_list_b = std::make_shared<PosList>(
-        PosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
+    auto pos_list_b = std::make_shared<RowIDPosList>(
+        RowIDPosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
     auto ref_segment_b = std::make_shared<ReferenceSegment>(table, ColumnID{1u}, pos_list_b);
 
     TableColumnDefinitions column_definitions;
@@ -277,14 +277,33 @@ TEST_P(OperatorsTableScanTest, DoubleScan) {
   scan_2->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
+
+  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
+  // operator:
+  const auto& performance_data = scan_2->performance_data();
+  EXPECT_TRUE(performance_data.executed);
+  EXPECT_GT(performance_data.walltime.count(), 0);
+  EXPECT_TRUE(performance_data.has_output);
+  EXPECT_EQ(performance_data.output_row_count, 1);
+  EXPECT_EQ(performance_data.output_chunk_count, 1);
 }
 
 TEST_P(OperatorsTableScanTest, EmptyResultScan) {
   auto scan_1 = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThan, 90000);
   scan_1->execute();
 
-  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
+  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++) {
     EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
+  }
+
+  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
+  // operator:
+  const auto& performance_data = scan_1->performance_data();
+  EXPECT_TRUE(performance_data.executed);
+  EXPECT_GT(performance_data.walltime.count(), 0);
+  EXPECT_TRUE(performance_data.has_output);
+  EXPECT_EQ(performance_data.output_row_count, 0);
+  EXPECT_EQ(performance_data.output_chunk_count, 0);
 }
 
 TEST_P(OperatorsTableScanTest, SingleScan) {

@@ -15,12 +15,12 @@ namespace opossum {
 class StorageChunkTest : public BaseTest {
  protected:
   void SetUp() override {
-    vs_int = make_shared_by_data_type<BaseValueSegment, ValueSegment>(DataType::Int);
-    vs_int->append(4);  // check for vs_ as well
+    vs_int = std::make_shared<ValueSegment<int>>();
+    vs_int->append(4);
     vs_int->append(6);
     vs_int->append(3);
 
-    vs_str = make_shared_by_data_type<BaseValueSegment, ValueSegment>(DataType::String);
+    vs_str = std::make_shared<ValueSegment<pmr_string>>();
     vs_str->append("Hello,");
     vs_str->append("world");
     vs_str->append("!");
@@ -88,13 +88,6 @@ TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
 
   auto mvcc_data_chunk = chunk->mvcc_data();
   EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
-}
-
-TEST_F(StorageChunkTest, UnknownColumnType) {
-  // Exception will only be thrown in debug builds
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-  auto wrapper = []() { make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Null); };
-  EXPECT_THROW(wrapper(), std::logic_error);
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {

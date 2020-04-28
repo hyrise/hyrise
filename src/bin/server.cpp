@@ -1,7 +1,5 @@
 #include "cxxopts.hpp"
 
-#include "hyrise.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
 
 cxxopts::Options get_server_cli_options() {
@@ -36,9 +34,6 @@ int main(int argc, char* argv[]) {
   const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
 
   Assert(!error, "Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
-
-  // Set scheduler so that the server can execute the tasks on separate threads.
-  opossum::Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
 
   auto server = opossum::Server{address, port, static_cast<opossum::SendExecutionInfo>(execution_info)};
   server.run();

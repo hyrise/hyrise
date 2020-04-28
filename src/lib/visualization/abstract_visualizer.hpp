@@ -126,16 +126,18 @@ class AbstractVisualizer {
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
       }
-      if (max_unnormalized_width == 0.0) {
-        // All widths are the same, don't do anything
-        return;
-      }
 
       double offset = max_unnormalized_width - (max_normalized_width - 1.0);
 
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         auto& pen_width = _graph[*iter].pen_width;
-        pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
+        if (max_unnormalized_width == 0.0) {
+          // All widths are the same, set pen width to 1
+          pen_width = 1.0;
+        } else {
+          // Set normalized pen width
+          pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
+        }
       }
 #pragma GCC diagnostic pop
     };

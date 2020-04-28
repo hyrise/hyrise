@@ -22,7 +22,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
-            # python2.7 is preinstalled on macOS
             # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on MacOS after system upgrade
             # NOTE: The Mac CI server does not execute the install_dependencies.sh - formulas need to be installed manually.
             for formula in autoconf boost cmake graphviz libpq ncurses parallel pkg-config postgresql readline sqlite3 tbb; do
@@ -41,7 +40,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 exit 1
             fi
 
-            if ! git submodule update --jobs 5 --init --recursive; then
+            if ! git submodule update --jobs 5 --init --recursive --depth 1; then
                 echo "Error during installation."
                 exit 1
             fi
@@ -53,11 +52,18 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
+                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
+                if [[ "$(lsb_release -sr)" < "20.04" ]]; then
+                    # Ubuntu versions before 20.04 do not have a compatible boost version. Manually retrieve it
+                    sudo add-apt-repository -y ppa:mhier/libboost-latest
+                    sudo apt-get update
+                    sudo apt-get install --no-install-recommends -y libboost1.70-dev
+                else 
+                    sudo apt-get install --no-install-recommends -y libboost1.71-all-dev
+                fi
+
                 # packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y software-properties-common
-                sudo add-apt-repository -y ppa:mhier/libboost-latest
-                sudo apt-get update
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libboost1.70-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python2.7 python-pexpect python-pip sudo systemtap systemtap-sdt-dev valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pexpect systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."

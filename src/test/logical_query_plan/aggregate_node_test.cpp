@@ -81,7 +81,9 @@ TEST_F(AggregateNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_d);
 
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_a->hash());
-  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_b->hash());
+  // _aggregate_node and different_aggregate_node_b are known to conflict because we do not recurse deep enough to
+  // identify the difference in the aggregate expressions. That is acceptable, as long as the comparison identifies
+  // the two nodes as non-equal.
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_c->hash());
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_d->hash());
 }

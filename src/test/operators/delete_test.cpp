@@ -114,6 +114,20 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_FALSE(delete_op1->execute_failed());
   EXPECT_TRUE(delete_op2->execute_failed());
 
+  // Sneaking in a test for the OperatorPerformanceData here, which doesn't really make sense to be tested without an
+  // operator:
+  {
+    const auto& performance_data_1 = delete_op1->performance_data();
+    EXPECT_TRUE(performance_data_1.executed);
+    EXPECT_GT(performance_data_1.walltime.count(), 0);
+    EXPECT_FALSE(performance_data_1.has_output);
+
+    const auto& performance_data_2 = delete_op2->performance_data();
+    EXPECT_TRUE(performance_data_2.executed);
+    EXPECT_GT(performance_data_2.walltime.count(), 0);
+    EXPECT_FALSE(performance_data_2.has_output);
+  }
+
   // MVCC commit.
   t1_context->commit();
   t2_context->rollback();

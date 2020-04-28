@@ -135,7 +135,9 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 1);
 
   // build and execute sort
-  auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
+  auto sort = std::make_shared<Sort>(
+      _table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}},
+      2u);
   sort->execute();
   EXPECT_TABLE_EQ_UNORDERED(sort->get_output(), expected_result);
 
@@ -202,7 +204,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
   const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
-  const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
+  const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();

@@ -28,7 +28,7 @@ bool TPCCStockLevel::_on_execute() {
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
 
   // We check the stock levels for the 20 orders before that next order ID
-  auto first_o_id = district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
+  auto first_o_id = *district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
 
   // Retrieve the distict item ids of those orders
   const auto order_line_table_pair = _sql_executor.execute(
@@ -39,7 +39,7 @@ bool TPCCStockLevel::_on_execute() {
   // Build a string for the IN expression
   std::stringstream ol_i_ids_stream;
   for (auto order_line_idx = size_t{0}; order_line_idx < order_line_table->row_count(); ++order_line_idx) {
-    ol_i_ids_stream << order_line_table->get_value<int32_t>(ColumnID{0}, order_line_idx) << ", ";
+    ol_i_ids_stream << *order_line_table->get_value<int32_t>(ColumnID{0}, order_line_idx) << ", ";
   }
   auto ol_i_ids = ol_i_ids_stream.str();
   ol_i_ids.resize(ol_i_ids.size() - 2);  // Remove final ", "

@@ -79,7 +79,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     const auto chunk = _in_table->get_chunk(chunk_id);
     if (!chunk) return;
 
-    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+    const auto matches_out = std::make_shared<RowIDPosList>(_scan_chunk(chunk_id));
     if (matches_out->empty()) return;
 
     Segments segments;
@@ -111,14 +111,14 @@ void IndexScan::_validate_input() {
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
+RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
   auto range_begin = AbstractIndex::Iterator{};
   auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
-  auto matches_out = PosList{};
+  auto matches_out = RowIDPosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
   Assert(index, "Index of specified type not found for segment (vector).");

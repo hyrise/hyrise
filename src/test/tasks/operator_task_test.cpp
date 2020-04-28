@@ -33,7 +33,7 @@ class OperatorTaskTest : public BaseTest {
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto tasks = OperatorTask::make_tasks_from_operator(gt, CleanupTemporaries::Yes);
+  auto tasks = OperatorTask::make_tasks_from_operator(gt);
 
   auto result_task = tasks.back();
   result_task->schedule();
@@ -46,7 +46,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
   auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
 
-  auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
+  auto tasks = OperatorTask::make_tasks_from_operator(ts);
   for (auto& task : tasks) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
@@ -66,7 +66,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
       gt_a, gt_b, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
 
-  auto tasks = OperatorTask::make_tasks_from_operator(join, CleanupTemporaries::Yes);
+  auto tasks = OperatorTask::make_tasks_from_operator(join);
   for (auto& task : tasks) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
@@ -89,7 +89,7 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto scan_c = std::make_shared<TableScan>(scan_a, greater_than_(b, 2000));
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(union_positions, CleanupTemporaries::Yes);
+  auto tasks = OperatorTask::make_tasks_from_operator(union_positions);
 
   ASSERT_EQ(tasks.size(), 5u);
   EXPECT_EQ(tasks[0]->get_operator(), gt_a);
