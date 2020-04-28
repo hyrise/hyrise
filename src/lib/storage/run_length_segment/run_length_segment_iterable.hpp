@@ -51,15 +51,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    * Run length segments store the end positions of runs in a sorted vector. To access a particular position, this
    * vector has to be searched for the end position of the according run. It is possible to find the value of a
    * position in O(log(n)) by doing a binary search.
-<<<<<<< HEAD
-   * In case we hav already searched for a nearby position (e.g., when a previous not selective filter removed only
-   * relatively few lines), we can linearly search the end position. Since position lists are often ordered and modern
-   * CPUs are well at prefetching, linear searches are often faster than a complete binary search.
-=======
    * In case we have already searched for a nearby position (e.g., a previous filter with a low selectivity resulted
    * in an almost contiguous PosList), we can linearly search for the end position. Since position lists are often
    * ordered and modern CPUs are well at prefetching, linear searches are often faster than a complete binary search.
->>>>>>> origin/master
    * determine_linear_search_offset_distance_threshold() estimates the threshold of when to use a linear or a binary
    * search. Given the previous and the current chunk offset, the threshold is used to determine if a linear search is
    * faster for the given number of skipped positions.
@@ -241,14 +235,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
       const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
-<<<<<<< HEAD
-      const auto end_positions_it = search_end_positions_for_chunk_offset(_end_positions,
-          _prev_chunk_offset, current_chunk_offset, _prev_index, _linear_search_threshold);
-=======
 
       const auto end_positions_it = search_end_positions_for_chunk_offset(
           _end_positions, _prev_chunk_offset, current_chunk_offset, _prev_index, _linear_search_threshold);
->>>>>>> origin/master
       const auto target_distance_from_begin = std::distance(_end_positions->cbegin(), end_positions_it);
 
       _prev_chunk_offset = current_chunk_offset;
