@@ -47,19 +47,14 @@ try {
   node('linux') {
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
-    // create ccache volume on host using:
-    // mkdir /mnt/ccache; mount -t tmpfs -o size=200G none /mnt/ccache
-    // or add it to /etc/fstab:
-    // tmpfs  /mnt/ccache tmpfs defaults,size=200G  0 0
 
-    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_MAXSIZE=200GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" -e\"CCACHE_DEPEND=1\" -e\"CCACHE_NOHASHDIR=1\" -e\"CCACHE_DEBUG=1\" --privileged=true") {
+    oppossumCI.inside() {
       try {
         stage("Setup") {
           checkout scm
           sh "./install_dependencies.sh"
 
           cmake = 'cmake -DCI_BUILD=ON'
-          ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
           unity = '-DCMAKE_UNITY_BUILD=ON'
 
           clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
@@ -80,19 +75,16 @@ try {
           sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
 
           // Configure the rest in parallel
-          // clang + precompiled headers + ccache is broken: https://gitlab.kitware.com/cmake/cmake/issues/19923
-          // Some configurations don't use unity builds as this would break the ccache use across different PRs.
-          // For clang-tidy, ccache does not have an effect, so we use unity there.
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake}           ${debug}          ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake}           ${debug}          ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake}           ${debug}          ${clang}          -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake}           ${debug}          ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake}           ${release}        ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release &&                                                   ${cmake}           ${release}        ${clang}          .. &\
-          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
-          mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${ccache} ${release}        ${gcc}            .. &\
-          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake}           ${debug}          ${clang10}        .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   ${unity} -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            .. &\
+          mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
+          mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
+          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake} ${debug}          ${clang10} ${unity} .. &\
           wait"
         }
 
@@ -108,7 +100,7 @@ try {
           }
         }, gccDebug: {
           stage("gcc-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && ${disable_aslr} make all -j \$(( \$(nproc) / 4)) && ../scripts/analyze_ccache_usage.py"
+            sh "cd gcc-debug && ${disable_aslr} make all -j \$(( \$(nproc) / 4))"
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -204,7 +196,7 @@ try {
         }, gccRelease: {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             stage("gcc-release") {
-              sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && ${disable_aslr} make all -j \$(( \$(nproc) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "cd gcc-release && ${disable_aslr} make all -j \$(( \$(nproc) / 6))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
               sh "./scripts/test/hyriseConsole_test.py gcc-release"

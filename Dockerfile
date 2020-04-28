@@ -7,7 +7,6 @@ RUN apt-get update \
         autoconf \
         bash-completion \
         bc \
-        ccache \
         clang-9 \
         clang-10 \
         clang-format-9 \
