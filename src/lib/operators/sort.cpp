@@ -230,13 +230,14 @@ void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVaria
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   const auto& input_table = input_table_left();
+
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
   }
 
-  if (input_table->chunk_count() == 0) {
+  if (input_table->row_count() == 0) {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
     } else {
