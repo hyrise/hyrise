@@ -686,13 +686,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
   result_table->append_chunk(_output_segments);
 
-  const auto chunk = result_table->last_chunk();
-  auto sorted_by = sorted_table->get_chunk(ChunkID{0})->sorted_by();
-  if (sorted_by) {
-    chunk->finalize();
-    chunk->set_sorted_by(*sorted_by);
-  }
-
+  // We do not set sort information on the output table as we can only guarantee it in certain situations (e.g., when
+  // the whole input table needed to be sorted). As this aggregate case is the fall back solution and should be rather
+  // be calculated with the hash aggregate, we neglect the sort information for now and keep it simple.
   return result_table;
 }
 

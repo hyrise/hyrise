@@ -14,7 +14,7 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& state) {
   _clear_cache();
 
   auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{
