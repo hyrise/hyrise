@@ -141,7 +141,7 @@ class Chunk : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
-   * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
+   * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsLast/DescendingNullsLast) and
    * the ColumnID of the segment by which it is sorted will be returned.
    * This is currently only taken advantage of in the ColumnVsValueScan. See #1519 for more details.
    */
