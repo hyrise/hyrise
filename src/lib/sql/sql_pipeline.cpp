@@ -143,7 +143,7 @@ const std::vector<std::reference_wrapper<const SQLTranslationInfo>>& SQLPipeline
   }
 
   // Make sure plans are translated
-  (void) get_unoptimized_logical_plans();
+  (void)get_unoptimized_logical_plans();
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     _sql_translation_infos.emplace_back(std::cref(pipeline_statement->get_sql_translation_info()));
@@ -151,7 +151,6 @@ const std::vector<std::reference_wrapper<const SQLTranslationInfo>>& SQLPipeline
 
   return _sql_translation_infos;
 }
-
 
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
   if (!_optimized_logical_plans.empty()) {
@@ -316,7 +315,8 @@ SQLPipelineMetrics& SQLPipeline::metrics() {
 const std::vector<std::shared_ptr<SQLPipelineStatement>>& SQLPipeline::_get_sql_pipeline_statements() const {
   // Note that the execution of the pipeline sets the transaction_context within the SQLPipelineStatement. If you call
   // this method on an unexecuted pipeline, you will not see the correct transaction context.
-  Assert(_sql_pipeline_statements.size() == 1, "_get_sql_pipeline_statements helper should only be used for single-query pipelines");
+  Assert(_sql_pipeline_statements.size() == 1,
+         "_get_sql_pipeline_statements helper should only be used for single-query pipelines");
 
   return _sql_pipeline_statements;
 }

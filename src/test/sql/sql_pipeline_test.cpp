@@ -674,7 +674,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   {
     const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
     auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
-    (void) conflicting_sql_pipeline.get_result_table();
+    (void)conflicting_sql_pipeline.get_result_table();
   }
 
   // The UPDATE should have inserted a new version of that row

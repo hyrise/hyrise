@@ -72,7 +72,6 @@ class SQLPipelineStatementTest : public BaseTest {
 
     _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
     _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-
   }
 
   // Access via friendship
@@ -133,7 +132,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline();
 
   // Execute SQLPipeline so that the transaction context gets set in the statement(s)
-  (void) sql_pipeline.get_result_tables();
+  (void)sql_pipeline.get_result_tables();
 
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
 
@@ -169,14 +168,14 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
                            .with_transaction_context(transaction_context)
                            .create_pipeline();
   // Execute SQLPipeline so that the transaction context gets set in the statement(s)
-  (void) sql_pipeline4.get_result_tables();
+  (void)sql_pipeline4.get_result_tables();
   auto statement4 = get_sql_pipeline_statements(sql_pipeline4).at(0);
   EXPECT_EQ(statement4->transaction_context(), transaction_context);
   EXPECT_EQ(statement4->get_sql_string(), _select_query_a);
 
   auto sql_pipeline5 =
       SQLPipelineBuilder{_select_query_a}.with_transaction_context(transaction_context).create_pipeline();
-  (void) sql_pipeline5.get_result_tables();
+  (void)sql_pipeline5.get_result_tables();
   auto statement5 = get_sql_pipeline_statements(sql_pipeline5).at(0);
   EXPECT_EQ(statement5->transaction_context(), transaction_context);
   EXPECT_EQ(statement5->get_sql_string(), _select_query_a);
@@ -185,7 +184,7 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
                            .with_optimizer(optimizer)
                            .with_transaction_context(transaction_context)
                            .create_pipeline();
-  (void) sql_pipeline6.get_result_tables();
+  (void)sql_pipeline6.get_result_tables();
   auto statement6 = get_sql_pipeline_statements(sql_pipeline6).at(0);
   EXPECT_EQ(statement6->transaction_context(), transaction_context);
   EXPECT_EQ(statement6->get_sql_string(), _select_query_a);
@@ -290,8 +289,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   // Expect cache to be empty
   EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
-  auto validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
+  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
 
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
@@ -332,8 +330,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
   // Evict not validated version by requesting a validated version
-  auto validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
+  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
@@ -422,7 +419,7 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
   auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline();
 
-  (void) sql_pipeline.get_result_tables();
+  (void)sql_pipeline.get_result_tables();
 
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   const auto& plan = statement->get_physical_plan();
@@ -673,9 +670,9 @@ TEST_F(SQLPipelineStatementTest, DefaultPlanCaches) {
 
   // Local caches
   auto sql_pipeline_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
-                                  .with_pqp_cache(local_pqp_cache)
-                                  .with_lqp_cache(local_lqp_cache)
-                                  .create_pipeline();
+                            .with_pqp_cache(local_pqp_cache)
+                            .with_lqp_cache(local_lqp_cache)
+                            .create_pipeline();
   auto statement_2 = get_sql_pipeline_statements(sql_pipeline_2).at(0);
   EXPECT_EQ(statement_2->pqp_cache, local_pqp_cache);
   EXPECT_EQ(statement_2->lqp_cache, local_lqp_cache);
@@ -691,11 +688,9 @@ TEST_F(SQLPipelineStatementTest, DefaultPlanCaches) {
 TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   const auto meta_table_query = "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables";
 
-  auto sql_pipeline = SQLPipelineBuilder{meta_table_query}
-                          .with_lqp_cache(_lqp_cache)
-                          .with_pqp_cache(_pqp_cache)
-                          .create_pipeline();
-auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
+  auto sql_pipeline =
+      SQLPipelineBuilder{meta_table_query}.with_lqp_cache(_lqp_cache).with_pqp_cache(_pqp_cache).create_pipeline();
+  auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   statement->get_result_table();
 
   EXPECT_EQ(_lqp_cache->size(), 0u);

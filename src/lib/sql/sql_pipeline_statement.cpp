@@ -102,7 +102,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
 const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   // Make sure that the SQLTranslator was invoked
-  (void) get_unoptimized_logical_plan();
+  (void)get_unoptimized_logical_plan();
 
   return _translation_info;
 }
