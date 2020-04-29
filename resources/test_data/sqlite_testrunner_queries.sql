@@ -467,6 +467,13 @@ SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
 SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
 
+-- TRANSACTIONS
+BEGIN; INSERT INTO mixed VALUES (999, 'a', 42, 123.456, 'qwer'); SELECT * FROM mixed; ROLLBACK; SELECT * FROM mixed;
+BEGIN; INSERT INTO mixed VALUES (999, 'a', 42, 123.456, 'qwer'); SELECT * FROM mixed; COMMIT; SELECT * FROM mixed;
+
+BEGIN; DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100; ROLLBACK; SELECT * FROM id_int_int_int_100;
+BEGIN; DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100; COMMIT; SELECT * FROM id_int_int_int_100;
+
 -- Cannot test the following (expressions), because sqlite doesn't support them:
 --  * EXTRACT
 --  * CONCAT
