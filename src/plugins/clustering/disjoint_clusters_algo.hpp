@@ -5,6 +5,7 @@
 #include <string>
 
 #include "abstract_clustering_algo.hpp"
+#include "operators/clustering_partitioner.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -13,7 +14,6 @@ namespace opossum {
 
 using ClusterBoundary = std::pair<AllTypeVariant, AllTypeVariant>;
 using ClusterBoundaries = std::vector<ClusterBoundary>;
-using ClusterKey = std::vector<size_t>;
 
 class DisjointClustersAlgo : public AbstractClusteringAlgo {
  public:
@@ -33,10 +33,6 @@ class DisjointClustersAlgo : public AbstractClusteringAlgo {
 
   const ClusterKey _clustering_key_for_chunk(const std::shared_ptr<Chunk>& chunk) const;
   const std::vector<ClusterKey> _cluster_keys(const std::shared_ptr<Chunk>& chunk) const;
-
-
-
-  std::vector<std::shared_ptr<Chunk>> _distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::shared_ptr<Chunk>>& partially_filled_chunks, const std::vector<std::shared_ptr<Chunk>>& previously_partially_filled_chunks);
 
   std::vector<std::shared_ptr<Chunk>> _sort_and_encode_chunks(const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id) const;
 

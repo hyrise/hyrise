@@ -52,8 +52,17 @@ void AbstractClusteringAlgo::_run_assertions() const {
     Assert(table, "table named \"" + table_name + "\" disappeared");
 
     // Make sure the table size did not change, i.e., no rows got lost or duplicated in the clustering process
+    // We have to filter out invalidated rows
     const auto original_row_count = _original_table_sizes.at(table_name);
-    const auto row_count = table->row_count();
+    size_t invalidated_rows{0};
+    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+      const auto& table_chunk = table->get_chunk(chunk_id);
+      if (table_chunk) {
+        invalidated_rows += table_chunk->invalid_row_count();
+      }
+    }
+    const auto row_count = table->row_count() - invalidated_rows;
+
     Assert(row_count == original_row_count, "Table " + table_name + " had " 
       + std::to_string(original_row_count) + " rows when the clustering began, "
       + "but has now " + std::to_string(row_count) + " rows");
@@ -96,10 +105,17 @@ void AbstractClusteringAlgo::_run_assertions() const {
     for (ChunkID chunk_id{0};chunk_id < table->chunk_count();chunk_id++) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk) {
+        // Clustering algos might generate invalidated chunks as temporary results. Ignore them.
+        bool chunk_is_invalidated = chunk->invalid_row_count() == chunk->size();
+        if (chunk_is_invalidated) {
+          continue;
+        }
+
+
         Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
         if (ordered_by_column_id) {
-          Assert(chunk->ordered_by(), "chunk should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
+          Assert(chunk->ordered_by(), "chunk " + std::to_string(chunk_id) + " should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
           Assert((*chunk->ordered_by()).first == *ordered_by_column_id, "chunk should be ordered by " + table->column_name(*ordered_by_column_id) 
             + ", but is ordered by " + table->column_name((*chunk->ordered_by()).first));
         } else {

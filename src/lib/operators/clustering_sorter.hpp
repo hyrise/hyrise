@@ -1,8 +1,10 @@
 #pragma once
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
-#include <vector>
+
 
 #include "abstract_read_write_operator.hpp"
 #include "utils/assert.hpp"
@@ -10,12 +12,11 @@
 namespace opossum {
 
 /**
- * Operator that marks the rows referenced by its input table as MVCC-expired.
- * Assumption: The input has been validated before.
+ * An operator that uses Mvcc to "replace" a set of chunks with their sorted version.
  */
-class Clustering : public AbstractReadWriteOperator {
+class ClusteringSorter : public AbstractReadWriteOperator {
  public:
-  explicit Clustering(const std::shared_ptr<const AbstractOperator>& referencing_table_op);
+  explicit ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, const std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const std::shared_ptr<const Table> sorted_table);
 
   const std::string& name() const override;
 
@@ -29,7 +30,8 @@ class Clustering : public AbstractReadWriteOperator {
   void _on_rollback_records() override;
 
  private:
-  
-  std::shared_ptr<const Table> _referencing_table;
+  const std::shared_ptr<Table> _table;
+  const std::set<ChunkID> _chunk_ids;
+  const std::shared_ptr<const Table> _sorted_table;
 };
 }  // namespace opossum

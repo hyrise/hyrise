@@ -8,6 +8,8 @@
 #include "abstract_clustering_algo.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "operators/clustering_partitioner.hpp"
+#include "operators/clustering_sorter.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
@@ -23,7 +25,7 @@
 
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 
-#define SORT_WITHIN_CLUSTERS false
+#define SORT_WITHIN_CLUSTERS true
 
 namespace opossum {
 
@@ -187,97 +189,6 @@ const std::vector<ClusterKey> DisjointClustersAlgo::_cluster_keys(const std::sha
   return cluster_keys;
 }
 
-// TODO: maybe get rid of AllTypeVariant
-std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_distribute_chunk(const std::shared_ptr<Chunk>& chunk, std::vector<std::shared_ptr<Chunk>>& partially_filled_chunks, const std::vector<std::shared_ptr<Chunk>>& previously_partially_filled_chunks) {
-  Assert(partially_filled_chunks.empty(), "'partially_filled_chunks' should be empty");
-  Assert(_boundaries.size() == _clustering_column_ids.size(), "we need one boundary per clustering column");
-
-
-  // for assertions
-  size_t previously_partially_filled_chunk_row_count = 0;
-  for (const auto& c: previously_partially_filled_chunks) {
-    previously_partially_filled_chunk_row_count += c->size();
-  }
-
-  // calculate the clustering keys for each row in the chunk
-  auto cluster_indices = _cluster_keys(chunk);
-
-
-  // start filling the clusters by copying the chunks that were only partially filled in the previous clustering steps
-  std::map<ClusterKey, std::vector<std::shared_ptr<Chunk>>> clusters;
-  for (const auto& previously_partially_filled_chunk : previously_partially_filled_chunks) {
-    const ClusterKey chunk_clustering_key = _clustering_key_for_chunk(previously_partially_filled_chunk);
-    Assert(chunk_clustering_key.size() == _boundaries.size(), "clustering key calculation broken: got " + std::to_string(chunk_clustering_key.size()) + " indices when there should be " + std::to_string(_boundaries.size()));
-    
-    const auto segments = _get_segments(previously_partially_filled_chunk);
-    auto copied_chunk = std::make_shared<Chunk>(segments, previously_partially_filled_chunk->mvcc_data());
-    
-    clusters[chunk_clustering_key] = { copied_chunk };
-  }
-  Assert(clusters.size() == previously_partially_filled_chunks.size(), "did not copy all chunks into the cluster");
-
-  // for assertions
-  size_t rows_loaded = 0;
-  for (const auto& [key, chunk_vector] : clusters) {
-    Assert(chunk_vector.size() == 1, "expected just one chunk");
-    rows_loaded += chunk_vector[0]->size();
-  }
-  Assert(rows_loaded == previously_partially_filled_chunk_row_count, "should have " + std::to_string(previously_partially_filled_chunk_row_count)
-    + " rows, but got " + std::to_string(rows_loaded));
-
-
-  // start distributing the rows
-  for (ChunkOffset chunk_offset{0}; chunk_offset < chunk->size(); chunk_offset++) {
-    const auto cluster_index = cluster_indices[chunk_offset];
-
-    std::vector<AllTypeVariant> insertion_values;
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-      const auto segment = chunk->get_segment(column_id);
-      Assert(segment, "segment was nullptr");
-      insertion_values.push_back((*segment)[chunk_offset]);
-    }
-
-
-    if (clusters.find(cluster_index) == clusters.end()) {
-      clusters[cluster_index] = { _create_empty_chunk(_table, _table->target_chunk_size()) };
-    } else {
-      const auto& insertion_chunk_vector = clusters[cluster_index];
-      Assert(_table->target_chunk_size() >= insertion_chunk_vector.back()->size(), "chunk is larger than allowed");
-      if (insertion_chunk_vector.back()->size() == _table->target_chunk_size()) {
-        clusters[cluster_index].push_back(_create_empty_chunk(_table, _table->target_chunk_size()));
-        //std::cout << "reached a full chunk" << std::endl;
-      }
-    }
-    auto rows = clusters[cluster_index].back()->size();
-    clusters[cluster_index].back()->append(insertion_values);
-    Assert(rows + 1 == clusters[cluster_index].back()->size(), "append did not work");
-  }
-
-  // for assertions
-  size_t total_rows = 0;
-  for (const auto& [key, chunk_vector] : clusters) {
-    for (const auto& c : chunk_vector) {
-      total_rows += c->size();
-    }
-  
-  }
-  Assert(total_rows == previously_partially_filled_chunk_row_count + chunk->size(), "wrong number of rows");
-
-  // split clustered chunks into full and partially filled chunks
-  std::vector<std::shared_ptr<Chunk>> full_chunks;
-  for (const auto& [clustering_key, chunks] : clusters) {
-    for (const auto & clustered_chunk : chunks) {
-      if (clustered_chunk->size() == _table->target_chunk_size()) {
-        full_chunks.push_back(clustered_chunk);
-      } else {
-        partially_filled_chunks.push_back(clustered_chunk);
-      }
-    }
-  }
-
-  return full_chunks;
-}
-
 std::vector<std::shared_ptr<Chunk>> DisjointClustersAlgo::_sort_and_encode_chunks(const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id) const {
   std::vector<std::shared_ptr<Chunk>> sorted_chunks;
   for (const auto& chunk : chunks) {
@@ -367,29 +278,25 @@ void DisjointClustersAlgo::_perform_clustering() {
     _boundaries = _all_cluster_boundaries(num_clusters_per_dimension);
     
 
-    std::vector<std::shared_ptr<Chunk>> partially_filled_chunks;
-    std::vector<std::shared_ptr<Chunk>> previously_partially_filled_chunks;
-    std::vector<ChunkID> temporary_chunk_ids;
-
     const auto chunk_count_before_clustering = _table->chunk_count();
+    std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
+    std::map<ClusterKey, std::shared_ptr<Chunk>> clusters;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
       const auto initial_chunk = _table->get_chunk(chunk_id);
-      // TODO what if the last chunk to cluster is nullptr?
-      bool last_chunk_to_cluster = chunk_id + 1 == chunk_count_before_clustering;
       if (initial_chunk) {
         const auto initial_invalidated_rows = initial_chunk->invalid_row_count();
-        auto filled_chunks = _distribute_chunk(initial_chunk, partially_filled_chunks, previously_partially_filled_chunks);
 
-        // since we do just one pass over the table, we can sort and finalize the chunks immediately
-        const auto& post_processed_chunks = _sort_and_encode_chunks(filled_chunks, sort_column_id);
-        auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
-        const auto transaction_id = transaction_context->transaction_id();
-        std::cout << "transaction id is " << transaction_id << std::endl;
+        const auto cluster_keys = _cluster_keys(initial_chunk);
 
-        bool lock_successful = _lock_chunk(initial_chunk, transaction_context);
-        
 
-        //TODO MVCC check and transaction-like move, repeat on failure
+        auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context();
+
+        auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
+        clustering_partitioner->set_transaction_context(partition_transaction);
+        clustering_partitioner->execute();
+
+        bool lock_successful = _lock_chunk(initial_chunk, partition_transaction);
+
         if (!lock_successful) {
           std::cout << "Chunk " << chunk_id << " could not be locked entirely. Trying again." << std::endl;
           chunk_id--;
@@ -403,105 +310,60 @@ void DisjointClustersAlgo::_perform_clustering() {
 
           continue;
         } else {
-          // Chunk unchanged
-          _table->remove_chunk(chunk_id);
-          for (const auto temporary_chunk_id : temporary_chunk_ids) {
-            _table->remove_chunk(temporary_chunk_id);
-          }
-
-          _append_sorted_chunks_to_table(post_processed_chunks, _table, false);
-          //std::cout << "added full chunks" << std::endl;
-          
-
-          // TODO do transactions guarantee that no new chunks are added? Probably not -> assert
-          const auto first_inserted_chunk_id = _table->chunk_count();
-          if (last_chunk_to_cluster) {
-            const auto post_processed_last_chunks = _sort_and_encode_chunks(partially_filled_chunks, sort_column_id);
-            for (const auto& c : post_processed_last_chunks) {
-              Assert(!c->is_mutable(), "mutable chunk");
-            }
-            _append_sorted_chunks_to_table(post_processed_last_chunks, _table, false);
-
-            size_t rows_in_unfull_chunks = 0;
-            for (const auto& c : post_processed_last_chunks) {
-              rows_in_unfull_chunks += c->size();
-            }
-
-            const auto num_unfull_chunks = post_processed_last_chunks.size();
-            const auto avg_rows_in_unfull_chunks = rows_in_unfull_chunks / num_unfull_chunks;
-            std::cout << "There are "  << num_unfull_chunks << " chunks that are not full. On average, they have "
-                      << avg_rows_in_unfull_chunks << " rows (" << 100 * avg_rows_in_unfull_chunks / _table->target_chunk_size()
-                      << "% of the target chunk size " << _table->target_chunk_size() << ")" << std::endl;
-          } else {
-            _append_chunks_to_table(partially_filled_chunks, _table, true);
-            //std::cout << "added partially filled chunks" << std::endl;
-            temporary_chunk_ids.clear();
-            for (auto inserted_chunk_id = first_inserted_chunk_id; inserted_chunk_id < _table->chunk_count(); inserted_chunk_id++) {
-              temporary_chunk_ids.push_back(inserted_chunk_id);
-            }
-            Assert(temporary_chunk_ids.size() == partially_filled_chunks.size(), "incorrect number of chunks: " + std::to_string(temporary_chunk_ids.size()) + " when there should be " + std::to_string(partially_filled_chunks.size()));
-          }
-          
-          Assert(first_inserted_chunk_id + partially_filled_chunks.size() == size_t{_table->chunk_count()}, "some additional chunk appeared");
-
-          previously_partially_filled_chunks = partially_filled_chunks;
-          partially_filled_chunks = {};
+          partition_transaction->commit();
         }
-        
-
-        //
       }        
     }
- 
-    // sort within clusters
-    // TODO mvcc correctness - needs its own transaction? what about newly added chunks, between the clustering and the sorting?
-    // for now, just assume it does not happen
-    if (SORT_WITHIN_CLUSTERS) {
-      std::map<ClusterKey, std::vector<std::shared_ptr<Chunk>>> chunks_per_cluster;
 
-      for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); chunk_id++) {
+    // sort within clusters
+    for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
+      auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
+
+      std::vector<size_t> invalid_row_counts;
+      for (const auto chunk_id : chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);
-        if (chunk) {
-          const auto& clustering_key = _clustering_key_for_chunk(chunk);
-          if (chunks_per_cluster.find(clustering_key) == chunks_per_cluster.end()) {
-            chunks_per_cluster[clustering_key] = std::vector<std::shared_ptr<Chunk>>();
-          }
-          chunks_per_cluster[clustering_key].push_back(chunk);
-        }
-        // TODO deleting clusterwise would be smarter, because only the chunks of that cluster must not change during that
+        Assert(chunk, "chunk must not be deleted");
+        _append_chunk_to_table(chunk, sorting_table);
+        invalid_row_counts.push_back(chunk->invalid_row_count());
+      }
+
+      auto wrapper = std::make_shared<TableWrapper>(sorting_table);
+      wrapper->execute();
+      auto sort = std::make_shared<Sort>(wrapper, sort_column_id, OrderByMode::Ascending, _table->target_chunk_size());
+      sort->execute();
+
+      auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context();
+      for (const auto chunk_id : chunk_ids) {
+        const auto& chunk = _table->get_chunk(chunk_id);
+        Assert(chunk, "chunk must not be deleted");
+        Assert(_lock_chunk(chunk, sort_transaction), "could not lock chunk with id " + std::to_string(chunk_id));
+      }
+
+      size_t invalid_row_index = 0;
+      for (const auto chunk_id : chunk_ids) {
+        const auto& chunk = _table->get_chunk(chunk_id);
+        Assert(chunk, "chunk must not be deleted");
+
+        Assert(chunk->invalid_row_count() == invalid_row_counts[invalid_row_index], "chunk was modified since sorting");
+        invalid_row_index++;
+      }
+
+      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort->get_output());
+      clustering_sorter->set_transaction_context(sort_transaction);
+      clustering_sorter->execute();
+
+      sort_transaction->commit();
+    }
+
+    // pretend mvcc plugin were active and remove invalidated chunks
+    for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); chunk_id++) {
+      const auto& chunk = _table->get_chunk(chunk_id);
+      if (chunk && chunk->size() == chunk->invalid_row_count()) {
         _table->remove_chunk(chunk_id);
       }
-
-      // some additional statistics
-      size_t highest_chunk_count = 0;
-
-      // sort and append chunks
-      for (const auto& [key, chunks] : chunks_per_cluster) {
-        highest_chunk_count = std::max(highest_chunk_count, chunks.size());
-
-        auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
-        _append_chunks_to_table(chunks, sorting_table);
-
-        auto table_wrapper = std::make_shared<TableWrapper>(sorting_table);
-        table_wrapper->execute();
-        auto sort = std::make_shared<Sort>(table_wrapper, sort_column_id, OrderByMode::Ascending, _table->target_chunk_size());
-        sort->execute();
-        const auto& sorted_table = sort->get_output();
-        for (ChunkID cid{0}; cid < sorted_table->chunk_count(); cid++) {
-          const auto& sorted_chunk = sorted_table->get_chunk(cid);
-          Assert(sorted_chunk, "chunk disappeared");
-          Assert(sorted_chunk->ordered_by(), "chunk is not sorted");
-
-          auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_chunk), std::make_shared<MvccData>(sorted_chunk->size(), 0));
-          sorted_chunk_with_mvcc->set_ordered_by(*sorted_chunk->ordered_by());
-          sorted_chunk_with_mvcc->finalize();
-
-          ChunkEncoder::encode_chunk(sorted_chunk_with_mvcc, _table->column_data_types(), EncodingType::Dictionary);
-          _append_sorted_chunk_to_table(sorted_chunk_with_mvcc, _table, false);
-        }
-      }
-      std::cout << "The highest amount of chunks to sort in one step was " << highest_chunk_count << std::endl;
     }
+
+    std::cout << table_name << " has now " << _table->chunk_count() << " chunks (from originally " << chunk_count_before_clustering << ")" << std::endl;
   }
 }
 
