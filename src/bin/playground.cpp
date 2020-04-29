@@ -52,8 +52,16 @@ std::vector<std::string> get_queries(const std::string workload_file) {
   return queries;
 } 
 
-std::shared_ptr<Table> get_table(const std::string tbl_file, const size_t chunk_size) {
+std::shared_ptr<Table> get_table(const std::string tbl_file, const size_t chunk_size, const std::string config_file) {
+  // load initial table 
   auto table = load_table(tbl_file, chunk_size);
+  // load configuration
+  auto conf = read_file(config_file);
+
+  for(const auto& line : conf) {
+     std::cout << line[1] << std::endl;
+  }
+
   return table;
 }
 
@@ -86,8 +94,8 @@ int main() {
 
     std::cout << "Benchmark for configuration: " << conf_name  << std::endl;
     
+    const auto table = get_table(TBL_FILE, CHUNK_SIZE, conf_path);
     // Add table to storage manager create statistics.
-    const auto table = get_table(TBL_FILE, CHUNK_SIZE);
     storage_manager.add_table(TABLE, table);
 
     for (auto const& query : queries) {
