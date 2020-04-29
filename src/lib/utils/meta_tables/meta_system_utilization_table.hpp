@@ -38,8 +38,8 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   static uint64_t _get_system_cpu_time();
   static uint64_t _get_process_cpu_time();
   static SystemMemoryUsage _get_system_memory_usage();
-  static std::vector<int64_t> _get_values(std::string& input_string);
   static ProcessMemoryUsage _get_process_memory_usage();
+  static std::vector<int64_t> _parse_value_string(std::string& input_string);
 };
 
 }  // namespace opossum

@@ -55,19 +55,11 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
 */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
 #ifdef __linux__
-  std::ifstream load_avg_file;
-  load_avg_file.open("/proc/loadavg", std::ifstream::in);
-  DebugAssert(load_avg_file.is_open(), "Failed to open /proc/loadavg");
+  double load_avg[3];
+  [[maybe_unused]] const auto ret = getloadavg(loadavg, 3);
+  DebugAssert(ret == 0, "Failed to get load average");
 
-  std::array<float, 3> load_avg_values{};
-  std::string load_avg_string;
-  for (auto& load_avg_value : load_avg_values) {
-    std::getline(load_avg_file, load_avg_string, ' ');
-    load_avg_value = std::stof(load_avg_string);
-  }
-  load_avg_file.close();
-
-  return {load_avg_values[0], load_avg_values[1], load_avg_values[2]};
+  return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
 #endif
 
 #ifdef __APPLE__
@@ -108,7 +100,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   std::getline(stat_file, cpu_line);
   stat_file.close();
 
-  const auto cpu_ticks = _get_values(cpu_line);
+  const auto cpu_ticks = _parse_value_string(cpu_line);
 
   const auto user_ticks = cpu_ticks.at(0);
   const auto user_nice_ticks = cpu_ticks.at(1);
@@ -201,9 +193,9 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   std::string meminfo_line;
   while (std::getline(meminfo_file, meminfo_line)) {
     if (meminfo_line.rfind("MemFree", 0) == 0) {
-      memory_usage.free_memory = _get_values(meminfo_line)[0] * 1024;
+      memory_usage.free_memory = _parse_value_string(meminfo_line)[0] * 1024;
     } else if (meminfo_line.rfind("MemAvailable", 0) == 0) {
-      memory_usage.available_memory = _get_values(meminfo_line)[0] * 1024;
+      memory_usage.available_memory = _parse_value_string(meminfo_line)[0] * 1024;
     }
   }
   meminfo_file.close();
@@ -250,9 +242,9 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
   std::string self_status_line;
   while (std::getline(self_status_file, self_status_line)) {
     if (self_status_line.rfind("VmSize", 0) == 0) {
-      memory_usage.virtual_memory = _get_values(self_status_line)[0] * 1024;
+      memory_usage.virtual_memory = _parse_value_string(self_status_line)[0] * 1024;
     } else if (self_status_line.rfind("VmRSS", 0) == 0) {
-      memory_usage.physical_memory = _get_values(self_status_line)[0] * 1024;
+      memory_usage.physical_memory = _parse_value_string(self_status_line)[0] * 1024;
     }
   }
 
@@ -275,7 +267,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 }
 
 #ifdef __linux__
-std::vector<int64_t> MetaSystemUtilizationTable::_get_values(std::string& input_string) {
+std::vector<int64_t> MetaSystemUtilizationTable::_parse_value_string(std::string& input_string) {
   std::stringstream input_stream;
   input_stream << input_string;
   std::vector<int64_t> output_values;
