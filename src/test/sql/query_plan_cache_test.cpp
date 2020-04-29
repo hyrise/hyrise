@@ -30,11 +30,9 @@ class QueryPlanCacheTest : public BaseTest {
 
   void execute_query(const std::string& query) {
     auto pipeline = SQLPipelineBuilder{query}.with_pqp_cache(cache).create_pipeline();
-    EXPECT_EQ(pipeline.get_sql_pipeline_statements().size(), 1);
-    auto pipeline_statement = pipeline.get_sql_pipeline_statements()[0];
-    pipeline_statement->get_result_table();
+    pipeline.get_result_table();
 
-    if (pipeline_statement->metrics()->query_plan_cache_hit) {
+    if (pipeline.metrics().statement_metrics.at(0)->query_plan_cache_hit) {
       _query_plan_cache_hits++;
     }
   }
@@ -54,17 +52,15 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
 
   // Execute a query and cache its plan.
   auto pipeline = SQLPipelineBuilder{Q1}.disable_mvcc().create_pipeline();
-  EXPECT_EQ(pipeline.get_sql_pipeline_statements().size(), 1);
-  auto pipeline_statement = pipeline.get_sql_pipeline_statements()[0];
-  pipeline_statement->get_result_table();
-  cache->set(Q1, pipeline_statement->get_physical_plan());
+  pipeline.get_result_table();
+  cache->set(Q1, pipeline.get_physical_plans().at(0));
 
   EXPECT_TRUE(cache->has(Q1));
   EXPECT_FALSE(cache->has(Q2));
 
   // Retrieve and execute the cached plan.
   const auto cached_plan = cache->get_entry(Q1);
-  EXPECT_EQ(cached_plan, pipeline_statement->get_physical_plan());
+  EXPECT_EQ(cached_plan, pipeline.get_physical_plans().at(0));
 }
 
 // Test query plan cache with LRU implementation.

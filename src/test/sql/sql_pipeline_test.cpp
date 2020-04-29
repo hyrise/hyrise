@@ -119,7 +119,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
   EXPECT_THROW(auto sql_pipeline = SQLPipelineBuilder{_multi_statement_invalid}.create_pipeline(), std::exception);
 }
 
-TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
+TEST_F(SQLPipelineTest, ParseErrorDebugMessage) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   try {
@@ -644,6 +644,68 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
       SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
   EXPECT_FALSE(sql_pipeline_3.pqp_cache);
   EXPECT_FALSE(sql_pipeline_3.lqp_cache);
+}
+
+TEST_F(SQLPipelineTest, PrecheckDDLOperators) {
+  auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
+
+  auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline();
+  EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
+
+  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline();
+  EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
+
+  auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
+}
+
+TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+  EXPECT_EQ(_table_a->row_count(), 3);
+
+  {
+    const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
+    (void) conflicting_sql_pipeline.get_result_table();
+  }
+
+  // The UPDATE should have inserted a new version of that row
+  EXPECT_EQ(_table_a->row_count(), 4);
+
+  const auto sql = "INSERT INTO table_a (a, b) VALUES (1, 2.0); UPDATE table_a SET a = a + 1 WHERE b < 457";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
+  EXPECT_EQ(table, nullptr);
+
+  // The INSERT could not be committed, but still created a row that never became fully visible
+  EXPECT_EQ(_table_a->row_count(), 5);
+
+  const auto verify_table_contents = []() {
+    const auto verification_sql = "SELECT a FROM table_a WHERE b < 457";
+    auto verification_pipeline = SQLPipelineBuilder{verification_sql}.create_pipeline();
+    const auto [verification_status, verification_table] = verification_pipeline.get_result_table();
+    EXPECT_EQ(verification_status, SQLPipelineStatus::Success);
+    EXPECT_EQ(verification_table->get_value<int32_t>("a", 0), 100);
+  };
+  verify_table_contents();
+
+  // Check that this doesn't crash. This should not modify the table a second time.
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
+  EXPECT_EQ(table2, nullptr);
+  verify_table_contents();
+
+  // The INSERT should not have been executed a second time
+  EXPECT_EQ(_table_a->row_count(), 5);
 }
 
 }  // namespace opossum
