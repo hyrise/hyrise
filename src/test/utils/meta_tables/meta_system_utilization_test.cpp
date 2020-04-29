@@ -117,11 +117,47 @@ TEST_F(MetaSystemUtilizationTest, SystemMemoryUsage) {
   EXPECT_GE(static_cast<size_t>(available_memory_diff), memory_estimation);
 }
 
-// This test may fail if it is executed in parallel with other CPU intensive processes.
 TEST_F(MetaSystemUtilizationTest, ProcessCPUUsage) {
   const auto total_time_column_id = system_utilization_idle_1->column_id_by_name("total_time");
-  const auto cpu_system_time_column_id = system_utilization_idle_1->column_id_by_name("cpu_system_time");
   const auto cpu_process_time_column_id = system_utilization_idle_1->column_id_by_name("cpu_process_time");
+
+  const auto total_time_idle_1 = boost::get<int64_t>(system_utilization_idle_1->get_row(0)[total_time_column_id]);
+  const auto total_time_idle_2 = boost::get<int64_t>(system_utilization_idle_2->get_row(0)[total_time_column_id]);
+  const auto total_time_idle_diff = total_time_idle_2 - total_time_idle_1;
+  EXPECT_GT(total_time_idle_diff, 0);
+
+  const auto cpu_process_time_idle_1 =
+      boost::get<int64_t>(system_utilization_idle_1->get_row(0)[cpu_process_time_column_id]);
+  const auto cpu_process_time_idle_2 =
+      boost::get<int64_t>(system_utilization_idle_2->get_row(0)[cpu_process_time_column_id]);
+  const auto cpu_process_time_idle_diff = cpu_process_time_idle_2 - cpu_process_time_idle_1;
+  EXPECT_GT(cpu_process_time_idle_diff, 0);
+
+  const auto process_cpu_idle_utilization =
+      static_cast<float>(cpu_process_time_idle_diff) / static_cast<float>(total_time_idle_diff);
+
+  const auto total_time_load_1 = boost::get<int64_t>(system_utilization_load_1->get_row(0)[total_time_column_id]);
+  const auto total_time_load_2 = boost::get<int64_t>(system_utilization_load_2->get_row(0)[total_time_column_id]);
+  const auto total_time_load_diff = total_time_load_2 - total_time_load_1;
+  EXPECT_GT(total_time_load_diff, 0);
+
+  const auto cpu_process_time_load_1 =
+      boost::get<int64_t>(system_utilization_load_1->get_row(0)[cpu_process_time_column_id]);
+  const auto cpu_process_time_load_2 =
+      boost::get<int64_t>(system_utilization_load_2->get_row(0)[cpu_process_time_column_id]);
+  const auto cpu_process_time_load_diff = cpu_process_time_load_2 - cpu_process_time_load_1;
+  EXPECT_GT(cpu_process_time_load_diff, 0);
+
+  const auto process_cpu_load_utilization =
+      static_cast<float>(cpu_process_time_load_diff) / static_cast<float>(total_time_load_diff);
+
+  EXPECT_GE(process_cpu_load_utilization, process_cpu_idle_utilization);
+}
+
+// This test may fail if it is executed in parallel with other CPU intensive processes.
+TEST_F(MetaSystemUtilizationTest, SystemCPUUsage) {
+  const auto total_time_column_id = system_utilization_idle_1->column_id_by_name("total_time");
+  const auto cpu_system_time_column_id = system_utilization_idle_1->column_id_by_name("cpu_system_time");
 
   const auto total_time_idle_1 = boost::get<int64_t>(system_utilization_idle_1->get_row(0)[total_time_column_id]);
   const auto total_time_idle_2 = boost::get<int64_t>(system_utilization_idle_2->get_row(0)[total_time_column_id]);
@@ -135,17 +171,8 @@ TEST_F(MetaSystemUtilizationTest, ProcessCPUUsage) {
   const auto cpu_system_time_idle_diff = cpu_system_time_idle_2 - cpu_system_time_idle_1;
   EXPECT_GT(cpu_system_time_idle_diff, 0);
 
-  const auto cpu_process_time_idle_1 =
-      boost::get<int64_t>(system_utilization_idle_1->get_row(0)[cpu_process_time_column_id]);
-  const auto cpu_process_time_idle_2 =
-      boost::get<int64_t>(system_utilization_idle_2->get_row(0)[cpu_process_time_column_id]);
-  const auto cpu_process_time_idle_diff = cpu_process_time_idle_2 - cpu_process_time_idle_1;
-  EXPECT_GT(cpu_process_time_idle_diff, 0);
-
   const auto system_cpu_idle_utilization =
       static_cast<float>(cpu_system_time_idle_diff) / static_cast<float>(total_time_idle_diff);
-  const auto process_cpu_idle_utilization =
-      static_cast<float>(cpu_process_time_idle_diff) / static_cast<float>(total_time_idle_diff);
 
   const auto total_time_load_1 = boost::get<int64_t>(system_utilization_load_1->get_row(0)[total_time_column_id]);
   const auto total_time_load_2 = boost::get<int64_t>(system_utilization_load_2->get_row(0)[total_time_column_id]);
@@ -159,23 +186,10 @@ TEST_F(MetaSystemUtilizationTest, ProcessCPUUsage) {
   const auto cpu_system_time_load_diff = cpu_system_time_load_2 - cpu_system_time_load_1;
   EXPECT_GT(cpu_system_time_load_diff, 0);
 
-  const auto cpu_process_time_load_1 =
-      boost::get<int64_t>(system_utilization_load_1->get_row(0)[cpu_process_time_column_id]);
-  const auto cpu_process_time_load_2 =
-      boost::get<int64_t>(system_utilization_load_2->get_row(0)[cpu_process_time_column_id]);
-  const auto cpu_process_time_load_diff = cpu_process_time_load_2 - cpu_process_time_load_1;
-  EXPECT_GT(cpu_process_time_load_diff, 0);
-
   const auto system_cpu_load_utilization =
       static_cast<float>(cpu_system_time_load_diff) / static_cast<float>(total_time_load_diff);
-  const auto process_cpu_load_utilization =
-      static_cast<float>(cpu_process_time_load_diff) / static_cast<float>(total_time_load_diff);
 
   EXPECT_GE(system_cpu_load_utilization, system_cpu_idle_utilization);
-  EXPECT_GE(process_cpu_load_utilization, process_cpu_idle_utilization);
-
-  // EXPECT_GE(system_cpu_load_utilization, process_cpu_load_utilization);
-  // EXPECT_GE(system_cpu_idle_utilization, process_cpu_idle_utilization);
 }
 
 }  // namespace opossum
