@@ -55,7 +55,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
 */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
   std::array<double, 3> load_avg{};
-  const int nelem = getloadavg(load_avg.data(), 3);
+  [[maybe_unused]] const int nelem = getloadavg(load_avg.data(), 3);
   DebugAssert(nelem == 3, "Failed to read load averages");
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
 }
