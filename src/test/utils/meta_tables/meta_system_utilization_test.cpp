@@ -18,7 +18,7 @@ class MetaSystemUtilizationTest : public BaseTest {
 
     // idle measurement
     system_utilization_idle_1 = generate_meta_table(meta_system_utilization_table);
-    usleep(100);
+    usleep(10);
     system_utilization_idle_2 = generate_meta_table(meta_system_utilization_table);
 
     const auto dummy_table = create_dummy_table();
@@ -26,7 +26,7 @@ class MetaSystemUtilizationTest : public BaseTest {
 
     // load measurement
     system_utilization_load_1 = generate_meta_table(meta_system_utilization_table);
-    usleep(100);
+    usleep(10);
     system_utilization_load_2 = generate_meta_table(meta_system_utilization_table);
 
     for (uint32_t thread_index = 0; thread_index < 100; ++thread_index) {
@@ -136,7 +136,7 @@ TEST_F(MetaSystemUtilizationTest, ProcessCPUUsage) {
   const auto cpu_process_time_idle_2 =
       boost::get<int64_t>(system_utilization_idle_2->get_row(0)[cpu_process_time_column_id]);
   const auto cpu_process_time_idle_diff = cpu_process_time_idle_2 - cpu_process_time_idle_1;
-  EXPECT_GT(cpu_process_time_idle_diff, 0);
+  EXPECT_GE(cpu_process_time_idle_diff, 0);
 
   const auto process_cpu_idle_utilization =
       static_cast<float>(cpu_process_time_idle_diff) / static_cast<float>(total_time_idle_diff);
@@ -174,7 +174,7 @@ TEST_F(MetaSystemUtilizationTest, SystemCPUUsage) {
   const auto cpu_system_time_idle_2 =
       boost::get<int64_t>(system_utilization_idle_2->get_row(0)[cpu_system_time_column_id]);
   const auto cpu_system_time_idle_diff = cpu_system_time_idle_2 - cpu_system_time_idle_1;
-  EXPECT_GT(cpu_system_time_idle_diff, 0);
+  EXPECT_GE(cpu_system_time_idle_diff, 0);
 
   const auto system_cpu_idle_utilization =
       static_cast<float>(cpu_system_time_idle_diff) / static_cast<float>(total_time_idle_diff);
