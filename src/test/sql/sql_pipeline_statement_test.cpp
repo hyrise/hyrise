@@ -427,8 +427,6 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
   EXPECT_EQ(plan->transaction_context(), context);
 }
 
-// TODO test begin
-
 TEST_F(SQLPipelineStatementTest, GetTasks) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
@@ -726,7 +724,17 @@ TEST_F(SQLPipelineStatementTest, SQLTranslationInfo) {
     EXPECT_EQ(translation_info.parameter_ids_of_value_placeholders, parameters);
   }
 
-  // TODO test subquery
+  {
+    auto sql_pipeline =
+        SQLPipelineBuilder{
+            "SELECT * FROM table_a t1 WHERE a > ? AND b = (SELECT MAX(b) FROM table_a t2 WHERE t2.a = t1.a AND b > ?)"}
+            .create_pipeline();
+    auto translation_info = get_sql_pipeline_statements(sql_pipeline).at(0)->get_sql_translation_info();
+
+    EXPECT_TRUE(translation_info.cacheable);
+    const auto parameters = std::vector<ParameterID>{ParameterID(0), ParameterID(2)};
+    EXPECT_EQ(translation_info.parameter_ids_of_value_placeholders, parameters);
+  }
 }
 
 }  // namespace opossum
