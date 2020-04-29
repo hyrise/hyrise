@@ -18,7 +18,7 @@ class MetaSystemUtilizationTest : public BaseTest {
 
     // idle measurement
     system_utilization_idle_1 = generate_meta_table(meta_system_utilization_table);
-    usleep(10);
+    usleep(100);
     system_utilization_idle_2 = generate_meta_table(meta_system_utilization_table);
 
     const auto dummy_table = create_dummy_table();
@@ -26,7 +26,7 @@ class MetaSystemUtilizationTest : public BaseTest {
 
     // load measurement
     system_utilization_load_1 = generate_meta_table(meta_system_utilization_table);
-    usleep(10);
+    usleep(100);
     system_utilization_load_2 = generate_meta_table(meta_system_utilization_table);
 
     for (uint32_t thread_index = 0; thread_index < 100; ++thread_index) {
