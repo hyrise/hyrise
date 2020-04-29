@@ -264,7 +264,8 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __APPLE__
   struct task_basic_info info;
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
-  [[maybe_unused]] const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
+  [[maybe_unused]] const auto ret =
+      task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   DebugAssert(ret == KERN_SUCCESS, "Failed to get task_info");
 
   return {info.virtual_size, info.resident_size};
