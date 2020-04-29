@@ -24,22 +24,22 @@ using namespace opossum;  // NOLINT
  *
  * @returns   Boolean value denoting whether at the group-by list of @param aggregate_node changed.
  */
-bool reduce_group_by_columns_for_fd(const FunctionalDependency& fd, const ExpressionUnorderedSet& group_by_columns,
+bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const ExpressionUnorderedSet& group_by_columns,
                                     AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list
   if (!std::all_of(fd.first.cbegin(), fd.first.cend(),
-                   [&group_by_columns](std::shared_ptr<AbstractExpression> constraint_col_expr) {
-                     return group_by_columns.contains(constraint_col_expr);
+                   [&group_by_columns](std::shared_ptr<AbstractExpression> constraint_column_expression) {
+                     return group_by_columns.contains(constraint_column_expression);
                    })) {
     return false;
   }
 
-  // Every column that is functionally dependent gets moved from
-  // the group-by list to the aggregate list. For this purpose it is wrapped in an ANY() expression.
+  // Every column that is functionally dependent gets moved from the group-by list to the aggregate list. For this
+  // purpose it is wrapped in an ANY() expression.
   for (const auto& group_by_column : group_by_columns) {
-    DebugAssert(std::dynamic_pointer_cast<LQPColumnExpression>(group_by_column), "Unexpected group-by-column type.");
+    DebugAssert(group_by_column->type != ExpressionType::Aggregate, "Unexpected group-by-column type.");
     if (fd.second.contains(group_by_column)) {
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
@@ -107,7 +107,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // one reduction took place, we can ignore the remaining constraints.
     auto group_by_list_changed = false;
     for (const auto& fd : fds) {
-      group_by_list_changed |= reduce_group_by_columns_for_fd(fd, group_by_columns, aggregate_node);
+      group_by_list_changed |= remove_dependent_group_by_columns(fd, group_by_columns, aggregate_node);
       if (group_by_list_changed) break;
     }
 

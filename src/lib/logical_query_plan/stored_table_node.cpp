@@ -100,26 +100,23 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
   for (const auto& constraint : unique_constraints) {
     // We support FDs for non-nullable columns only
     if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
-                    [this](const auto column_id) { return this->is_column_nullable(column_id); }))
+                    [this](const auto column_id) { return this->is_column_nullable(column_id); })) {
       continue;
+    }
 
     auto left = ExpressionUnorderedSet{};
     auto right = ExpressionUnorderedSet{};
 
     // Gather column expressions for constraint's column ids
-    for (const auto& expression : column_expressions) {
-      const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
-                      [&lqp_column](const auto constraint_column_id) {
-                        return constraint_column_id == lqp_column->column_reference.original_column_id();
-                      }))
-        left.insert(lqp_column);
+    for(auto constraint_column_id : constraint.columns) {
+      const auto lqp_column = column_expressions.at(constraint_column_id);
+      left.insert(lqp_column);
     }
 
     Assert(left.size() == constraint.columns.size(),
            "Failed to collect all column expressions for constraint's column ids");
 
-    // Find column expressions that are functionally dependent
+    // Collect all columns that are not part of the non-NULL unique constraint. These will form the right side of the FD.
     std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()),
                  [&left](std::shared_ptr<AbstractExpression> column_expr) { return !(left.contains(column_expr)); });
 

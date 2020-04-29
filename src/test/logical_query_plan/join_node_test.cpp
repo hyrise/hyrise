@@ -249,17 +249,17 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node_b, ColumnID{0}));
   // clang-format off
   const auto inner_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
+                                 stored_table_node_a,
+                                   stored_table_node_b);
   const auto left_join_node = JoinNode::make(JoinMode::Left, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
+                                stored_table_node_a,
+                                  stored_table_node_b);
   const auto right_join_node = JoinNode::make(JoinMode::Right, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
+                                 stored_table_node_a,
+                                   stored_table_node_b);
   const auto full_outer_join_node = JoinNode::make(JoinMode::FullOuter, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
+                                      stored_table_node_a,
+                                        stored_table_node_b);
   // clang-format on
 
   // Prerequisite

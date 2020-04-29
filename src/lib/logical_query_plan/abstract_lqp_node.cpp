@@ -256,6 +256,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_right = right_input()->functional_dependencies();
   }
 
+  // Merge input FDs and remove duplicates, if any
   auto fds_in = std::vector<FunctionalDependency>();
   if (fds_right.empty()) {
     fds_in = fds_left;
@@ -274,15 +275,15 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   // Currently, we do not support FDs in conjunction with null values.
-  // Since previous operators like outer joins might have added null values, we have to check columns for nullability.
-  // FDs which are based on at least one nullable column do not get forwarded.
+  // In consequence, FDs based on at least one nullable column must be discarded. Some LQP nodes, like for instance
+  // outer joins, change column nullability. Therefore, we check FDs for compliance each time before forwarding.
   auto fds_out = std::vector<FunctionalDependency>();
   const auto node_column_expressions_vec = this->column_expressions();
   const auto node_column_expressions_set =
       ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
 
   for (const auto& fd : fds_in) {
-    // For convenience, create a new container with all expressions
+    // For convenience, create a new container for all the expressions that are involved in the FD
     auto fd_expressions = fd.first;
     fd_expressions.insert(fd.second.begin(), fd.second.end());
 

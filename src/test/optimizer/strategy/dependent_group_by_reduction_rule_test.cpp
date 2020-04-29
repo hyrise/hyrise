@@ -101,7 +101,8 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   }
 }
 
-// Test that a removable column is removed when single primary key column is present.
+
+// Test that a removable column is removed when a single column primary key is present.
 // Check for the restored column order.
 TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   // clang-format off
