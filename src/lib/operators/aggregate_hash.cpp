@@ -211,7 +211,8 @@ void AggregateHash::_aggregate() {
       size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
                            chunk_count * aligned_size<AggregateKeys<AggregateKey>>() +
                            input_table->row_count() * needed_size_per_aggregate_key;
-      needed_size = static_cast<size_t>(needed_size * 1.1);  // Give it a little bit more, just in case
+      needed_size =
+          static_cast<size_t>(static_cast<double>(needed_size) * 1.1);  // Give it a little bit more, just in case
 
       auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
       auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
@@ -645,7 +646,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   if (_aggregates.empty()) {
     auto context = std::static_pointer_cast<AggregateResultContext<DistinctColumnType, DistinctAggregateType>>(
         _contexts_per_column[0]);
-    auto pos_list = PosList();
+    auto pos_list = RowIDPosList();
     pos_list.reserve(context->results.size());
     for (const auto& result : context->results) {
       pos_list.push_back(result.row_id);
@@ -688,89 +689,73 @@ template <typename ColumnDataType, typename AggregateType, AggregateFunction fun
 std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum ||
                      func == AggregateFunction::Any,
                  void>
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
-  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
-
-  auto& values = segment->values();
-  auto& null_values = segment->null_values();
-
   values.resize(results.size());
   null_values.resize(results.size());
 
-  size_t i = 0;
+  size_t output_offset = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_primary_aggregate;
+    null_values[output_offset] = !result.current_primary_aggregate;
 
     if (result.current_primary_aggregate) {
-      values[i] = *result.current_primary_aggregate;
+      values[output_offset] = *result.current_primary_aggregate;
     }
-    ++i;
+    ++output_offset;
   }
 }
 
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, AggregateType>& results) {
-  DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
-
-  auto& values = segment->values();
   values.resize(results.size());
 
-  size_t i = 0;
+  size_t output_offset = 0;
   for (const auto& result : results) {
-    values[i] = result.aggregate_count;
-    ++i;
+    values[output_offset] = result.aggregate_count;
+    ++output_offset;
   }
 }
 
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, AggregateType>& results) {
-  DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
-
-  auto& values = segment->values();
   values.resize(results.size());
 
-  size_t i = 0;
+  size_t output_offset = 0;
   for (const auto& result : results) {
-    values[i] = result.distinct_values.size();
-    ++i;
+    values[output_offset] = result.distinct_values.size();
+    ++output_offset;
   }
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, AggregateType>& results) {
-  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
-
-  auto& values = segment->values();
-  auto& null_values = segment->null_values();
-
   values.resize(results.size());
   null_values.resize(results.size());
 
-  size_t i = 0;
+  auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
-    null_values[i] = !result.current_primary_aggregate;
+    null_values[output_offset] = !result.current_primary_aggregate;
 
     if (result.current_primary_aggregate) {
-      values[i] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
+      values[output_offset] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
-    ++i;
+    ++output_offset;
   }
 }
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
     const AggregateResults<ColumnDataType, AggregateType>& results) {
   Fail("Invalid aggregate");
 }
@@ -778,38 +763,33 @@ std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<Aggrega
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
-  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
-
-  auto& values = segment->values();
-  auto& null_values = segment->null_values();
-
   values.resize(results.size());
   null_values.resize(results.size());
 
-  auto chunk_offset = ChunkOffset{0};
+  auto output_offset = ChunkOffset{0};
   for (const auto& result : results) {
     const auto count = static_cast<AggregateType>(result.aggregate_count);
 
     if (result.current_primary_aggregate && count > 1) {
-      values[chunk_offset] = *result.current_primary_aggregate;
+      values[output_offset] = *result.current_primary_aggregate;
     } else {
-      null_values[chunk_offset] = true;
+      null_values[output_offset] = true;
     }
-    ++chunk_offset;
+    ++output_offset;
   }
 }
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
 std::enable_if_t<func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
   Fail("Invalid aggregate");
 }
 
-void AggregateHash::_write_groupby_output(PosList& pos_list) {
+void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
   auto input_table = input_table_left();
 
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
@@ -907,7 +887,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   // Before writing the first aggregate column, write all group keys into the respective columns
   if (column_index == 0) {
-    auto pos_list = PosList(context->results.size());
+    auto pos_list = RowIDPosList(context->results.size());
     auto chunk_offset = ChunkOffset{0};
     for (auto& result : context->results) {
       pos_list[chunk_offset] = (result.row_id);
@@ -916,22 +896,34 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
     _write_groupby_output(pos_list);
   }
 
-  // write aggregated values into the segment
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
+  // Write aggregated values into the segment. While write_aggregate_values could track if an actual NULL value was
+  // written or not, we rather make the output types consistent independent of the input types. Not sure what the
+  // standard says about this.
+  auto values = pmr_vector<decltype(aggregate_type)>{};
+  auto null_values = pmr_vector<bool>{};
 
-  auto output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(NEEDS_NULL);
+  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
 
   if (!results.empty()) {
-    write_aggregate_values<ColumnDataType, decltype(aggregate_type), function>(output_segment, results);
+    write_aggregate_values<ColumnDataType, decltype(aggregate_type), function>(values, null_values, results);
   } else if (_groupby_column_ids.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    output_segment->values().push_back(decltype(aggregate_type){});
-    if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
-      output_segment->null_values().push_back(true);
+    values.push_back(decltype(aggregate_type){});
+    if (NEEDS_NULL) {
+      null_values.push_back(true);
     }
   }
 
+  DebugAssert(NEEDS_NULL || null_values.empty(), "write_aggregate_values unexpectedly wrote NULL values");
+  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
+
+  auto output_segment = std::shared_ptr<ValueSegment<decltype(aggregate_type)>>{};
+  if (!NEEDS_NULL) {
+    output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values));
+  } else {
+    output_segment =
+        std::make_shared<ValueSegment<decltype(aggregate_type)>>(std::move(values), std::move(null_values));
+  }
   _output_segments.push_back(output_segment);
 }
 

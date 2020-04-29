@@ -9,6 +9,7 @@
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -276,7 +277,8 @@ class SortedSegmentSearch {
 
   template <typename ResultIteratorType>
   void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id,
-                              PosList& matches, const std::shared_ptr<const PosList>& position_filter) const {
+                              RowIDPosList& matches,
+                              const std::shared_ptr<const AbstractPosList>& position_filter) const {
     if (begin == end) return;
 
     // General note: If the predicate is NotEquals, there might be two ranges that match.

@@ -114,8 +114,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   auto out_table = std::make_shared<Table>(left_input_table.column_definitions(), TableType::References);
 
-  std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
-  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
+  std::vector<std::shared_ptr<RowIDPosList>> pos_lists(reference_matrix_left.size());
+  std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
 
   // Adds the row `row_idx` from `reference_matrix` to the pos_lists we're currently building
   const auto emit_row = [&](const ReferenceMatrix& reference_matrix, size_t row_idx) {
@@ -187,7 +187,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       emit_chunk();
 
       chunk_row_idx = 0;
-      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
+      std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
     }
   }
 
@@ -226,7 +226,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * below)
    */
   const auto add = [&](const auto& table) {
-    auto current_pos_list = std::shared_ptr<const PosList>();
+    auto current_pos_list = std::shared_ptr<const AbstractPosList>();
     const auto first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto segment = first_chunk->get_segment(column_id);
@@ -274,7 +274,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto verify_column_clusters_in_all_chunks = [&](const auto& table) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto current_pos_list = std::shared_ptr<const PosList>();
+      auto current_pos_list = std::shared_ptr<const AbstractPosList>();
       size_t next_cluster_id = 0;
       const auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {

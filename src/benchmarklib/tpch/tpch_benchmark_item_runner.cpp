@@ -209,7 +209,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
 
       static std::uniform_int_distribution<> discount_dist{2, 9};
-      const auto discount = 0.01f * discount_dist(random_engine);
+      const auto discount = 0.01f * static_cast<float>(discount_dist(random_engine));
 
       std::uniform_int_distribution<> quantity_dist{24, 25};
       const auto quantity = quantity_dist(random_engine);

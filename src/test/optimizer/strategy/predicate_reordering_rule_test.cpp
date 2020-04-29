@@ -219,7 +219,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto table_node =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
                                        {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
-  auto union_node = UnionNode::make(UnionMode::Positions);
+  auto union_node = UnionNode::make(SetOperationMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
   auto predicate_c_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 5));

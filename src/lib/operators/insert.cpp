@@ -28,7 +28,6 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
   Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
   auto& target_values = target_value_segment->values();
-  const auto target_is_nullable = target_value_segment->is_nullable();
 
   /**
    * If the source Segment is a ValueSegment, take a fast path to copy the data.
@@ -42,10 +41,11 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
       const auto nulls_begin_iter = source_value_segment->null_values().begin() + source_begin_offset;
       const auto nulls_end_iter = nulls_begin_iter + length;
 
-      Assert(
-          target_is_nullable || std::none_of(nulls_begin_iter, nulls_end_iter, [](const auto& null) { return null; }),
-          "Trying to insert NULL into non-NULL segment");
-      std::copy(nulls_begin_iter, nulls_end_iter, target_value_segment->null_values().begin() + target_begin_offset);
+      auto nulls_target_offset = target_begin_offset;
+      for (auto nulls_iter = nulls_begin_iter; nulls_iter != nulls_end_iter; ++nulls_iter) {
+        if (*nulls_iter) target_value_segment->set_null_value(nulls_target_offset);
+        ++nulls_target_offset;
+      }
     }
   } else {
     segment_with_iterators<T>(*source_base_segment, [&](const auto source_begin, const auto source_end) {
@@ -56,10 +56,9 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
       for (auto index = ChunkOffset(0); index < length; index++) {
         *target_iter = source_iter->value();
 
-        if (target_is_nullable) {
-          target_value_segment->null_values()[target_begin_offset + index] = source_iter->is_null();
-        } else {
-          Assert(!source_iter->is_null(), "Cannot insert NULL into NOT NULL target");
+        if (source_iter->is_null()) {
+          // ValueSegments not being NULLable will be handled over there
+          target_value_segment->set_null_value(target_begin_offset + index);
         }
 
         ++source_iter;
@@ -129,9 +128,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // new row count.
       {
         const auto& mvcc_data = target_chunk->mvcc_data();
+        DebugAssert(mvcc_data, "Insert cannot operate on a table without MVCC data");
         const auto transaction_id = context->transaction_id();
         const auto end_offset = target_chunk->size() + num_rows_for_target_chunk;
         for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < end_offset; ++target_chunk_offset) {
+          DebugAssert(mvcc_data->get_begin_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid begin CID");
+          DebugAssert(mvcc_data->get_end_cid(target_chunk_offset) == MvccData::MAX_COMMIT_ID, "Invalid end CID");
           mvcc_data->set_tid(target_chunk_offset, transaction_id, std::memory_order_relaxed);
         }
       }
@@ -151,7 +153,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
           const auto value_segment =
               std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(target_chunk->get_segment(column_id));
-          Assert(value_segment, "Cannot insert into non-ValueColumns");
+          Assert(value_segment, "Cannot insert into non-ValueSegments");
 
           const auto new_size = old_size + num_rows_for_target_chunk;
 

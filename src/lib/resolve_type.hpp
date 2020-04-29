@@ -16,102 +16,17 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
+
 namespace opossum {
 
 namespace hana = boost::hana;
 
 /**
- * Resolves a data type by creating an instance of a templated class and
- * returning it as a unique_ptr of its non-templated base class.
- *
- * @param data_type is an enum value of any of the supported data types
- * @param args is a list of constructor arguments
- *
- *
- * Example:
- *
- *   class BaseImpl {
- *    public:
- *     virtual void execute() = 0;
- *   };
- *
- *   template <typename T>
- *   class Impl : public BaseImpl {
- *    public:
- *     Impl(int var) : _var{var} { ... }
- *
- *     void execute() override { ... }
- *   };
- *
- *   constexpr auto var = 12;
- *   auto impl = make_unique_by_data_type<BaseImpl, Impl>(DataType::String, var);
- *   impl->execute();
- */
-template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_type(DataType data_type, ConstructorArgs&&... args) {
-  DebugAssert(data_type != DataType::Null, "data_type cannot be null.");
-
-  std::unique_ptr<Base> ret = nullptr;
-  hana::for_each(data_type_pairs, [&](auto x) {
-    if (hana::first(x) == data_type) {
-      // The + before hana::second - which returns a reference - converts its return value
-      // into a value so that we can access ::type
-      using ColumnDataType = typename decltype(+hana::second(x))::type;
-      ret = std::make_unique<Impl<ColumnDataType, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
-      return;
-    }
-  });
-  return ret;
-}
-
-/**
- * Resolves two data types by creating an instance of a templated class and
- * returning it as a unique_ptr of its non-templated base class.
- * It does the same as make_unique_by_data_type but with two data types.
- *
- * @param data_type1 is an enum value of any of the supported column types
- * @param data_type2 is an enum value of any of the supported column types
- * @param args is a list of constructor arguments
- *
- * Note: We need to pass parameter packs explicitly for GCC due to the following bug:
- *       http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
- */
-template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType data_type2, ConstructorArgs&&... args) {
-  DebugAssert(data_type1 != DataType::Null, "data_type1 cannot be null.");
-  DebugAssert(data_type2 != DataType::Null, "data_type2 cannot be null.");
-
-  std::unique_ptr<Base> ret = nullptr;
-  hana::for_each(data_type_pairs, [&ret, &data_type1, &data_type2, &args...](auto x) {
-    if (hana::first(x) == data_type1) {
-      hana::for_each(data_type_pairs, [&ret, &data_type2, &args...](auto y) {
-        if (hana::first(y) == data_type2) {
-          using ColumnDataType1 = typename decltype(+hana::second(x))::type;
-          using ColumnDataType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(
-              std::forward<ConstructorArgs>(args)...);
-          return;
-        }
-      });
-      return;
-    }
-  });
-  return ret;
-}
-
-/**
- * Convenience function. Calls make_unique_by_data_type and casts the result into a shared_ptr.
- */
-template <class Base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
-std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorArgs&&... args) {
-  return make_unique_by_data_type<Base, impl, TemplateArgs...>(data_type, std::forward<ConstructorArgs>(args)...);
-}
-
-/**
  * Resolves a data type by passing a hana::type object on to a generic lambda
  *
  * @param data_type is an enum value of any of the supported column types
- * @param func is a generic lambda or similar accepting a hana::type object
+ * @param functor is a generic lambda or similar accepting a hana::type object
  *
  *
  * Note on hana::type (taken from Boost.Hana documentation):
@@ -157,13 +72,13 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
  *   });
  */
 template <typename Functor>
-void resolve_data_type(DataType data_type, const Functor& func) {
+void resolve_data_type(DataType data_type, const Functor& functor) {
   DebugAssert(data_type != DataType::Null, "data_type cannot be null.");
 
   hana::for_each(data_type_pairs, [&](auto x) {
     if (hana::first(x) == data_type) {
       // The + before hana::second - which returns a reference - converts its return value into a value
-      func(+hana::second(x));
+      functor(+hana::second(x));
       return;
     }
   });
@@ -172,7 +87,7 @@ void resolve_data_type(DataType data_type, const Functor& func) {
 /**
  * Given a BaseSegment and its known column type, resolve the segment implementation and call the lambda
  *
- * @param func is a generic lambda or similar accepting a reference to a specialized segment (value, dictionary,
+ * @param functor is a generic lambda or similar accepting a reference to a specialized segment (value, dictionary,
  * reference)
  *
  *
@@ -196,19 +111,44 @@ using ConstOutIfConstIn = std::conditional_t<std::is_const_v<In>, const Out, Out
 template <typename ColumnDataType, typename BaseSegmentType, typename Functor>
 // BaseSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType>>>
-/*void*/ resolve_segment_type(BaseSegmentType& segment, const Functor& func) {
+/*void*/ resolve_segment_type(BaseSegmentType& segment, const Functor& functor) {
   using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<ColumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
-  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
-    func(*value_segment);
-  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
-    func(*ref_segment);
-  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
-    resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
+  if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
+    functor(*value_segment);
+  } else if (const auto reference_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
+    functor(*reference_segment);
+  } else if (const auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
+    resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, functor);
   } else {
     Fail("Unrecognized column type encountered.");
+  }
+}
+
+// Used as a template parameter that is passed whenever we conditionally erase the type of the position list. This is
+// done to reduce the compile time at the cost of the runtime performance. We do not re-use EraseTypes here, as it
+// might confuse readers who could think that the setting erases all types within the functor.
+enum class ErasePosListType { OnlyInDebugBuild, Always };
+
+template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
+void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped_pos_list, const Functor& functor) {
+  if constexpr (HYRISE_DEBUG || erase_pos_list_type == ErasePosListType::Always) {
+    functor(untyped_pos_list);
+  } else {
+    if (const auto row_id_pos_list = std::dynamic_pointer_cast<const RowIDPosList>(untyped_pos_list);
+        !untyped_pos_list || row_id_pos_list) {
+      // We also use this branch for nullptr instead of calling the functor with the untyped_pos_list. This way, we
+      // avoid initializing the functor template with AbstractPosList. The first thing the functor has to do is to
+      // check for nullptr anyway, and for that check it does not matter "which" nullptr we pass in.
+      functor(row_id_pos_list);
+    } else if (const auto entire_chunk_pos_list =
+                   std::dynamic_pointer_cast<const EntireChunkPosList>(untyped_pos_list)) {
+      functor(entire_chunk_pos_list);
+    } else {
+      Fail("Unrecognized PosList type encountered");
+    }
   }
 }
 
@@ -216,7 +156,7 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
  * Resolves a data type by passing a hana::type object and the downcasted segment on to a generic lambda
  *
  * @param data_type is an enum value of any of the supported column types
- * @param func is a generic lambda or similar accepting two parameters: a hana::type object and
+ * @param functor is a generic lambda or similar accepting two parameters: a hana::type object and
  *   a reference to a specialized segment (value, dictionary, reference)
  *
  *
@@ -237,11 +177,11 @@ std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType
  */
 template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType>>>
-/*void*/ resolve_data_and_segment_type(BaseSegmentType& segment, const Functor& func) {
+/*void*/ resolve_data_and_segment_type(BaseSegmentType& segment, const Functor& functor) {
   resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) { func(type, typed_segment); });
+    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) { functor(type, typed_segment); });
   });
 }
 

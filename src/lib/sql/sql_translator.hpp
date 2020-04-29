@@ -154,6 +154,8 @@ class SQLTranslator final {
   void _translate_select_groupby_having(const hsql::SelectStatement& select,
                                         const std::vector<SelectListElement>& select_list_elements);
 
+  void _translate_set_operation(const hsql::SetOperation& set_operator);
+
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
 
@@ -199,6 +201,8 @@ class SQLTranslator final {
 
   static std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
       const std::vector<SelectListElement>& select_list_elements);
+
+  static std::string _trim_meta_table_name(const std::string& name);
 
  private:
   const UseMvcc _use_mvcc;

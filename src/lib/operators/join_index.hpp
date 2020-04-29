@@ -8,7 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/index/abstract_index.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -46,13 +46,14 @@ class JoinIndex : public AbstractJoinOperator {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
 
+  std::string description(DescriptionMode description_mode) const override;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                              const bool track_index_matches, const bool is_semi_or_anti_join,
@@ -64,10 +65,10 @@ class JoinIndex : public AbstractJoinOperator {
                                            const std::shared_ptr<AbstractIndex>& index);
 
   template <typename ProbeIterator>
-  void _reference_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                const std::shared_ptr<AbstractIndex>& index,
-                                                const std::shared_ptr<const PosList>& reference_segment_pos_list);
+  void _reference_join_two_segments_using_index(
+      ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
+      const std::shared_ptr<AbstractIndex>& index,
+      const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
   std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
@@ -78,12 +79,12 @@ class JoinIndex : public AbstractJoinOperator {
                        const ChunkID index_chunk_id);
 
   void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
-                                    const PosList& index_table_matches);
+                                    const RowIDPosList& index_table_matches);
 
   void _append_matches_non_inner(const bool is_semi_or_anti_join);
 
   void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                              const std::shared_ptr<PosList>& pos_list);
+                              const std::shared_ptr<RowIDPosList>& pos_list);
 
   void _on_cleanup() override;
 
@@ -94,8 +95,8 @@ class JoinIndex : public AbstractJoinOperator {
   std::shared_ptr<const Table> _probe_input_table;
   std::shared_ptr<const Table> _index_input_table;
 
-  std::shared_ptr<PosList> _probe_pos_list;
-  std::shared_ptr<PosList> _index_pos_list;
+  std::shared_ptr<RowIDPosList> _probe_pos_list;
+  std::shared_ptr<RowIDPosList> _index_pos_list;
   std::vector<bool> _index_pos_dereferenced;
 
   // for left/right/outer joins

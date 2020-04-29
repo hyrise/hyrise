@@ -151,13 +151,27 @@ void Table::append_mutable_chunk() {
 }
 
 uint64_t Table::row_count() const {
-  uint64_t ret = 0;
+  if (_type == TableType::References && _cached_row_count && !HYRISE_DEBUG) {
+    return *_cached_row_count;
+  }
+
+  uint64_t row_count = 0;
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (chunk) ret += chunk->size();
+    if (chunk) row_count += chunk->size();
   }
-  return ret;
+
+  if (_type == TableType::References) {
+    // After being created, reference tables should never be changed again.
+    DebugAssert(!_cached_row_count || row_count == *_cached_row_count, "Size of reference table has changed");
+
+    // row_count() is called by AbstractOperator after the operator has finished to fill the performance data. As such,
+    // no synchronization is necessary.
+    _cached_row_count = row_count;
+  }
+
+  return row_count;
 }
 
 bool Table::empty() const { return row_count() == 0u; }

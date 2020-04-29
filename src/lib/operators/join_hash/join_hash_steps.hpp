@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/container/small_vector.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
@@ -182,34 +183,82 @@ class PosHashTable {
   std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
 };
 
+// The bloom filter (with k=1) is used during the materialization and build phases. It contains `true` for each
+// `hash_function(value) % BLOOM_FILTER_SIZE`. Much of how the bloom filter is used in the hash join could be improved:
+// (1) Dynamically check whether bloom filters are worth the memory and computational costs This could be based on the
+//     input table sizes, the expected cardinalities, the hardware characteristics, or other factors.
+// (2) Choosing an appropriate filter size. 2^20 was experimentally found to be good for TPC-H SF 10, but is certainly
+//     not optimal in every situation.
+// (3) Check whether using multiple hash functions (k>1) brings any improvement.
+// (4) Use the probe side bloom filter when partitioning the build side. By doing that, we reduce the size of the
+//     intermediary results. When a bloom filter-supported materialization has been done (i.e., materialization has not
+//     been skipped), we do not need to use a bloom filter in the build phase anymore.
+// Some of these points could be addressed with relatively low effort and should bring additional, significant benefits.
+// We did not yet work on this because the bloom filter was a byproduct of a research project and we have not had the
+// resources to optimize it at the time.
+static constexpr auto BLOOM_FILTER_SIZE = 1 << 20;
+static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
+
+// Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
+// needed for merging partial bloom filters created by different threads. Note that the dynamic_bitset(n, value)
+// constructor does not do what you would expect it to, so try to avoid it.
+using BloomFilter = boost::dynamic_bitset<>;
+
+// @param in_table             Table to materialize
+// @param column_id            Column within that table to materialize
+// @param histograms           Out: If radix_bits > 0, contains one histogram per chunk where each histogram contains
+//                             1 << radix_bits slots
+// @param radix_bits           Number of radix_bits, needed only for histogram calculation
+// @param output_bloom_filter  Out: A filled BloomFilter where `value & BLOOM_FILTER_MASK == true` for each value
+//                             encountered in the input column
+// @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
+//                             bloom filter is false
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                    BloomFilter& output_bloom_filter,
+                                    const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
+  // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
+  // negation (~x).
+
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
   const std::hash<HashedType> hash_function;
-  // list of all elements that will be partitioned
+  // List of all elements that will be partitioned
   auto radix_container = RadixContainer<T>{};
   radix_container.resize(chunk_count);
 
-  // fan-out
+  // Fan-out
   const size_t num_radix_partitions = 1ull << radix_bits;
 
-  // currently, we just do one pass
+  // Currently, we just do one pass
   const auto pass = size_t{0};
   const auto radix_mask = static_cast<size_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
-  // create histograms per chunk
+  Assert(output_bloom_filter.empty(), "output_bloom_filter should be empty");
+  output_bloom_filter.resize(BLOOM_FILTER_SIZE);
+  std::mutex output_bloom_filter_mutex;
+
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "Invalid input_bloom_filter");
+
+  // Create histograms per chunk
   histograms.resize(chunk_count);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
-
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     if (!in_table->get_chunk(chunk_id)) continue;
 
     jobs.emplace_back(std::make_shared<JobTask>([&, in_table, chunk_id]() {
+      auto local_output_bloom_filter = BloomFilter{};
+      std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
+      if (Hyrise::get().is_multi_threaded()) {
+        // We cannot write to BloomFilter concurrently, so we build a local one first.
+        local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
+        used_output_bloom_filter = local_output_bloom_filter;
+      }
+
       const auto chunk_in = in_table->get_chunk(chunk_id);
 
       // Skip chunks that were physically deleted
@@ -244,29 +293,40 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             // double. See #1550 for details.
             const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
 
-            /*
-            For ReferenceSegments we do not use the RowIDs from the referenced tables.
-            Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-            values from different inputs (important for Multi Joins).
-            */
-            if constexpr (is_reference_segment_iterable_v<IterableType>) {
-              *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
-            } else {
-              *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+            auto skip = false;
+            if (!value.is_null() && !input_bloom_filter[hashed_value & BLOOM_FILTER_MASK] && !keep_null_values) {
+              // Value in not present in input bloom filter and can be skipped
+              skip = true;
             }
-            ++elements_iter;
 
-            // In case we care about NULL values, store the NULL flag
-            if constexpr (keep_null_values) {
-              if (value.is_null()) {
-                *null_values_iter = true;
+            if (!skip) {
+              // Fill the corresponding slot in the bloom filter
+              used_output_bloom_filter.get()[hashed_value & BLOOM_FILTER_MASK] = true;
+
+              /*
+              For ReferenceSegments we do not use the RowIDs from the referenced tables.
+              Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
+              values from different inputs (important for Multi Joins).
+              */
+              if constexpr (is_reference_segment_iterable_v<IterableType>) {
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+              } else {
+                *elements_iter = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
               }
-              ++null_values_iter;
-            }
+              ++elements_iter;
 
-            if (radix_bits > 0) {
-              const Hash radix = hashed_value & radix_mask;
-              ++histogram[radix];
+              // In case we care about NULL values, store the NULL flag
+              if constexpr (keep_null_values) {
+                if (value.is_null()) {
+                  *null_values_iter = true;
+                }
+                ++null_values_iter;
+              }
+
+              if (radix_bits > 0) {
+                const Hash radix = hashed_value & radix_mask;
+                ++histogram[radix];
+              }
             }
           }
 
@@ -291,6 +351,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       elements.resize(std::distance(elements.begin(), elements_iter));
 
       histograms[chunk_id] = std::move(histogram);
+
+      if (Hyrise::get().is_multi_threaded()) {
+        // Merge the local_output_bloom_filter into output_bloom_filter
+        std::lock_guard<std::mutex> lock{output_bloom_filter_mutex};
+        output_bloom_filter |= local_output_bloom_filter;
+      }
     }));
     jobs.back()->schedule();
   }
@@ -305,7 +371,10 @@ Build all the hash tables for the partitions of the build column. One job per pa
 
 template <typename BuildColumnType, typename HashedType>
 std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
-                                                           const JoinHashBuildMode mode, const size_t radix_bits) {
+                                                           const JoinHashBuildMode mode, const size_t radix_bits,
+                                                           const BloomFilter& input_bloom_filter) {
+  Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
+
   if (radix_container.empty()) return {};
 
   /*
@@ -333,6 +402,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       continue;
     }
 
+    const std::hash<HashedType> hash_function;
+
     const auto insert_into_hash_table = [&, partition_idx]() {
       const auto hash_table_idx = radix_bits > 0 ? partition_idx : 0;
       const auto& elements = radix_container[partition_idx].elements;
@@ -343,6 +414,11 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
       }
       for (const auto& element : elements) {
         DebugAssert(!(element.row_id == NULL_ROW_ID), "No NULL_ROW_IDs should make it to this point");
+
+        const Hash hashed_value = hash_function(static_cast<HashedType>(element.value));
+        if (!input_bloom_filter[hashed_value & BLOOM_FILTER_MASK]) {
+          continue;
+        }
 
         hash_table->emplace(element.value, element.row_id);
       }
@@ -372,7 +448,10 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                     const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
+  // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
+  // negation (~x).
   if (radix_container.empty()) return radix_container;
 
   if constexpr (keep_null_values) {
@@ -482,8 +561,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-           std::vector<PosList>& pos_lists_build_side, std::vector<PosList>& pos_lists_probe_side, const JoinMode mode,
-           const Table& build_table, const Table& probe_table,
+           std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
+           const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
@@ -507,8 +586,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       const auto& elements = partition.elements;
       const auto& null_values = partition.null_values;
 
-      PosList pos_list_build_side_local;
-      PosList pos_list_probe_side_local;
+      RowIDPosList pos_list_build_side_local;
+      RowIDPosList pos_list_probe_side_local;
 
       if constexpr (keep_null_values) {
         Assert(elements.size() == null_values.size(),
@@ -631,7 +710,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-                     std::vector<PosList>& pos_lists, const Table& build_table, const Table& probe_table,
+                     std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
@@ -648,7 +727,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       const auto& elements = partition.elements;
       const auto& null_values = partition.null_values;
 
-      PosList pos_list_local;
+      RowIDPosList pos_list_local;
 
       const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
       if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
@@ -739,7 +818,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 }
 
-using PosLists = std::vector<std::shared_ptr<const PosList>>;
+using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 
 /**
@@ -795,8 +874,8 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
  */
 inline void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                                   const PosListsByChunk& input_pos_list_ptrs_sptrs_by_segments,
-                                  std::shared_ptr<PosList> pos_list) {
-  std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
+                                  std::shared_ptr<RowIDPosList> pos_list) {
+  std::map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop
   std::shared_ptr<Table> dummy_table;
@@ -812,7 +891,7 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         auto iter = output_pos_list_cache.find(input_table_pos_lists);
         if (iter == output_pos_list_cache.end()) {
           // Get the row ids that are referenced
-          auto new_pos_list = std::make_shared<PosList>(pos_list->size());
+          auto new_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
           auto new_pos_list_iter = new_pos_list->begin();
           auto common_chunk_id = std::optional<ChunkID>{};
           for (const auto& row : *pos_list) {

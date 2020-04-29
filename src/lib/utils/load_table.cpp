@@ -51,7 +51,8 @@ std::shared_ptr<Table> create_table_from_header(const std::string& file_name, si
   return create_table_from_header(infile, chunk_size);
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size) {
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size,
+                                  FinalizeLastChunk finalize_last_chunk) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
 
@@ -80,7 +81,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
   }
 
   // All other chunks have been finalized by Table::append() when they reached their capacity.
-  if (!table->empty()) {
+  if (!table->empty() && finalize_last_chunk == FinalizeLastChunk::Yes) {
     table->last_chunk()->finalize();
   }
 
