@@ -74,21 +74,25 @@ std::shared_ptr<Table> MetaSystemUtilizationTest::system_utilization_load_2;
 
 size_t MetaSystemUtilizationTest::memory_estimation;
 
-TEST_F(MetaSystemUtilizationTest, ProcessMemoryUsage) {
+TEST_F(MetaSystemUtilizationTest, ProcessVirtualMemoryUsage) {
   const auto virtual_memory_column_id = system_utilization_idle_1->column_id_by_name("process_virtual_memory");
-  const auto rss_column_id = system_utilization_idle_1->column_id_by_name("process_physical_memory_RSS");
 
   const auto virtual_memory_idle = boost::get<int64_t>(system_utilization_idle_1->get_row(0)[virtual_memory_column_id]);
   const auto virtual_memory_load = boost::get<int64_t>(system_utilization_load_1->get_row(0)[virtual_memory_column_id]);
   const auto virtual_memory_diff = virtual_memory_load - virtual_memory_idle;
 
+  EXPECT_GE(static_cast<size_t>(virtual_memory_diff), memory_estimation);
+}
+
+// This test may fail if not enough physical memory is present or other processes are allocating memory
+TEST_F(MetaSystemUtilizationTest, ProcessRSSSize) {
+  const auto rss_column_id = system_utilization_idle_1->column_id_by_name("process_physical_memory_RSS");
+
   const auto rss_idle = boost::get<int64_t>(system_utilization_idle_1->get_row(0)[rss_column_id]);
   const auto rss_load = boost::get<int64_t>(system_utilization_load_1->get_row(0)[rss_column_id]);
   const auto rss_diff = rss_load - rss_idle;
 
-  EXPECT_GE(static_cast<size_t>(virtual_memory_diff), memory_estimation);
-  // This should be true if enough memory is available and no other processes allocate memory concurrently
-  // EXPECT_GE(static_cast<size_t>(rss_diff), memory_estimation);
+  EXPECT_GE(static_cast<size_t>(rss_diff), memory_estimation);
 }
 
 // This test may fail if it is executed in parallel with other memory intensive processes.
