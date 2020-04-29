@@ -54,28 +54,10 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   * Returns the load average values for 1min, 5min, and 15min.
 */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
-#ifdef __linux__
-  double load_avg[3];
-  [[maybe_unused]] const auto ret = getloadavg(loadavg, 3);
-  DebugAssert(ret == 0, "Failed to get load average");
-
+  std::array<double, 3> load_avg;
+  const int nelem = getloadavg(load_avg.data(), 3);
+  DebugAssert(nelem == 3, "Failed to read load averages");
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
-#endif
-
-#ifdef __APPLE__
-  loadavg load_avg;
-  // loadavg contains three integer load average values ldavg[3] that need to be divided
-  // by the scaling factor fscale in order to obtain the correct load average values.
-  size_t size = sizeof(load_avg);
-  [[maybe_unused]] const auto ret = sysctlbyname("vm.loadavg", &load_avg, &size, nullptr, 0);
-  DebugAssert(ret == 0, "Failed to call sysctl vm.loadavg");
-
-  return {static_cast<float>(load_avg.ldavg[0]) / static_cast<float>(load_avg.fscale),
-          static_cast<float>(load_avg.ldavg[1]) / static_cast<float>(load_avg.fscale),
-          static_cast<float>(load_avg.ldavg[2]) / static_cast<float>(load_avg.fscale)};
-#endif
-
-  Fail("Method not implemented for this platform");
 }
 
 /*
