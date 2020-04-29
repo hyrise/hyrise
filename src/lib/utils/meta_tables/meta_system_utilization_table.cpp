@@ -61,7 +61,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 }
 
 /*
-  * Returns the time in ns since epch.
+  * Returns the time in ns since epoch.
 */
 uint64_t MetaSystemUtilizationTable::_get_total_time() {
   auto time = std::chrono::steady_clock::now().time_since_epoch();

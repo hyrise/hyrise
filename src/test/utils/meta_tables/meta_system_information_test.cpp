@@ -30,15 +30,15 @@ TEST_F(MetaSystemInformationTest, NumaInformation) {
   EXPECT_GE(cpu_count, numa_cpu_count);
 
 #ifdef __linux__
-  // Reduce useable cpu set by one, check if the change is reflected in the metatable and reset the cpu affinities.
+  // Reduce useable CPUs by one, check if the change is reflected in the metatable and reset the CPU affinities.
   auto* default_cpu_mask = numa_allocate_cpumask();
   numa_sched_getaffinity(0, default_cpu_mask);
 
   auto* cpu_mask = numa_allocate_cpumask();
   copy_bitmask_to_bitmask(default_cpu_mask, cpu_mask);
 
-  const auto max_cpu = numa_num_configured_cpus();
-  for (int32_t cpu_index = 0; cpu_index < max_cpu; ++cpu_index) {
+  const uint32_t max_cpu = static_cast<uint32_t>(numa_num_configured_cpus());
+  for (uint32_t cpu_index = 0; cpu_index < max_cpu; ++cpu_index) {
     if (numa_bitmask_isbitset(default_cpu_mask, cpu_index)) {
       cpu_mask = numa_bitmask_clearbit(cpu_mask, cpu_index);
       break;

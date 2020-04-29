@@ -29,7 +29,7 @@ class MetaSystemUtilizationTest : public BaseTest {
     usleep(10);
     system_utilization_load_2 = generate_meta_table(meta_system_utilization_table);
 
-    for (int thread_index = 0; thread_index < 100; ++thread_index) {
+    for (uint32_t thread_index = 0; thread_index < 100; ++thread_index) {
       dummy_threads[thread_index].join();
     }
 
@@ -53,7 +53,7 @@ class MetaSystemUtilizationTest : public BaseTest {
 
   static std::vector<std::thread> create_dummy_threads() {
     std::vector<std::thread> threads(100);
-    for (int thread_index = 0; thread_index < 100; ++thread_index) {
+    for (uint32_t thread_index = 0; thread_index < 100; ++thread_index) {
       threads[thread_index] = std::thread(dummy_load);
     }
     return threads;
@@ -61,7 +61,7 @@ class MetaSystemUtilizationTest : public BaseTest {
 
   static void dummy_load() {
     // busy waiting
-    for (int i = 0; i < 10'000'000; ++i) {
+    for (uint32_t i = 0; i < 10'000'000; ++i) {
       continue;
     }
   }
@@ -92,7 +92,7 @@ TEST_F(MetaSystemUtilizationTest, ProcessMemoryUsage) {
 
 // This test may fail if it is executed in parallel with other memory intensive processes.
 TEST_F(MetaSystemUtilizationTest, SystemMemoryUsage) {
-  // Since the OS doesn't immediately takes back freed memory, this test works only once
+  // Since the OS doesn't immediately take back freed memory, this test might not work repeatedly within one process-
   static bool first_run = true;
   if (first_run) {
     first_run = false;
