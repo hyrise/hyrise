@@ -9,34 +9,29 @@
 
 namespace opossum {
 
+template <typename T>
 class AllTypeVariantTest : public BaseTest {};
 
-TEST_F(AllTypeVariantTest, GetExtractsExactNumericalValue) {
-  {
-    const auto value_in = static_cast<float>(std::rand()) / RAND_MAX;
-    const auto variant = AllTypeVariant{value_in};
-    const auto value_out = boost::get<float>(variant);
+using AllTypeVariantTestDataTypes = ::testing::Types<int32_t, int64_t, float, double, pmr_string>;
+TYPED_TEST_SUITE(AllTypeVariantTest, AllTypeVariantTestDataTypes, );  // NOLINT(whitespace/parens)
 
-    ASSERT_EQ(value_in, value_out);
+TYPED_TEST(AllTypeVariantTest, GetExtractsExactNumericalValue) {
+  auto values = std::vector<TypeParam>{};
+  if constexpr (std::is_same_v<TypeParam, pmr_string>) {
+    values.emplace_back(pmr_string{});
+    values.emplace_back(pmr_string{"shortstring"});
+    values.emplace_back(pmr_string{"reallyreallylongstringthatcantbestoredusingsso"});
+  } else {
+    values.emplace_back(std::numeric_limits<TypeParam>::min());
+    values.emplace_back(std::numeric_limits<TypeParam>::lowest());
+    values.emplace_back(std::numeric_limits<TypeParam>::max());
+    values.emplace_back(TypeParam{0});
+    values.emplace_back(TypeParam{17});
   }
-  {
-    const auto value_in = static_cast<double>(std::rand()) / RAND_MAX;
-    const auto variant = AllTypeVariant{value_in};
-    const auto value_out = boost::get<double>(variant);
 
-    ASSERT_EQ(value_in, value_out);
-  }
-  {
-    const auto value_in = static_cast<int32_t>(std::rand());
+  for (auto value_in : values) {
     const auto variant = AllTypeVariant{value_in};
-    const auto value_out = boost::get<int32_t>(variant);
-
-    ASSERT_EQ(value_in, value_out);
-  }
-  {
-    const auto value_in = static_cast<int64_t>(std::rand());
-    const auto variant = AllTypeVariant{value_in};
-    const auto value_out = boost::get<int64_t>(variant);
+    const auto value_out = boost::get<TypeParam>(variant);
 
     ASSERT_EQ(value_in, value_out);
   }

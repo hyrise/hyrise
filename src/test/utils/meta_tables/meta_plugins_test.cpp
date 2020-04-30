@@ -84,4 +84,19 @@ TEST_F(MetaPluginsTest, Delete) {
   EXPECT_EQ(Hyrise::get().plugin_manager.loaded_plugins().size(), 0);
 }
 
+TEST_F(MetaPluginsTest, RepeatedInsert) {
+  SQLPipelineBuilder{"INSERT INTO meta_plugins VALUES ('" + build_dylib_path("libhyriseTestPlugin") + "')"}
+      .create_pipeline()
+      .get_result_table();
+  EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 1);
+
+  SQLPipelineBuilder{"DELETE FROM meta_plugins WHERE name ='hyriseTestPlugin'"}.create_pipeline().get_result_table();
+  EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 0);
+
+  SQLPipelineBuilder{"INSERT INTO meta_plugins VALUES ('" + build_dylib_path("libhyriseTestPlugin") + "')"}
+      .create_pipeline()
+      .get_result_table();
+  EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 1);
+}
+
 }  // namespace opossum

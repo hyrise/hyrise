@@ -7,3 +7,6 @@
 # The hash map seems to reinterpret memory addresses in some semi-legal (but working) way. Example:
 # ska::bytell_hash_map<int, int> h; h.emplace(11, 11); std::cout << h[11] << std::endl;
 src:*bytell_hash_map.hpp
+
+# Either a false positive in LZ4 or at least something that we cannot fix ourselves, see https://github.com/lz4/lz4/issues/847
+fun:LZ4_setStreamDecode

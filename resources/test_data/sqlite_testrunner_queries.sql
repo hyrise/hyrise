@@ -287,7 +287,7 @@ sELEcT Sum(b + b) AS sum_b_b from mixed;
 
 -- Aggregates with NULL
 SELECT a, MAX(b) FROM mixed_null GROUP BY a;
-SELECT a, MAX(b) FROM mixed_null GROUP BY a ORDER BY MAX(b) DESC;
+SELECT a, MAX(b) FROM mixed_null GROUP BY a ORDER BY MAX(b), a DESC;
 SELECT a, MIN(b) FROM mixed_null GROUP BY a;
 SELECT a, SUM(b) FROM mixed_null GROUP BY a;
 SELECT a, AVG(b) FROM mixed_null GROUP BY a;
@@ -466,6 +466,13 @@ SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int
 SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int_int_50 AS s WHERE s.b < r.b)
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
 SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
+
+-- TRANSACTIONS
+BEGIN; INSERT INTO mixed VALUES (999, 'a', 42, 123.456, 'qwer'); SELECT * FROM mixed; ROLLBACK; SELECT * FROM mixed;
+BEGIN; INSERT INTO mixed VALUES (999, 'a', 42, 123.456, 'qwer'); SELECT * FROM mixed; COMMIT; SELECT * FROM mixed;
+
+BEGIN; DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100; ROLLBACK; SELECT * FROM id_int_int_int_100;
+BEGIN; DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100; COMMIT; SELECT * FROM id_int_int_int_100;
 
 -- Cannot test the following (expressions), because sqlite doesn't support them:
 --  * EXTRACT

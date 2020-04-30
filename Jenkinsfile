@@ -4,7 +4,7 @@ full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 tests_excluded_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
-  node('master') {
+  node {
     stage ("Start") {
       // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
       if (env.CHANGE_ID) {
@@ -45,7 +45,7 @@ try {
   }
 
   node('linux') {
-    def oppossumCI = docker.image('hyrise/opossum-ci:19.10');
+    def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
     // create ccache volume on host using:
     // mkdir /mnt/ccache; mount -t tmpfs -o size=200G none /mnt/ccache
@@ -63,6 +63,7 @@ try {
           unity = '-DCMAKE_UNITY_BUILD=ON'
 
           clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+          clang10 = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
           debug = '-DCMAKE_BUILD_TYPE=Debug'
@@ -91,6 +92,7 @@ try {
           mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
           mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
           mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${ccache} ${release}        ${gcc}            .. &\
+          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake}           ${debug}          ${clang10}        .. &\
           wait"
         }
 
@@ -98,6 +100,11 @@ try {
           stage("clang-debug") {
             sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
             sh "./clang-debug/hyriseTest clang-debug"
+          }
+        }, clang10Debug: {
+          stage("clang-10-debug") {
+            sh "cd clang-10-debug && make all -j \$(( \$(nproc) / 4))"
+            sh "./clang-10-debug/hyriseTest clang-10-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
@@ -311,7 +318,7 @@ try {
           sh "cd clang-debug && make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TpcdsTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
-          sh "./scripts/test/hyriseConsole_test.py clang-debug"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {
           sh "ls -A1 | xargs rm -rf"
@@ -322,7 +329,7 @@ try {
     }
   }
 
-  node ('master') {
+  node {
     stage("Notify") {
       script {
         githubNotify context: 'CI Pipeline', status: 'SUCCESS'
