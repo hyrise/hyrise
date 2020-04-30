@@ -112,7 +112,7 @@ add_note_for_insufficient_pvalue_runs = False
 print_context_overview(old_data, new_data)
 
 table_data = []
-# <...> indicates a span, which will be replaced later
+# $latency and $thrghpt will be replaced later with a title spanning two columns
 table_data.append(["Item", "", "$latency", "", "Change", "", "$thrghpt", "", "Change", "p-value"])
 table_data.append(["", "", "old", "new", "", "", "old", "new", "", ""])
 
@@ -147,10 +147,10 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     else:
         note = ' '
 
-    # Note, we use a width of 8 for printing to ensure that we can later savely replace the throughput marker and
-    # everything still fits nicely.
-    table_data.append([name, '', f'{(old["avg_real_time_per_iteration"] / 1e6):>8.1f}',
-                      f'{(new["avg_real_time_per_iteration"] / 1e6):>8.1f}', diff_latency_formatted + note, '',
+    # Note, we use a width of 7/8 for printing to ensure that we can later savely replace the latency/throughput marker
+    # and everything still fits nicely.
+    table_data.append([name, '', f'{(old["avg_real_time_per_iteration"] / 1e6):>7.1f}',
+                      f'{(new["avg_real_time_per_iteration"] / 1e6):>7.1f}', diff_latency_formatted + note, '',
                       f'{old["items_per_second"]:>8.2f}', f'{new["items_per_second"]:>8.2f}',
                       diff_throughput_formatted + note, p_value_formatted])
 
@@ -173,7 +173,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
         unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
         table_data.append(unsuccessful_info_colored)
 
-table_data.append(['Sum', '', f'{(total_runtime_old / 1e6):>8.1f}', f'{(total_runtime_new / 1e6):>8.1f}',
+table_data.append(['Sum', '', f'{(total_runtime_old / 1e6):>7.1f}', f'{(total_runtime_new / 1e6):>7.1f}',
                    color_diff(total_runtime_new / total_runtime_old, True) + ' '])
 table_data.append(['Geomean', '' , '', '', '', '', '', '', color_diff(geometric_mean(diffs_throughput)) + ' '])
 
