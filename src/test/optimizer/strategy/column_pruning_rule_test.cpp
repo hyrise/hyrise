@@ -196,14 +196,12 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
   // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
-  // While column c is used in a projection, the result of that projection is removed later on.
+  // Column c should be removed even below the UnionNode
   const auto pruned_node_a = pruned(node_a, {ColumnID{2}});
   const auto pruned_a = pruned_node_a->get_column("a");
   const auto pruned_b = pruned_node_a->get_column("b");
-  const auto pruned_c = pruned_node_a->get_column("c");
 
-  const auto expected_sub_lqp = ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3),
-                                                     add_(pruned_c, 4)), pruned_node_a);
+  const auto expected_sub_lqp = ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)), pruned_node_a);
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
