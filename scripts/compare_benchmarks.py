@@ -163,10 +163,10 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
             diff_unsuccessful = float('nan')
 
         unsuccessful_info = [
-            '   unsucc.:', ''
+            '   unsucc.:', '', '', '', '', '',
             f'{old_unsuccessful_per_second:>.2f}',
             f'{new_unsuccessful_per_second:>.2f}',
-            color_diff(diff_unsuccessful) + ' '
+            color_diff(diff_unsuccessful, True) + ' '
         ]
 
         unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
