@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const std::shared_ptr<const Table> sorted_table)
-    : AbstractReadWriteOperator{OperatorType::Clustering, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _sorted_table{sorted_table} {
+ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const std::vector<size_t>& invalid_row_counts, const std::shared_ptr<const Table> sorted_table)
+    : AbstractReadWriteOperator{OperatorType::Clustering, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _invalid_row_counts{invalid_row_counts}, _sorted_table{sorted_table}, _num_locks{0}, _transaction_id{0} {
       size_t num_rows = 0;
       for (const auto chunk_id : _chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);
@@ -27,8 +27,73 @@ const std::string& ClusteringSorter::name() const {
 }
 
 std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<TransactionContext> context) {
-  // TODO get locks
+  _transaction_id = context->transaction_id();
+
+  // get locks for the unsorted chunks in the table
+  size_t invalid_row_index = 0;
+  for (const auto chunk_id : _chunk_ids) {
+    const auto& chunk = _table->get_chunk(chunk_id);
+    Assert(chunk, "chunk is not supposed to be deleted");
+
+    // TODO @Jan?
+    Assert(chunk->invalid_row_count() == 0, "Cannot handle invalidations in the clustered, unsorted chunks yet. This is because Sort discards MvccData (and thus invalidations). Maybe add a Validate?");
+
+    const auto success = _lock_chunk(chunk);
+    if (!success) {
+      return nullptr;
+    }
+
+    if (chunk->invalid_row_count() != _invalid_row_counts[invalid_row_index]) {
+      // chunk was modified between sorting and locking
+      _mark_as_failed();
+      return nullptr;
+    }
+    invalid_row_index++;
+  }
+
+  // no need to get locks for the sorted chunks, as they get inserted as completely new chunks
+
   return nullptr;
+}
+
+void ClusteringSorter::_unlock_all() {
+  // we only hold locks for the unsorted chunks
+  for (const auto chunk_id : _chunk_ids) {
+    const auto& chunk = _table->get_chunk(chunk_id);
+    Assert(chunk, "chunk is not supposed to be deleted");
+    _unlock_chunk(chunk);
+  }
+
+  Assert(_num_locks == 0, "there should be no more locks, but got " + std::to_string(_num_locks));
+}
+
+bool ClusteringSorter::_lock_chunk(const std::shared_ptr<Chunk> chunk) {
+  const auto mvcc_data = chunk->mvcc_data();
+
+  for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
+    const auto expected = 0u;
+    auto success = mvcc_data->compare_exchange_tid(offset, expected, _transaction_id);
+    if (!success) {
+      _mark_as_failed();
+      return false;
+    } else {
+      _num_locks++;
+    }
+  }
+
+  return true;
+}
+
+void ClusteringSorter::_unlock_chunk(const std::shared_ptr<Chunk> chunk) {
+  const auto mvcc_data = chunk->mvcc_data();
+
+  for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
+    if (mvcc_data->get_tid(offset) == _transaction_id) {
+      const auto success = mvcc_data->compare_exchange_tid(offset, _transaction_id, 0u);
+      Assert(success, "Unable to unlock a row that belongs to our own transaction");
+      _num_locks--;
+    }
+  }
 }
 
 void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
@@ -61,21 +126,35 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     }
     const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), commit_id);
 
-    // set ordering information
-    Assert(chunk->ordered_by(), "chunk has no ordering information");
+    // transfer meta information
     const auto chunk_count = _table->chunk_count();    
+
     _table->append_chunk(segments, mvcc_data);
     Assert(_table->chunk_count() == chunk_count + 1, "some additional chunk was added");
-    _table->get_chunk(chunk_count)->set_ordered_by(*chunk->ordered_by());
-    _table->get_chunk(chunk_count)->finalize();
-    ChunkEncoder::encode_chunks(_table, {chunk_count}, EncodingType::Dictionary);
+    const auto table_chunk = _table->get_chunk(chunk_count);
+
+    Assert(table_chunk, "Chunk disappeared");
+    Assert(chunk->ordered_by(), "chunk has no ordering information");
+    table_chunk->set_ordered_by(*chunk->ordered_by());
+
+    // TODO (maybe): move encoding to disjoint_clusters_algo
+    table_chunk->finalize();
+    ChunkEncoder::encode_chunk(table_chunk, _table->column_data_types(), EncodingType::Dictionary);
+    //Assert(chunk->pruning_statistics(), "chunk has no pruning statistics");
+    //table_chunk->set_pruning_statistics(*chunk->pruning_statistics());
   }
+
+  for (const auto chunk_id : _chunk_ids) {
+    const auto& chunk = _table->get_chunk(chunk_id);
+    Assert(chunk, "Chunk disappeared");
+    chunk->set_cleanup_commit_id(commit_id);
+  }
+
+  _unlock_all();
 }
 
-// TODO unlock on both commit and failure
-
 void ClusteringSorter::_on_rollback_records() {
-  
+  _unlock_all();
 }
 
 std::shared_ptr<AbstractOperator> ClusteringSorter::_on_deep_copy(

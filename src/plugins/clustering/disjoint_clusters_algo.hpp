@@ -36,6 +36,8 @@ class DisjointClustersAlgo : public AbstractClusteringAlgo {
 
   std::vector<std::shared_ptr<Chunk>> _sort_and_encode_chunks(const std::vector<std::shared_ptr<Chunk>>& chunks, const ColumnID sort_column_id) const;
 
+  bool _can_delete_chunk(const std::shared_ptr<Chunk> chunk) const;
+
  private:
   std::vector<ClusterBoundaries> _boundaries;
   std::vector<ColumnID> _clustering_column_ids;

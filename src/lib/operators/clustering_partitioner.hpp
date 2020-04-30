@@ -18,7 +18,7 @@ using ClusterKey = std::vector<size_t>;
  */
 class ClusteringPartitioner : public AbstractReadWriteOperator {
  public:
-  explicit ClusteringPartitioner(const std::shared_ptr<const AbstractOperator>& referencing_table_op, const std::shared_ptr<Table> table, const std::shared_ptr<Chunk> chunk, const std::vector<ClusterKey>& cluster_keys, std::map<ClusterKey, std::shared_ptr<Chunk>>& clusters, std::map<ClusterKey, std::set<ChunkID>>& _chunk_ids_per_cluster);
+  explicit ClusteringPartitioner(const std::shared_ptr<const AbstractOperator>& referencing_table_op, const std::shared_ptr<Table> table, const std::shared_ptr<Chunk> chunk, const std::vector<ClusterKey>& cluster_keys, const size_t expected_invalid_row_count, std::map<ClusterKey, std::shared_ptr<Chunk>>& clusters, std::map<ClusterKey, std::set<ChunkID>>& _chunk_ids_per_cluster);
 
   const std::string& name() const override;
 
@@ -33,13 +33,17 @@ class ClusteringPartitioner : public AbstractReadWriteOperator {
 
  private:  
   void _start_new_chunk(ClusterKey cluster_key);
+  void _unlock_chunk(const std::shared_ptr<Chunk> chunk);
 
   const std::shared_ptr<Table> _table;
   const std::shared_ptr<Chunk> _chunk;
   const std::vector<ClusterKey>& _cluster_keys;
+  const size_t _expected_invalid_row_count;
 
   std::map<ClusterKey, std::shared_ptr<Chunk>>& _clusters;
   std::map<ClusterKey, std::set<ChunkID>>& _chunk_ids_per_cluster;
 
+  size_t _num_locks;
+  TransactionID _transaction_id;
 };
 }  // namespace opossum

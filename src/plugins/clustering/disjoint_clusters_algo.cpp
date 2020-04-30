@@ -45,11 +45,10 @@ ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<co
   Assert(num_clusters < histogram->bin_count(), "more clusters (" + std::to_string(num_clusters) + ") than histogram bins (" + std::to_string(histogram->bin_count()) + ")");
 
   const auto num_null_values = row_count - histogram->total_count();
-  ClusterBoundaries boundaries(num_clusters);
+  ClusterBoundaries boundaries;
   size_t boundary_index = 0;
   if (num_null_values > 0) {
-    boundaries.resize(num_clusters + 1);
-    boundaries[0] = std::make_pair(NULL_VALUE, NULL_VALUE);
+    boundaries.push_back(std::make_pair(NULL_VALUE, NULL_VALUE));
     boundary_index++;
   }
 
@@ -254,6 +253,20 @@ std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(con
   return cluster_boundaries;
 }
 
+bool DisjointClustersAlgo::_can_delete_chunk(const std::shared_ptr<Chunk> chunk) const {
+  // Check whether there are still active transactions that might use the chunk
+  Assert(chunk->get_cleanup_commit_id().has_value(), "expected a cleanup commit id");
+
+  bool conflicting_transactions = false;
+  auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
+
+  if (lowest_snapshot_commit_id.has_value()) {
+    conflicting_transactions = chunk->get_cleanup_commit_id().value() > lowest_snapshot_commit_id.value();
+  }
+
+  return !conflicting_transactions;
+}
+
 void DisjointClustersAlgo::_perform_clustering() {
 
   for (const auto& [table_name, clustering_config] : clustering_by_table) {
@@ -278,6 +291,7 @@ void DisjointClustersAlgo::_perform_clustering() {
     _boundaries = _all_cluster_boundaries(num_clusters_per_dimension);
     
 
+    // phase 1: partition each chunk into clusters
     const auto chunk_count_before_clustering = _table->chunk_count();
     std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
     std::map<ClusterKey, std::shared_ptr<Chunk>> clusters;
@@ -285,27 +299,16 @@ void DisjointClustersAlgo::_perform_clustering() {
       const auto initial_chunk = _table->get_chunk(chunk_id);
       if (initial_chunk) {
         const auto initial_invalidated_rows = initial_chunk->invalid_row_count();
-
         const auto cluster_keys = _cluster_keys(initial_chunk);
 
-
         auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context();
-
-        auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
+        auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, initial_invalidated_rows, clusters, chunk_ids_per_cluster);
         clustering_partitioner->set_transaction_context(partition_transaction);
         clustering_partitioner->execute();
 
-        bool lock_successful = _lock_chunk(initial_chunk, partition_transaction);
 
-        if (!lock_successful) {
-          std::cout << "Chunk " << chunk_id << " could not be locked entirely. Trying again." << std::endl;
-          chunk_id--;
-
-          continue;
-        }
-        if (initial_invalidated_rows < initial_chunk->invalid_row_count()) {
-          // Some tuples were updated or deleted. Try again.
-          std::cout <<  "Chunk " << chunk_id << " was modified during clustering. Trying again." << std::endl;
+        if (clustering_partitioner->execute_failed()) {
+          std::cout << "Chunk " << chunk_id << " could not be locked entirely or was modified since cluster keys were computed. Trying again." << std::endl;
           chunk_id--;
 
           continue;
@@ -315,7 +318,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       }        
     }
 
-    // sort within clusters
+    // phase 2: sort within clusters
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
       auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
 
@@ -333,22 +336,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       sort->execute();
 
       auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context();
-      for (const auto chunk_id : chunk_ids) {
-        const auto& chunk = _table->get_chunk(chunk_id);
-        Assert(chunk, "chunk must not be deleted");
-        Assert(_lock_chunk(chunk, sort_transaction), "could not lock chunk with id " + std::to_string(chunk_id));
-      }
-
-      size_t invalid_row_index = 0;
-      for (const auto chunk_id : chunk_ids) {
-        const auto& chunk = _table->get_chunk(chunk_id);
-        Assert(chunk, "chunk must not be deleted");
-
-        Assert(chunk->invalid_row_count() == invalid_row_counts[invalid_row_index], "chunk was modified since sorting");
-        invalid_row_index++;
-      }
-
-      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort->get_output());
+      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, invalid_row_counts, sort->get_output());
       clustering_sorter->set_transaction_context(sort_transaction);
       clustering_sorter->execute();
 
@@ -356,14 +344,21 @@ void DisjointClustersAlgo::_perform_clustering() {
     }
 
     // pretend mvcc plugin were active and remove invalidated chunks
+    size_t num_invalid_chunks = 0;
+    size_t num_removed_chunks = 0;
     for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); chunk_id++) {
       const auto& chunk = _table->get_chunk(chunk_id);
       if (chunk && chunk->size() == chunk->invalid_row_count()) {
-        _table->remove_chunk(chunk_id);
+        num_invalid_chunks++;
+        if (_can_delete_chunk(chunk)) {
+          _table->remove_chunk(chunk_id);
+          num_removed_chunks++;
+        }
       }
     }
 
     std::cout << table_name << " has now " << _table->chunk_count() << " chunks (from originally " << chunk_count_before_clustering << ")" << std::endl;
+    std::cout << num_invalid_chunks << " of the " << _table->chunk_count() << " chunks are fully invalidated, and " << num_removed_chunks << " of those could be removed." << std::endl;
   }
 }
 
