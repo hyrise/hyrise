@@ -182,7 +182,7 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   // clang-format off
-  const auto sub_lqp = 
+  const auto sub_lqp =
   ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3), add_(c, 4)),
     node_a);
 
