@@ -656,7 +656,7 @@ if (NOT APPLE)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
-    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
 
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
