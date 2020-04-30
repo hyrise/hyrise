@@ -25,11 +25,11 @@ class LQPSubqueryExpressionTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
-    a = {int_float_node_a, ColumnID{0}};
-    b = {int_float_node_a, ColumnID{1}};
+    a = int_float_node_a->get_column("a");
+    b = int_float_node_a->get_column("b");
 
     int_float_node_a_2 = StoredTableNode::make("int_float");
-    a_2 = {int_float_node_a_2, ColumnID{0}};
+    a_2 = int_float_node_a_2->get_column("a");
 
     // clang-format off
     lqp_a =
@@ -52,7 +52,7 @@ class LQPSubqueryExpressionTest : public BaseTest {
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
   std::shared_ptr<CorrelatedParameterExpression> parameter_a;
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_c;
-  LQPColumnReference a, b, a_2;
+  std::shared_ptr<LQPColumnExpression> a, b, a_2;
 };
 
 TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
