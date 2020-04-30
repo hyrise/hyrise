@@ -11,14 +11,12 @@ p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
 
-SUPERSCRIPT = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
-
 def format_diff(diff):
     diff -= 1  # adapt to show change in percent
     if diff < 0.0:
-        return "{0:.0%}".format(diff)
+        return f"{diff:.0%}"
     else:
-        return "+{0:.0%}".format(diff)
+        return f"+{diff:.0%}"
 
 def color_diff(diff, inverse_colors = False):
     select_color = lambda value, color: color if abs(value - 1) > 0.05 else 'white'
@@ -63,12 +61,29 @@ def calculate_and_format_p_value(old, new):
         return "(run time too short)"
     elif (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
         is_significant = False
-        return colored('2'.translate(SUPERSCRIPT), 'yellow', attrs=['bold'])
+        global add_note_for_insufficient_pvalue_runs
+        add_note_for_insufficient_pvalue_runs = True
+        return colored('˅', 'yellow', attrs=['bold'])
     else:
         if is_significant:
-            return colored("{0:.4f}".format(p_value), 'white')
+            return colored(f"{p_value:.4f}", 'white')
         else:
-            return colored("{0:.4f}".format(p_value), 'yellow', attrs=['bold'])
+            return colored(f"{p_value:.4f}", 'yellow', attrs=['bold'])
+
+def print_context_overview(old_config, new_config):
+    ignore_difference_for = ['GIT-HASH', 'date']
+    lines = [["Parameter", sys.argv[1], sys.argv[2]]]
+    for (old_key, old_value), (new_key, new_value) in zip(old_config['context'].items(), new_config['context'].items()):
+        color = 'white'
+        note = ' '
+        if old_value != new_value and old_key not in ignore_difference_for:
+            color = 'red'
+            note = '≠'
+        lines.append([colored(note + old_key, color), old_value, new_value])
+
+    table = AsciiTable(lines)
+    table.title = 'Configuration Overview'
+    print(table.table)
 
 
 if (not len(sys.argv) in [3, 4]):
@@ -86,13 +101,20 @@ with open(sys.argv[2]) as new_file:
 if old_data['context']['benchmark_mode'] != new_data['context']['benchmark_mode']:
     exit("Benchmark runs with different modes (ordered/shuffled) are not comparable")
 
-diffs1 = []
-diffs2 = []
+diffs_latency = []
+diffs_throughput = []
 total_runtime_old = 0
 total_runtime_new = 0
 
+add_note_for_capped_runs = False
+add_note_for_insufficient_pvalue_runs = False
+
+print_context_overview(old_data, new_data)
+
 table_data = []
-table_data.append(["Item", "Latency\nms/iter", "Now\nms/iter", "Change\n%", "Throughput\niter/s", "Now\niter/s", "Change\n%", "p-value"])
+# <...> indicates a span, which will be replaced later
+table_data.append(["Item", "", "$latency", "", "Change", "", "$thrghpt", "", "Change", "p-value"])
+table_data.append(["", "", "old", "new", "", "", "old", "new", "", ""])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
@@ -104,77 +126,117 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     total_runtime_new += new['avg_real_time_per_iteration']
 
     if float(old['avg_real_time_per_iteration']) > 0.0:
-        diff1 = float(new['avg_real_time_per_iteration']) / float(old['avg_real_time_per_iteration'])
-        diffs1.append(diff1)
+        diff_latency = float(new['avg_real_time_per_iteration']) / float(old['avg_real_time_per_iteration'])
     else:
-        diff1 = float('nan')
+        diff_latency = float('nan')
 
     if float(old['items_per_second']) > 0.0:
-        diff2 = float(new['items_per_second']) / float(old['items_per_second'])
-        diffs2.append(diff2)
+        diff_throughput = float(new['items_per_second']) / float(old['items_per_second'])
+        diffs_throughput.append(diff_throughput)
     else:
-        diff2 = float('nan')
+        diff_throughput = float('nan')
 
-    diff1_formatted = format_diff(diff1)
-    diff2_formatted = color_diff(diff2)
+    diff_throughput_formatted = color_diff(diff_throughput)
+    diff_latency_formatted = color_diff(diff_latency, True)
     p_value_formatted = calculate_and_format_p_value(old, new)
 
-    if old['name'] == 'TPC-H 06':
-        note = colored('1'.translate(SUPERSCRIPT), 'yellow', attrs=['bold'])
+    if (old_data['context']['max_runs'] > 0 or new_data['context']['max_runs'] > 0) and \
+       (old['iterations'] >= old_data['context']['max_runs'] or new['iterations'] >= new_data['context']['max_runs']):
+        note = colored('˄', 'yellow', attrs=['bold'])
+        add_note_for_capped_runs = True
     else:
         note = ' '
 
-    table_data.append([name, '{:>.1f}'.format(old['avg_real_time_per_iteration'] / 1e6), '{:>.1f}'.format(new['avg_real_time_per_iteration'] / 1e6), diff1_formatted + note, '{:>.2f}'.format(old['items_per_second']), '{:>.2f}'.format(new['items_per_second']), diff2_formatted + note, p_value_formatted])
+    # Note, we use a width of 8 for printing to ensure that we can later savely replace the throughput marker and
+    # everything still fits nicely.
+    table_data.append([name, '', f'{(old["avg_real_time_per_iteration"] / 1e6):>8.1f}',
+                      f'{(new["avg_real_time_per_iteration"] / 1e6):>8.1f}', diff_latency_formatted + note, '',
+                      f'{old["items_per_second"]:>8.2f}', f'{new["items_per_second"]:>8.2f}',
+                      diff_throughput_formatted + note, p_value_formatted])
 
-    # if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
-    #     old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
-    #     new_unsuccessful_per_second = float(len(new['unsuccessful_runs'])) / (new['duration'] / 1e9)
+    if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
+        old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
+        new_unsuccessful_per_second = float(len(new['unsuccessful_runs'])) / (new['duration'] / 1e9)
 
-    #     if len(old['unsuccessful_runs']) > 0:
-    #         diff_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
-    #     else:
-    #         diff_unsuccessful = float('nan')
+        if len(old['unsuccessful_runs']) > 0:
+            diff_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
+        else:
+            diff_unsuccessful = float('nan')
 
-    #     unsuccessful_info = [
-    #         '  unsucc.:',
-    #         ' ' + str(old_unsuccessful_per_second),
-    #         ' ' + str(len(old['unsuccessful_runs'])),
-    #         ' ' + str(new_unsuccessful_per_second),
-    #         ' ' + str(len(new['unsuccessful_runs'])),
-    #         ' ' + color_diff(diff_unsuccessful)
-    #     ]
+        unsuccessful_info = [
+            '   unsucc.:', ''
+            f'{old_unsuccessful_per_second:>.2f}',
+            f'{new_unsuccessful_per_second:>.2f}',
+            color_diff(diff_unsuccessful) + ' '
+        ]
 
-    #     unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
-    #     table_data.append(unsuccessful_info_colored)
-    # TODO bring this back
+        unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
+        table_data.append(unsuccessful_info_colored)
 
-table_data.append(['Sum', '{:>.1f}'.format(total_runtime_old / 1e6), '{:>.1f}'.format(total_runtime_new / 1e6), color_diff(total_runtime_new / total_runtime_old, True) + ' ', ''])
-table_data.append(['Geomean', '', '', '', '', '', color_diff(geometric_mean(diffs2)) + ' ', ''])
+table_data.append(['Sum', '', f'{(total_runtime_old / 1e6):>8.1f}', f'{(total_runtime_new / 1e6):>8.1f}',
+                   color_diff(total_runtime_new / total_runtime_old, True) + ' '])
+table_data.append(['Geomean', '' , '', '', '', '', '', '', color_diff(geometric_mean(diffs_throughput)) + ' '])
 
 table = AsciiTable(table_data)
-table.justify_columns[1] = 'right'
-table.justify_columns[2] = 'right'
-table.justify_columns[3] = 'right'
-table.justify_columns[4] = 'right'
-table.justify_columns[5] = 'right'
-table.justify_columns[6] = 'right'
+for column_index in range(1, 10): # all columns justified to right, except for item name
+    table.justify_columns[column_index] = 'right'
 
 result = str(table.table)
 
 new_result = ''
 lines = result.splitlines()
+
+# TODO: replace properly
+" Latency (ms/iter)"
+" Throughput (iter/s)"
+
+# Narrow separation column TODO: multiple times
+separation_columns = []
+header_strings = lines[4].split('|') # use a result line without empty columns here
+for column_id, text in enumerate(header_strings):
+    # find empty columns
+    # ignore first and last as this is "outside" of the actual table
+    if text.strip() == "" and column_id > 0 and column_id < len(header_strings)-1:
+        separation_columns.append(column_id)
+
+if len(separation_columns) > 0:
+    for sep_column_id in separation_columns:
+        for line_id, line in enumerate(lines):
+            separator = '|' if line[0] == '|' else '+'
+            splits = line.split(separator)
+            new_splits = splits[:sep_column_id] + [''] + splits[sep_column_id+1:]
+            lines[line_id] = separator.join(new_splits)
+
+# Span throughput/latency header columns
+for (placeholder, final) in [('$thrghpt', 'Throughput (iter/s)'), ('$latency', 'Latency (ms/iter)')]:
+    header_strings = lines[1].split('|')
+    for column_id, text in enumerate(header_strings):
+        if placeholder in text:
+            title_column = header_strings[column_id]
+            unit_column = header_strings[column_id + 1]
+            previous_length = len(title_column) + len(unit_column) + 1
+            new_title = f' {final} '.ljust(previous_length,' ')
+            lines[1] = '|'.join(header_strings[:column_id] + [new_title] + header_strings[column_id+2:])
+
+ # swap second line of header with automatically added separator
+lines[2], lines[3] = lines[3], lines[2]
 for (line_number, line) in enumerate(lines):
-    if line_number == len(table_data) + 1:
+    if line_number == len(table_data):
         # Add another separation between benchmark items and aggregates
         new_result += lines[-1] + "\n"
 
     new_result += line + "\n"
 
-# TODO actually calculate column width
-# TODO only show these when applicable?
-new_result += '|    Notes | ' + '1'.translate(SUPERSCRIPT) + ' Execution stopped at 10000 runs                                     |' + '\n'
-new_result += '|          | ' + '2'.translate(SUPERSCRIPT) + ' Insufficient number of runs for p-value calculation                 |' + '\n'
-new_result += lines[-1] + "\n"
+if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
+    first_column_width = len(lines[1].split('|')[1])
+    width_for_note = len(lines[0]) - first_column_width - 5 # 5 for seperators and spaces
+    if add_note_for_capped_runs:
+        note = '˄' + f' Execution stopped at {new_data["context"]["max_runs"]} runs'
+        new_result += '|' + (' Notes '.rjust(first_column_width, ' ')) +  '|| ' + note.ljust(width_for_note, ' ') + '|\n'
+    if add_note_for_insufficient_pvalue_runs:
+        note = '˅' + ' Insufficient number of runs for p-value calculation'
+        new_result += '|' + (' ' * first_column_width) + '|| ' + note.ljust(width_for_note, ' ') + '|\n'
+    new_result += lines[-1] + "\n"
 
 result = new_result
 
