@@ -168,8 +168,6 @@ set(
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
     memory/boost_default_memory_resource.cpp
-    memory/numa_memory_resource.cpp
-    memory/numa_memory_resource.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     null_value.hpp
