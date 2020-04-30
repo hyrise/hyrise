@@ -340,7 +340,11 @@ void DisjointClustersAlgo::_perform_clustering() {
       clustering_sorter->set_transaction_context(sort_transaction);
       clustering_sorter->execute();
 
-      sort_transaction->commit();
+      if (clustering_sorter->execute_failed()) {
+        std::cout << "Failed to sort a cluster. Skipping it." << std::endl;
+      } else {
+        sort_transaction->commit();
+      }
     }
 
     // pretend mvcc plugin were active and remove invalidated chunks
