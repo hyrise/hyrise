@@ -182,8 +182,9 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   // clang-format off
-  const auto sub_lqp = ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3), add_(c, 4)),
-        node_a);
+  const auto sub_lqp = 
+  ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3), add_(c, 4)),
+    node_a);
 
   lqp =
   ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
@@ -201,7 +202,9 @@ TEST_F(ColumnPruningRuleTest, Diamond) {
   const auto pruned_a = pruned_node_a->get_column("a");
   const auto pruned_b = pruned_node_a->get_column("b");
 
-  const auto expected_sub_lqp = ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)), pruned_node_a);
+  const auto expected_sub_lqp =
+  ProjectionNode::make(expression_vector(add_(pruned_a, 2), add_(pruned_b, 3)),
+    pruned_node_a);
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
