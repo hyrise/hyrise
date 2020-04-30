@@ -72,16 +72,16 @@ def calculate_and_format_p_value(old, new):
 
 def print_context_overview(old_config, new_config):
     ignore_difference_for = ['GIT-HASH', 'date']
-    lines = [["Parameter", sys.argv[1], sys.argv[2]]]
+    table_lines = [["Parameter", sys.argv[1], sys.argv[2]]]
     for (old_key, old_value), (new_key, new_value) in zip(old_config['context'].items(), new_config['context'].items()):
         color = 'white'
         note = ' '
         if old_value != new_value and old_key not in ignore_difference_for:
             color = 'red'
             note = '≠'
-        lines.append([colored(note + old_key, color), old_value, new_value])
+        table_lines.append([colored(note + old_key, color), old_value, new_value])
 
-    table = AsciiTable(lines)
+    table = AsciiTable(table_lines)
     table.title = 'Configuration Overview'
     print(table.table)
 
@@ -101,7 +101,6 @@ with open(sys.argv[2]) as new_file:
 if old_data['context']['benchmark_mode'] != new_data['context']['benchmark_mode']:
     exit("Benchmark runs with different modes (ordered/shuffled) are not comparable")
 
-diffs_latency = []
 diffs_throughput = []
 total_runtime_old = 0
 total_runtime_new = 0
@@ -178,7 +177,7 @@ table_data.append(['Sum', '', f'{(total_runtime_old / 1e6):>7.1f}', f'{(total_ru
 table_data.append(['Geomean', '' , '', '', '', '', '', '', color_diff(geometric_mean(diffs_throughput)) + ' '])
 
 table = AsciiTable(table_data)
-for column_index in range(1, 10): # all columns justified to right, except for item name
+for column_index in range(1, len(table_data[0])): # all columns justified to right, except for item name
     table.justify_columns[column_index] = 'right'
 
 result = str(table.table)
@@ -186,11 +185,7 @@ result = str(table.table)
 new_result = ''
 lines = result.splitlines()
 
-# TODO: replace properly
-" Latency (ms/iter)"
-" Throughput (iter/s)"
-
-# Narrow separation column TODO: multiple times
+# Narrow separation column
 separation_columns = []
 header_strings = lines[4].split('|') # use a result line without empty columns here
 for column_id, text in enumerate(header_strings):
