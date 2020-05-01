@@ -889,7 +889,7 @@ TEST_F(AggregateSortedTest, SingleAggregateMaxSorted) {
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl",
-                               sort->get_output()->target_chunk_size());
+                               Chunk::DEFAULT_SIZE);
   }
 }
 
@@ -900,7 +900,7 @@ TEST_F(AggregateSortedTest, SingleAggregateMinSorted) {
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl",
-                               sort->get_output()->target_chunk_size());
+                               Chunk::DEFAULT_SIZE);
   }
 }
 
@@ -911,7 +911,7 @@ TEST_F(AggregateSortedTest, SingleAggregateSumSorted) {
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl",
-                               sort->get_output()->target_chunk_size());
+                               Chunk::DEFAULT_SIZE);
   }
 }
 
@@ -922,7 +922,7 @@ TEST_F(AggregateSortedTest, SingleAggregateAvgSorted) {
     sort->execute();
     test_output<AggregateSort>(sort, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
                                "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl",
-                               sort->get_output()->target_chunk_size());
+                               Chunk::DEFAULT_SIZE);
   }
 }
 
