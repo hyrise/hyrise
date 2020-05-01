@@ -14,7 +14,6 @@ class MetaSystemUtilizationTable : public AbstractMetaSystemTable {
   const std::string& name() const final;
 
  protected:
-  friend class MetaSystemUtilizationTest;
   std::shared_ptr<Table> _on_generate() const final;
 
   struct LoadAvg {
