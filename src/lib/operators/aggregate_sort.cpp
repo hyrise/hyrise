@@ -684,7 +684,6 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     aggregate_index++;
   }
 
-
   // Append output to result table
   if (_output_segments.at(0)->size() > 0) {
     result_table->append_chunk(_output_segments);
