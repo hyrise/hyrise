@@ -154,8 +154,8 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
     });
 
 const boost::bimap<SortMode, std::string> sort_mode_to_string = make_bimap<SortMode, std::string>({
-    {SortMode::Ascending, "AscendingNullsFirst"},
-    {SortMode::Descending, "DescendingNullsFirst"},
+    {SortMode::Ascending, "Ascending"},
+    {SortMode::Descending, "Descending"},
     {SortMode::AscendingNullsLast, "AscendingNullsLast"},
     {SortMode::DescendingNullsLast, "DescendingNullsLast"},
 });
