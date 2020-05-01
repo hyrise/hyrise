@@ -55,7 +55,7 @@ TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
 }
 
 TEST_F(OperatorsProjectionTest, PassThroughInvalidRowCount) {
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 123);
   table_scan->execute();

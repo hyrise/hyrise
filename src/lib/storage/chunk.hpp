@@ -144,12 +144,13 @@ class Chunk : private Noncopyable {
    * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
    * the ColumnIDs of the segments by which it is sorted will be returned.
    *
-   * In a chunk, multiple segments may be ordered independently. For example, in a table storing ordered,
-   * both the order id and date of incoming orders have incrementing values. In this case, sorted_by
+   * In a chunk, multiple segments may be ordered independently. For example, in a table storing orders,
+   * both the order id and date of incoming orders might have incrementing values. In this case, sorted_by
    * has two entries. However, for cases where the data is first orderered by one column, then by another
    * (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
    *
-   * This is currently taken advantage of in, e.g., the ColumnVsValueScan. See #1519 for more details.
+   * Sort order are currently exploited in several scan implementations (e.g., ColumnVsValue, ColumnIsNull,
+   * ColumnBetweenScan) and selected other operators (e.g., AggregateSort). See #1519 for more details.
    */
   const std::optional<std::vector<SortColumnDefinition>>& sorted_by() const;
   void set_sorted_by(const SortColumnDefinition& sorted_by);

@@ -449,7 +449,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                    const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
+                                     const BloomFilter& input_bloom_filter = ~BloomFilter(BLOOM_FILTER_SIZE)) {
   // input_bloom_filter is default-initialized by creating a BloomFilter with every value being false and using bitwise
   // negation (~x).
   if (radix_container.empty()) return radix_container;

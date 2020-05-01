@@ -32,7 +32,7 @@ class TPCCTest : public BaseTest {
       auto table_wrapper = std::make_shared<TableWrapper>(generated_table);
       table_wrapper->execute();
       auto insert = std::make_shared<Insert>(table_name, table_wrapper);
-      auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+      auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       insert->set_transaction_context(transaction_context);
       insert->execute();
       transaction_context->commit();
@@ -53,7 +53,7 @@ class TPCCTest : public BaseTest {
 
   void verify_table_sizes(const std::unordered_map<std::string, size_t>& sizes) {
     for (const auto& [table_name, size] : sizes) {
-      auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+      auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       const auto table = get_validated(table_name, transaction_context);
 
       if (table_name == "ORDER_LINE" && size == 0) {
@@ -91,7 +91,7 @@ TEST_F(TPCCTest, Delivery) {
   // we first create a transaction that has a view on the unmodified database, then execute the procedure, and finally
   // compare the changes between the final state of the database to that seen by the initial transaction. Those changes
   // should reflect what we expect the procedure to have done.
-  auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
@@ -204,7 +204,7 @@ TEST_F(TPCCTest, Delivery) {
 }
 
 TEST_F(TPCCTest, NewOrder) {
-  auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto old_order_line_size = static_cast<int>(Hyrise::get().storage_manager.get_table("ORDER_LINE")->row_count());
   const auto old_time = time(nullptr);
 
@@ -336,7 +336,7 @@ TEST_F(TPCCTest, NewOrderUnusedItemId) {
   // NewOrder transactions with simulated user input errors (unused item ids) are still counted as successful
   EXPECT_TRUE(new_order.execute());
 
-  auto new_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto new_transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // None of the tables should have been visibly modified
   for (const auto& [table_name, table_info] : tables) {

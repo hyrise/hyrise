@@ -78,7 +78,7 @@ void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID 
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -90,7 +90,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result =
       load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", 2u);
@@ -108,7 +108,7 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
-  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto validate1 = std::make_shared<Validate>(_gt);
   validate1->set_transaction_context(t1_context);
@@ -118,7 +118,7 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
   EXPECT_EQ(validate1->get_output()->row_count(), 8);
   t1_context->commit();
 
-  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // Select one row for deletion
   auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "13");
@@ -208,7 +208,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // This optimization is possible, if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -240,7 +240,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 }
 
 TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
-  const auto context = std::make_shared<TransactionContext>(1u, 3u);
+  const auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   const auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
   validate_unsorted->set_transaction_context(context);
