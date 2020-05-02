@@ -50,8 +50,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
-    // assuming non-inclusive between predicates are not yet supported).
-    // This order is not necessarily the order Hyrise uses (estimates can be vastly off) or which will eventually
+    // assumed missing support of non-inclusive between predicates).
+    // This order is not necessarily the order Hyrise uses (estimates can be vastly off) or which might eventually
     // be calculated by more sophisticated cost models.
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
                                            lineitem_table->column_is_nullable(ColumnID{6}), "");
@@ -194,30 +194,29 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
 }
 
 /**
- * The objective of this benchmark is to measure performance improvements when having
- * a sort-based aggregate on a sorted column
- * This is not a TPC-H benchmark, it just uses TPC-H data (there are few joins on non-key columns in TPC-H).
+ * The objective of this benchmark is to measure performance improvements when having a sort-based aggregate on a
+ * sorted column. This is not a TPC-H benchmark, it just uses TPC-H data (there are few joins on non-key columns in
+ * TPC-H).
  */
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ScanAggregate)(benchmark::State& state) {
-  // In this case, we take TPC-H LineItem (biggest table in dataset)
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& state) {
+  // In this case, we use TPC-H lineitem table (largest table in dataset).
   // Assumption: We joined on shipmode, which is why we are sorted by that column
   // Aggregate: group by shipmode and count(l_orderkey_id)
 
-  const auto& line_item = _table_wrapper_map.at("lineitem");
+  const auto& lineitem = _table_wrapper_map.at("lineitem");
   const auto l_orderkey_id = ColumnID{0};
   const auto l_shipmode_id = ColumnID{10};
 
-  const auto sorted_line_item =
-      std::make_shared<Sort>(line_item, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
-  sorted_line_item->execute();
-  const auto table_scan_output = sorted_line_item->get_output();
+  const auto sorted_lineitem = std::make_shared<Sort>(lineitem, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
+  sorted_lineitem->execute();
+  const auto mocked_table_scan_output = sorted_lineitem->get_output();
   const ColumnID group_by_column = l_orderkey_id;
   const std::vector<ColumnID> group_by = {l_orderkey_id};
   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{count_(pqp_column_(
-      group_by_column, table_scan_output->column_data_type(group_by_column),
-      table_scan_output->column_is_nullable(group_by_column), table_scan_output->column_name(group_by_column)))};
+      group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
+      mocked_table_scan_output->column_is_nullable(group_by_column), mocked_table_scan_output->column_name(group_by_column)))};
   for (auto _ : state) {
-    const auto aggregate = std::make_shared<AggregateSort>(sorted_line_item, aggregate_expressions, group_by);
+    const auto aggregate = std::make_shared<AggregateSort>(sorted_lineitem, aggregate_expressions, group_by);
     aggregate->execute();
   }
 }
