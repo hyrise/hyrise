@@ -16,6 +16,7 @@
 
 namespace {
 
+constexpr auto SEED = size_t{17};
 constexpr auto TABLE_SIZE = size_t{1'000};
 constexpr auto NUMBER_OF_CHUNKS_JOIN_AGGREGATE = size_t{1};
 // How much of the table size range should be used in the join columns.
@@ -32,12 +33,11 @@ using namespace opossum::expression_functional;  //NOLINT
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
-  const auto max_value = static_cast<int>(TABLE_SIZE * SELECTIVITY) + 1;
+  const auto max_value = static_cast<int32_t>(TABLE_SIZE * SELECTIVITY) + 1;
   // Use const seed to always generate the same tables. This is important to
   // compare benchmarks
-  unsigned int seed = 12345;
-  std::default_random_engine random_engine(seed);
-  std::uniform_int_distribution<int> dist(1, max_value);
+  std::default_random_engine random_engine(SEED);
+  std::uniform_int_distribution<int32_t> dist(1, max_value);
 
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
     values[row_index] = dist(random_engine);
@@ -50,16 +50,16 @@ pmr_vector<int32_t> generate_ids(const size_t table_size) {
 pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
 
-  int zip_count = 1;
-  int zip_code = 10'000;
-  size_t total_entries = 0;
-  bool finished = false;
+  auto zip_count = int32_t{1};
+  auto zip_code = int32_t{10'000};
+  auto total_entries = size_t{0};
+  auto finished = false;
 
   while (!finished) {
     for (int zip_counter = 0; zip_counter < zip_count; ++zip_counter) {
       if (total_entries <= table_size) {
         values[total_entries] = zip_code;
-        total_entries++;
+        ++total_entries;
       } else {
         finished = true;
         break;
@@ -74,13 +74,10 @@ pmr_vector<int32_t> generate_zip_codes(const size_t table_size) {
 
 pmr_vector<int32_t> generate_ages(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
-  // Use const seed to always generate the same tables. This is important to
-  // compare benchmarks
-  const unsigned int seed = 54321;
-  std::default_random_engine random_engine(seed);
+  std::default_random_engine random_engine(SEED);
 
   // The result ages are always the same in each table because of the constant seed
-  std::uniform_int_distribution<int> dist(1, 100);
+  std::uniform_int_distribution<int32_t> dist(1, 100);
   for (size_t row_index = 0; row_index < table_size; ++row_index) {
     values[row_index] = dist(random_engine);
   }
@@ -88,7 +85,7 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
   return values;
 }
 
-std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t> values) {
+std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
   const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
   auto table_column_definitions = opossum::TableColumnDefinitions();
@@ -99,11 +96,11 @@ std::shared_ptr<Table> create_table(const size_t table_size, pmr_vector<int32_t>
 
   std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, chunk_size);
 
-  for (size_t chunk_index = 0; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
+  for (auto chunk_index = size_t{0}; chunk_index < NUMBER_OF_CHUNKS_JOIN_AGGREGATE; ++chunk_index) {
     const auto ids_value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
         ids_vector.begin() + (chunk_index * chunk_size), ids_vector.begin() + ((chunk_index + 1) * chunk_size)));
     const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
-        values.begin() + (chunk_index * chunk_size), values.begin() + ((chunk_index + 1) * chunk_size)));
+        values.cbegin() + (chunk_index * chunk_size), values.cbegin() + ((chunk_index + 1) * chunk_size)));
     Segments segments;
     segments.push_back(ids_value_segment);
     segments.push_back(value_segment);
@@ -120,7 +117,7 @@ std::shared_ptr<TableWrapper> create_zip_table(const size_t table_size) {
   auto zip_table = create_table(table_size, zip_values);
 
   const auto chunk_count = zip_table->chunk_count();
-  for (ChunkID chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
+  for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = zip_table->get_chunk(chunk_index);
     chunk->finalize();
     chunk->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
@@ -136,7 +133,7 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
   auto ages_table = create_table(table_size, ages_values);
 
   const auto chunk_count = ages_table->chunk_count();
-  for (ChunkID chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
+  for (auto chunk_index = ChunkID{0}; chunk_index < chunk_count; ++chunk_index) {
     auto chunk = ages_table->get_chunk(chunk_index);
     chunk->finalize();
     chunk->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
