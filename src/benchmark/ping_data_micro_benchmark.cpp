@@ -29,7 +29,7 @@ using namespace opossum;
 ///////////////////////////////
 constexpr auto SEGMENT_META_DATA_FILE = "../../out/segment_meta_data_int_index.csv";
 constexpr auto INDEX_META_DATA_FILE = "../../out/index_meta_data_int_index.csv";
-constexpr auto TBL_FILE = "../../data/10mio_pings_int.tbl";
+constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 
 // table and compression settings
 ///////////////////////////////
@@ -237,14 +237,14 @@ static void BM_Ping_Print_Sorted_Tables(benchmark::State& state) {
   std::cout << "############ unsorted:" << std::endl;
   Print::print(table);
 
-  auto sorted_table = sort_table_chunk_wise(table, "timestamp", chunk_size);
+  auto sorted_table = sort_table_chunk_wise(table, "longitude", chunk_size);
 
   // debug print of unsorted table
   std::cout << "############ sorted:" << std::endl;
   Print::print(sorted_table);
 
   for (auto _ : state) {
-    auto sorted_table_benchmark = sort_table_chunk_wise(table, "timestamp", chunk_size);
+    auto sorted_table_benchmark = sort_table_chunk_wise(table, "longitude", chunk_size);
   }
 }
 BENCHMARK(BM_Ping_Print_Sorted_Tables);
