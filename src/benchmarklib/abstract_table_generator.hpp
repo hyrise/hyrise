@@ -71,7 +71,7 @@ class AbstractTableGenerator {
   // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
   // (right side).
   using SortOrderByTable = std::map<std::string, std::string>;
-  virtual SortOrderByTable _sort_sorted_by_table() const;
+  virtual SortOrderByTable _sort_order_by_table() const;
 
   // Optionally, the benchmark may add constraints once the tables are generated / loaded from binary
   virtual void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;

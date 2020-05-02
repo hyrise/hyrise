@@ -39,11 +39,11 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Sort tables if a sort order was defined by the benchmark
    */
-  const auto& sort_sorted_by_table = _sort_sorted_by_table();
-  if (!sort_sorted_by_table.empty()) {
+  const auto& sort_order_by_table = _sort_order_by_table();
+  if (!sort_order_by_table.empty()) {
     std::cout << "- Sorting tables" << std::endl;
 
-    for (const auto& [table_name, column_name] : sort_sorted_by_table) {
+    for (const auto& [table_name, column_name] : sort_order_by_table) {
       auto& table = table_info_by_name[table_name].table;
       const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
       const auto sort_column_id = table->column_id_by_name(column_name);
@@ -270,7 +270,7 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
 
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }
 
-AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_sorted_by_table() const { return {}; }
+AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const { return {}; }
 
 void AbstractTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
