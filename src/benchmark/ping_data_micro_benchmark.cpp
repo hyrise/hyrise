@@ -103,8 +103,11 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     // call sort operator on single-chunk table
     auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
     table_wrapper->execute();
-    auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{single_chunk_table->column_id_by_name(order_by_column_name), order_by_mode}};
-    auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
+
+    auto sort = std::make_shared<Sort>(
+      table_wrapper, std::vector<SortColumnDefinition>{
+        SortColumnDefinition{single_chunk_table->column_id_by_name(order_by_column_name), order_by_mode}},
+      chunk_size, Sort::ForceMaterialization::Yes);
     sort->execute();
     const auto immutable_sorted_table = sort->get_output();
 
