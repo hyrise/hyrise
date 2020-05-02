@@ -245,7 +245,11 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  return _build_output_table({std::make_shared<Chunk>(std::move(segments))});
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{};
+  if (segments.at(0)->size() > 0) {
+    chunks.emplace_back(std::make_shared<Chunk>(std::move(segments)));
+  }
+  return _build_output_table(std::move(chunks));
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,

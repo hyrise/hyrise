@@ -261,7 +261,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         " chunks scanned using an index");
   }
 
-  return _build_output_table({std::make_shared<Chunk>(output_segments)});
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{};
+  if (output_segments.at(0)->size() > 0) {
+    chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+  }
+  return _build_output_table(std::move(chunks));
 }
 
 void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,

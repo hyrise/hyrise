@@ -78,7 +78,7 @@ TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
   auto get_table_1 = std::make_shared<opossum::GetTable>("int_int_float");
   get_table_1->execute();
 
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto table_scan = create_table_scan(get_table_1, ColumnID{0}, PredicateCondition::GreaterThan, 9);
   table_scan->execute();
@@ -165,7 +165,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto chunk = original_table->get_chunk(ChunkID{0});
@@ -185,7 +185,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
-  auto context = std::make_shared<TransactionContext>(1u, 1u);
+  auto context = std::make_shared<TransactionContext>(1u, 1u, AutoCommit::No);
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   get_table->set_transaction_context(context);
   get_table->execute();
@@ -213,7 +213,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // Check GetTable filtering
-  auto context2 = std::make_shared<TransactionContext>(2u, 1u);
+  auto context2 = std::make_shared<TransactionContext>(2u, 1u, AutoCommit::No);
   auto get_table_2 = std::make_shared<opossum::GetTable>("int_int_float");
   get_table_2->set_transaction_context(context2);
 
@@ -227,7 +227,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
-  auto context = std::make_shared<TransactionContext>(1u, 1u);
+  auto context = std::make_shared<TransactionContext>(1u, 1u, AutoCommit::No);
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   get_table->set_transaction_context(context);
   get_table->execute();
@@ -256,7 +256,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   auto get_table_2 =
       std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
 
-  auto context2 = std::make_shared<TransactionContext>(1u, 3u);
+  auto context2 = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   auto modified_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto chunk = modified_table->get_chunk(ChunkID{1});

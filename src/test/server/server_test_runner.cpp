@@ -104,8 +104,6 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
 TEST_F(ServerTestRunner, TestCopyImport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
@@ -117,8 +115,6 @@ TEST_F(ServerTestRunner, TestCopyImport) {
 TEST_F(ServerTestRunner, TestInvalidCopyImport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed
@@ -138,8 +134,6 @@ TEST_F(ServerTestRunner, TestInvalidCopyImport) {
 TEST_F(ServerTestRunner, TestCopyExport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   transaction.exec("COPY table_a TO '" + _export_filename + "';");
@@ -151,8 +145,6 @@ TEST_F(ServerTestRunner, TestCopyExport) {
 TEST_F(ServerTestRunner, TestInvalidCopyExport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed
@@ -172,8 +164,6 @@ TEST_F(ServerTestRunner, TestInvalidCopyExport) {
 TEST_F(ServerTestRunner, TestCopyIntegration) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   // We delete a tuple of a table, export and re-import it.
@@ -192,8 +182,6 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
 TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use SQL that we do not support. Nontransactions auto
-  // commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed SQL statement
@@ -205,6 +193,54 @@ TEST_F(ServerTestRunner, TestInvalidStatement) {
   // Check whether server is still running and connection established
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), _table_a->row_count());
+}
+
+TEST_F(ServerTestRunner, TestTransactionCommit) {
+  pqxx::connection connection{_connection_string};
+  pqxx::connection verification_connection{_connection_string};
+
+  pqxx::transaction transaction{connection};
+  transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
+
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), 4);
+
+  {
+    pqxx::transaction verification_transaction{verification_connection};
+    const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
+    EXPECT_EQ(verification_result.size(), 3);
+  }
+
+  transaction.commit();
+
+  {
+    pqxx::transaction verification_transaction{verification_connection};
+    const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
+    EXPECT_EQ(verification_result.size(), 4);
+  }
+}
+
+TEST_F(ServerTestRunner, TestTransactionRollback) {
+  pqxx::connection connection{_connection_string};
+
+  pqxx::transaction transaction{connection};
+  transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
+
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), 4);
+
+  transaction.abort();
+
+  pqxx::transaction verification_transaction{connection};
+  const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(verification_result.size(), 3);
+}
+
+TEST_F(ServerTestRunner, TestInvalidTransactionFlow) {
+  pqxx::connection connection{_connection_string};
+
+  pqxx::transaction transaction{connection};
+  EXPECT_THROW(transaction.exec("BEGIN;"), pqxx::sql_error);
 }
 
 TEST_F(ServerTestRunner, TestMultipleConnections) {
