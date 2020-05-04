@@ -38,7 +38,7 @@ class BetweenCompositionTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<MockNode> _node_a, _node_b;
-  LQPColumnReference _a_a, _a_b, _a_c, _b_a;
+  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _a_c, _b_a;
   std::shared_ptr<BetweenCompositionRule> _rule;
 };
 
@@ -391,7 +391,7 @@ TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
                       _node_a);
 
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_equals_(_a_a, 300),
       predicate_node),
     PredicateNode::make(greater_than_equals_(_a_a, 400),

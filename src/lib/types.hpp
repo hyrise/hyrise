@@ -63,6 +63,8 @@ using Cost = float;
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
+//
+// TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
@@ -206,7 +208,10 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-enum class UnionMode { Positions, All };
+// SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
+// We have a third mode (Positions) that is used to intersect position lists that point to the same table,
+// see union_positions.hpp for details.
+enum class SetOperationMode { Unique, All, Positions };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
@@ -216,6 +221,8 @@ enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
 
+enum class RollbackReason : bool { User, Conflict };
+
 enum class MemoryUsageCalculationMode { Sampled, Full };
 
 enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
@@ -224,7 +231,7 @@ enum class MetaTableChangeType { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
 
-enum class LogLevel { Debug, Info, Warning, Error };
+enum class LogLevel { Debug, Info, Warning };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
@@ -247,13 +254,13 @@ struct Null {};
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
 extern const boost::bimap<OrderByMode, std::string> order_by_mode_to_string;
 extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
-extern const boost::bimap<UnionMode, std::string> union_mode_to_string;
+extern const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string;
 extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
 std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
-std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
+std::ostream& operator<<(std::ostream& stream, SetOperationMode set_operation_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
 using BoolAsByteType = uint8_t;

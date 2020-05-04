@@ -207,10 +207,10 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                            24 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 25 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                            25 * (ipow(26, 0)) + 1;
 
-  const auto bin_1_width = (bin_1_upper - bin_1_lower + 1.f);
-  const auto bin_2_width = (bin_2_upper - bin_2_lower + 1.f);
-  const auto bin_3_width = (bin_3_upper - bin_3_lower + 1.f);
-  const auto bin_4_width = (bin_4_upper - bin_4_lower + 1.f);
+  const auto bin_1_width = (static_cast<float>(bin_1_upper - bin_1_lower) + 1.f);
+  const auto bin_2_width = (static_cast<float>(bin_2_upper - bin_2_lower) + 1.f);
+  const auto bin_3_width = (static_cast<float>(bin_3_upper - bin_3_lower) + 1.f);
+  const auto bin_4_width = (static_cast<float>(bin_4_upper - bin_4_lower) + 1.f);
 
   constexpr auto bin_1_count = 4.f;
   constexpr auto bin_2_count = 6.f;
@@ -226,17 +226,17 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "abcf"), 2 / bin_1_width * bin_1_count);
 
-  EXPECT_FLOAT_EQ(
-      histogram.estimate_cardinality(PredicateCondition::LessThan, "cccc"),
-      (2 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
-       1 + 2 * (ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 0)) + 1 - bin_1_lower) /
-          bin_1_width * bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "cccc"),
+                  static_cast<float>(2 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     2 * (ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 0)) + 1 - bin_1_lower) /
+                      bin_1_width * bin_1_count);
 
-  EXPECT_FLOAT_EQ(
-      histogram.estimate_cardinality(PredicateCondition::LessThan, "dddd"),
-      (3 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
-       1 + 3 * (ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 0)) + 1 - bin_1_lower) /
-          bin_1_width * bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "dddd"),
+                  static_cast<float>(3 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     3 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     3 * (ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 0)) + 1 - bin_1_lower) /
+                      bin_1_width * bin_1_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "efgg"),
                   (bin_1_width - 2) / bin_1_width * bin_1_count);
@@ -252,24 +252,24 @@ TEST_F(GenericHistogramTest, StringLessThan) {
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ijkn"),
                   2 / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_FLOAT_EQ(
-      histogram.estimate_cardinality(PredicateCondition::LessThan, "jjjj"),
-      (9 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
-       1 + 9 * (ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 0)) + 1 - bin_2_lower) /
-              bin_2_width * bin_2_count +
-          bin_1_count);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "jjjj"),
+                  static_cast<float>(9 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     9 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     9 * (ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 0)) + 1 - bin_2_lower) /
+                          bin_2_width * bin_2_count +
+                      bin_1_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "kkkk"),
-                  (10 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   10 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 10 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   10 * (ipow(26, 0)) + 1 - bin_2_lower) /
+                  static_cast<float>(10 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     10 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     10 * (ipow(26, 1) + ipow(26, 0)) + 1 + 10 * (ipow(26, 0)) + 1 - bin_2_lower) /
                           bin_2_width * bin_2_count +
                       bin_1_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "lzzz"),
-                  (11 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   25 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 25 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   25 * (ipow(26, 0)) + 1 - bin_2_lower) /
+                  static_cast<float>(11 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     25 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     25 * (ipow(26, 1) + ipow(26, 0)) + 1 + 25 * (ipow(26, 0)) + 1 - bin_2_lower) /
                           bin_2_width * bin_2_count +
                       bin_1_count);
 
@@ -288,23 +288,23 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                   2 / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "pppp"),
-                  (15 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   15 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 15 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   15 * (ipow(26, 0)) + 1 - bin_3_lower) /
+                  static_cast<float>(15 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     15 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     15 * (ipow(26, 1) + ipow(26, 0)) + 1 + 15 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qqqq"),
-                  (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   16 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 16 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   16 * (ipow(26, 0)) + 1 - bin_3_lower) /
+                  static_cast<float>(16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     16 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     16 * (ipow(26, 1) + ipow(26, 0)) + 1 + 16 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "qllo"),
-                  (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   11 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 11 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   14 * (ipow(26, 0)) + 1 - bin_3_lower) /
+                  static_cast<float>(16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     11 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     11 * (ipow(26, 1) + ipow(26, 0)) + 1 + 14 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
@@ -327,23 +327,23 @@ TEST_F(GenericHistogramTest, StringLessThan) {
                   2 / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "vvvv"),
-                  (21 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   21 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 21 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   21 * (ipow(26, 0)) + 1 - bin_4_lower) /
+                  static_cast<float>(21 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     21 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     21 * (ipow(26, 1) + ipow(26, 0)) + 1 + 21 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "xxxx"),
-                  (23 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   23 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 23 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   23 * (ipow(26, 0)) + 1 - bin_4_lower) /
+                  static_cast<float>(23 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     23 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     23 * (ipow(26, 1) + ipow(26, 0)) + 1 + 23 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
   EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::LessThan, "ycip"),
-                  (24 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
-                   2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 8 * (ipow(26, 1) + ipow(26, 0)) + 1 +
-                   15 * (ipow(26, 0)) + 1 - bin_4_lower) /
+                  static_cast<float>(24 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
+                                     8 * (ipow(26, 1) + ipow(26, 0)) + 1 + 15 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 

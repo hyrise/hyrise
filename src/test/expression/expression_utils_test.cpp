@@ -14,17 +14,17 @@ class ExpressionUtilsTest : public BaseTest {
   void SetUp() override {
     node_a =
         MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
-    a_a = LQPColumnReference{node_a, ColumnID{0}};
-    a_b = LQPColumnReference{node_a, ColumnID{1}};
-    a_c = LQPColumnReference{node_a, ColumnID{2}};
+    a_a = node_a->get_column("a");
+    a_b = node_a->get_column("b");
+    a_c = node_a->get_column("c");
 
     node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}}});
-    b_a = LQPColumnReference{node_b, ColumnID{0}};
-    b_b = LQPColumnReference{node_b, ColumnID{1}};
+    b_a = node_b->get_column("a");
+    b_b = node_b->get_column("b");
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, a_c, b_a, b_b;
 };
 
 TEST_F(ExpressionUtilsTest, ExpressionFlattenAndInflate) {
@@ -49,58 +49,56 @@ TEST_F(ExpressionUtilsTest, ExpressionEvaluableOnLQPSimple) {
   // clang-format on
 
   // Expressions that are already available as columns
-  EXPECT_TRUE(expression_evaluable_on_lqp(lqp_column_(a_a), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(lqp_column_(a_b), *input_lqp));
-  EXPECT_FALSE(expression_evaluable_on_lqp(lqp_column_(b_a), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(a_a, *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(a_b, *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(b_a, *input_lqp));
 
   // Expressions that can be computed using a projection
-  EXPECT_TRUE(expression_evaluable_on_lqp(add_(lqp_column_(a_a), 1), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(add_(lqp_column_(a_b), lqp_column_(a_c)), *input_lqp));
-  EXPECT_FALSE(expression_evaluable_on_lqp(add_(lqp_column_(b_a), lqp_column_(a_a)), *input_lqp));
-  EXPECT_FALSE(expression_evaluable_on_lqp(mul_(lqp_column_(b_a), 2), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(add_(a_a, 1), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(add_(a_b, a_c), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(add_(b_a, a_a), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(mul_(b_a, 2), *input_lqp));
 
   // Expressions that can be computed using an aggregate
-  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(lqp_column_(a_c)), *input_lqp));
-  EXPECT_FALSE(expression_evaluable_on_lqp(sum_(lqp_column_(b_a)), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(a_c), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(sum_(b_a), *input_lqp));
 
   // COUNT(*) is always evaluable if the original node is present
-  EXPECT_TRUE(
-      expression_evaluable_on_lqp(count_(lqp_column_(LQPColumnReference{node_a, INVALID_COLUMN_ID})), *input_lqp));
-  EXPECT_FALSE(
-      expression_evaluable_on_lqp(count_(lqp_column_(LQPColumnReference{node_b, INVALID_COLUMN_ID})), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(count_(lqp_column_(node_a, INVALID_COLUMN_ID)), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(count_(lqp_column_(node_b, INVALID_COLUMN_ID)), *input_lqp));
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionEvaluableOnLQPAggregate) {
   // SELECT b, SUM(c) FROM a WHERE a = 1
   // clang-format off
   const auto input_lqp =
-  AggregateNode::make(expression_vector(lqp_column_(a_b)), expression_vector(sum_(lqp_column_(a_c))),
+  AggregateNode::make(expression_vector(a_b), expression_vector(sum_(a_c)),
     PredicateNode::make(equals_(a_a, 1),
       node_a));
   // clang-format on
 
-  EXPECT_FALSE(expression_evaluable_on_lqp(lqp_column_(a_a), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(lqp_column_(a_b), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(lqp_column_(a_c)), *input_lqp));
-  EXPECT_FALSE(expression_evaluable_on_lqp(sum_(lqp_column_(a_a)), *input_lqp));
-  EXPECT_FALSE(expression_evaluable_on_lqp(lqp_column_(b_a), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(a_a, *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(a_b, *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(a_c), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(sum_(a_a), *input_lqp));
+  EXPECT_FALSE(expression_evaluable_on_lqp(b_a, *input_lqp));
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionEvaluableOnJoin) {
   // SELECT * FROM a, b WHERE a.a = b.a AND a.a = 1
   // clang-format off
   const auto input_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(lqp_column_(a_a), lqp_column_(b_a)),
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
     PredicateNode::make(equals_(a_a, 1),
       node_a),
     node_b);
   // clang-format on
 
-  EXPECT_TRUE(expression_evaluable_on_lqp(lqp_column_(a_a), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(lqp_column_(b_a), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(add_(lqp_column_(a_c), lqp_column_(b_b)), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(lqp_column_(a_c)), *input_lqp));
-  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(add_(lqp_column_(a_c), lqp_column_(b_b))), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(a_a, *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(b_a, *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(add_(a_c, b_b), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(a_c), *input_lqp));
+  EXPECT_TRUE(expression_evaluable_on_lqp(sum_(add_(a_c, b_b)), *input_lqp));
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionDeepReplace) {
@@ -109,8 +107,7 @@ TEST_F(ExpressionUtilsTest, ExpressionDeepReplace) {
       and_(and_(greater_than_(a_a, 5), less_than_(a_a, 6)), equals_(a_c, 7));
 
   // replace a with b; 7 with 8
-  const auto mapping = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{{lqp_column_(a_a), lqp_column_(a_b)},
-                                                                                   {value_(7), value_(8)}};
+  const auto mapping = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{{a_a, a_b}, {value_(7), value_(8)}};
 
   expression_deep_replace(expression, mapping);
 
@@ -134,7 +131,7 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsPlaceholders) {
   EXPECT_FALSE(expression_contains_placeholder(and_(greater_than_(a_a, 5), equals_(a_c, 7))));
   EXPECT_TRUE(expression_contains_placeholder(and_(greater_than_(a_a, placeholder_(ParameterID{5})), equals_(a_c, 7))));
   EXPECT_FALSE(expression_contains_placeholder(
-      and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, lqp_column_(a_a))), equals_(a_c, 7))));
+      and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, a_a)), equals_(a_c, 7))));
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
@@ -142,7 +139,7 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
   EXPECT_FALSE(expression_contains_correlated_parameter(
       and_(greater_than_(a_a, placeholder_(ParameterID{5})), equals_(a_c, 7))));
   EXPECT_TRUE(expression_contains_correlated_parameter(
-      and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, lqp_column_(a_a))), equals_(a_c, 7))));
+      and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, a_a)), equals_(a_c, 7))));
 }
 
 }  // namespace opossum

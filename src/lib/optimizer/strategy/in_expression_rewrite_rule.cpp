@@ -50,7 +50,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
 
   // Create a join node
   const auto static_table_node = std::make_shared<StaticTableNode>(list_as_table);
-  const auto right_column = std::make_shared<LQPColumnExpression>(LQPColumnReference{static_table_node, ColumnID{0}});
+  const auto right_column = std::make_shared<LQPColumnExpression>(static_table_node, ColumnID{0});
   const auto join_predicate =
       std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_column);
   const auto join_mode = is_negated ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
@@ -83,7 +83,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
   // Create a PredicateNode for the first value. Then, successively hook up additional PredicateNodes using UnionNodes.
   std::shared_ptr<AbstractLQPNode> last_node = predicate_nodes[0];
   for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes.size(); ++predicate_node_idx) {
-    last_node = UnionNode::make(UnionMode::All, last_node, predicate_nodes[predicate_node_idx]);
+    last_node = UnionNode::make(SetOperationMode::All, last_node, predicate_nodes[predicate_node_idx]);
   }
 
   // Attach the final UnionNode (or PredicateNode if only one) to the original plan. As this replaces the original

@@ -86,7 +86,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -108,7 +108,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_transaction_context(context).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -122,7 +122,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context
   EXPECT_NO_THROW(
@@ -430,11 +430,11 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   const auto sql =
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
       "UPDATE table_a SET a = 1 WHERE a = 1234";
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
 
   const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(tables.size(), 0);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
   EXPECT_TRUE(transaction_context->aborted());
@@ -466,7 +466,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(tables.size(), 1);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
 

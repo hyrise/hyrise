@@ -50,7 +50,7 @@ bool reduce_group_by_columns_for_constraint(const TableConstraintDefinition& tab
       continue;
     }
 
-    // Remove node expression if it is a column reference and references the given stored table node.
+    // Remove node expression if it is a LQPColumnExpression and references the given stored table node.
     // Further, decrement the aggregate's index which denotes the end of group-by expressions.
     aggregate_node.node_expressions.erase(
         std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
@@ -58,11 +58,11 @@ bool reduce_group_by_columns_for_constraint(const TableConstraintDefinition& tab
                          const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
                          if (!column_expression) return false;
 
-                         const auto& expression_stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(
-                             column_expression->column_reference.original_node());
+                         const auto& expression_stored_table_node =
+                             std::dynamic_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
                          if (!expression_stored_table_node) return false;
 
-                         const auto column_id = column_expression->column_reference.original_column_id();
+                         const auto column_id = column_expression->original_column_id;
                          if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
                            // Adjust the number of group by expressions.
                            --aggregate_node.aggregate_expressions_begin_idx;
@@ -74,7 +74,7 @@ bool reduce_group_by_columns_for_constraint(const TableConstraintDefinition& tab
         aggregate_node.node_expressions.end());
 
     // Add the ANY() aggregate to the list of aggregate columns.
-    const auto aggregate_any_expression = any_(lqp_column_({stored_table_node, group_by_column}));
+    const auto aggregate_any_expression = any_(lqp_column_(stored_table_node, group_by_column));
     aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
   }
 
@@ -114,11 +114,11 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       }
 
       const auto& stored_table_node =
-          std::dynamic_pointer_cast<const StoredTableNode>(column_expression->column_reference.original_node());
+          std::dynamic_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
       // If column is not a physical column skip
       if (!stored_table_node) continue;
 
-      const auto column_id = column_expression->column_reference.original_column_id();
+      const auto column_id = column_expression->original_column_id;
       group_by_columns_per_table[stored_table_node].insert(column_id);
     }
 
@@ -167,7 +167,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // In case the initial query plan root returned the same columns in the same column order and was not a projection,
     // it is likely that the result of the current aggregate was either the root itself or only operators followed that
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
-    // by adding a projection with the initial column_references since we changed the column order by moving columns
+    // by adding a projection with the initial column expressions since we changed the column order by moving columns
     // from the group-by list to the aggregations.
     if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
         lqp->type != LQPNodeType::Projection) {

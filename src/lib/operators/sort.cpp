@@ -8,9 +8,9 @@ using namespace opossum;  // NOLINT
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
-std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Table>& unsorted_table,
-                                                const RowIDPosList& pos_list, const ChunkOffset output_chunk_size) {
-  // First we create a new table as the output
+std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<const Table>& unsorted_table,
+                                                       RowIDPosList pos_list, const ChunkOffset output_chunk_size) {
+  // First, we create a new table as the output
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
 
@@ -41,8 +41,11 @@ std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Tabl
       auto value_segment_value_vector = pmr_vector<ColumnDataType>();
       auto value_segment_null_vector = pmr_vector<bool>();
 
-      value_segment_value_vector.reserve(output_chunk_size);
-      value_segment_null_vector.reserve(output_chunk_size);
+      {
+        const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
+        value_segment_value_vector.reserve(next_chunk_size);
+        value_segment_null_vector.reserve(next_chunk_size);
+      }
 
       auto accessor_by_chunk_id =
           std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
@@ -51,7 +54,7 @@ std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Tabl
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(base_segment);
       }
 
-      for (auto row_index = 0u; row_index < row_count; ++row_index) {
+      for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
         const auto [chunk_id, chunk_offset] = pos_list[row_index];
 
         auto& accessor = accessor_by_chunk_id[chunk_id];
@@ -71,8 +74,10 @@ std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Tabl
           value_segment_value_vector = pmr_vector<ColumnDataType>();
           value_segment_null_vector = pmr_vector<bool>();
 
-          value_segment_value_vector.reserve(output_chunk_size);
-          value_segment_null_vector.reserve(output_chunk_size);
+          const auto next_chunk_size =
+              std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
+          value_segment_value_vector.reserve(next_chunk_size);
+          value_segment_null_vector.reserve(next_chunk_size);
 
           ++chunk_it;
         }
@@ -94,15 +99,118 @@ std::shared_ptr<Table> materialize_output_table(const std::shared_ptr<const Tabl
   return output;
 }
 
+// Given an unsorted_table and an input_pos_list that defines the output order, this writes the output table as a
+// reference table. This is usually faster, but can only be done if a single column in the input table does not
+// reference multiple tables. An example where this restriction applies is the sorted result of a union between two
+// tables. The restriction is needed because a ReferenceSegment can only reference a single table. It does, however,
+// not necessarily apply to joined tables, so two tables referenced in different columns is fine.
+//
+// If unsorted_table is of TableType::Data, this is trivial and the input_pos_list is used to create the output
+// reference table. If the input is already a reference table, the double indirection needs to be resolved.
+std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const Table>& unsorted_table,
+                                                    RowIDPosList input_pos_list, const ChunkOffset output_chunk_size) {
+  // First we create a new table as the output
+  // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
+  auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
+
+  const auto resolve_indirection = unsorted_table->type() == TableType::References;
+  const auto column_count = output_table->column_count();
+
+  // Ceiling of integer division
+  const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
+  const auto output_chunk_count = div_ceil(input_pos_list.size(), output_chunk_size);
+  Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
+
+  // Vector of segments for each chunk
+  auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
+
+  if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
+    // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.
+    const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list));
+    auto& output_segments = output_segments_by_chunk.at(0);
+    for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+      output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
+    }
+  } else {
+    for (ColumnID column_id{0u}; column_id < column_count; ++column_id) {
+      // To keep the implementation simple, we write the output ReferenceSegments column by column. This means that even
+      // if input ReferenceSegments share a PosList, the output will contain independent PosLists. While this is
+      // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
+      // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
+      // is acceptable. In the future, this could be improved.
+      auto output_pos_list = std::make_shared<RowIDPosList>();
+      output_pos_list->reserve(output_chunk_size);
+
+      // Collect all input segments for the current column
+      const auto input_chunk_count = unsorted_table->chunk_count();
+      auto input_segments = std::vector<std::shared_ptr<BaseSegment>>(input_chunk_count);
+      for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
+        input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
+      }
+
+      const auto first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(input_segments.at(0));
+      const auto referenced_table = resolve_indirection ? first_reference_segment->referenced_table() : unsorted_table;
+      const auto referenced_column_id =
+          resolve_indirection ? first_reference_segment->referenced_column_id() : column_id;
+
+      // write_output_pos_list creates an output reference segment for a given ChunkID, ColumnID and PosList.
+      auto output_chunk_id = ChunkID{0};
+      const auto write_output_pos_list = [&] {
+        DebugAssert(!output_pos_list->empty(), "Asked to write empty output_pos_list");
+        output_segments_by_chunk.at(output_chunk_id)[column_id] =
+            std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
+        ++output_chunk_id;
+
+        output_pos_list = std::make_shared<RowIDPosList>();
+        if (output_chunk_id < output_chunk_count) {
+          output_pos_list->reserve(output_chunk_size);
+        }
+      };
+
+      // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
+      // `output_chunk_size` rows.
+      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list.size();
+           ++input_pos_list_offset) {
+        const auto& row_id = input_pos_list[input_pos_list_offset];
+        if (resolve_indirection) {
+          const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
+          DebugAssert(input_reference_segment.referenced_table() == referenced_table,
+                      "Input column references more than one table");
+          DebugAssert(input_reference_segment.referenced_column_id() == referenced_column_id,
+                      "Input column references more than one column");
+          const auto& input_reference_pos_list = input_reference_segment.pos_list();
+          output_pos_list->emplace_back((*input_reference_pos_list)[row_id.chunk_offset]);
+        } else {
+          output_pos_list->emplace_back(row_id);
+        }
+
+        if (output_pos_list->size() == output_chunk_size) {
+          write_output_pos_list();
+        }
+      }
+      if (!output_pos_list->empty()) {
+        write_output_pos_list();
+      }
+    }
+  }
+
+  for (auto& segments : output_segments_by_chunk) {
+    output_table->append_chunk(segments);
+  }
+
+  return output_table;
+}
+
 }  // namespace
 
 namespace opossum {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-           const ChunkOffset output_chunk_size)
+           const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _sort_definitions(sort_definitions),
-      _output_chunk_size(output_chunk_size) {
+      _output_chunk_size(output_chunk_size),
+      _force_materialization(force_materialization) {
   DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
 }
 
@@ -116,17 +224,26 @@ const std::string& Sort::name() const {
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Sort>(copied_input_left, _sort_definitions, _output_chunk_size);
+  return std::make_shared<Sort>(copied_input_left, _sort_definitions, _output_chunk_size, _force_materialization);
 }
 
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   const auto& input_table = input_table_left();
+
   for (const auto& column_sort_definition : _sort_definitions) {
     Assert(column_sort_definition.column != INVALID_COLUMN_ID, "Sort: Invalid column in sort definition");
     Assert(column_sort_definition.column < input_table->column_count(),
            "Sort: Column ID is greater than table's column count");
+  }
+
+  if (input_table->row_count() == 0) {
+    if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
+      return Table::create_dummy_table(input_table->column_definitions());
+    } else {
+      return input_table;
+    }
   }
 
   std::shared_ptr<Table> sorted_table;
@@ -137,8 +254,6 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   auto previously_sorted_pos_list = std::optional<RowIDPosList>{};
 
   for (auto sort_step = static_cast<int64_t>(_sort_definitions.size() - 1); sort_step >= 0; --sort_step) {
-    const bool is_last_sorting_step = (sort_step == 0);
-
     const auto& sort_definition = _sort_definitions[sort_step];
     const auto data_type = input_table->column_data_type(sort_definition.column);
 
@@ -147,22 +262,56 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 
       auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.order_by_mode);
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
-
-      if (is_last_sorting_step) {
-        // This is inside the for loop so that we do not have to resolve the type again
-        sorted_table = materialize_output_table(input_table, *previously_sorted_pos_list, _output_chunk_size);
-      }
     });
+  }
+
+  // We have to materialize the output (i.e., write ValueSegments) if
+  //  (a) it is requested by the user,
+  //  (b) a column in the table references multiple tables (see write_reference_output_table for details), or
+  //  (c) a column in the table references multiple columns in the same table (which is an unlikely edge case).
+  // Cases (b) and (c) can only occur if there is more than one ReferenceSegment in an input chunk.
+  auto must_materialize = _force_materialization == ForceMaterialization::Yes;
+  const auto input_chunk_count = input_table->chunk_count();
+  if (!must_materialize && input_table->type() == TableType::References && input_chunk_count > 1) {
+    const auto input_column_count = input_table->column_count();
+
+    for (auto input_column_id = ColumnID{0}; input_column_id < input_column_count; ++input_column_id) {
+      const auto& first_segment = input_table->get_chunk(ChunkID{0})->get_segment(input_column_id);
+      const auto& first_reference_segment = static_cast<ReferenceSegment&>(*first_segment);
+
+      const auto& common_referenced_table = first_reference_segment.referenced_table();
+      const auto& common_referenced_column_id = first_reference_segment.referenced_column_id();
+
+      for (auto input_chunk_id = ChunkID{1}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
+        const auto& segment = input_table->get_chunk(input_chunk_id)->get_segment(input_column_id);
+        const auto& referenced_table = static_cast<ReferenceSegment&>(*segment).referenced_table();
+        const auto& referenced_column_id = static_cast<ReferenceSegment&>(*segment).referenced_column_id();
+
+        if (common_referenced_table != referenced_table || common_referenced_column_id != referenced_column_id) {
+          must_materialize = true;
+          break;
+        }
+      }
+      if (must_materialize) break;
+    }
+  }
+
+  if (must_materialize) {
+    sorted_table =
+        write_materialized_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
+  } else {
+    sorted_table =
+        write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
   }
 
   auto final_sort_definition = _sort_definitions[0];
   // Set the ordered_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
-  const auto chunk_count = sorted_table->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& chunk = sorted_table->get_chunk(chunk_id);
-    chunk->finalize();
-    chunk->set_ordered_by(std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
+  const auto output_chunk_count = sorted_table->chunk_count();
+  for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
+    const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
+    output_chunk->finalize();
+    output_chunk->set_ordered_by(std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
   }
   return sorted_table;
 }

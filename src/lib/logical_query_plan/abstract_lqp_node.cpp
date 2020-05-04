@@ -59,9 +59,8 @@ AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
     : type(node_type), node_expressions(init_node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
-  Assert(
-      _outputs.empty(),
-      "Bug detected. There are outputs that should still reference to this node. Thus this node shouldn't get deleted");
+  Assert(_outputs.empty(),
+         "There are outputs that should still reference this node. Thus this node shouldn't get deleted");
 
   // We're in the destructor, thus we must make sure we're not calling any virtual methods - so we're doing the removal
   // directly instead of calling set_input_left/right(nullptr)
@@ -105,14 +104,16 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
   DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
-                  type == LQPNodeType::Update || type == LQPNodeType::ChangeMetaTable,
+                  type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
+                  type == LQPNodeType::ChangeMetaTable,
               "This node type does not accept a right input");
   set_input(LQPInputSide::Right, right);
 }
 
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
   DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
-                  type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::ChangeMetaTable,
+                  type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::Intersect ||
+                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable,
               "This node type does not accept a right input");
 
   // We need a reference to _inputs[input_idx], so not calling this->input(side)

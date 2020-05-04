@@ -83,7 +83,7 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
   }
 
   // Step 1: Insert initial diamond
-  auto top_union_node = UnionNode::make(UnionMode::Positions);
+  auto top_union_node = UnionNode::make(SetOperationMode::Positions);
   const auto diamond_bottom = predicate_node->left_input();
   lqp_replace_node(predicate_node, top_union_node);
   {
@@ -103,7 +103,7 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
   auto previous_union_node = top_union_node;
   for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {
     const auto& predicate_expression = flat_disjunction[disjunction_idx];
-    const auto new_union_node = UnionNode::make(UnionMode::Positions);
+    const auto new_union_node = UnionNode::make(SetOperationMode::Positions);
     lqp_insert_node(previous_union_node, LQPInputSide::Right, new_union_node);
 
     const auto new_predicate_node = PredicateNode::make(predicate_expression, diamond_bottom);

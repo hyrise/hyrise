@@ -39,10 +39,10 @@ class LogicalQueryPlanTest : public BaseTest {
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
     _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
 
-    _t_a_a = LQPColumnReference{_mock_node_a, ColumnID{0}};
-    _t_a_b = LQPColumnReference{_mock_node_a, ColumnID{1}};
-    _t_b_a = LQPColumnReference{_mock_node_b, ColumnID{0}};
-    _t_b_b = LQPColumnReference{_mock_node_b, ColumnID{1}};
+    _t_a_a = _mock_node_a->get_column("a");
+    _t_a_b = _mock_node_a->get_column("b");
+    _t_b_a = _mock_node_b->get_column("a");
+    _t_b_b = _mock_node_b->get_column("b");
 
     _predicate_node_a = PredicateNode::make(equals_(_t_a_a, 42));
     _predicate_node_b = PredicateNode::make(equals_(_t_a_b, 1337));
@@ -68,7 +68,7 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[7] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
     _nodes[0] = JoinNode::make(JoinMode::Cross);
     _nodes[1] = JoinNode::make(JoinMode::Cross);
-    _nodes[2] = PredicateNode::make(equals_(LQPColumnReference{_nodes[6], ColumnID{0}}, 42));
+    _nodes[2] = PredicateNode::make(equals_(lqp_column_(_nodes[6], ColumnID{0}), 42));
     _nodes[3] = JoinNode::make(JoinMode::Cross);
     _nodes[4] = JoinNode::make(JoinMode::Cross);
     _nodes[5] = JoinNode::make(JoinMode::Cross);
@@ -88,8 +88,8 @@ class LogicalQueryPlanTest : public BaseTest {
 
   std::shared_ptr<Table> table_int_int;
   std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
-  LQPColumnReference a1, b1;
-  LQPColumnReference a2, b2, c2;
+  std::shared_ptr<LQPColumnExpression> a1, b1;
+  std::shared_ptr<LQPColumnExpression> a2, b2, c2;
 
   std::array<std::shared_ptr<AbstractLQPNode>, 8> _nodes;
 
@@ -100,19 +100,19 @@ class LogicalQueryPlanTest : public BaseTest {
   std::shared_ptr<ProjectionNode> _projection_node;
   std::shared_ptr<JoinNode> _join_node;
 
-  LQPColumnReference _t_a_a;
-  LQPColumnReference _t_a_b;
-  LQPColumnReference _t_b_a;
-  LQPColumnReference _t_b_b;
+  std::shared_ptr<LQPColumnExpression> _t_a_a;
+  std::shared_ptr<LQPColumnExpression> _t_a_b;
+  std::shared_ptr<LQPColumnExpression> _t_b_a;
+  std::shared_ptr<LQPColumnExpression> _t_b_b;
 };
 
 TEST_F(LogicalQueryPlanTest, LQPColumnExpressionHash) {
   const auto node_int_int_1 = StoredTableNode::make("int_int");
   const auto node_int_int_2 = StoredTableNode::make("int_int");
 
-  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_1, ColumnID{0}});
-  const auto expression_a_1 = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_1, ColumnID{0}});
-  const auto expression_a_2 = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_2, ColumnID{0}});
+  const auto expression_a = std::make_shared<LQPColumnExpression>(node_int_int_1, ColumnID{0});
+  const auto expression_a_1 = std::make_shared<LQPColumnExpression>(node_int_int_1, ColumnID{0});
+  const auto expression_a_2 = std::make_shared<LQPColumnExpression>(node_int_int_2, ColumnID{0});
 
   EXPECT_EQ(expression_a->hash(), expression_a_1->hash());
   EXPECT_EQ(expression_a->hash(), expression_a_2->hash());
@@ -245,7 +245,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = UnionNode::make(UnionMode::Positions);
+  auto new_node = UnionNode::make(SetOperationMode::Positions);
 
   lqp_replace_node(_nodes[5], new_node);
 
@@ -307,8 +307,8 @@ TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
-  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{0}});
-  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{1}});
+  const auto expression_a = std::make_shared<LQPColumnExpression>(node_int_int, ColumnID{0});
+  const auto expression_b = std::make_shared<LQPColumnExpression>(node_int_int, ColumnID{1});
 
   const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
   const auto lqp = projection_node;
@@ -330,8 +330,8 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   const auto copied_expression_b =
       std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->node_expressions.at(1));
 
-  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
-  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
+  EXPECT_EQ(copied_expression_a->original_node.lock(), copied_node_int_int);
+  EXPECT_EQ(copied_expression_b->original_node.lock(), copied_node_int_int);
 }
 
 TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
@@ -339,7 +339,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   const auto lqp =
   PredicateNode::make(greater_than_(a1, 5),
     JoinNode::make(JoinMode::Inner, equals_(a1, a2),
-      UnionNode::make(UnionMode::Positions,
+      UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(equals_(a1, 5), node_int_int),
         PredicateNode::make(equals_(a1, 6), node_int_int)),
     node_int_int_int));
@@ -352,7 +352,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
 
   EXPECT_EQ(cleaned_str, R"([0] [Predicate] 0x00000000.a > 5 @ 0x00000000
  \_[1] [Join] Mode: Inner [0x00000000.a = 0x00000000.a] @ 0x00000000
-    \_[2] [UnionNode] Mode: UnionPositions @ 0x00000000
+    \_[2] [UnionNode] Mode: Positions @ 0x00000000
     |  \_[3] [Predicate] 0x00000000.a = 5 @ 0x00000000
     |  |  \_[4] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s) @ 0x00000000
     |  \_[5] [Predicate] 0x00000000.a = 6 @ 0x00000000
