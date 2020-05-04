@@ -251,8 +251,15 @@ int main() {
         Assert(encoding_id < CHUNK_ENCODINGS.size(), 
           "Undefined encoding specified in configuration file");
 
-        ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
+        const auto encoded_segment = ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
+        sorted_single_chunk_table->get_chunk(ChunkID{0})->replace_segment(column_id, encoded_segment);
 
+        const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(encoded_segment);
+        std::cout << unencoded_segment << std::endl;
+        const auto en_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(encoded_segment);
+        if (en_segment) {
+          std::cout << "Should be: " << encoding << "Found: " << en_segment->encoding_type() << std::endl;
+        }
         //Store index columns 
 
         const auto index_conf = static_cast<uint16_t>(std::stoi(conf[conf_line_count][4]));
