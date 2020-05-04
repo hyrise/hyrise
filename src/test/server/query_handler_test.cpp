@@ -42,7 +42,9 @@ TEST_F(QueryHandlerTest, BindParameters) {
   const auto get_table = std::dynamic_pointer_cast<const GetTable>(bound_plan->input_left()->input_left());
   ASSERT_TRUE(get_table);
 
-  // Check that the optimizer was executed
+  // Check that the optimizer was executed. We cannot distinguish an optimized PQP from an unoptimized PQP, so we check
+  // whether the chunk pruning information was set in the GetTable operator. That would have been done by the
+  // ChunkPruningRule, which could not have been successful before the bound value (12345) was known.
   ASSERT_FALSE(get_table->pruned_chunk_ids().empty());
 }
 
