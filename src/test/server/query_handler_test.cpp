@@ -36,10 +36,10 @@ TEST_F(QueryHandlerTest, BindParameters) {
   QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a = ?");
   const auto specification = PreparedStatementDetails{"test_statement", "", {12345}};
 
-  const auto result = QueryHandler::bind_prepared_plan(specification);
-  EXPECT_EQ(result->type(), OperatorType::Validate);
+  const auto bound_plan = QueryHandler::bind_prepared_plan(specification);
+  EXPECT_EQ(bound_plan->type(), OperatorType::Validate);
 
-  const auto get_table = std::dynamic_pointer_cast<const GetTable>(result->input_left()->input_left());
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(bound_plan->input_left()->input_left());
   ASSERT_TRUE(get_table);
 
   // Check that the optimizer was executed
