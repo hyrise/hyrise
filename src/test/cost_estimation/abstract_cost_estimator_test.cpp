@@ -40,7 +40,7 @@ class AbstractCostEstimatorTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a;
-  LQPColumnReference a_a;
+  std::shared_ptr<LQPColumnExpression> a_a;
 };
 
 TEST_F(AbstractCostEstimatorTest, DiamondShape) {

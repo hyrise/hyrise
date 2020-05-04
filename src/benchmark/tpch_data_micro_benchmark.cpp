@@ -123,8 +123,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<BinaryPredicateExpression> _tpchq6_quantity_predicate;
 
   std::shared_ptr<StoredTableNode> _orders_table_node, _lineitem_table_node;
-  LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
-  LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
+  std::shared_ptr<LQPColumnExpression> _orders_orderpriority, _orders_orderdate, _orders_orderkey;
+  std::shared_ptr<LQPColumnExpression> _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {

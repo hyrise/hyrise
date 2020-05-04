@@ -33,7 +33,7 @@ class JoinGraphBuilderTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b, b_c, c_a;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, a_c, b_a, b_b, b_c, c_a;
 };
 
 TEST_F(JoinGraphBuilderTest, None) {
