@@ -109,12 +109,37 @@ std::shared_ptr<const Table> Print::_on_execute() {
         const auto& segment = chunk->get_segment(column_id);
         _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
       }
+
+      _out << "|" << std::endl;
+      // print index information
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+        const auto column_width = widths[column_id];
+        const auto& index = chunk->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{column_id});
+        if (index){
+          _out << "|" << std::setw(column_width) << std::left << "GroupKey" << std::right << std::setw(0);
+        } else {
+          _out << "|" << std::setw(column_width) << std::left << "" << std::right << std::setw(0);
+        }
+      }
+
+      _out << "|" << std::endl;
+      // print sorting Information
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+        const auto column_width = widths[column_id];
+        const auto sort = chunk->ordered_by();
+        if (sort && sort->first == column_id){
+          _out << "|" << std::setw(column_width) << std::left << "X" << std::right << std::setw(0);
+        } else {
+          _out << "|" << std::setw(column_width) << std::left << "" << std::right << std::setw(0);
+        }
+      }
+      
       if (has_print_mvcc_flag(_flags)) _out << "|";
       _out << "|" << std::endl;
     }
 
     // print the rows in the chunk
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+    /*for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       _out << "|";
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
@@ -141,7 +166,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
         _out << "|";
       }
       _out << std::endl;
-    }
+    }*/
   }
 
   return input_table_left();
