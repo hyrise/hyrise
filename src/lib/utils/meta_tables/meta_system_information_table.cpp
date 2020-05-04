@@ -75,7 +75,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
       }
     }
   } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo");
+    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
   }
 
   Fail("Could not read CPU model.");
