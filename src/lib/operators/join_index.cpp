@@ -19,6 +19,7 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
