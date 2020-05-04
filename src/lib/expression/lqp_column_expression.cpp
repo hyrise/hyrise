@@ -36,25 +36,30 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
     return output.str();
   }
 
-  if (original_node_locked->type == LQPNodeType::StoredTable) {
-    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
-    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-    output << table->column_name(original_column_id);
-    return output.str();
+  switch (original_node_locked->type) {
+    case LQPNodeType::StoredTable: {
+      const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
+      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      output << table->column_name(original_column_id);
+      return output.str();
+    }
 
-  } else if (original_node_locked->type == LQPNodeType::Mock) {
-    const auto mock_node = std::static_pointer_cast<const MockNode>(original_node_locked);
-    Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range");
-    output << mock_node->column_definitions()[original_column_id].second;
-    return output.str();
+    case LQPNodeType::Mock: {
+      const auto mock_node = std::static_pointer_cast<const MockNode>(original_node_locked);
+      Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range");
+      output << mock_node->column_definitions()[original_column_id].second;
+      return output.str();
+    }
 
-  } else if (original_node_locked->type == LQPNodeType::StaticTable) {
-    const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(original_node_locked);
-    output << static_table_node->table->column_name(original_column_id);
-    return output.str();
+    case LQPNodeType::StaticTable: {
+      const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(original_node_locked);
+      output << static_table_node->table->column_name(original_column_id);
+      return output.str();
+    }
 
-  } else {
-    Fail("Node type can not be referenced in LQPColumnExpressions");
+    default: {
+      Fail("Node type can not be referenced in LQPColumnExpressions");
+    }
   }
 }
 
@@ -65,22 +70,29 @@ DataType LQPColumnExpression::data_type() const {
   if (original_column_id == INVALID_COLUMN_ID) {
     // Handle COUNT(*). Note: This is the input data type.
     return DataType::Long;
-  } else if (original_node_locked->type == LQPNodeType::StoredTable) {
-    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
-    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-    return table->column_data_type(original_column_id);
+  }
 
-  } else if (original_node_locked->type == LQPNodeType::Mock) {
-    const auto mock_node = std::static_pointer_cast<const MockNode>(original_node_locked);
-    Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range");
-    return mock_node->column_definitions()[original_column_id].first;
+  switch (original_node_locked->type) {
+    case LQPNodeType::StoredTable: {
+      const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
+      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      return table->column_data_type(original_column_id);
+    }
 
-  } else if (original_node_locked->type == LQPNodeType::StaticTable) {
-    const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(original_node_locked);
-    return static_table_node->table->column_data_type(original_column_id);
+    case LQPNodeType::Mock: {
+      const auto mock_node = std::static_pointer_cast<const MockNode>(original_node_locked);
+      Assert(original_column_id < mock_node->column_definitions().size(), "ColumnID out of range");
+      return mock_node->column_definitions()[original_column_id].first;
+    }
 
-  } else {
-    Fail("Node type can not be referenced in LQPColumnExpressions");
+    case LQPNodeType::StaticTable: {
+      const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(original_node_locked);
+      return static_table_node->table->column_data_type(original_column_id);
+    }
+
+    default: {
+      Fail("Node type can not be referenced in LQPColumnExpressions");
+    }
   }
 }
 
