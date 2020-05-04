@@ -16,6 +16,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -149,17 +150,19 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       }
     } break;
 
-    // Set Operations always require all columns of the left and right input node
-    case LQPNodeType::Union:
+    case LQPNodeType::Union: {
+      const auto& union_node = static_cast<const UnionNode&>(*node);
+      Assert(union_node.set_operation_mode == SetOperationMode::Positions,
+             "Currently, ColumnPruningRule can only handle UnionNodes in Positions mode");
+      // UnionNode does not require any expressions itself for the Positions mode. Once we add actual unions from two
+      // tables, we will probably have to change something here in this rule that the required expressions are kept on
+      // both the left and right sides.
+    } break;
+
     case LQPNodeType::Intersect:
     case LQPNodeType::Except: {
-      for (const auto& expression : node->left_input()->column_expressions()) {
-        locally_required_expressions.emplace(expression);
-      }
-
-      for (const auto& expression : node->right_input()->column_expressions()) {
-        locally_required_expressions.emplace(expression);
-      }
+      Fail("Intersect and Except are not supported yet");
+      // Not sure what needs to happen here. That partially depends on how intersect and except are finally implemented.
     } break;
 
     // No pruning of the input columns for these nodes as they need them all.
