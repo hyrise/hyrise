@@ -36,9 +36,9 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
   EXPECT_EQ(get_active_snapshot_commit_ids().size(), 0);
   EXPECT_EQ(manager.get_lowest_active_snapshot_commit_id(), std::nullopt);
 
-  const auto t1_context = manager.new_transaction_context();
-  const auto t2_context = manager.new_transaction_context();
-  const auto t3_context = manager.new_transaction_context();
+  const auto t1_context = manager.new_transaction_context(AutoCommit::No);
+  const auto t2_context = manager.new_transaction_context(AutoCommit::No);
+  const auto t3_context = manager.new_transaction_context(AutoCommit::No);
 
   const CommitID t1_snapshot_commit_id = t1_context->snapshot_commit_id();
   const CommitID t2_snapshot_commit_id = t2_context->snapshot_commit_id();

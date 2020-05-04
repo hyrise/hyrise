@@ -102,6 +102,7 @@ set(
     operators/maintenance/drop_table_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/operator_join_predicate_test.cpp
+    operators/operator_performance_data_test.cpp
     operators/operator_scan_predicate_test.cpp
     operators/operator_performance_data_test.cpp
     operators/print_test.cpp
@@ -148,6 +149,7 @@ set(
     server/query_handler_test.cpp
     server/read_buffer_test.cpp
     server/result_serializer_test.cpp
+    server/transaction_handling_test.cpp
     server/write_buffer_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp

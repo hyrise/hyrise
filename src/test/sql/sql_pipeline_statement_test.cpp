@@ -96,9 +96,11 @@ class SQLPipelineStatementTest : public BaseTest {
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
 
-  static bool _contains_validate(const std::vector<std::shared_ptr<OperatorTask>>& tasks) {
+  static bool _contains_validate(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
     for (const auto& task : tasks) {
-      if (std::dynamic_pointer_cast<Validate>(task->get_operator())) return true;
+      if (auto op_task = std::dynamic_pointer_cast<OperatorTask>(task)) {
+        if (std::dynamic_pointer_cast<Validate>(op_task->get_operator())) return true;
+      }
     }
     return false;
   }
@@ -119,7 +121,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -142,7 +144,7 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement(
       _select_parse_result);
 
@@ -161,7 +163,7 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
 
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context
   auto sql_pipeline1 = SQLPipelineBuilder{_select_query_a}.with_optimizer(optimizer).create_pipeline_statement();
@@ -411,7 +413,7 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
   const auto& plan = sql_pipeline.get_physical_plan();
 
@@ -518,7 +520,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutputNoReexecution) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
-  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   {
     const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
@@ -530,7 +532,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
   const auto verify_table_contents = []() {
@@ -544,7 +546,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
 
   // Check that this doesn't crash. This should not modify the table a second time.
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
   verify_table_contents();
 }
@@ -566,16 +568,16 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransac
   _table_a->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{17});
 
   const auto sql = "UPDATE table_a SET a = 1";
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
   // Retrieving it again should give us the same result
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
 
   EXPECT_TRUE(transaction_context->aborted());
@@ -589,12 +591,12 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(table, nullptr);
 
   // Retrieving it again should give us the same result
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
-  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
   EXPECT_EQ(table2, nullptr);
 }
 

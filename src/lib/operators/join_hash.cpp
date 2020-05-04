@@ -297,10 +297,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
     // ===============================================================================================
-    // We have two data paths, one for build side and one for probe input side. We can prepare (i.e.,
-    // materialize(), build(), etc.) both sides in parallel until the actual join takes place.
+    // We have two data paths, one for build side and one for probe input side.
     // All tasks might spawn concurrent tasks themselves. For example, materialize parallelizes over
     // the input chunks and the following steps over the radix clusters.
+    //
+    // Bloom filters can be used to skip rows that will not find a join partner. They are not shown here.
     //
     //           Build Relation                       Probe Relation
     //                 |                                    |
@@ -316,28 +317,49 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //                           \                 /
     //                          Probing (actual Join)
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
-
-    std::chrono::nanoseconds clock_materialization_build_column;
-    std::chrono::nanoseconds clock_materialization_probe_column;
-    std::chrono::nanoseconds clock_clustering_build_column;
-    std::chrono::nanoseconds clock_clustering_probe_column;
-    std::chrono::nanoseconds clock_hash_map_build;
     /**
-     * 1.1 Schedule a JobTask for materialization, optional radix partitioning and hash table building for the build side
+     * 1.1. Materialize the build partition, which is expected to be smaller. Create a bloom filter.
      */
-    jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      Timer timer_build_column;
-      if (keep_nulls_build_column) {
-        materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
-            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits);
-      } else {
-        materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
-            _build_input_table, _column_ids.first, histograms_build_column, _radix_bits);
-      }
-      clock_materialization_build_column = timer_build_column.lap();
 
-      if (_radix_bits > 0) {
+    auto build_side_bloom_filter = BloomFilter{};
+
+    Timer timer_materialization;
+    if (keep_nulls_build_column) {
+      materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
+          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
+    } else {
+      materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
+          _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
+    }
+
+    /**
+     * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
+     *       will not find a join partner.
+     */
+    auto probe_side_bloom_filter = BloomFilter{};
+
+    if (keep_nulls_probe_column) {
+      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
+          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+          build_side_bloom_filter);
+    } else {
+      materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
+          _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
+          build_side_bloom_filter);
+    }
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Materialization)] = timer_materialization.lap();
+
+    /**
+     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
+     *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
+     *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
+     *    within partition_by_radix.
+     */
+    if (_radix_bits > 0) {
+      Timer timer_clustering;
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+
+      jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
         if (keep_nulls_build_column) {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
@@ -346,44 +368,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
               materialized_build_column, histograms_build_column, _radix_bits);
         }
+
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
         materialized_build_column.clear();
-      } else {
-        // short cut: skip radix partitioning and use materialized data directly
-        radix_build_column = std::move(materialized_build_column);
-      }
-      clock_clustering_build_column = timer_build_column.lap();
+      }));
 
-      // Build hash tables. In the case of semi or anti joins, we do not need to track all rows on the hashed side,
-      // just one per value. However, if we have secondary predicates, those might fail on that single row. In that
-      // case, we DO need all rows.
-      if (_secondary_predicates.empty() &&
-          (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hash_tables =
-            build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition, _radix_bits);
-      } else {
-        hash_tables =
-            build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits);
-      }
-      clock_hash_map_build = timer_build_column.lap();
-    }));
-    jobs.back()->schedule();
-
-    /**
-     * 1.2 Schedule a JobTask for materialization, optional radix partitioning for the probe side
-     */
-    jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      Timer timer_probe_column;
-      if (keep_nulls_probe_column) {
-        materialized_probe_column = materialize_input<ProbeColumnType, HashedType, true>(
-            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits);
-      } else {
-        materialized_probe_column = materialize_input<ProbeColumnType, HashedType, false>(
-            _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits);
-      }
-      clock_materialization_probe_column = timer_probe_column.lap();
-
-      if (_radix_bits > 0) {
+      jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the probe column.
         if (keep_nulls_probe_column) {
           radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, true>(
@@ -392,23 +382,41 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_probe_column = partition_by_radix<ProbeColumnType, HashedType, false>(
               materialized_probe_column, histograms_probe_column, _radix_bits);
         }
+
         // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
         materialized_probe_column.clear();
-      } else {
-        // short cut: skip radix partitioning and use materialized data directly
-        radix_probe_column = std::move(materialized_probe_column);
-      }
-      clock_clustering_probe_column = timer_probe_column.lap();
-    }));
-    jobs.back()->schedule();
+      }));
 
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Materialization)] =
-        clock_materialization_build_column + clock_materialization_probe_column;
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Clustering)] =
-        clock_clustering_build_column + clock_clustering_probe_column;
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Building)] = clock_hash_map_build;
+      histograms_build_column.clear();
+      histograms_probe_column.clear();
+
+      _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Clustering)] = timer_clustering.lap();
+    } else {
+      // short cut: skip radix partitioning and use materialized data directly
+      radix_build_column = std::move(materialized_build_column);
+      radix_probe_column = std::move(materialized_probe_column);
+    }
+
+    /**
+     * 3. Build hash tables.
+     *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
+     *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
+     *    all rows.
+     *    We use the probe side's bloom filter to exclude values from the hash table that will not be accessed in the
+     *    probe phase.
+     */
+    Timer timer_hash_map_building;
+    if (_secondary_predicates.empty() &&
+        (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition,
+                                                       _radix_bits, probe_side_bloom_filter);
+    } else {
+      hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
+                                                       probe_side_bloom_filter);
+    }
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Building)] = timer_hash_map_building.lap();
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted
@@ -426,7 +434,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     /**
-     * 2. Probe stage
+     * 4. Probe phase
      */
     std::vector<RowIDPosList> build_side_pos_lists;
     std::vector<RowIDPosList> probe_side_pos_lists;
@@ -442,12 +450,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       probe_side_pos_lists[i].reserve(result_rows_per_partition);
     }
 
-    Timer clock_probe_stage;
-    /*
-    NUMA notes:
-    The workers for each radix partition P should be scheduled on the same node as the input data:
-    buildP, probeP and hash tableP.
-    */
+    Timer timer_probing;
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
@@ -483,14 +486,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Probing)] = clock_probe_stage.lap();
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Probing)] = timer_probing.lap();
 
     // After probing, the partitioned columns are not needed anymore.
     radix_build_column.clear();
     radix_probe_column.clear();
 
-    /** 
-     * 3. Write output Table
+    /**
+     * 5. Write output Table
      */
 
     /**
@@ -515,7 +518,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByChunk build_side_pos_lists_by_segment;
     PosListsByChunk probe_side_pos_lists_by_segment;
 
-    Timer clock_output_stage;
+    Timer timer_output_writing;
 
     // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
     if (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::ProbeOnly) {
@@ -574,7 +577,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
       ++output_chunk_id;
     }
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = clock_output_stage.lap();
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer_output_writing.lap();
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }
