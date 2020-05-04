@@ -33,7 +33,7 @@ class JoinHash : public AbstractJoinOperator {
   template <typename T>
   static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
 
-  enum class OperatorStages : uint8_t { Materialization, Clustering, Building, Probing, OutputWriting };
+  enum class OperatorSteps : uint8_t { Materialization, Clustering, Building, Probing, OutputWriting };
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

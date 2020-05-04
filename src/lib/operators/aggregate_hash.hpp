@@ -106,7 +106,7 @@ class AggregateHash : public AbstractAggregateOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
 
-  enum class OperatorStages : uint8_t { Aggregate, WriteGroupByColumns, WriteAggregateColumns, OutputWriting };
+  enum class OperatorSteps : uint8_t { Aggregate, WriteGroupByColumns, WriteAggregateColumns, OutputWriting };
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

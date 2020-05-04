@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <magic_enum.hpp>
+
 #include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
@@ -42,7 +44,8 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const OperatorJoinPredicate& primary_predicate,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates,
                    const std::optional<size_t>& radix_bits)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates,
+                           std::make_unique<StepOperatorPerformanceData>()),
       _radix_bits(radix_bits) {}
 
 const std::string& JoinHash::name() const {
@@ -54,6 +57,7 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
+
   return stream.str();
 }
 
@@ -173,6 +177,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
   }
 
+  auto& step_performance_data = static_cast<StepOperatorPerformanceData&>(*performance_data);
+
   resolve_data_type(build_column_type, [&](const auto build_data_type_t) {
     using BuildColumnDataType = typename decltype(build_data_type_t)::type;
     resolve_data_type(probe_column_type, [&](const auto probe_data_type_t) {
@@ -200,7 +206,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits, step_performance_data,
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
@@ -220,6 +226,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
+               StepOperatorPerformanceData& step_performance_data,
                std::vector<OperatorJoinPredicate> secondary_predicates = {})
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
@@ -227,6 +234,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
+        _performance(step_performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)),
         _radix_bits(radix_bits) {}
@@ -237,6 +245,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
+  StepOperatorPerformanceData& _performance;
 
   OutputColumnOrder _output_column_order;
 
@@ -313,6 +322,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     auto build_side_bloom_filter = BloomFilter{};
 
+    Timer timer_materialization;
     if (keep_nulls_build_column) {
       materialized_build_column = materialize_input<BuildColumnType, HashedType, true>(
           _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
@@ -325,7 +335,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
-
     auto probe_side_bloom_filter = BloomFilter{};
 
     if (keep_nulls_probe_column) {
@@ -337,6 +346,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
           build_side_bloom_filter);
     }
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Materialization)] = timer_materialization.lap();
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
@@ -344,8 +354,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
      */
-
     if (_radix_bits > 0) {
+      Timer timer_clustering;
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
@@ -380,6 +390,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       histograms_build_column.clear();
       histograms_probe_column.clear();
+
+      _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Clustering)] = timer_clustering.lap();
     } else {
       // short cut: skip radix partitioning and use materialized data directly
       radix_build_column = std::move(materialized_build_column);
@@ -394,7 +406,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *    We use the probe side's bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe phase.
      */
-
+    Timer timer_hash_map_building;
     if (_secondary_predicates.empty() &&
         (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition,
@@ -403,6 +415,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
                                                        probe_side_bloom_filter);
     }
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Building)] = timer_hash_map_building.lap();
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted
@@ -436,6 +449,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       probe_side_pos_lists[i].reserve(result_rows_per_partition);
     }
 
+    Timer timer_probing;
     switch (_mode) {
       case JoinMode::Inner:
         probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
@@ -471,6 +485,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Probing)] = timer_probing.lap();
 
     // After probing, the partitioned columns are not needed anymore.
     radix_build_column.clear();
@@ -501,6 +516,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByChunk build_side_pos_lists_by_segment;
     PosListsByChunk probe_side_pos_lists_by_segment;
 
+    Timer timer_output_writing;
     // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
     if (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::ProbeOnly) {
       build_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_build_input_table);
@@ -558,6 +574,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
       ++output_chunk_id;
     }
+    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer_output_writing.lap();
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

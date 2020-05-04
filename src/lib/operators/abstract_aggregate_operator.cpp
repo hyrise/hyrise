@@ -7,10 +7,9 @@
 
 namespace opossum {
 
-AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
-                                                     const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
-                                                     const std::vector<ColumnID>& groupby_column_ids,
-                                                     std::unique_ptr<OperatorPerformanceData> init_performance_data)
+AbstractAggregateOperator::AbstractAggregateOperator(
+    const std::shared_ptr<AbstractOperator>& in, const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+    const std::vector<ColumnID>& groupby_column_ids, std::unique_ptr<OperatorPerformanceData> init_performance_data)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in, nullptr, std::move(init_performance_data)),
       _aggregates{aggregates},
       _groupby_column_ids{groupby_column_ids} {
@@ -32,8 +31,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
   const auto separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
 
   std::stringstream desc;
-  desc << name() << separator
-       << "GroupBy ColumnIDs: ";
+  desc << name() << separator << "GroupBy ColumnIDs: ";
   for (size_t groupby_column_idx = 0; groupby_column_idx < _groupby_column_ids.size(); ++groupby_column_idx) {
     desc << _groupby_column_ids[groupby_column_idx];
 
