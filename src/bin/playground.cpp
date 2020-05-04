@@ -210,7 +210,6 @@ int main() {
 
     auto conf_line_count = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      std::vector<ColumnID> index_column_vector = {}; 
       const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][0]))};
       const auto conf_chunk_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][3]))};
       Assert(chunk_id == conf_chunk_id,
@@ -231,10 +230,18 @@ int main() {
           SortColumnDefinition{conf_chunk_sort_column_id, ORDER_BY_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
       sort->execute();
       const auto sorted_single_chunk_table = sort->get_output();
-      
+
+      // Add sorted chunk to sorted table
+      // Note: we do not care about MVCC at all at the moment
+      sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
+      const auto& added_chunk = sorted_table->get_chunk(chunk_id);
+      // Set order by for chunk 
+      added_chunk->set_ordered_by({conf_chunk_sort_column_id, ORDER_BY_MODE});
+      added_chunk->finalize();
+     
       // Encode segments of sorted single chunk table
 
-      for (ColumnID column_id = ColumnID{0}; column_id < sorted_single_chunk_table->get_chunk(ChunkID{0})->column_count(); ++column_id) {
+      for (ColumnID column_id = ColumnID{0}; column_id < added_chunk->column_count(); ++column_id) {
         const auto conf_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][1]))};
         Assert(column_id == conf_column_id,
            "Expected column id does not match column id in configuration file");
@@ -246,54 +253,32 @@ int main() {
         //Encode segment with specified encoding 
         const auto encoding_id = static_cast<uint16_t>(std::stoi(conf[conf_line_count][2]));
         const auto encoding = CHUNK_ENCODINGS[encoding_id];
-        const auto segment = sorted_single_chunk_table->get_chunk(ChunkID{0})->get_segment(column_id);
+        const auto segment = added_chunk->get_segment(column_id);
         
         Assert(encoding_id < CHUNK_ENCODINGS.size(), 
           "Undefined encoding specified in configuration file");
 
         const auto encoded_segment = ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
-        sorted_single_chunk_table->get_chunk(ChunkID{0})->replace_segment(column_id, encoded_segment);
+        added_chunk->replace_segment(column_id, encoded_segment);
 
-        const auto unencoded_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(encoded_segment);
-        std::cout << unencoded_segment << std::endl;
-        const auto en_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(encoded_segment);
-        if (en_segment) {
-          std::cout << "Should be: " << encoding << "Found: " << en_segment->encoding_type() << std::endl;
-        }
+        //const auto en_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(encoded_segment);
+        //if (en_segment) {
+        //  std::cout << "Should be: " << encoding << " Found: " << en_segment->encoding_type() << std::endl;
+        //}
+
         //Store index columns 
 
         const auto index_conf = static_cast<uint16_t>(std::stoi(conf[conf_line_count][4]));
         if (index_conf == 1) {
           Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
-          //sorted_single_chunk_table->get_chunk(ChunkID{0})->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-          index_column_vector.push_back(column_id);
+          added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
         }
 
         ++conf_line_count;
       }
-
-      //Print::print(sorted_single_chunk_table);
-
-      // Add sorted single chunk table to output table
-      // Note: we do not care about MVCC at all at the moment
-      sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
-      const auto& added_chunk = sorted_table->get_chunk(chunk_id);
-      // Set order by for chunk 
-      added_chunk->set_ordered_by({conf_chunk_sort_column_id, ORDER_BY_MODE});
-      added_chunk->finalize();
-
-      // Set index 
-      for (auto const index_column : index_column_vector) {
-        std::cout << chunk_id << " --> "<< index_column << std::endl;
-        //auto new_segment = sorted_table->get_chunk(chunk_id)->get_segment(index_column);
-        //const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(new_segment);
-        //std::cout << encoded_segment->encoding_type() << std::endl;
-        //if (encoded_segment) {
-        //  std::cout << encoded_segment->encoding_type() << std::endl;
-        //} 
-        //sorted_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{index_column});
-      }
     }
+
+    //Print::print(sorted_table);
 
     std::cout << " done (" << format_duration(preparation_timer.lap()) << ")" << std::endl;
 
