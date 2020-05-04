@@ -139,19 +139,17 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
                                     const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  if (const auto& output = from->get_output()) {
+  const auto& performance_data = from->performance_data;
+  if (performance_data->executed && performance_data->has_output) {
     std::stringstream stream;
-
-    stream << std::to_string(output->row_count()) + " row(s)/";
-    stream << std::to_string(output->chunk_count()) + " chunk(s)/";
-    stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
-
+    stream << std::to_string(performance_data->output_row_count) + " row(s)/";
+    stream << std::to_string(performance_data->output_chunk_count) + " chunk(s)";
     info.label = stream.str();
+  }
 
-    info.pen_width = output->row_count();
-    if (to->input_right() != nullptr) {
-      info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
-    }
+  info.pen_width = performance_data->output_row_count;
+  if (to->input_right() != nullptr) {
+    info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
   _add_edge(from, to, info);
@@ -161,51 +159,16 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   VizVertexInfo info = _default_vertex;
   auto label = op->description(DescriptionMode::MultiLine);
 
-  auto split_with_first_linebreak = [](const std::string& text) {
-    const auto first_linebreak_position = text.find("\n");
-    if (first_linebreak_position != std::string::npos) {
-      return std::pair<std::string, std::optional<std::string>>{text.substr(0, first_linebreak_position),
-                                                 text.substr(first_linebreak_position)};
-    }
-    return std::pair<std::string, std::optional<std::string>>{text, std::nullopt};
-  };
-
-  auto splitted_label = split_with_first_linebreak(label);
-  if (splitted_label.second) {
-    label = "=TITLE=" + splitted_label.first + "=/TITLE=" + *splitted_label.second;
-  }
-
-  // const auto first_linebreak_position = label.find("\n");
-  // if (first_linebreak_position != std::string::npos) {
-  //   const auto first_line = label.substr(0, first_linebreak_position);
-  //   label = "=TITLE=" + first_line + "=/TITLE=" + label.substr(first_linebreak_position);
-  // }
-
-  if (op->get_output()) {
-    auto total = op->performance_data->walltime;
-
-    std::stringstream ss;
-    if (dynamic_cast<StagedOperatorPerformanceData*>(op->performance_data.get())) {
-      auto& staged_performance_data = dynamic_cast<StagedOperatorPerformanceData&>(*op->performance_data);
-      staged_performance_data.output_to_stream(ss, DescriptionMode::MultiLine);
-    } else if (dynamic_cast<TableScan::TableScanPerformanceData*>(op->performance_data.get())) {
-      auto& table_scan_performance_data = dynamic_cast<TableScan::TableScanPerformanceData&>(*op->performance_data);
-      table_scan_performance_data.output_to_stream(ss, DescriptionMode::MultiLine);
-    } else {
-      ss << *op->performance_data;
-    }
-
-    auto description_label = "\n\n" + ss.str();
-    auto splitted_description_label = split_with_first_linebreak(description_label);
-    if (splitted_description_label.second) {
-      description_label = splitted_description_label.first + "=DESC=" + *splitted_description_label.second + "=/DESC=";
-    }
-    label += description_label;
-
+  const auto& performance_data = op->performance_data;
+  if (performance_data->executed) {
+    auto total = performance_data->walltime;
+    label += "\n\n" + format_duration(total);
     info.pen_width = total.count();
+  } else {
+    info.pen_width = 1;
   }
 
-  _duration_by_operator_name[op->name()] += op->performance_data->walltime;
+  _duration_by_operator_name[op->name()] += performance_data->walltime;
 
   info.label = label;
   _add_vertex(op, info);

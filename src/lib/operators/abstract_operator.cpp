@@ -21,8 +21,8 @@ namespace opossum {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
-                                   std::unique_ptr<OperatorPerformanceData> performance_data)
-    : performance_data(std::move(performance_data)), _type(type), _input_left(left), _input_right(right) {}
+                                   std::unique_ptr<OperatorPerformanceData> init_performance_data)
+    : performance_data(std::move(init_performance_data)), _type(type), _input_left(left), _input_right(right) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
@@ -30,7 +30,7 @@ void AbstractOperator::execute() {
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
-  DebugAssert(performance_data->walltime.count() == 0, "Operator has already been executed");
+  DebugAssert(!performance_data->executed, "Operator has already been executed");
 
   Timer performance_timer;
 
@@ -55,13 +55,13 @@ void AbstractOperator::execute() {
   // release any temporary data if possible
   _on_cleanup();
 
-  performance_data->walltime = performance_timer.lap();
-  if (_input_left) performance_data->input_row_count_left = _input_left->get_output()->row_count();
-  if (_input_right) performance_data->input_row_count_right = _input_right->get_output()->row_count();
   if (_output) {
+    performance_data->has_output = true;
     performance_data->output_row_count = _output->row_count();
     performance_data->output_chunk_count = _output->chunk_count();
   }
+  performance_data->walltime = performance_timer.lap();
+  performance_data->executed = true;
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,

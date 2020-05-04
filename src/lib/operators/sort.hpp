@@ -15,41 +15,47 @@
 namespace opossum {
 
 /**
- * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
- * maintain their relative order.
- * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+ * Defines in which order a certain column should be sorted.
+ */
+struct SortColumnDefinition final {
+  explicit SortColumnDefinition(const ColumnID& init_column,
+                                const OrderByMode init_order_by_mode = OrderByMode::Ascending)
+      : column(init_column), order_by_mode(init_order_by_mode) {}
+
+  const ColumnID column;
+  const OrderByMode order_by_mode;
+};
+
+/**
+ * Operator to sort a table by one or multiple columns. This implements a stable sort, i.e., rows that share the same
+ * value will maintain their relative order.
+ * By passing multiple sort column definitions it is possible to sort multiple columns with one operator run.
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
-  // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
-       const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = Chunk::DEFAULT_SIZE);
+  Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
+       const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE);
 
-  ColumnID column_id() const;
-  OrderByMode order_by_mode() const;
+  const std::vector<SortColumnDefinition>& sort_definitions() const;
 
   const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
-  void _on_cleanup() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  // The operator is separated in three different classes. SortImpl is the common templated implementation of the
-  // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
-  // task during the Sort process, as described later on.
   template <typename SortColumnType>
   class SortImpl;
+
   template <typename SortColumnType>
   class SortImplMaterializeOutput;
 
-  std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  const ColumnID _column_id;
-  const OrderByMode _order_by_mode;
-  const size_t _output_chunk_size;
+  const std::vector<SortColumnDefinition> _sort_definitions;
+
+  const ChunkOffset _output_chunk_size;
 };
 
 }  // namespace opossum

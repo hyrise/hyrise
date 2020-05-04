@@ -108,8 +108,8 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto w_ytd = double{table->get_value<float>(ColumnID{1}, row_id)};
-      const auto d_ytd_sum = table->get_value<double>(ColumnID{2}, row_id);
+      const auto w_ytd = double{*table->get_value<float>(ColumnID{1}, row_id)};
+      const auto d_ytd_sum = *table->get_value<double>(ColumnID{2}, row_id);
 
       Assert(floats_near(w_ytd, d_ytd_sum), "Mismatching YTD for WAREHOUSE and DISTRICT");
     }
@@ -124,14 +124,14 @@ void check_consistency(const size_t num_warehouses) {
       const auto [district_pipeline_status, district_table] = district_pipeline.get_result_table();
       Assert(district_table && district_table->row_count() == NUM_DISTRICTS_PER_WAREHOUSE, "Lost a district");
       for (auto d_id = 1; d_id <= NUM_DISTRICTS_PER_WAREHOUSE; ++d_id) {
-        const auto district_max_o_id = district_table->get_value<int32_t>(ColumnID{0}, d_id - 1);
+        const auto district_max_o_id = *district_table->get_value<int32_t>(ColumnID{0}, d_id - 1);
 
         auto order_pipeline = SQLPipelineBuilder{std::string{"SELECT MAX(O_ID) FROM \"ORDER\" WHERE O_W_ID = "} +
                                                  std::to_string(w_id) + " AND O_D_ID = " + std::to_string(d_id)}
                                   .create_pipeline();
         const auto [order_pipeline_status, order_table] = order_pipeline.get_result_table();
         Assert(order_table && order_table->row_count() == 1, "Did not find MAX(O_ID)");
-        Assert(order_table->get_value<int32_t>(ColumnID{0}, 0) == district_max_o_id, "Mismatching order IDs");
+        Assert(*order_table->get_value<int32_t>(ColumnID{0}, 0) == district_max_o_id, "Mismatching order IDs");
 
         auto new_order_pipeline =
             SQLPipelineBuilder{std::string{"SELECT COUNT(*), MAX(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
@@ -139,10 +139,10 @@ void check_consistency(const size_t num_warehouses) {
                 .create_pipeline();
         const auto [new_order_pipeline_status, new_order_table] = new_order_pipeline.get_result_table();
         Assert(order_table && order_table->row_count() == 1, "Could not retrieve new_orders");
-        const auto new_order_count = new_order_table->get_value<int64_t>(ColumnID{0}, 0);
+        const auto new_order_count = *new_order_table->get_value<int64_t>(ColumnID{0}, 0);
         new_order_counts[w_id - 1][d_id - 1] = new_order_count;
         if (new_order_count > 0) {
-          Assert(new_order_table->get_value<int32_t>(ColumnID{1}, 0) == district_max_o_id, "Mismatching order IDs");
+          Assert(*new_order_table->get_value<int32_t>(ColumnID{1}, 0) == district_max_o_id, "Mismatching order IDs");
         }
       }
     }
@@ -158,10 +158,10 @@ void check_consistency(const size_t num_warehouses) {
     Assert(new_order_table, "Could not retrieve new_orders");
     const auto& row_count = new_order_table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto w_id = new_order_table->get_value<int32_t>(ColumnID{0}, row_id);
-      const auto d_id = new_order_table->get_value<int32_t>(ColumnID{1}, row_id);
-      const auto min_o_id = new_order_table->get_value<int32_t>(ColumnID{2}, row_id);
-      const auto max_o_id = new_order_table->get_value<int32_t>(ColumnID{3}, row_id);
+      const auto w_id = *new_order_table->get_value<int32_t>(ColumnID{0}, row_id);
+      const auto d_id = *new_order_table->get_value<int32_t>(ColumnID{1}, row_id);
+      const auto min_o_id = *new_order_table->get_value<int32_t>(ColumnID{2}, row_id);
+      const auto max_o_id = *new_order_table->get_value<int32_t>(ColumnID{3}, row_id);
       Assert(max_o_id - min_o_id + 1 == new_order_counts[w_id - 1][d_id - 1], "Mismatching order IDs");
     }
   }
@@ -186,8 +186,8 @@ void check_consistency(const size_t num_warehouses) {
 
     const auto row_count = order_line_table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      Assert(order_table->get_value<int64_t>(ColumnID{2}, row_id) ==
-                 order_line_table->get_value<int64_t>(ColumnID{2}, row_id),
+      Assert(*order_table->get_value<int64_t>(ColumnID{2}, row_id) ==
+                 *order_line_table->get_value<int64_t>(ColumnID{2}, row_id),
              "Mismatching order_line count");
     }
   }
@@ -198,7 +198,7 @@ void check_consistency(const size_t num_warehouses) {
     auto pipeline = SQLPipelineBuilder{R"(
                       SELECT *
                       FROM "ORDER"
-                      WHERE O_CARRIER_ID = -1
+                      WHERE O_CARRIER_ID IS NULL
                       AND NOT EXISTS (SELECT NO_W_ID
                         FROM NEW_ORDER
                         WHERE O_W_ID = NO_W_ID
@@ -227,7 +227,7 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() > size_t{0}, "Failed to retrieve order / order lines");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      Assert(table->get_value<int32_t>(ColumnID{3}, row_id) == table->get_value<int64_t>(ColumnID{4}, row_id),
+      Assert(*table->get_value<int32_t>(ColumnID{3}, row_id) == *table->get_value<int64_t>(ColumnID{4}, row_id),
              "Mismatching number of order lines");
     }
   }
@@ -237,7 +237,7 @@ void check_consistency(const size_t num_warehouses) {
     auto pipeline =
         SQLPipelineBuilder{
             "SELECT * FROM ORDER_LINE LEFT JOIN \"ORDER\" ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID "
-            "WHERE OL_DELIVERY_D = -1 AND O_CARRIER_ID <> -1"}
+            "WHERE OL_DELIVERY_D IS NULL AND O_CARRIER_ID IS NOT NULL"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == size_t{0},
@@ -254,8 +254,8 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto w_ytd = double{table->get_value<float>(ColumnID{1}, row_id)};
-      const auto h_amount = table->get_value<double>(ColumnID{2}, row_id);
+      const auto w_ytd = double{*table->get_value<float>(ColumnID{1}, row_id)};
+      const auto h_amount = *table->get_value<double>(ColumnID{2}, row_id);
 
       Assert(floats_near(w_ytd, h_amount), "Mismatching YTD for WAREHOUSE and HISTORY");
     }
@@ -272,8 +272,8 @@ void check_consistency(const size_t num_warehouses) {
     Assert(table && table->row_count() == total_num_districts, "Lost a district");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto d_ytd = double{table->get_value<float>(ColumnID{2}, row_id)};
-      const auto h_amount = table->get_value<double>(ColumnID{3}, row_id);
+      const auto d_ytd = double{*table->get_value<float>(ColumnID{2}, row_id)};
+      const auto h_amount = *table->get_value<double>(ColumnID{3}, row_id);
 
       Assert(floats_near(d_ytd, h_amount), "Mismatching YTD for DISTRICT and HISTORY");
     }
@@ -293,7 +293,7 @@ void check_consistency(const size_t num_warehouses) {
                          FROM "ORDER", ORDER_LINE
                          WHERE
                           OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID
-                          AND OL_DELIVERY_D <> -1
+                          AND OL_DELIVERY_D IS NOT NULL
                           GROUP BY O_W_ID, O_D_ID, O_C_ID
                         ) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT)
                         ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID
@@ -312,9 +312,9 @@ void check_consistency(const size_t num_warehouses) {
              "Lost a customer");
       const auto row_count = table->row_count();
       for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-        const auto c_balance = double{table->get_value<float>(ColumnID{3}, row_id)};
-        const auto sum_h_amount = table->get_value<double>(ColumnID{4}, row_id);
-        const auto sum_ol_amount = table->get_value<double>(ColumnID{5}, row_id);
+        const auto c_balance = double{*table->get_value<float>(ColumnID{3}, row_id)};
+        const auto sum_h_amount = *table->get_value<double>(ColumnID{4}, row_id);
+        const auto sum_ol_amount = *table->get_value<double>(ColumnID{5}, row_id);
 
         Assert(floats_near(sum_ol_amount - sum_h_amount, c_balance), "Mismatching amounts for customer");
       }
@@ -340,7 +340,7 @@ void check_consistency(const size_t num_warehouses) {
                         ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID
                       LEFT JOIN ORDER_LINE
                         ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID
-                        AND OL_DELIVERY_D <> -1
+                        AND OL_DELIVERY_D IS NOT NULL
                       GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT
                     )"}.create_pipeline();
     // clang-format on
@@ -350,9 +350,9 @@ void check_consistency(const size_t num_warehouses) {
            "Lost a customer");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
-      const auto c_balance = double{table->get_value<float>(ColumnID{3}, row_id)};
-      const auto c_ytd_payment = double{table->get_value<float>(ColumnID{4}, row_id)};
-      const auto sum_ol_amount = table->get_value<double>(ColumnID{5}, row_id);
+      const auto c_balance = double{*table->get_value<float>(ColumnID{3}, row_id)};
+      const auto c_ytd_payment = double{*table->get_value<float>(ColumnID{4}, row_id)};
+      const auto sum_ol_amount = *table->get_value<double>(ColumnID{5}, row_id);
 
       Assert(floats_near(c_balance + c_ytd_payment, sum_ol_amount), "Mismatching YTD for CUSTOMER and ORDER");
     }

@@ -27,7 +27,7 @@ You can find definitions of most of the terms and abbreviations used in the code
 The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
 
 ## Native Setup
-You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
+You can install the dependencies on your own or use the install_dependencies.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
 The install script was tested under macOS Catalina (10.15) and Ubuntu 19.10 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
@@ -44,7 +44,7 @@ You can start the container via
 docker run -it hyrise
 ```
 
-Inside of the container, you can then checkout Hyrise and run `./install.sh` to download the required submodules.
+Inside the container, you can then checkout Hyrise and run `./install_dependencies.sh` to download the required submodules.
 
 ## Building and Tooling
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
@@ -115,6 +115,8 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Timo      Djürken
 -   Fabian    Dumke
+-   Leonard   Geier
+-   Richard   Ebeling
 -   Fabian    Engel
 -   Moritz    Eyssen
 -   Martin    Fischer
@@ -139,6 +141,7 @@ Contact: firstname.lastname@hpi.de
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
+-   Dominik   Meier
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß

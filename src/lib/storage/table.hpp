@@ -124,12 +124,12 @@ class Table : private Noncopyable {
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(const std::vector<AllTypeVariant>& values);
 
-  // returns one materialized value
-  // multiversion concurrency control values of chunks are ignored
-  // - table needs to be validated before by Validate operator
+  // Returns one materialized value using an easy, but inefficient AllTypeVariant approach.
   // If you want to write efficient operators, back off!
+  // Multi-Version Concurrency Control information of chunks is ignored. This means that if you are calling this method
+  // on a non-validated table, you may end up with a row you should not be able to see or an entirely different row.
   template <typename T>
-  T get_value(const ColumnID column_id, const size_t row_number) const {
+  std::optional<T> get_value(const ColumnID column_id, const size_t row_number) const {
     PerformanceWarning("get_value() used");
 
     Assert(column_id < column_count(), "column_id invalid");
@@ -143,15 +143,20 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return boost::get<T>(
-            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)]);
+        const auto variant =
+            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)];
+        if (variant_is_null(variant)) {
+          return std::nullopt;
+        } else {
+          return boost::get<T>(variant);
+        }
       }
     }
     Fail("Row does not exist.");
   }
 
   template <typename T>
-  T get_value(const std::string& column_name, const size_t row_number) const {
+  std::optional<T> get_value(const std::string& column_name, const size_t row_number) const {
     return get_value<T>(column_id_by_name(column_name), row_number);
   }
 
@@ -227,5 +232,9 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;
+
+  // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
+  // chunks more than once.
+  mutable std::optional<uint64_t> _cached_row_count;
 };
 }  // namespace opossum

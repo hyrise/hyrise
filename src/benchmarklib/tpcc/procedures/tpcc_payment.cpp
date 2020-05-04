@@ -49,8 +49,8 @@ bool TPCCPayment::_on_execute() {
       std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
-  auto w_name = warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
-  auto w_ytd = warehouse_table->get_value<float>(ColumnID{6}, 0);
+  auto w_name = *warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
+  auto w_ytd = *warehouse_table->get_value<float>(ColumnID{6}, 0);
 
   // Update warehouse YTD
   std::tie(pipeline_status, std::ignore) =
@@ -67,8 +67,8 @@ bool TPCCPayment::_on_execute() {
       std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
-  auto d_name = district_table->get_value<pmr_string>(ColumnID{0}, 0);
-  auto d_ytd = district_table->get_value<float>(ColumnID{6}, 0);
+  auto d_name = *district_table->get_value<pmr_string>(ColumnID{0}, 0);
+  auto d_ytd = *district_table->get_value<float>(ColumnID{6}, 0);
 
   // Update district YTD
   const auto district_update_pair =
@@ -105,7 +105,7 @@ bool TPCCPayment::_on_execute() {
     customer_offset =
         static_cast<size_t>(std::max(0.0, std::min(std::ceil(customer_table->row_count() / 2.0),
                                                    static_cast<double>(customer_table->row_count() - 1))));
-    c_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
+    c_id = *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 
   // There is a possible optimization here if we take `customer_table` as an input to an UPDATE operator, but that
@@ -121,15 +121,15 @@ bool TPCCPayment::_on_execute() {
   }
 
   // Retrieve C_CREDIT and check for "bad credit"
-  if (customer_table->get_value<pmr_string>(ColumnID{11}, customer_offset) == "BC") {
+  if (*customer_table->get_value<pmr_string>(ColumnID{11}, customer_offset) == "BC") {
     std::stringstream new_c_data_stream;
-    new_c_data_stream << customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);  // C_ID
+    new_c_data_stream << *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);  // C_ID
     new_c_data_stream << c_d_id;
     new_c_data_stream << c_w_id;
     new_c_data_stream << d_id;
     new_c_data_stream << w_id;
     new_c_data_stream << h_amount;
-    new_c_data_stream << customer_table->get_value<pmr_string>(ColumnID{15}, customer_offset);  // C_DATA
+    new_c_data_stream << *customer_table->get_value<pmr_string>(ColumnID{15}, customer_offset);  // C_DATA
     auto new_c_data = new_c_data_stream.str();
     new_c_data.resize(std::min(new_c_data.size(), size_t{500}));
     const auto customer_update_data_pair = _sql_executor.execute(

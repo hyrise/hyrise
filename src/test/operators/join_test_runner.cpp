@@ -453,7 +453,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           Segments reference_segments;
 
           if (input_table_type == InputTableType::SharedPosList) {
-            const auto pos_list = std::make_shared<PosList>();
+            const auto pos_list = std::make_shared<RowIDPosList>();
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
@@ -464,7 +464,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
           } else if (input_table_type == InputTableType::IndividualPosLists) {
             for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-              const auto pos_list = std::make_shared<PosList>();
+              const auto pos_list = std::make_shared<RowIDPosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }

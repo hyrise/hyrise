@@ -187,8 +187,11 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
     const auto is_nullable = table.column_is_nullable(column_id);
     const auto column_type = table.column_data_type(column_id);
 
-    converters.emplace_back(
-        make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, meta.config, is_nullable));
+    resolve_data_type(column_type, [&](const auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      converters.emplace_back(std::make_unique<CsvConverter<ColumnDataType>>(row_count, meta.config, is_nullable));
+    });
   }
 
   Assert(field_ends.size() == row_count * column_count, "Unexpected number of fields");

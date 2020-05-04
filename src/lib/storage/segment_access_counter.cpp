@@ -43,7 +43,7 @@ std::string SegmentAccessCounter::to_string() const {
   return result;
 }
 
-SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList& positions) {
+SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const AbstractPosList& positions) {
   const auto access_pattern = _access_pattern(positions);
   switch (access_pattern) {
     case SegmentAccessCounter::AccessPattern::Point:
@@ -68,7 +68,7 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const PosList
 // elements (in positions) the difference is computed and mapped to an element of the enum Input.
 // That input is used to transition from one state to the next. The predefined, two dimensional array, TRANSITIONS,
 // acts as the transition function.
-SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const PosList& positions) {
+SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const AbstractPosList& positions) {
   // There are five possible inputs
   enum class Input { Zero, One, Positive, NegativeOne, Negative };
 

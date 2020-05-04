@@ -127,12 +127,16 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/except_node.cpp
+    logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
+    logical_query_plan/intersect_node.cpp
+    logical_query_plan/intersect_node.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
@@ -482,7 +486,12 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/pos_list.hpp
+    storage/pos_lists/abstract_pos_list.hpp
+    storage/pos_lists/abstract_pos_list.cpp
+    storage/pos_lists/entire_chunk_pos_list.hpp
+    storage/pos_lists/entire_chunk_pos_list.cpp
+    storage/pos_lists/row_id_pos_list.hpp
+    storage/pos_lists/row_id_pos_list.cpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
     storage/reference_segment.cpp

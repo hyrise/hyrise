@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "concurrency/transaction_context.hpp"
 #include "operators/validate.hpp"
@@ -47,13 +48,14 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       }
     }
 
-    for (auto row_id : *pos_list) {
+    for (const auto row_id : *pos_list) {
       const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
       Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers");
 
       // Scope for the lock on the MVCC data
       {
         auto mvcc_data = referenced_chunk->mvcc_data();
+        DebugAssert(mvcc_data, "Delete cannot operate on a table without MVCC data");
 
         DebugAssert(
             Validate::is_row_visible(
@@ -94,7 +96,7 @@ void Delete::_on_commit_records(const CommitID commit_id) {
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
 
-    for (const auto& row_id : *referencing_segment->pos_list()) {
+    for (const auto row_id : *referencing_segment->pos_list()) {
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       referenced_chunk->mvcc_data()->set_end_cid(row_id.chunk_offset, commit_id);
@@ -112,7 +114,7 @@ void Delete::_on_rollback_records() {
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
 
-    for (const auto& row_id : *referencing_segment->pos_list()) {
+    for (const auto row_id : *referencing_segment->pos_list()) {
       auto expected = _transaction_id;
 
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);

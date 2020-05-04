@@ -108,7 +108,9 @@ void AbstractTableGenerator::generate_and_store() {
 
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
-      auto sort = std::make_shared<Sort>(table_wrapper, sort_column_id, order_by_mode, _benchmark_config->chunk_size);
+      auto sort = std::make_shared<Sort>(
+          table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, order_by_mode}},
+          _benchmark_config->chunk_size);
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
 
@@ -154,7 +156,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Encode the tables
    */
-  std::cout << "- Encoding tables if necessary" << std::endl;
+  std::cout << "- Encoding tables (if necessary) and generating pruning statistics" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Encoding '" << table_name << "' - " << std::flush;
     Timer per_table_timer;
@@ -164,7 +166,8 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << " (" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
   metrics.encoding_duration = timer.lap();
-  std::cout << "- Encoding tables done (" << format_duration(metrics.encoding_duration) << ")" << std::endl;
+  std::cout << "- Encoding tables and generating pruning statistic done ("
+            << format_duration(metrics.encoding_duration) << ")" << std::endl;
 
   /**
    * Write the Tables into binary files if required
@@ -206,7 +209,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add the Tables to the StorageManager
    */
-  std::cout << "- Adding tables to StorageManager and generating statistics" << std::endl;
+  std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
   auto& storage_manager = Hyrise::get().storage_manager;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Adding '" << table_name << "' " << std::flush;
@@ -218,7 +221,7 @@ void AbstractTableGenerator::generate_and_store() {
 
   metrics.store_duration = timer.lap();
 
-  std::cout << "- Adding tables to StorageManager and generating statistics done ("
+  std::cout << "- Adding tables to StorageManager and generating table statistics done ("
             << format_duration(metrics.store_duration) << ")" << std::endl;
 
   /**

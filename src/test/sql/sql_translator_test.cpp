@@ -2,6 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
@@ -17,9 +18,11 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
@@ -459,6 +462,21 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, RepeatingAggregates) {
+  // See #1902. Optimally, these queries would produce correct results. Until then, at least make sure they don't
+  // produce any wrong ones.
+
+  EXPECT_THROW(compile_query("SELECT COUNT(*) FROM (SELECT COUNT(*) FROM t WHERE a <= 1234) t2"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2"), InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT COUNT(a) FROM (SELECT a, COUNT(a) AS b FROM t GROUP BY a) t2"),
+               InvalidInputException);
+
+  EXPECT_THROW(compile_query("SELECT AVG(a) FROM (SELECT a, AVG(a) FROM t GROUP BY a) t3"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, SelectAggregate) {
@@ -2709,6 +2727,84 @@ TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
   const auto expected_lqp =
     ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
       stored_table_node_int_int_int);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SetOperationSingleExcept) {
+  const auto actual_lqp = compile_query(
+      "SELECT a FROM int_float "
+      "EXCEPT "
+      "SELECT a FROM int_float2;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ExceptNode::make(SetOperationMode::Unique,
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
+      ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SetOperationSingleIntersect) {
+  const auto actual_lqp = compile_query(
+      "SELECT a FROM int_float "
+      "INTERSECT "
+      "SELECT a FROM int_float2;");
+
+  // clang-format off
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Unique,
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float),
+      ProjectionNode::make(expression_vector(int_float2_a), stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, MultiSetOperations) {
+  const auto actual_lqp = compile_query(
+      "SELECT a FROM int_int_int "
+      "INTERSECT "
+      "SELECT b FROM int_int_int "
+      "EXCEPT "
+      "SELECT c FROM int_int_int;");
+
+  // clang-format off
+  const auto expected_lqp =
+  IntersectNode::make(SetOperationMode::Unique,
+    ProjectionNode::make(expression_vector(int_int_int_a), stored_table_node_int_int_int),
+      ExceptNode::make(SetOperationMode::Unique,
+        ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
+          ProjectionNode::make(expression_vector(int_int_int_c), stored_table_node_int_int_int)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
+  const auto actual_lqp = compile_query(
+      "(SELECT a FROM int_int_int ORDER by a) "
+      "INTERSECT "
+      "(SELECT b FROM int_int_int "
+      "EXCEPT "
+      "(SELECT c FROM int_int_int ORDER by c) LIMIT 10) ORDER BY a");
+
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+    IntersectNode::make(SetOperationMode::Unique,
+      ProjectionNode::make(expression_vector(int_int_int_a),
+        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+                       stored_table_node_int_int_int)),
+      LimitNode::make(value_(10),
+        ExceptNode::make(SetOperationMode::Unique,
+          ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
+          ProjectionNode::make(expression_vector(int_int_int_c),
+            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending },
+                           stored_table_node_int_int_int))))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

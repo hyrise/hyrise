@@ -7,12 +7,14 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
+#include <magic_enum.hpp>
 
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
-#include "magic_enum.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
@@ -51,12 +53,84 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
   auto& performance_data = table_scan->performance_data;
   EXPECT_GT(performance_data->walltime.count(), 0ul);
 
-  EXPECT_TRUE(performance_data->input_row_count_left);
-  EXPECT_EQ(3, *(performance_data->input_row_count_left));
+  EXPECT_EQ(2, performance_data->output_row_count);
+}
 
-  EXPECT_FALSE(performance_data->input_row_count_right);
+// Check for correct counting of skipped chunks/segment (this is different to chunk pruning, which happens within the
+// optimizer) due to early exists via the dictionary and counting of chunks/segments that are sorted and have thus been
+// scanned with a sorted search (i.e., binary search).
+TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
+  const TableColumnDefinitions column_definitions{{"a", DataType::Int, false}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  table->append({1});
+  table->append({2});
+  table->append({2});
+  table->append({3});
 
-  EXPECT_EQ(2, *(performance_data->output_row_count));
+  // Finalize last chunk
+  table->get_chunk(ChunkID{1})->finalize();
+
+  ChunkEncoder::encode_all_chunks(table);
+
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan =
+        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_sorted);
+  }
+
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan =
+        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 1));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(1, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_sorted);
+  }
+
+  // Check counters for sorted segment scanning (value scan)
+  table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
+  table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan =
+        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(2, scan_performance_data.chunk_scans_sorted);
+  }
+
+  // Between scan
+  {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+
+    auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 2));
+    table_scan->execute();
+
+    auto& scan_performance_data = static_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
+    EXPECT_GT(scan_performance_data.walltime.count(), 0ul);
+    EXPECT_EQ(0, scan_performance_data.chunk_scans_skipped);
+    EXPECT_EQ(2, scan_performance_data.chunk_scans_sorted);
+  }
 }
 
 TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
@@ -68,7 +142,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
   auto& perf = static_cast<const StagedOperatorPerformanceData&>(*join->performance_data);
 
   for (const auto stage : magic_enum::enum_values<JoinHash::OperatorStages>()) {
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(stage)).count() > 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(stage)).count(), 0);
   }
 }
 
@@ -86,10 +160,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count() == 0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() >
-                0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count() > 0);
+    EXPECT_EQ(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
   }
@@ -105,10 +178,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count() > 0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() ==
-                0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count() > 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
+    EXPECT_EQ(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
   }
@@ -122,10 +194,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count() > 0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count() >
-                0);
-    EXPECT_TRUE(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count() > 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
   }
@@ -133,22 +204,86 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
 
 TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
   auto aggregate = std::make_shared<AggregateHash>(
-      _table_wrapper, std::vector<std::shared_ptr<AggregateExpression>>{
-      min_(pqp_column_(ColumnID{0}, _table->column_data_type(ColumnID{0}),
-                       _table->column_is_nullable(ColumnID{0}),
-                       _table->column_name(ColumnID{0})))},
+      _table_wrapper,
+      std::vector<std::shared_ptr<AggregateExpression>>{
+          min_(pqp_column_(ColumnID{0}, _table->column_data_type(ColumnID{0}), _table->column_is_nullable(ColumnID{0}),
+                           _table->column_name(ColumnID{0})))},
       std::initializer_list<ColumnID>{ColumnID{1}});
-
-  
-
 
   aggregate->execute();
 
   auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(*aggregate->performance_data);
 
   for (const auto stage : magic_enum::enum_values<AggregateHash::OperatorStages>()) {
-    EXPECT_TRUE(staged_performance_data.get_stage_runtime(*magic_enum::enum_index(stage)).count() > 0);
+    EXPECT_GT(staged_performance_data.get_stage_runtime(*magic_enum::enum_index(stage)).count(), 0);
   }
+}
+
+TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
+  const auto table_name = "table_a";
+  const auto table = load_table("resources/test_data/tbl/int_float.tbl");
+
+  // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
+  Hyrise::get().storage_manager.add_table(table_name, table);
+
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
+  auto table_scan_1 = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, "123");
+  auto table_scan_2 = create_table_scan(gt, ColumnID{0}, PredicateCondition::LessThan, "0");
+
+  table_scan_1->execute();
+  table_scan_2->execute();
+
+  auto delete_op = std::make_shared<Delete>(table_scan_1);
+  delete_op->set_transaction_context(transaction_context);
+
+  delete_op->execute();
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  {
+    const auto& performance_data = delete_op->performance_data;
+    EXPECT_TRUE(performance_data->executed);
+    EXPECT_GT(performance_data->walltime.count(), 0);
+    EXPECT_FALSE(performance_data->has_output);
+  }
+
+  {
+    const auto& performance_data = table_scan_1->performance_data;
+    EXPECT_TRUE(performance_data->executed);
+    EXPECT_GT(performance_data->walltime.count(), 0);
+    EXPECT_TRUE(performance_data->has_output);
+    EXPECT_EQ(performance_data->output_row_count, 1);
+    EXPECT_EQ(performance_data->output_chunk_count, 1);
+  }
+
+  {
+    const auto& performance_data = table_scan_2->performance_data;
+    EXPECT_TRUE(performance_data->executed);
+    EXPECT_GT(performance_data->walltime.count(), 0);
+    EXPECT_TRUE(performance_data->has_output);
+    EXPECT_EQ(performance_data->output_row_count, 0);
+    EXPECT_EQ(performance_data->output_chunk_count, 0);
+  }
+
+  // Committing to avoid error "Has registered operators but has neither been committed nor rolled back."
+  transaction_context->commit();
+}
+
+// Ensure that only non-zero runtimes are listed but at the same time assume that stages might be skipped and thus zero
+// runtimes can occur in between non-zero runtimes.
+TEST_F(OperatorPerformanceDataTest, StagedOperatorPerformanceDataToOutputStream) {
+  StagedOperatorPerformanceData performance_data;
+  performance_data.stage_runtimes[0] = std::chrono::nanoseconds{17};
+  performance_data.stage_runtimes[1] = std::chrono::nanoseconds{17};
+  performance_data.stage_runtimes[2] = std::chrono::nanoseconds{0};
+  performance_data.stage_runtimes[3] = std::chrono::nanoseconds{17};
+
+  std::stringstream stringstream;
+  stringstream << performance_data << std::endl;
+  EXPECT_TRUE(stringstream.str().starts_with("Stage runtimes: 17 ns, 17 ns, 0 ns, 17 ns."));
 }
 
 }  // namespace opossum

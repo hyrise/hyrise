@@ -69,4 +69,4 @@ If you want to test a single module, class or test you have to execute the test 
 	- Is the copy constructor deleted where it makes sense?
 	- Is the destructor virtual for base classes?
 	- Are unnecessary copies of heavy elements made? (prefer vector& over vector, but not int& over int)
-	- Did the author update documentation and dependencies (Wiki, README.md, DEPENDENCIES.md, Dockerfile, install.sh, Jenkinsfile)
+	- Did the author update documentation and dependencies (Wiki, README.md, DEPENDENCIES.md, Dockerfile, install_dependencies.sh, Jenkinsfile)

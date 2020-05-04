@@ -8,9 +8,10 @@
 #include <utility>
 #include <vector>
 
+#include <magic_enum.hpp>
+
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
-#include "magic_enum.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/abstract_index.hpp"
@@ -124,8 +125,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   }
 
-  _probe_pos_list = std::make_shared<PosList>();
-  _index_pos_list = std::make_shared<PosList>();
+  _probe_pos_list = std::make_shared<RowIDPosList>();
+  _index_pos_list = std::make_shared<RowIDPosList>();
 
   auto pos_list_size_to_reserve =
       std::max(uint64_t{100}, std::min(_probe_input_table->row_count(), _index_input_table->row_count()));
@@ -133,7 +134,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _probe_pos_list->reserve(pos_list_size_to_reserve);
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
-  auto& perf = static_cast<PerformanceData&>(*performance_data);
+  auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
   Timer timer;
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
@@ -184,17 +185,20 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                                        reference_segment_pos_list);
             });
           }
-          perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
-          perf.chunks_scanned_with_index++;
+          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] +=
+              timer.lap();
+          join_index_performance_data.chunks_scanned_with_index++;
         } else {
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
-          perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+          join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+              timer.lap();
         }
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+            timer.lap();
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
@@ -223,12 +227,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
         }
-        perf.chunks_scanned_with_index++;
-        perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] += timer.lap();
+        join_index_performance_data.chunks_scanned_with_index++;
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::IndexJoining)] +=
+            timer.lap();
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] += timer.lap();
+        join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::NestedLoopJoining)] +=
+            timer.lap();
       }
     }
 
@@ -252,13 +258,15 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   }
 
-  if (perf.chunks_scanned_with_index < perf.chunks_scanned_without_index) {
-    PerformanceWarning(
-        std::string("Only ") + std::to_string(perf.chunks_scanned_with_index) + " of " +
-        std::to_string(perf.chunks_scanned_with_index + perf.chunks_scanned_without_index) +
-        " chunks processed using an index.");
+  if (join_index_performance_data.chunks_scanned_with_index <
+      join_index_performance_data.chunks_scanned_without_index) {
+    PerformanceWarning(std::string("Only ") + std::to_string(join_index_performance_data.chunks_scanned_with_index) +
+                       " of " +
+                       std::to_string(join_index_performance_data.chunks_scanned_with_index +
+                                      join_index_performance_data.chunks_scanned_without_index) +
+                       " chunks processed using an index.");
   }
-  perf.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
+  join_index_performance_data.stage_runtimes[*magic_enum::enum_index(OperatorStages::OutputWriting)] = timer.lap();
 
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }
@@ -267,7 +275,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
   PerformanceWarning("Fallback nested loop used.");
-  auto& perf = static_cast<PerformanceData&>(*performance_data);
+  auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
 
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
   Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -296,7 +304,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
   const auto& count_index_positions = index_pos_list_size_post_fallback - index_pos_list_size_pre_fallback;
   std::fill_n(std::back_inserter(_index_pos_dereferenced), count_index_positions, false);
-  perf.chunks_scanned_without_index++;
+  join_index_performance_data.chunks_scanned_without_index++;
 }
 
 // join loop that joins two segments of two columns using an iterator for the probe side,
@@ -317,9 +325,10 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
 template <typename ProbeIterator>
 void JoinIndex::_reference_join_two_segments_using_index(
     ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-    const std::shared_ptr<AbstractIndex>& index, const std::shared_ptr<const PosList>& reference_segment_pos_list) {
+    const std::shared_ptr<AbstractIndex>& index,
+    const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list) {
   for (; probe_iter != probe_end; ++probe_iter) {
-    PosList index_scan_pos_list;
+    RowIDPosList index_scan_pos_list;
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
     for (const auto& [index_begin, index_end] : index_ranges) {
@@ -329,12 +338,12 @@ void JoinIndex::_reference_join_two_segments_using_index(
                      });
     }
 
-    PosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
+    RowIDPosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
     std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
     std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
     std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
 
-    PosList index_table_matches{};
+    RowIDPosList index_table_matches{};
     std::set_intersection(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end(), index_scan_pos_list.begin(),
                           index_scan_pos_list.end(), std::back_inserter(index_table_matches));
     _append_matches_dereferenced(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
@@ -429,7 +438,7 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
 }
 
 void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
-                                             const PosList& index_table_matches) {
+                                             const RowIDPosList& index_table_matches) {
   for (const auto& index_side_row_id : index_table_matches) {
     _probe_pos_list->emplace_back(RowID{probe_chunk_id, probe_chunk_offset});
     _index_pos_list->emplace_back(index_side_row_id);
@@ -492,7 +501,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
 }
 
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                                       const std::shared_ptr<PosList>& pos_list) {
+                                       const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   const auto column_count = input_table->column_count();
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
@@ -500,7 +509,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
-        auto new_pos_list = std::make_shared<PosList>();
+        auto new_pos_list = std::make_shared<RowIDPosList>();
 
         ChunkID current_chunk_id{0};
 
@@ -558,12 +567,11 @@ void JoinIndex::_on_cleanup() {
 }
 
 void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-  OperatorPerformanceData::output_to_stream(stream, description_mode);
   StagedOperatorPerformanceData::output_to_stream(stream, description_mode);
 
   stream << (description_mode == DescriptionMode::SingleLine ? " - " : "\n");
-  stream << chunks_scanned_with_index << " of "
-         << (chunks_scanned_with_index + chunks_scanned_without_index) << " chunks used an index.";
+  stream << chunks_scanned_with_index << " of " << (chunks_scanned_with_index + chunks_scanned_without_index)
+         << " chunks used an index.";
 }
 
 }  // namespace opossum

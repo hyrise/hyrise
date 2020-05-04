@@ -11,7 +11,7 @@
 namespace opossum {
 
 ClusteringSorter::ClusteringSorter(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::set<ChunkID>& chunk_ids, const std::vector<size_t>& invalid_row_counts, const std::shared_ptr<const Table> sorted_table)
-    : AbstractReadWriteOperator{OperatorType::Clustering, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _invalid_row_counts{invalid_row_counts}, _sorted_table{sorted_table}, _num_locks{0}, _transaction_id{0} {
+    : AbstractReadWriteOperator{OperatorType::ClusteringSorter, referencing_table_op}, _table{table}, _chunk_ids{chunk_ids}, _invalid_row_counts{invalid_row_counts}, _sorted_table{sorted_table}, _num_locks{0}, _transaction_id{0} {
       size_t num_rows = 0;
       for (const auto chunk_id : _chunk_ids) {
         const auto& chunk = _table->get_chunk(chunk_id);

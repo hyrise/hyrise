@@ -101,7 +101,8 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
+  explicit SingleChunkReferenceSegmentAccessor(const AbstractPosList& pos_list, const ChunkID chunk_id,
+                                               const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
@@ -116,7 +117,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
 
  protected:
   mutable uint64_t _accesses{0};
-  const PosList& _pos_list;
+  const AbstractPosList& _pos_list;
   const ChunkID _chunk_id;
   const Segment& _segment;
 };

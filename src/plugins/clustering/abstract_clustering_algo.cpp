@@ -274,7 +274,8 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   auto wrapper = std::make_shared<TableWrapper>(table);
   wrapper->execute();
   Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
-  auto sort = std::make_shared<Sort>(wrapper, sort_column, OrderByMode::Ascending, size_before_sort);
+  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column, OrderByMode::Ascending) };
+  auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, size_before_sort);
   sort->execute();
 
   const auto& sort_result = sort->get_output();

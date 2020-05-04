@@ -48,7 +48,7 @@ bool TPCCOrderStatus::_on_execute() {
     // Calculate ceil(n/2)
     auto customer_offset = static_cast<size_t>(
         std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1)));
-    customer_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
+    customer_id = *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 
   // Retrieve order
@@ -58,8 +58,8 @@ bool TPCCOrderStatus::_on_execute() {
   const auto& order_table = order_select_pair.second;
   // Returns multiple orders, we are interested in the latest one
   Assert(order_table && order_table->row_count() >= 1, "Did not find order");
-  o_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
-  o_entry_d = order_table->get_value<int32_t>(ColumnID{1}, 0);
+  o_id = *order_table->get_value<int32_t>(ColumnID{0}, 0);
+  o_entry_d = *order_table->get_value<int32_t>(ColumnID{1}, 0);
   o_carrier_id = order_table->get_value<int32_t>(ColumnID{2}, 0);
 
   // Retrieve order lines
@@ -70,7 +70,7 @@ bool TPCCOrderStatus::_on_execute() {
   Assert(order_line_table && order_line_table->row_count() >= 5 && order_line_table->row_count() <= 15,
          "Did not find order lines");
   for (auto row = size_t{0}; row < order_line_table->row_count(); ++row) {
-    ol_quantity_sum += order_line_table->get_value<int32_t>(ColumnID{2}, row);
+    ol_quantity_sum += *order_line_table->get_value<int32_t>(ColumnID{2}, row);
   }
 
   _sql_executor.commit();

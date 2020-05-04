@@ -79,7 +79,7 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
 
 std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(
     const std::shared_ptr<AbstractOperator>& physical_plan) {
-  const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
+  const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   return tasks.back()->get_operator()->get_output();
 }

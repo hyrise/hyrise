@@ -41,6 +41,8 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     // used as optional input for the compression of the offset values
     auto max_offset = uint32_t{0u};
 
+    auto segment_contains_null_values = false;
+
     segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
       const auto size = std::distance(segment_it, segment_end);
       const auto num_blocks = div_ceil(size, block_size);
@@ -69,6 +71,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
           const auto value_is_null = segment_value.is_null();
           *value_block_it = value_is_null ? T{0u} : value;
           null_values.push_back(value_is_null);
+          segment_contains_null_values |= value_is_null;
 
           if (!value_is_null) {
             min_value = std::min(min_value, value);
@@ -106,7 +109,11 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
 
     auto compressed_offset_values = compress_vector(offset_values, vector_compression_type(), allocator, {max_offset});
 
-    return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::move(null_values),
+    if (segment_contains_null_values) {
+      return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::move(null_values),
+                                                          std::move(compressed_offset_values));
+    }
+    return std::make_shared<FrameOfReferenceSegment<T>>(std::move(block_minima), std::nullopt,
                                                         std::move(compressed_offset_values));
   }
 };

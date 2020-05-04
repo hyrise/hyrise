@@ -54,7 +54,7 @@ bool TPCCNewOrder::_on_execute() {
       _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
-  const auto w_tax = warehouse_table->get_value<float>(ColumnID{0}, 0);
+  const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);
   Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered");
 
   // Find the district tax rate and the next order ID
@@ -63,9 +63,9 @@ bool TPCCNewOrder::_on_execute() {
                             std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
-  const auto d_tax = district_table->get_value<float>(ColumnID{0}, 0);
+  const auto d_tax = *district_table->get_value<float>(ColumnID{0}, 0);
   Assert(d_tax >= 0.f && d_tax <= .2f, "Invalid warehouse tax rate encountered");
-  const auto d_next_o_id = district_table->get_value<int32_t>(ColumnID{1}, 0);
+  const auto d_next_o_id = *district_table->get_value<int32_t>(ColumnID{1}, 0);
   o_id = d_next_o_id;
 
   // The TPC-C requires D_NEXT_O_ID to have a capacity of 10,000,000, so int is enough. For long runs, we still
@@ -86,10 +86,10 @@ bool TPCCNewOrder::_on_execute() {
       " AND C_D_ID = " + std::to_string(d_id) + " AND C_ID = " + std::to_string(c_id));
   const auto& customer_table = customer_select_pair.second;
   Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one)");
-  const auto c_discount = customer_table->get_value<float>(ColumnID{0}, 0);
+  const auto c_discount = *customer_table->get_value<float>(ColumnID{0}, 0);
   Assert(c_discount >= 0.f && c_discount <= .5f, "Invalid customer discount rate encountered");
-  const auto c_last = customer_table->get_value<pmr_string>(ColumnID{1}, 0);
-  const auto c_credit = customer_table->get_value<pmr_string>(ColumnID{2}, 0);
+  const auto c_last = *customer_table->get_value<pmr_string>(ColumnID{1}, 0);
+  const auto c_credit = *customer_table->get_value<pmr_string>(ColumnID{2}, 0);
   Assert(c_credit == "GC" || c_credit == "BC", "Invalid customer credit encountered");
 
   // Check if all order lines are local
@@ -106,12 +106,11 @@ bool TPCCNewOrder::_on_execute() {
   Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Insert row into ORDER
-  // TODO(anyone): add NULL support to O_CARRIER_ID - also adapt check_consistency in tpcc_benchmark.cpp
   const auto order_insert_pair = _sql_executor.execute(
       std::string{"INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
                   "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +
       std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " + std::to_string(c_id) +
-      ", " + std::to_string(o_entry_d) + ", -1, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
+      ", " + std::to_string(o_entry_d) + ", NULL, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
   Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Iterate over order lines
@@ -130,7 +129,7 @@ bool TPCCNewOrder::_on_execute() {
       return true;
     }
 
-    const auto i_price = item_table->get_value<float>(ColumnID{1}, 0);
+    const auto i_price = *item_table->get_value<float>(ColumnID{1}, 0);
 
     // Retrieve the STOCK entry. Currently, this is done in the loop and it should be more performant to do a similar
     // `IN (...)` optimization. Not sure how legal that is though.
@@ -140,12 +139,12 @@ bool TPCCNewOrder::_on_execute() {
         " AND S_W_ID = " + std::to_string(order_line.ol_supply_w_id));
     const auto& stock_table = stock_select_pair.second;
     Assert(stock_table && stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
-    const auto s_quantity = stock_table->get_value<int32_t>(ColumnID{0}, 0);
-    const auto s_dist = stock_table->get_value<pmr_string>(ColumnID{1}, 0);
-    const auto s_data = stock_table->get_value<pmr_string>(ColumnID{2}, 0);
-    const auto s_ytd = stock_table->get_value<int32_t>(ColumnID{3}, 0);
-    const auto s_order_cnt = stock_table->get_value<int32_t>(ColumnID{4}, 0);
-    const auto s_remote_cnt = stock_table->get_value<int32_t>(ColumnID{4}, 0);
+    const auto s_quantity = *stock_table->get_value<int32_t>(ColumnID{0}, 0);
+    const auto s_dist = *stock_table->get_value<pmr_string>(ColumnID{1}, 0);
+    const auto s_data = *stock_table->get_value<pmr_string>(ColumnID{2}, 0);
+    const auto s_ytd = *stock_table->get_value<int32_t>(ColumnID{3}, 0);
+    const auto s_order_cnt = *stock_table->get_value<int32_t>(ColumnID{4}, 0);
+    const auto s_remote_cnt = *stock_table->get_value<int32_t>(ColumnID{4}, 0);
 
     // Calculate the new values for S_QUANTITY, S_YTD, S_ORDER_CNT
     auto new_s_quantity = 0;
@@ -175,13 +174,12 @@ bool TPCCNewOrder::_on_execute() {
     // Add to ORDER_LINE
     // TODO(anyone): This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and
     //               allow for a single insert at the end
-    // TODO(anyone): Use actual NULL for OL_DELIVERY_D
     const auto order_line_insert_pair = _sql_executor.execute(
         std::string{"INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "
                     "OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES ("} +
         std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " +
         std::to_string(order_line_idx) + ", " + std::to_string(order_line.ol_i_id) + ", " +
-        std::to_string(order_line.ol_supply_w_id) + ", -1, " + std::to_string(order_line.ol_quantity) + ", " +
+        std::to_string(order_line.ol_supply_w_id) + ", NULL, " + std::to_string(order_line.ol_quantity) + ", " +
         std::to_string(ol_amount) + ", '" + std::string{s_dist} + "')");
     Assert(order_line_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
   }

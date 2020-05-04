@@ -68,11 +68,9 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressio
     auto& column_expression = column_expressions[expression_idx];
     DebugAssert(column_expression->type == ExpressionType::Aggregate,
                 "Unexpected non-aggregate in list of aggregates.");
-    if (column_expression->type == ExpressionType::Aggregate) {
-      const auto& aggregate_expression = static_cast<AggregateExpression&>(*column_expression);
-      if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
-        column_expression = column_expression->arguments[0];
-      }
+    const auto& aggregate_expression = static_cast<AggregateExpression&>(*column_expression);
+    if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
+      column_expression = column_expression->arguments[0];
     }
   }
 

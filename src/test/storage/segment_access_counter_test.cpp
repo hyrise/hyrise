@@ -19,7 +19,7 @@ class SegmentAccessCounterTest : public BaseTest {
   using AccessPattern = SegmentAccessCounter::AccessPattern;
   using AccessType = SegmentAccessCounter::AccessType;
 
-  static AccessPattern _access_pattern(const std::shared_ptr<const PosList>& positions) {
+  static AccessPattern _access_pattern(const std::shared_ptr<const RowIDPosList>& positions) {
     return SegmentAccessCounter::_access_pattern(*positions);
   }
 };
@@ -73,7 +73,7 @@ TEST_F(SegmentAccessCounterTest, AssignmentOperator) {
 }
 
 TEST_F(SegmentAccessCounterTest, AccessPatternIncreasing) {
-  auto positions = std::make_shared<PosList>();
+  auto positions = std::make_shared<RowIDPosList>();
   EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{0}});
   EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
@@ -90,7 +90,7 @@ TEST_F(SegmentAccessCounterTest, AccessPatternIncreasing) {
 }
 
 TEST_F(SegmentAccessCounterTest, AccessPatternDecreasing) {
-  auto positions = std::make_shared<PosList>();
+  auto positions = std::make_shared<RowIDPosList>();
   EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));
   positions->push_back({ChunkID{0}, ChunkOffset{666}});
   EXPECT_EQ(AccessPattern::Point, _access_pattern(positions));

@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -46,7 +46,7 @@ class SegmentAccessCounter {
 
   // For a given position list, this determines whether its entries are in sequential, monotonic, or random order.
   // It only looks at the first n values.
-  static AccessType access_type(const PosList& positions);
+  static AccessType access_type(const AbstractPosList& positions);
 
   std::string to_string() const;
 
@@ -71,7 +71,7 @@ class SegmentAccessCounter {
     Random
   };
 
-  static AccessPattern _access_pattern(const PosList& positions);
+  static AccessPattern _access_pattern(const AbstractPosList& positions);
 
   void _set_counters(const SegmentAccessCounter& counter);
 };

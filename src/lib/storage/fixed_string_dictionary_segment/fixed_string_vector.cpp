@@ -11,6 +11,12 @@
 
 namespace opossum {
 
+FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator)
+    : _string_length(other._string_length), _chars(other._chars, allocator), _size(other._size) {
+  // For pmr_vectors, operator= does not change the allocator. As such, we need to set _chars in the initializer list.
+  // Otherwise, it would be created using the default allocator and ignore the passed-in allocator.
+}
+
 void FixedStringVector::push_back(const pmr_string& string) {
   Assert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
   const auto pos = _chars.size();
@@ -73,11 +79,13 @@ pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   }
 }
 
-char* FixedStringVector::data() { return _chars.data(); }
+const char* FixedStringVector::data() const { return _chars.data(); }
 
 size_t FixedStringVector::size() const { return _size; }
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }
+
+size_t FixedStringVector::string_length() const { return _string_length; }
 
 void FixedStringVector::erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end) {
   const auto count = std::distance(start, end);
@@ -99,6 +107,6 @@ PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() { return _c
 
 void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_length); }
 
-size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.size(); }
+size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.capacity(); }
 
 }  // namespace opossum

@@ -178,7 +178,7 @@ TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
       std::make_shared<PredicateNode>(greater_than_(LQPColumnReference(stored_table_node, ColumnID{0}), 200));
   predicate_node_1->set_left_input(stored_table_node);
 
-  auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
+  auto union_node = std::make_shared<UnionNode>(SetOperationMode::Positions);
   union_node->set_left_input(predicate_node_0);
   union_node->set_right_input(predicate_node_1);
 

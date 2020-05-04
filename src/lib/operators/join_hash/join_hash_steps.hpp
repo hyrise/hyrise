@@ -482,8 +482,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-           std::vector<PosList>& pos_lists_build_side, std::vector<PosList>& pos_lists_probe_side, const JoinMode mode,
-           const Table& build_table, const Table& probe_table,
+           std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
+           const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
@@ -507,8 +507,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
       const auto& elements = partition.elements;
       const auto& null_values = partition.null_values;
 
-      PosList pos_list_build_side_local;
-      PosList pos_list_probe_side_local;
+      RowIDPosList pos_list_build_side_local;
+      RowIDPosList pos_list_probe_side_local;
 
       if constexpr (keep_null_values) {
         Assert(elements.size() == null_values.size(),
@@ -631,7 +631,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-                     std::vector<PosList>& pos_lists, const Table& build_table, const Table& probe_table,
+                     std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
@@ -648,7 +648,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
       const auto& elements = partition.elements;
       const auto& null_values = partition.null_values;
 
-      PosList pos_list_local;
+      RowIDPosList pos_list_local;
 
       const auto hash_table_idx = hash_tables.size() > 1 ? partition_idx : 0;
       if (!hash_tables.empty() && hash_tables.at(hash_table_idx)) {
@@ -739,7 +739,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 }
 
-using PosLists = std::vector<std::shared_ptr<const PosList>>;
+using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 
 /**
@@ -795,8 +795,8 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
  */
 inline void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                                   const PosListsByChunk& input_pos_list_ptrs_sptrs_by_segments,
-                                  std::shared_ptr<PosList> pos_list) {
-  std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
+                                  std::shared_ptr<RowIDPosList> pos_list) {
+  std::map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop
   std::shared_ptr<Table> dummy_table;
@@ -812,7 +812,7 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         auto iter = output_pos_list_cache.find(input_table_pos_lists);
         if (iter == output_pos_list_cache.end()) {
           // Get the row ids that are referenced
-          auto new_pos_list = std::make_shared<PosList>(pos_list->size());
+          auto new_pos_list = std::make_shared<RowIDPosList>(pos_list->size());
           auto new_pos_list_iter = new_pos_list->begin();
           auto common_chunk_id = std::optional<ChunkID>{};
           for (const auto& row : *pos_list) {
