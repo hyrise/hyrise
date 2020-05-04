@@ -74,9 +74,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
-  _loop_thread_snap =
-     std::make_unique<PausableLoopThread>(std::chrono::seconds(30), [&](size_t) { _snap(); });
-
   _benchmark_start = std::chrono::steady_clock::now();
 
   const auto& items = _benchmark_item_runner->items();
@@ -97,8 +94,6 @@ void BenchmarkRunner::run() {
 
   auto benchmark_end = std::chrono::steady_clock::now();
   _total_run_duration = benchmark_end - _benchmark_start;
-
-  _loop_thread_snap.reset();
 
   // Create report
   if (_config.output_file_path) {
@@ -140,14 +135,6 @@ void BenchmarkRunner::run() {
     Hyrise::get().scheduler()->finish();
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
   }
-
-  std::cout << "cache calls: " << _cache_calls.load() << std::endl << "cached items: " << _cached_items.load() << std::endl;
-}
-
-void BenchmarkRunner::_snap() {
-  auto cached_items = Hyrise::get().default_pqp_cache->snapshot().size();
-  _cached_items += cached_items;
-  _cache_calls++;
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {

@@ -13,7 +13,7 @@ namespace opossum {
 // Generic cache implementation using the GDFS policy.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class GDFSCache : public AbstractCacheImpl<Key, Value> {
+class GDFSCacheOld : public AbstractCacheImpl<Key, Value> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -61,10 +61,9 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  explicit GDFSCache(size_t capacity = 1024) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCacheOld(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
-    std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -96,16 +95,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     _map[key] = handle;
   }
 
-  std::optional<Value> try_get(const Key& query) {
-    if (this->_capacity == 0) return {};
-    if (!has(query)) {
-      return {};
-    }
-    return get(query);
-  }
-
   Value& get(const Key& key) {
-    std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     DebugAssert(it != _map.end(), "key not present");
     Handle handle = it->second;
@@ -116,24 +106,16 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     return entry.value;
   }
 
-  bool has(const Key& key) const {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
-    return _map.find(key) != _map.end();
-  }
+  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
 
-  size_t size() const {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
-    return _map.size();
-  }
+  size_t size() const { return _map.size(); }
 
   void clear() {
-    std::unique_lock<std::shared_mutex> lock(_mutex);
     _map.clear();
     _queue.clear();
   }
 
   void resize(size_t capacity) {
-    std::unique_lock<std::shared_mutex> lock(_mutex);
     while (_queue.size() > capacity) {
       _evict();
     }
@@ -165,7 +147,6 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   }
 
   CacheSnapshot snapshot() const {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
     CacheSnapshot _map_copy;
     for (auto it = _map.begin(); it != _map.end(); it++) {
       const auto [key, entry] = *it;
@@ -180,8 +161,6 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
   // Map to point towards element in the list.
   CacheMap _map;
-
-  mutable std::shared_mutex _mutex;
 
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;

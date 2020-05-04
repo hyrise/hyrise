@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <utility>
 
 #include <boost/iterator/iterator_facade.hpp>

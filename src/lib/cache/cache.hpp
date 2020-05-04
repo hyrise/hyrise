@@ -7,13 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "gdfs_cache.hpp"
+#include "gdfs_cache_old.hpp"
 
 #include "utils/singleton.hpp"
 
 namespace opossum {
 
-inline constexpr size_t DefaultCacheCapacity = 10;
+inline constexpr size_t DefaultCacheCapacity = 1024;
 
 // Per-default, uses the GDFS cache as underlying storage.
 template <typename Value, typename Key = std::string>
@@ -22,7 +22,7 @@ class Cache {
   using Iterator = typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
   explicit Cache(size_t capacity = DefaultCacheCapacity)
-      : _impl(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
+      : _impl(std::move(std::make_unique<GDFSCacheOld<Key, Value>>(capacity))) {}
 
   // Adds or refreshes the cache entry [query, value].
   void set(const Key& query, const Value& value) {

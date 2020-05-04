@@ -12,6 +12,7 @@ set(
     cache/abstract_cache_impl.hpp
     cache/cache.hpp
     cache/gdfs_cache.hpp
+    cache/gdfs_cache_old.hpp
     cache/gds_cache.hpp
     cache/lru_cache.hpp
     cache/lru_k_cache.hpp
