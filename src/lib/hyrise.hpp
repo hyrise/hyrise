@@ -28,7 +28,10 @@ class Hyrise : public Singleton<Hyrise> {
   // You should be very sure that this is what you want.
   static void reset();
 
+  // The scheduler is always set. However, the ImmediateExecutionScheduler does not involve any multi-threading. This
+  // can be tested with is_multi_threaded.
   const std::shared_ptr<AbstractScheduler>& scheduler() const;
+  bool is_multi_threaded() const;
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 

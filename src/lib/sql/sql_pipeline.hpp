@@ -9,7 +9,6 @@
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/chunk.hpp"
-#include "types.hpp"
 
 namespace opossum {
 
@@ -58,7 +57,7 @@ class SQLPipeline : public Noncopyable {
   const std::vector<std::shared_ptr<AbstractOperator>>& get_physical_plans();
 
   // Returns all tasks for each statement that need to be executed for this query.
-  const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
+  const std::vector<std::vector<std::shared_ptr<AbstractTask>>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns
   //   - {Success, tables}     if the statement was successful
@@ -80,7 +79,7 @@ class SQLPipeline : public Noncopyable {
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
 
-  // This returns the SQLPipelineStatement that aborted the transaction, if any
+  // This returns the SQLPipelineStatement that caused the pipeline to fail due to a transaction conflict, if any
   std::shared_ptr<SQLPipelineStatement> failed_pipeline_statement() const;
 
   size_t statement_count() const;
@@ -99,7 +98,9 @@ class SQLPipeline : public Noncopyable {
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
-  const std::shared_ptr<TransactionContext> _transaction_context;
+  // Either created during execution (if auto-commit) or set by set_transaction_context
+  std::shared_ptr<TransactionContext> _transaction_context;
+
   const std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
@@ -108,7 +109,7 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
   std::vector<std::shared_ptr<AbstractOperator>> _physical_plans;
-  std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
+  std::vector<std::vector<std::shared_ptr<AbstractTask>>> _tasks;
   std::vector<std::shared_ptr<const Table>> _result_tables;
 
   // Indicates whether get_result_table() has been run yet and whether the execution was successful

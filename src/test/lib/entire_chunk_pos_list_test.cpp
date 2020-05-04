@@ -43,7 +43,7 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   const auto chunk_size = get_table->get_output()->get_chunk(chunk_id)->size();
   const auto entire_chunk_pos_list = std::make_shared<const EntireChunkPosList>(chunk_id, chunk_size);
 
-  const auto insert_context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto insert_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto get_table_to_add = std::make_shared<GetTable>(table_to_add_name);
   get_table_to_add->execute();
 

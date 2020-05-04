@@ -21,6 +21,7 @@ class MetaMockTable : public AbstractMetaTable {
   size_t insert_calls() const;
   size_t remove_calls() const;
   size_t update_calls() const;
+  size_t generate_calls() const;
 
   const std::vector<AllTypeVariant> insert_values() const;
   const std::vector<AllTypeVariant> remove_values() const;
@@ -33,9 +34,10 @@ class MetaMockTable : public AbstractMetaTable {
   void _on_remove(const std::vector<AllTypeVariant>& values);
   void _on_update(const std::vector<AllTypeVariant>& selected_values, const std::vector<AllTypeVariant>& update_values);
 
-  size_t _insert_calls;
-  size_t _remove_calls;
-  size_t _update_calls;
+  size_t _insert_calls = 0;
+  size_t _remove_calls = 0;
+  size_t _update_calls = 0;
+  mutable size_t _generate_calls = 0;
 
   std::vector<AllTypeVariant> _insert_values;
   std::vector<AllTypeVariant> _remove_values;
