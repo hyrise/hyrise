@@ -14,7 +14,6 @@ AbstractMetaSystemTable::AbstractMetaSystemTable(const TableColumnDefinitions& c
 // Returns the number of logical processors
 size_t AbstractMetaSystemTable::_get_cpu_count() {
 #ifdef __linux__
-
   std::ifstream cpu_info_file;
   cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
   DebugAssert(cpu_info_file.is_open(), "Failed to open /proc/cpuinfo");
@@ -31,7 +30,6 @@ size_t AbstractMetaSystemTable::_get_cpu_count() {
 #endif
 
 #ifdef __APPLE__
-
   size_t processors;
   size_t size = sizeof(processors);
   const auto ret = sysctlbyname("hw.ncpu", &processors, &size, nullptr, 0);

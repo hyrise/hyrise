@@ -23,7 +23,7 @@ MetaSystemUtilizationTable::MetaSystemUtilizationTable()
                                                      {"system_memory_free", DataType::Long, false},
                                                      {"system_memory_available", DataType::Long, false},
                                                      {"process_virtual_memory", DataType::Long, false},
-                                                     {"process_physical_memory_RSS", DataType::Long, false}}) {}
+                                                     {"process_RSS", DataType::Long, false}}) {}
 
 const std::string& MetaSystemUtilizationTable::name() const {
   static const auto name = std::string{"system_utilization"};
@@ -71,6 +71,8 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
 /*
  * Returns the time in ns that ALL processes have spent on the CPU
  * since an arbitrary point in the past.
+ * This might be used to differentiate between CPU time consumed by this process 
+ * and by other processes on the same machine.
 */
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
@@ -135,14 +137,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   [[maybe_unused]] const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
   DebugAssert(ret == 0, "Failed in clock_gettime");
 
-  size_t cpu_count;
-  if (numa_available() != -1) {
-    cpu_count = numa_num_task_cpus();
-  } else {
-    cpu_count = _get_cpu_count();
-  }
-
-  const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec) / cpu_count;
+  const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
 
   return active_ns;
 #endif
@@ -151,7 +146,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
   DebugAssert(active_ns != 0, "Failed in clock_gettime_nsec_np");
 
-  return active_ns / _get_cpu_count();
+  return active_ns;
 #endif
 
   Fail("Method not implemented for this platform");

@@ -9,7 +9,6 @@
 
 #include "hyrise.hpp"
 #include "types.hpp"
-#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
 

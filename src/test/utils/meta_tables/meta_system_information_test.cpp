@@ -1,5 +1,5 @@
 #ifdef __linux__
-#include <numa.h>
+#include <sched.h>
 #endif
 
 #include "base_test.hpp"
@@ -20,46 +20,49 @@ TEST_F(MetaSystemInformationTest, NumaInformation) {
   auto system_information = generate_meta_table(meta_system_information_table);
 
   const auto cpu_count_column_id = system_information->column_id_by_name("cpu_count");
-  const auto numa_cpu_count_column_id = system_information->column_id_by_name("numa_cpu_count");
+  const auto cpu_affinity_count_column_id = system_information->column_id_by_name("cpu_affinity_count");
 
   const auto cpu_count = boost::get<int32_t>(system_information->get_row(0)[cpu_count_column_id]);
-  const auto numa_cpu_count = boost::get<int32_t>(system_information->get_row(0)[numa_cpu_count_column_id]);
+  const auto cpu_affinity_count = boost::get<int32_t>(system_information->get_row(0)[cpu_affinity_count_column_id]);
 
   EXPECT_GT(cpu_count, 0);
-  EXPECT_GT(numa_cpu_count, 0);
-  EXPECT_GE(cpu_count, numa_cpu_count);
+  EXPECT_GT(cpu_affinity_count, 0);
+  EXPECT_GE(cpu_count, cpu_affinity_count);
 
 #ifdef __linux__
   // Reduce useable CPUs by one, check if the change is reflected in the metatable and reset the CPU affinities.
-  auto* default_cpu_mask = numa_allocate_cpumask();
-  numa_sched_getaffinity(0, default_cpu_mask);
+  auto* default_cpu_set = CPU_ALLOC(cpu_count);
+  const auto cpu_set_size = CPU_ALLOC_SIZE(cpu_count);
+  sched_getaffinity(0, cpu_set_size, default_cpu_set);
 
-  auto* cpu_mask = numa_allocate_cpumask();
-  copy_bitmask_to_bitmask(default_cpu_mask, cpu_mask);
+  auto* cpu_set = CPU_ALLOC(cpu_count);
+  memcpy(cpu_set, default_cpu_set, cpu_set_size);
 
-  const uint32_t max_cpu = static_cast<uint32_t>(numa_num_configured_cpus());
+  const auto max_cpu = static_cast<uint32_t>(cpu_count);
   for (uint32_t cpu_index = 0; cpu_index < max_cpu; ++cpu_index) {
-    if (numa_bitmask_isbitset(default_cpu_mask, cpu_index)) {
-      cpu_mask = numa_bitmask_clearbit(cpu_mask, cpu_index);
+    if (CPU_ISSET(cpu_index, default_cpu_set)) {
+      CPU_CLR(cpu_index, cpu_set);
       break;
     }
   }
 
-  numa_sched_setaffinity(0, cpu_mask);
-  numa_free_cpumask(cpu_mask);
+  sched_setaffinity(0, cpu_set_size, cpu_set);
+  CPU_FREE(cpu_set);
 
   system_information = generate_meta_table(meta_system_information_table);
-  const auto numa_cpu_count_altered = boost::get<int32_t>(system_information->get_row(0)[numa_cpu_count_column_id]);
+  const auto cpu_affinity_count_altered =
+      boost::get<int32_t>(system_information->get_row(0)[cpu_affinity_count_column_id]);
 
-  EXPECT_EQ(numa_cpu_count_altered, numa_cpu_count - 1);
+  EXPECT_EQ(cpu_affinity_count_altered, cpu_affinity_count - 1);
 
-  numa_sched_setaffinity(0, default_cpu_mask);
-  numa_free_cpumask(default_cpu_mask);
+  sched_setaffinity(0, cpu_set_size, default_cpu_set);
+  CPU_FREE(default_cpu_set);
 
   system_information = generate_meta_table(meta_system_information_table);
-  const auto numa_cpu_count_reset = boost::get<int32_t>(system_information->get_row(0)[numa_cpu_count_column_id]);
+  const auto cpu_affinity_count_reset =
+      boost::get<int32_t>(system_information->get_row(0)[cpu_affinity_count_column_id]);
 
-  EXPECT_EQ(numa_cpu_count_reset, numa_cpu_count);
+  EXPECT_EQ(cpu_affinity_count_reset, cpu_affinity_count);
 #endif
 }
 

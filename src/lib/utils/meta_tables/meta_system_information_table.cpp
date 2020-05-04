@@ -1,5 +1,5 @@
 #ifdef __linux__
-#include <numa.h>
+#include <sched.h>
 #include <sys/sysinfo.h>
 #endif
 
@@ -12,7 +12,7 @@ namespace opossum {
 MetaSystemInformationTable::MetaSystemInformationTable()
     : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
                                                      {"system_memory_total_bytes", DataType::Long, false},
-                                                     {"numa_cpu_count", DataType::Int, false},
+                                                     {"cpu_affinity_count", DataType::Int, false},
                                                      {"cpu_model", DataType::String, false}}) {}
 
 const std::string& MetaSystemInformationTable::name() const {
@@ -25,14 +25,15 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 
   const auto cpus = _get_cpu_count();
 
-  auto numa_cpus = cpus;
 #ifdef __linux__
-  if (numa_available() != -1) {
-    auto* cpu_mask = numa_allocate_cpumask();
-    numa_sched_getaffinity(0, cpu_mask);
-    numa_cpus = numa_bitmask_weight(cpu_mask);
-    numa_free_cpumask(cpu_mask);
-  }
+  auto* cpuset = CPU_ALLOC(cpus);
+  const auto size = CPU_ALLOC_SIZE(cpus);
+  sched_getaffinity(0, size, cpuset);
+  const auto cpu_affinity_count = CPU_COUNT_S(size, cpuset);
+  CPU_FREE(cpuset);
+#endif
+#ifdef __APPLE__
+  const auto cpu_affinity_count = cpus;
 #endif
 
   uint64_t ram;
@@ -52,7 +53,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 
   const auto cpu_model = _cpu_model();
 
-  output_table->append({static_cast<int32_t>(cpus), static_cast<int64_t>(ram), static_cast<int32_t>(numa_cpus),
+  output_table->append({static_cast<int32_t>(cpus), static_cast<int64_t>(ram), static_cast<int32_t>(cpu_affinity_count),
                         static_cast<pmr_string>(cpu_model)});
 
   return output_table;
@@ -67,7 +68,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
 
   std::string cpuinfo_line;
   while (std::getline(cpuinfo_file, cpuinfo_line)) {
-    if (cpuinfo_line.rfind("model name", 0) == 0) {
+    if (cpuinfo_line.starts_with("model name")) {
       cpuinfo_line.erase(0, cpuinfo_line.find(": ") + 2);
       cpuinfo_file.close();
       return cpuinfo_line;
@@ -84,6 +85,8 @@ std::string MetaSystemInformationTable::_cpu_model() {
 
   return std::string(buffer);
 #endif
+
+  Fail("Method not implemented for this platform");
 }
 
 }  // namespace opossum
