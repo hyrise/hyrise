@@ -39,16 +39,16 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   uint64_t ram;
 #ifdef __linux__
   struct sysinfo memory_info {};
-  [[maybe_unused]] const auto ret = sysinfo(&memory_info);
-  DebugAssert(ret == 0, "Failed to get sysinfo");
+  const auto ret = sysinfo(&memory_info);
+  Assert(ret == 0, "Failed to get sysinfo");
 
   ram = memory_info.totalram * memory_info.mem_unit;
 #endif
 
 #ifdef __APPLE__
   size_t size = sizeof(ram);
-  [[maybe_unused]] const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
-  DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
+  const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
+  Assert(ret == 0, "Failed to call sysctl hw.memsize");
 #endif
 
   const auto cpu_model = _cpu_model();
@@ -63,17 +63,21 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
 std::string MetaSystemInformationTable::_cpu_model() {
 #ifdef __linux__
   std::ifstream cpuinfo_file;
-  cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
-  DebugAssert(cpuinfo_file.is_open(), "Failed to open /proc/cpuinfo");
+  try {
+    cpuinfo_file.open("/proc/cpuinfo", std::ifstream::in);
 
-  std::string cpuinfo_line;
-  while (std::getline(cpuinfo_file, cpuinfo_line)) {
-    if (cpuinfo_line.starts_with("model name")) {
-      cpuinfo_line.erase(0, cpuinfo_line.find(": ") + 2);
-      cpuinfo_file.close();
-      return cpuinfo_line;
+    std::string cpuinfo_line;
+    while (std::getline(cpuinfo_file, cpuinfo_line)) {
+      if (cpuinfo_line.starts_with("model name")) {
+        cpuinfo_line.erase(0, cpuinfo_line.find(": ") + 2);
+        cpuinfo_file.close();
+        return cpuinfo_line;
+      }
     }
+  } catch (std::ios_base::failure& fail) {
+    Fail("Failed to read /proc/cpuinfo");
   }
+
   Fail("Could not read CPU model.");
 #endif
 
@@ -81,7 +85,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
   size_t buffer_size = 256;
   char buffer[256];
   const auto ret = sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0);
-  DebugAssert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
+  Assert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
 
   return std::string(buffer);
 #endif

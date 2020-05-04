@@ -55,8 +55,8 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
 */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
   std::array<double, 3> load_avg{};
-  [[maybe_unused]] const int nelem = getloadavg(load_avg.data(), 3);
-  DebugAssert(nelem == 3, "Failed to read load averages");
+  const int nelem = getloadavg(load_avg.data(), 3);
+  Assert(nelem == 3, "Failed to read load averages");
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
 }
 
@@ -77,12 +77,15 @@ uint64_t MetaSystemUtilizationTable::_get_total_time() {
 uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __linux__
   std::ifstream stat_file;
-  stat_file.open("/proc/stat", std::ifstream::in);
-  DebugAssert(stat_file.is_open(), "Failed to open /proc/stat");
-
   std::string cpu_line;
-  std::getline(stat_file, cpu_line);
-  stat_file.close();
+  try {
+    stat_file.open("/proc/stat", std::ifstream::in);
+
+    std::getline(stat_file, cpu_line);
+    stat_file.close();
+  } catch (std::ios_base::failure& fail) {
+    Fail("Failed to read /proc/stat");
+  }
 
   const auto cpu_ticks = _parse_value_string(cpu_line);
 
@@ -91,16 +94,10 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
   const auto kernel_ticks = cpu_ticks.at(2);
 
   const auto active_ticks = user_ticks + user_nice_ticks + kernel_ticks;
-  size_t cpu_count;
-  if (numa_available() != -1) {
-    cpu_count = numa_num_task_cpus();
-  } else {
-    cpu_count = _get_cpu_count();
-  }
 
   // The amount of time in /proc/stat is measured in units of clock ticks.
   // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
-  const auto active_ns = (active_ticks * std::nano::den) / (sysconf(_SC_CLK_TCK) * cpu_count);
+  const auto active_ns = (active_ticks * std::nano::den) / sysconf(_SC_CLK_TCK);
 
   return active_ns;
 #endif
@@ -108,16 +105,16 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 #ifdef __APPLE__
   host_cpu_load_info_data_t cpu_info;
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
-  [[maybe_unused]] const auto ret =
+  const auto ret =
       host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, reinterpret_cast<host_info_t>(&cpu_info), &count);
-  DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics");
+  Assert(ret == KERN_SUCCESS, "Failed to get host_statistics");
 
   const auto active_ticks =
       cpu_info.cpu_ticks[CPU_STATE_SYSTEM] + cpu_info.cpu_ticks[CPU_STATE_USER] + cpu_info.cpu_ticks[CPU_STATE_NICE];
 
   // The amount of time from HOST_CPU_LOAD_INFO is measured in units of clock ticks.
   // sysconf(_SC_CLK_TCK) can be used to convert it to ns.
-  const auto active_ns = active_ticks * std::nano::den / (sysconf(_SC_CLK_TCK) * _get_cpu_count());
+  const auto active_ns = active_ticks * std::nano::den / sysconf(_SC_CLK_TCK);
 
   return active_ns;
 #endif
@@ -134,8 +131,8 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // Per-process CPU-time clock (measures CPU time consumed by all threads in the process).
 #ifdef __linux__
   struct timespec time_spec {};
-  [[maybe_unused]] const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
-  DebugAssert(ret == 0, "Failed in clock_gettime");
+  const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
+  Assert(ret == 0, "Failed in clock_gettime");
 
   const auto active_ns = (time_spec.tv_sec * std::nano::den + time_spec.tv_nsec);
 
@@ -144,7 +141,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 
 #ifdef __APPLE__
   const auto active_ns = clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID);
-  DebugAssert(active_ns != 0, "Failed in clock_gettime_nsec_np");
+  Assert(active_ns != 0, "Failed in clock_gettime_nsec_np");
 
   return active_ns;
 #endif
@@ -163,19 +160,22 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
 MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_system_memory_usage() {
 #ifdef __linux__
   std::ifstream meminfo_file;
-  meminfo_file.open("/proc/meminfo", std::ifstream::in);
-  DebugAssert(meminfo_file.is_open(), "Unable to open /proc/meminfo");
-
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage{};
-  std::string meminfo_line;
-  while (std::getline(meminfo_file, meminfo_line)) {
-    if (meminfo_line.rfind("MemFree", 0) == 0) {
-      memory_usage.free_memory = _parse_value_string(meminfo_line)[0] * 1024;
-    } else if (meminfo_line.rfind("MemAvailable", 0) == 0) {
-      memory_usage.available_memory = _parse_value_string(meminfo_line)[0] * 1024;
+  try {
+    meminfo_file.open("/proc/meminfo", std::ifstream::in);
+
+    std::string meminfo_line;
+    while (std::getline(meminfo_file, meminfo_line)) {
+      if (meminfo_line.starts_with("MemFree")) {
+        memory_usage.free_memory = _parse_value_string(meminfo_line)[0] * 1024;
+      } else if (meminfo_line.starts_with("MemAvailable")) {
+        memory_usage.available_memory = _parse_value_string(meminfo_line)[0] * 1024;
+      }
     }
+    meminfo_file.close();
+  } catch (std::ios_base::failure& fail) {
+    Fail("Failed to read /proc/meminfo");
   }
-  meminfo_file.close();
 
   return memory_usage;
 #endif
@@ -183,16 +183,16 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 #ifdef __APPLE__
   int64_t physical_memory;
   size_t size = sizeof(physical_memory);
-  [[maybe_unused]] auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
-  DebugAssert(ret == 0, "Failed to call sysctl hw.memsize");
+  auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
+  Assert(ret == 0, "Failed to call sysctl hw.memsize");
 
   vm_size_t page_size;
   vm_statistics64_data_t vm_statistics;
   mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
   ret = host_page_size(mach_host_self(), &page_size);
-  DebugAssert(ret == KERN_SUCCESS, "Failed to get page size");
+  Assert(ret == KERN_SUCCESS, "Failed to get page size");
   ret = host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count);
-  DebugAssert(ret == KERN_SUCCESS, "Failed to get host_statistics64");
+  Assert(ret == KERN_SUCCESS, "Failed to get host_statistics64");
 
   MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
   memory_usage.free_memory = vm_statistics.free_count * page_size;
@@ -212,20 +212,23 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
 MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_process_memory_usage() {
 #ifdef __linux__
   std::ifstream self_status_file;
-  self_status_file.open("/proc/self/status", std::ifstream::in);
-  DebugAssert(self_status_file.is_open(), "Failed to open /proc/self/status");
-
   MetaSystemUtilizationTable::ProcessMemoryUsage memory_usage{};
-  std::string self_status_line;
-  while (std::getline(self_status_file, self_status_line)) {
-    if (self_status_line.rfind("VmSize", 0) == 0) {
-      memory_usage.virtual_memory = _parse_value_string(self_status_line)[0] * 1024;
-    } else if (self_status_line.rfind("VmRSS", 0) == 0) {
-      memory_usage.physical_memory = _parse_value_string(self_status_line)[0] * 1024;
-    }
-  }
+  try {
+    self_status_file.open("/proc/self/status", std::ifstream::in);
 
-  self_status_file.close();
+    std::string self_status_line;
+    while (std::getline(self_status_file, self_status_line)) {
+      if (self_status_line.starts_with("VmSize")) {
+        memory_usage.virtual_memory = _parse_value_string(self_status_line)[0] * 1024;
+      } else if (self_status_line.starts_with("VmRSS")) {
+        memory_usage.physical_memory = _parse_value_string(self_status_line)[0] * 1024;
+      }
+    }
+
+    self_status_file.close();
+  } catch (std::ios_base::failure& fail) {
+    Fail("Failed to read /proc/self/status");
+  }
 
   return memory_usage;
 #endif
@@ -233,9 +236,8 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #ifdef __APPLE__
   struct task_basic_info info;
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
-  [[maybe_unused]] const auto ret =
-      task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
-  DebugAssert(ret == KERN_SUCCESS, "Failed to get task_info");
+  const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
+  Assert(ret == KERN_SUCCESS, "Failed to get task_info");
 
   return {info.virtual_size, info.resident_size};
 #endif
