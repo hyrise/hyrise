@@ -62,6 +62,22 @@ def main():
 	console.expect("786")
 	console.expect("Execution info:")
 
+	# Test transactions
+	console.sendline("insert into test (a) values (17);")
+	console.sendline("begin")
+	console.sendline("insert into test (a) values (18);")
+	console.sendline("commit; insert into test (a) values (19);")
+	console.sendline("begin; insert into test (a) values (20);")
+	console.sendline("select sum(a) from test")
+	console.expect("860")
+	console.sendline("txinfo")
+	console.expect("Active transaction")
+	console.sendline("insert into test (a) values (21); rollback;")
+	console.sendline("select sum(a) from test")
+	console.expect("840")
+	console.sendline("txinfo")
+	console.expect("auto-commit mode")
+
 	# Test TPCH generation
 	console.sendline("generate_tpch     0.01   7")
 	console.expect("Generating tables done")
