@@ -7,10 +7,10 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
+class LQPColumnExpression;
 class TableStatistics;
 
 /**
@@ -26,7 +26,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {});
 
-  LQPColumnReference get_column(const std::string& column_name) const;
+  std::shared_ptr<LQPColumnExpression> get_column(const std::string& column_name) const;
 
   const ColumnDefinitions& column_definitions() const;
 

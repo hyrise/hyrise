@@ -29,7 +29,7 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, a_b, b_a, b_b;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b;
   std::shared_ptr<PredicateMergeRule> rule;
 };
 

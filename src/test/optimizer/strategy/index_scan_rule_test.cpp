@@ -57,7 +57,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   std::shared_ptr<IndexScanRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
   std::shared_ptr<Table> table;
-  LQPColumnReference a, b, c;
+  std::shared_ptr<LQPColumnExpression> a, b, c;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {

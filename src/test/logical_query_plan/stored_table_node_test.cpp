@@ -30,15 +30,15 @@ class StoredTableNodeTest : public BaseTest {
     table_t_a->create_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{0}}, "i_a3");
 
     _stored_table_node = StoredTableNode::make("t_a");
-    _a = LQPColumnReference(_stored_table_node, ColumnID{0});
-    _b = LQPColumnReference(_stored_table_node, ColumnID{1});
-    _c = LQPColumnReference(_stored_table_node, ColumnID{2});
+    _a = _stored_table_node->get_column("a");
+    _b = _stored_table_node->get_column("b");
+    _c = _stored_table_node->get_column("c");
 
     _stored_table_node->set_pruned_chunk_ids({ChunkID{2}});
   }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
-  LQPColumnReference _a, _b, _c;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
 TEST_F(StoredTableNodeTest, Description) {
@@ -52,26 +52,26 @@ TEST_F(StoredTableNodeTest, Description) {
 }
 
 TEST_F(StoredTableNodeTest, GetColumn) {
-  EXPECT_EQ(_stored_table_node->get_column("a"), _a);
-  EXPECT_EQ(_stored_table_node->get_column("b"), _b);
+  EXPECT_EQ(*_stored_table_node->get_column("a"), *_a);
+  EXPECT_EQ(*_stored_table_node->get_column("b"), *_b);
 
   // Column pruning does not interfere with get_column()
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-  EXPECT_EQ(_stored_table_node->get_column("a"), _a);
-  EXPECT_EQ(_stored_table_node->get_column("b"), _b);
+  EXPECT_EQ(*_stored_table_node->get_column("a"), *_a);
+  EXPECT_EQ(*_stored_table_node->get_column("b"), *_b);
 }
 
 TEST_F(StoredTableNodeTest, ColumnExpressions) {
   EXPECT_EQ(_stored_table_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *lqp_column_(_a));
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *lqp_column_(_b));
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(2u), *lqp_column_(_c));
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *_a);
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *_b);
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(2u), *_c);
 
   // Column pruning does not interfere with get_column()
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
   EXPECT_EQ(_stored_table_node->column_expressions().size(), 2u);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *lqp_column_(_b));
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *lqp_column_(_c));
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *_b);
+  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *_c);
 }
 
 TEST_F(StoredTableNodeTest, HashingAndEqualityCheck) {

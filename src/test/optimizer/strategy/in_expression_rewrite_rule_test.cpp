@@ -16,8 +16,8 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
         MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}}, 1000,
         {{GenericHistogram<int32_t>::with_single_bin(1, 200, 1000, 200),
           GenericHistogram<float>::with_single_bin(1.0f, 50.0f, 100, 10)}});
-    col_a = lqp_column_(node->get_column("col_a"));
-    col_b = lqp_column_(node->get_column("col_b"));
+    col_a = node->get_column("col_a");
+    col_b = node->get_column("col_b");
 
     single_element_in_expression = in_(col_a, list_(1));
     five_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5));
@@ -175,7 +175,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     table->append({1});
     const auto static_table_node = StaticTableNode::make(table);
-    const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
+    const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
@@ -194,7 +194,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     table->append({4});
     table->append({5});
     const auto static_table_node = StaticTableNode::make(table);
-    const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
+    const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
@@ -213,7 +213,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     table->append({4});
     table->append({5});
     const auto static_table_node = StaticTableNode::make(table);
-    const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
+    const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp =
         JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col_a, right_col), node, static_table_node);
 
@@ -242,7 +242,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     table->append({1});
     const auto static_table_node = StaticTableNode::make(table);
-    const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
+    const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
@@ -292,7 +292,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     for (auto i = 0; i < 100; ++i) table->append({i});
     const auto static_table_node = StaticTableNode::make(table);
-    const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
+    const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);

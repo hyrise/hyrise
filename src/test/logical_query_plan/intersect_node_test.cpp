@@ -16,9 +16,9 @@ class IntersectNodeTest : public BaseTest {
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
     _mock_node3 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}}, "t_v");
 
-    _a = {_mock_node1, ColumnID{0}};
-    _b = {_mock_node1, ColumnID{1}};
-    _c = {_mock_node1, ColumnID{2}};
+    _a = _mock_node1->get_column("a");
+    _b = _mock_node1->get_column("b");
+    _c = _mock_node1->get_column("c");
 
     _intersect_node = IntersectNode::make(SetOperationMode::Positions);
     _intersect_node->set_left_input(_mock_node1);
@@ -27,9 +27,9 @@ class IntersectNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
   std::shared_ptr<IntersectNode> _intersect_node;
-  LQPColumnReference _a;
-  LQPColumnReference _b;
-  LQPColumnReference _c;
+  std::shared_ptr<LQPColumnExpression> _a;
+  std::shared_ptr<LQPColumnExpression> _b;
+  std::shared_ptr<LQPColumnExpression> _c;
 };
 TEST_F(IntersectNodeTest, Description) { EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: Positions"); }
 

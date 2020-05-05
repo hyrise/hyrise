@@ -44,7 +44,7 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<ColumnPruningRule> rule;
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a, b, c, u, v, w;
+  std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
 TEST_F(ColumnPruningRuleTest, NoUnion) {
