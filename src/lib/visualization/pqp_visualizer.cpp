@@ -145,8 +145,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
     std::stringstream stream;
 
     // use a copy of the stream's default locale with thousand separator
-    const auto& separate_thousands_locale =
-        std::locale(stream.getloc(), std::make_unique<SeparateThousands>().release());
+    const auto& separate_thousands_locale = std::locale(stream.getloc(), new SeparateThousands);
     stream.imbue(separate_thousands_locale);
 
     stream << performance_data.output_row_count << " row(s)/";

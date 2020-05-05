@@ -115,8 +115,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   std::ostringstream label_stream;
 
   // use a copy of the stream's default locale with thousand separator
-  const auto& separate_thousands_locale =
-      std::locale(label_stream.getloc(), std::make_unique<SeparateThousands>().release());
+  const auto& separate_thousands_locale = std::locale(label_stream.getloc(), new SeparateThousands);
   label_stream.imbue(separate_thousands_locale);
 
   if (!isnan(row_count)) {
