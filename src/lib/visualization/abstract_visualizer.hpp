@@ -46,6 +46,7 @@ struct VizEdgeInfo {
   std::string arrowhead = "normal";
 };
 
+// Custom facet for creating a custom locale with thousands separator.
 struct SeparateThousands : std::numpunct<char> {
   char_type do_thousands_sep() const override { return ','; }  // separate with commas
   string_type do_grouping() const override { return "\3"; }    // groups of 3 digits
