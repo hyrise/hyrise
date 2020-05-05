@@ -256,10 +256,12 @@ void AggregateSort::_set_and_write_aggregate_value(
   }
 }
 
-Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id) {
+Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, const ChunkID chunk_id) {
   Segments segments{};
+  const auto column_count = input_table->column_count();
+  segments.reserve(column_count);
   const auto chunk = input_table->get_chunk(chunk_id);
-  for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     segments.emplace_back(chunk->get_segment(column_id));
   }
   return segments;
