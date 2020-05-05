@@ -107,7 +107,7 @@ When trying to optimize the time spent building the project, it is often helpful
 - Jan Kossmann
 - Markus Dreseler
 - Martin Boissier
-- Stefan Klauck
+- Stefan Halfpap
 
 
 Contact: firstname.lastname@hpi.de
@@ -131,14 +131,17 @@ Contact: firstname.lastname@hpi.de
 -   Carl      Gödecken
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Ivan      Illic
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   David     Justen
+-   Youri     Kaminsky
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
 -   Sven      Lehmann
+-   Till      Lehmann
 -   Tom       Lichtenstein
 -   Daniel    Lindner
 -   Alexander Löser
@@ -165,4 +168,3 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
-

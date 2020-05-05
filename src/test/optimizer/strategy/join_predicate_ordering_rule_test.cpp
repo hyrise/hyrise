@@ -44,7 +44,7 @@ class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<JoinPredicateOrderingRule> _rule;
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_x, a_y, a_z, b_x, b_y, b_z;
+  std::shared_ptr<LQPColumnExpression> a_x, a_y, a_z, b_x, b_y, b_z;
 };
 
 TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {

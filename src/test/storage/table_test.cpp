@@ -157,7 +157,40 @@ TEST_F(StorageTableTest, EmplaceChunk) {
   auto vs_int = std::make_shared<ValueSegment<int>>();
   auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
 
+  vs_int->append(5);
+  vs_str->append("five");
+
   t->append_chunk({vs_int, vs_str});
+  EXPECT_EQ(t->chunk_count(), 1u);
+}
+
+TEST_F(StorageTableTest, EmplaceEmptyChunk) {
+  EXPECT_EQ(t->chunk_count(), 0u);
+
+  auto vs_int = std::make_shared<ValueSegment<int>>();
+  auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+
+  t->append_chunk({vs_int, vs_str});
+  EXPECT_EQ(t->chunk_count(), 1u);
+}
+
+TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  EXPECT_EQ(t->chunk_count(), 0u);
+
+  {
+    auto vs_int = std::make_shared<ValueSegment<int>>();
+    auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+    t->append_chunk({vs_int, vs_str});
+  }
+
+  {
+    auto vs_int = std::make_shared<ValueSegment<int>>();
+    auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+    EXPECT_THROW(t->append_chunk({vs_int, vs_str}), std::logic_error);
+  }
+
   EXPECT_EQ(t->chunk_count(), 1u);
 }
 
@@ -182,6 +215,9 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   {
     auto vs_int = std::make_shared<ValueSegment<int>>();
     auto vs_str = std::make_shared<ValueSegment<pmr_string>>();
+
+    vs_int->append(5);
+    vs_str->append("World!");
 
     t->append_chunk({vs_int, vs_str});
     EXPECT_EQ(t->chunk_count(), 2u);

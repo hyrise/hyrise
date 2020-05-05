@@ -85,10 +85,10 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   gt1->execute();
 
   auto ins = std::make_shared<Insert>("table_insert", gt1);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   ins->set_transaction_context(context);
   ins->execute();
-  context->rollback();
+  context->rollback(RollbackReason::User);
 
   ASSERT_EQ(table->chunk_count(), 4u);
 
@@ -109,7 +109,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   auto gt2 = std::make_shared<GetTable>("table_insert");
   gt2->execute();
   auto validate = std::make_shared<Validate>(gt2);
-  context = Hyrise::get().transaction_manager.new_transaction_context();
+  context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   validate->set_transaction_context(context);
   validate->execute();
   EXPECT_EQ(validate->get_output()->row_count(), 12u);
