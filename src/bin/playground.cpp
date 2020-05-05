@@ -25,6 +25,8 @@ using namespace opossum::expression_functional;  // NOLINT
 
 using namespace opossum;  // NOLINT
 
+// Import
+
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
@@ -41,6 +43,10 @@ const auto CHUNK_ENCODINGS = std::vector{
   SegmentEncodingSpec{EncodingType::RunLength},
   SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}
 };
+
+// Export 
+constexpr auto MEMORY_CONSUMPTION_FILE = "../../out/config_results/memory_consumption.csv";
+constexpr auto PERFORMANCE_FILE = "../../out/config_results/performance.csv";
 
 // returns a vector with all lines of the file
 std::vector<std::vector<std::string>> read_file(const std::string file) {
@@ -90,7 +96,6 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
   auto previous_query_id = int64_t{-1};
   auto previous_predicate_selectivity = 17.0;
   std::shared_ptr<AbstractLQPNode> current_node;
-
   
   const auto& table = Hyrise::get().storage_manager.get_table(TABLE_NAME);
   const auto column_names = table->column_names();
@@ -138,7 +143,7 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
  * Takes a pair of an LQP-based query and the frequency, partially optimizes the query (only chunk and column pruning
  * for now), translates the query, and executes the query (single-threaded).
  */
-void partially_optimize_translate_and_execute_query(const std::pair<std::shared_ptr<AbstractLQPNode>, size_t>& workoad_item) {
+float partially_optimize_translate_and_execute_query(const std::pair<std::shared_ptr<AbstractLQPNode>, size_t>& workoad_item) {
   constexpr auto EXECUTION_COUNT = 17;
   const auto lqp_query = workoad_item.first;
   const auto frequency = workoad_item.second;
@@ -174,11 +179,20 @@ void partially_optimize_translate_and_execute_query(const std::pair<std::shared_
     runtime_accumulated += runtime;
   }
 
-  std::cout << std::fixed << "Execution took in average " << static_cast<float>(runtime_accumulated) / static_cast<float>(runtimes.size()) << " ns" << std::endl;
+  const auto avg_accumulated_runtime = static_cast<float>(runtime_accumulated) / static_cast<float>(runtimes.size());
+  std::cout << std::fixed << "Execution took in average " << avg_accumulated_runtime << " ns" << std::endl;
+
+  return avg_accumulated_runtime;
 }
 
 int main() {
   auto& storage_manager = Hyrise::get().storage_manager;
+
+  std::ofstream memory_consumption_csv_file(MEMORY_CONSUMPTION_FILE);
+  std::ofstream performance_csv_file(PERFORMANCE_FILE);
+
+  memory_consumption_csv_file << "CONFIG_NAME, MEMORY_CONSUMPTION\n";
+  performance_csv_file << "CONFIG_NAME,QUERY_ID,EXECUTION_TIME\n";
 
   for (const auto& entry : std::filesystem::directory_iterator(CONFIG_PATH)) {
     const auto conf_path = entry.path();
@@ -208,6 +222,7 @@ int main() {
       TableType::Data, CHUNK_SIZE, UseMvcc::No);
     const auto chunk_count = table->chunk_count();
 
+    auto index_memory_consumption = size_t{0};
     auto conf_line_count = 0;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][0]))};
@@ -261,17 +276,13 @@ int main() {
         const auto encoded_segment = ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
         added_chunk->replace_segment(column_id, encoded_segment);
 
-        //const auto en_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(encoded_segment);
-        //if (en_segment) {
-        //  std::cout << "Should be: " << encoding << " Found: " << en_segment->encoding_type() << std::endl;
-        //}
-
         //Store index columns 
 
         const auto index_conf = static_cast<uint16_t>(std::stoi(conf[conf_line_count][4]));
         if (index_conf == 1) {
           Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
-          added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
+          const auto added_index = added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
+          index_memory_consumption += added_index->memory_consumption();
         }
 
         ++conf_line_count;
@@ -284,13 +295,24 @@ int main() {
 
     storage_manager.add_table(TABLE_NAME, sorted_table);
 
+    // Write memory usage of indexes and table to memory consumption csv file 
+    auto mem_usage = sorted_table->memory_usage(MemoryUsageCalculationMode::Full) + index_memory_consumption;
+    memory_consumption_csv_file << conf_name << "," << mem_usage << "\n";
+
     // We load queries here, as the construction of the queries needs the existing actual table
     const auto queries = load_queries_from_csv(WORKLOAD_FILE);
 
+    auto query_id = size_t{0};
     for (auto const& query : queries) {
-      partially_optimize_translate_and_execute_query(query);
+      const auto query_runtime = partially_optimize_translate_and_execute_query(query);
+      performance_csv_file << conf_name << "," << query_id << "," << query_runtime << "\n";
+      query_id += 1;
     }
     
     storage_manager.drop_table(TABLE_NAME);
   }
+
+  memory_consumption_csv_file.close();
+  performance_csv_file.close();
+
 }
