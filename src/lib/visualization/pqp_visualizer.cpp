@@ -143,8 +143,14 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   const auto& performance_data = from->performance_data();
   if (performance_data.executed && performance_data.has_output) {
     std::stringstream stream;
-    stream << std::to_string(performance_data.output_row_count) + " row(s)/";
-    stream << std::to_string(performance_data.output_chunk_count) + " chunk(s)";
+
+    // use a copy of the stream's default locale with thousand separator
+    const auto& separate_thousands_locale =
+        std::locale(stream.getloc(), std::make_unique<SeparateThousands>().release());
+    stream.imbue(separate_thousands_locale);
+
+    stream << performance_data.output_row_count << " row(s)/";
+    stream << performance_data.output_chunk_count << " chunk(s)";
     info.label = stream.str();
   }
 
