@@ -5,6 +5,7 @@
 
 #include "cache/cache.hpp"
 #include "cache/gdfs_cache.hpp"
+#include "cache/gdfs_cache_lock.hpp"
 
 namespace opossum {
 
@@ -16,5 +17,8 @@ using SQLLogicalPlanCacheOld = Cache<std::shared_ptr<AbstractLQPNode>, std::stri
 
 using SQLPhysicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractOperator>>;
 using SQLLogicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractLQPNode>>;
+
+using SQLPhysicalPlanCacheLock = GDFSCacheLock<std::string, std::shared_ptr<AbstractOperator>>;
+using SQLLogicalPlanCacheLock = GDFSCacheLock<std::string, std::shared_ptr<AbstractLQPNode>>;
 
 }  // namespace opossum

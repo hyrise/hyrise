@@ -89,7 +89,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOldSmall)(benchmark::State& state) {
   std::mt19937 generator(1337);
-  std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheOld>(_small_cache_size);
 
   for (auto _ : state) {
@@ -114,7 +114,32 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOldSmall)(benchmark::S
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewSmall)(benchmark::State& state) {
   std::mt19937 generator(1337);
-  std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
+  auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>(_small_cache_size);
+
+  for (auto _ : state) {
+    const int32_t value = dist(generator);
+    const auto sql_string = _queries[value];
+    bool cache_hit = false;
+    std::shared_ptr<AbstractOperator> physical_plan;
+
+    // Following code is an abbreviated copy from SQLPipelineStatement
+    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+      cache_hit = true;
+    }
+
+    // Cache newly created plan for the according sql statement (only if not already cached)
+    if (!cache_hit) {
+      pqp_cache->set(sql_string, physical_plan);
+    }
+
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockSmall)(benchmark::State& state) {
+  std::mt19937 generator(1337);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>(_small_cache_size);
 
   for (auto _ : state) {
@@ -138,10 +163,35 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewSmall)(benchmark::S
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOld)(benchmark::State& state) {
-  std::cout << "SimulateCacheUsageOld" << std::endl;
   std::mt19937 generator(1337);
-  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheOld>();
+
+  for (auto _ : state) {
+    const int32_t value = dist(generator);
+    const auto sql_string = _queries[value];
+    bool cache_hit = false;
+    std::shared_ptr<AbstractOperator> physical_plan;
+
+    // Following code is an abbreviated copy from SQLPipelineStatement
+    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+      cache_hit = true;
+    }
+
+    // Cache newly created plan for the according sql statement (only if not already cached)
+    if (!cache_hit) {
+      pqp_cache->set(sql_string, physical_plan);
+    }
+
+    benchmark::ClobberMemory();
+
+  }
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNew)(benchmark::State& state) {
+  std::mt19937 generator(1337);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheLock>();
 
   for (auto _ : state) {
     const int32_t value = dist(generator);
@@ -163,11 +213,10 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOld)(benchmark::State&
   }
 }
 
-BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNew)(benchmark::State& state) {
-  std::cout << "SimulateCacheUsageNew" << std::endl;
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLock)(benchmark::State& state) {
   std::mt19937 generator(1337);
-  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size);
-  auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheLock>();
 
   for (auto _ : state) {
     const int32_t value = dist(generator);
@@ -190,9 +239,8 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNew)(benchmark::State&
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelect)(benchmark::State& state) {
-  std::cout << "RandomSelect" << std::endl;
   std::mt19937 generator(1337);
-  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
@@ -210,9 +258,8 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelect)(benchmark::State& state) {
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnap)(benchmark::State& state) {
-  std::cout << "RandomSelectWithSnap" << std::endl;
   std::mt19937 generator(1337);
-  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
