@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {

@@ -274,7 +274,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get()).argument();
       const auto column_expression = std::dynamic_pointer_cast<const LQPColumnExpression>(other_argument);
 
-      if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
+      if (column_expression && column_expression->original_column_id == INVALID_COLUMN_ID) {
         // COUNT(*) holds an INVALID_COLUMN_ID - that is acceptable if the argument a in AVG(a) is not nullable.
         // In that case, COUNT(*) == COUNT(a).
         return !avg_argument_is_nullable;

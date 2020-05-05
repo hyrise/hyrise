@@ -123,8 +123,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<BinaryPredicateExpression> _tpchq6_quantity_predicate;
 
   std::shared_ptr<StoredTableNode> _orders_table_node, _lineitem_table_node;
-  LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
-  LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
+  std::shared_ptr<LQPColumnExpression> _orders_orderpriority, _orders_orderdate, _orders_orderkey;
+  std::shared_ptr<LQPColumnExpression> _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
@@ -207,14 +207,16 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& s
   const auto l_orderkey_id = ColumnID{0};
   const auto l_shipmode_id = ColumnID{10};
 
-  const auto sorted_lineitem = std::make_shared<Sort>(lineitem, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
+  const auto sorted_lineitem =
+      std::make_shared<Sort>(lineitem, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
   sorted_lineitem->execute();
   const auto mocked_table_scan_output = sorted_lineitem->get_output();
   const ColumnID group_by_column = l_orderkey_id;
   const std::vector<ColumnID> group_by = {l_orderkey_id};
-  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{count_(pqp_column_(
-      group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
-      mocked_table_scan_output->column_is_nullable(group_by_column), mocked_table_scan_output->column_name(group_by_column)))};
+  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+      count_(pqp_column_(group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
+                         mocked_table_scan_output->column_is_nullable(group_by_column),
+                         mocked_table_scan_output->column_name(group_by_column)))};
   for (auto _ : state) {
     const auto aggregate = std::make_shared<AggregateSort>(sorted_lineitem, aggregate_expressions, group_by);
     aggregate->execute();

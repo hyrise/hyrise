@@ -25,7 +25,7 @@ class PreparedPlanTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, b_x;
+  std::shared_ptr<LQPColumnExpression> a_a, b_x;
 };
 
 TEST_F(PreparedPlanTest, InstantiateHashEqual) {
