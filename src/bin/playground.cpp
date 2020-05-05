@@ -45,6 +45,7 @@ const auto CHUNK_ENCODINGS = std::vector{
 };
 
 // Export 
+
 constexpr auto MEMORY_CONSUMPTION_FILE = "../../out/config_results/memory_consumption.csv";
 constexpr auto PERFORMANCE_FILE = "../../out/config_results/performance.csv";
 
@@ -146,7 +147,7 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
 float partially_optimize_translate_and_execute_query(const std::pair<std::shared_ptr<AbstractLQPNode>, size_t>& workoad_item) {
   constexpr auto EXECUTION_COUNT = 17;
   const auto lqp_query = workoad_item.first;
-  const auto frequency = workoad_item.second;
+  //const auto frequency = workoad_item.second;
 
   // Run chunk and column pruning rules. Kept it quite simple for now. Take a look at Optimizer::optimize() in case
   // problems occur. The following code is taken from optimizer.cpp. In case the new root is confusing to you, take a
@@ -163,7 +164,7 @@ float partially_optimize_translate_and_execute_query(const std::pair<std::shared
   const auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
-  std::cout << "Executing the following query " << EXECUTION_COUNT << " times (workload frequency " << frequency << "):\n" << *optimized_node << std::endl;
+  //std::cout << "Executing the following query " << EXECUTION_COUNT << " times (workload frequency " << frequency << "):\n" << *optimized_node << std::endl;
   std::vector<size_t> runtimes;
   for (auto count = size_t{0}; count < EXECUTION_COUNT; ++count) {
     Timer timer;
@@ -180,7 +181,7 @@ float partially_optimize_translate_and_execute_query(const std::pair<std::shared
   }
 
   const auto avg_accumulated_runtime = static_cast<float>(runtime_accumulated) / static_cast<float>(runtimes.size());
-  std::cout << std::fixed << "Execution took in average " << avg_accumulated_runtime << " ns" << std::endl;
+  //std::cout << std::fixed << "Execution took in average " << avg_accumulated_runtime << " ns" << std::endl;
 
   return avg_accumulated_runtime;
 }
@@ -289,7 +290,7 @@ int main() {
       }
     }
 
-    Print::print(sorted_table);
+    //Print::print(sorted_table);
 
     std::cout << " done (" << format_duration(preparation_timer.lap()) << ")" << std::endl;
 
@@ -302,12 +303,14 @@ int main() {
     // We load queries here, as the construction of the queries needs the existing actual table
     const auto queries = load_queries_from_csv(WORKLOAD_FILE);
 
+    std::cout << "Execute benchmark queries ... ";
     auto query_id = size_t{0};
     for (auto const& query : queries) {
       const auto query_runtime = partially_optimize_translate_and_execute_query(query);
       performance_csv_file << conf_name << "," << query_id << "," << query_runtime << "\n";
       query_id += 1;
     }
+    std::cout << " done" << std::endl;
     
     storage_manager.drop_table(TABLE_NAME);
   }
