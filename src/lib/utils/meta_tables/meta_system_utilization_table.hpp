@@ -39,7 +39,6 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
   static uint64_t _get_process_cpu_time();
   static SystemMemoryUsage _get_system_memory_usage();
   static ProcessMemoryUsage _get_process_memory_usage();
-  static size_t _get_cpu_affinity_count();
   static std::vector<int64_t> _parse_value_string(std::string& input_string);
 };
 

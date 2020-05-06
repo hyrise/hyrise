@@ -1,10 +1,8 @@
-#ifdef __linux__
-#include <numa.h>
-#endif
-
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
+
+#include "hyrise.hpp"
 
 #include <chrono>
 #include <fstream>
@@ -40,7 +38,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   const auto load_avg = _get_load_avg();
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
-  const auto cpu_affinity_count = _get_cpu_affinity_count();
+  const auto cpu_affinity_count = Hyrise::get().topology.num_cpus();
 
   output_table->append({static_cast<int64_t>(system_cpu_ticks), static_cast<int64_t>(process_cpu_ticks),
                         static_cast<int64_t>(total_ticks), load_avg.load_1_min, load_avg.load_5_min,
@@ -247,13 +245,6 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #endif
 
   Fail("Method not implemented for this platform");
-}
-
-size_t MetaSystemUtilizationTable::_get_cpu_affinity_count() {
-  cpu_set_t cpu_set;
-  CPU_ZERO(&cpu_set);
-  pthread_getaffinity_np(pthread_self(), sizeof(cpu_set), &cpu_set);
-  return CPU_COUNT(&cpu_set);
 }
 
 #ifdef __linux__

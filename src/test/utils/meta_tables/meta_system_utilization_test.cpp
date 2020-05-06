@@ -39,12 +39,13 @@ TEST_F(MetaSystemUtilizationTest, CPUAffinity) {
     }
   }
 
+  // Altering the CPU set of this worker thread should not alter the number on cpus for hyrise
   pthread_setaffinity_np(pthread_self(), sizeof(cpu_set), &cpu_set);
   system_utilization = generate_meta_table(meta_system_utilization_table);
   const auto cpu_affinity_count_altered =
       boost::get<int32_t>(system_utilization->get_row(0)[cpu_affinity_count_column_id]);
 
-  EXPECT_EQ(cpu_affinity_count_altered, cpu_affinity_count - 1);
+  EXPECT_EQ(cpu_affinity_count_altered, cpu_affinity_count);
 
   pthread_setaffinity_np(pthread_self(), sizeof(default_cpu_set), &default_cpu_set);
 

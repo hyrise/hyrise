@@ -3,6 +3,7 @@
 #include <sys/sysinfo.h>
 #endif
 
+#include "hyrise.hpp"
 #include <fstream>
 
 #include "meta_system_information_table.hpp"
