@@ -7,6 +7,7 @@
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
+#include "hyrise.hpp"
 #include "sql_plan_cache.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
@@ -24,9 +25,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
       _transaction_context(transaction_context),
       _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
-              "The transaction context cannot have been committed already.");
+              "The transaction context has to be active.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
               "Transaction context without MVCC enabled makes no sense");
+  DebugAssert(!_transaction_context || !_transaction_context->is_auto_commit(),
+              "Auto-commit transactions are created internally and should not be passed in.");
 
   hsql::SQLParserResult parse_result;
 
@@ -79,9 +82,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
-        statement_string, std::move(parsed_statement), use_mvcc, transaction_context, optimizer, pqp_cache, lqp_cache);
-    _sql_pipeline_statements.push_back(std::move(pipeline_statement));
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
+                                                                     use_mvcc, optimizer, pqp_cache, lqp_cache);
+    _sql_pipeline_statements.emplace_back(std::move(pipeline_statement));
   }
 
   // If we see at least one structure altering statement and we have more than one statement, we require execution of a
@@ -98,7 +101,7 @@ const std::vector<std::string>& SQLPipeline::get_sql_per_statement() {
 
   _sql_strings.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _sql_strings.push_back(pipeline_statement->get_sql_string());
+    _sql_strings.emplace_back(pipeline_statement->get_sql_string());
   }
 
   return _sql_strings;
@@ -111,7 +114,7 @@ const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_pars
 
   _parsed_sql_statements.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _parsed_sql_statements.push_back(pipeline_statement->get_parsed_sql_statement());
+    _parsed_sql_statements.emplace_back(pipeline_statement->get_parsed_sql_statement());
   }
 
   return _parsed_sql_statements;
@@ -128,10 +131,25 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimize
 
   _unoptimized_logical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _unoptimized_logical_plans.push_back(pipeline_statement->get_unoptimized_logical_plan());
+    _unoptimized_logical_plans.emplace_back(pipeline_statement->get_unoptimized_logical_plan());
   }
 
   return _unoptimized_logical_plans;
+}
+
+const std::vector<std::reference_wrapper<const SQLTranslationInfo>>& SQLPipeline::get_sql_translation_infos() {
+  if (!_sql_translation_infos.empty()) {
+    return _sql_translation_infos;
+  }
+
+  // Make sure plans are translated
+  (void)get_unoptimized_logical_plans();
+
+  for (auto& pipeline_statement : _sql_pipeline_statements) {
+    _sql_translation_infos.emplace_back(std::cref(pipeline_statement->get_sql_translation_info()));
+  }
+
+  return _sql_translation_infos;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
@@ -153,7 +171,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
 
   _optimized_logical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _optimized_logical_plans.push_back(pipeline_statement->get_optimized_logical_plan());
+    _optimized_logical_plans.emplace_back(pipeline_statement->get_optimized_logical_plan());
   }
 
   return _optimized_logical_plans;
@@ -170,13 +188,13 @@ const std::vector<std::shared_ptr<AbstractOperator>>& SQLPipeline::get_physical_
 
   _physical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _physical_plans.push_back(pipeline_statement->get_physical_plan());
+    _physical_plans.emplace_back(pipeline_statement->get_physical_plan());
   }
 
   return _physical_plans;
 }
 
-const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
+const std::vector<std::vector<std::shared_ptr<AbstractTask>>>& SQLPipeline::get_tasks() {
   if (!_tasks.empty()) {
     return _tasks;
   }
@@ -187,7 +205,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
 
   _tasks.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _tasks.push_back(pipeline_statement->get_tasks());
+    _tasks.emplace_back(pipeline_statement->get_tasks());
   }
 
   return _tasks;
@@ -196,7 +214,10 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
 std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::get_result_table() & {
   const auto& [pipeline_status, tables] = get_result_tables();
 
-  if (pipeline_status != SQLPipelineStatus::Success) {
+  DebugAssert(pipeline_status != SQLPipelineStatus::NotExecuted,
+              "SQLPipeline::get_result_table() should either return Success or Failure");
+
+  if (pipeline_status == SQLPipelineStatus::Failure) {
     static std::shared_ptr<const Table> null_table;
     return {pipeline_status, null_table};
   }
@@ -217,22 +238,48 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
   _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
+    pipeline_statement->set_transaction_context(_transaction_context);
     const auto& [statement_status, table] = pipeline_statement->get_result_table();
-    if (statement_status == SQLPipelineStatus::RolledBack) {
+    if (statement_status == SQLPipelineStatus::Failure) {
       _failed_pipeline_statement = pipeline_statement;
 
-      if (_transaction_context) {
+      if (_transaction_context && !_transaction_context->is_auto_commit()) {
         // The pipeline was executed using a transaction context (i.e., no auto-commit after each statement).
         // Previously returned results are invalid.
         _result_tables.clear();
+        _transaction_context = nullptr;
       }
 
-      return {SQLPipelineStatus::RolledBack, _result_tables};
+      _pipeline_status = SQLPipelineStatus::Failure;
+      return {_pipeline_status, _result_tables};
     }
 
-    DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+    Assert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
     _result_tables.emplace_back(table);
+
+    const auto& new_transaction_context = pipeline_statement->transaction_context();
+
+    if (!new_transaction_context) {
+      // No MVCC was used
+      Assert(!_transaction_context, "MVCC and Non-MVCC modes were mixed");
+    } else if (new_transaction_context->is_auto_commit()) {
+      Assert(new_transaction_context->phase() == TransactionPhase::Committed,
+             "Auto-commit statements should always be committed at this point");
+      // Auto-commit transaction context should not be available anymore
+      _transaction_context = nullptr;
+    } else if (new_transaction_context->phase() == TransactionPhase::Active) {
+      // If a new transaction was started (BEGIN), allow the caller to retrieve it so that it can be passed into the
+      // following SQLPipeline
+      _transaction_context = new_transaction_context;
+    } else {
+      // The previous, user-created transaction was sucessfully committed or rolled back due to the user's request.
+      // Clear it so that the next statement can either start a new transaction or run in auto-commit mode
+      Assert(new_transaction_context->phase() == TransactionPhase::Committed ||
+                 new_transaction_context->phase() == TransactionPhase::RolledBackByUser,
+             "Invalid state for non-auto-commit transaction after succesful statement");
+      _transaction_context = nullptr;
+    }
   }
 
   _pipeline_status = SQLPipelineStatus::Success;
@@ -258,11 +305,20 @@ SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {
     _metrics.statement_metrics.reserve(statement_count());
     for (const auto& pipeline_statement : _sql_pipeline_statements) {
-      _metrics.statement_metrics.push_back(pipeline_statement->metrics());
+      _metrics.statement_metrics.emplace_back(pipeline_statement->metrics());
     }
   }
 
   return _metrics;
+}
+
+const std::vector<std::shared_ptr<SQLPipelineStatement>>& SQLPipeline::_get_sql_pipeline_statements() const {
+  // Note that the execution of the pipeline sets the transaction_context within the SQLPipelineStatement. If you call
+  // this method on an unexecuted pipeline, you will not see the correct transaction context.
+  Assert(_sql_pipeline_statements.size() == 1,
+         "_get_sql_pipeline_statements helper should only be used for single-query pipelines");
+
+  return _sql_pipeline_statements;
 }
 
 std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics) {
@@ -278,7 +334,7 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
     total_lqp_translate_nanos += statement_metric->lqp_translation_duration;
     total_execute_nanos += statement_metric->plan_execution_duration;
 
-    query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
+    query_plan_cache_hits.emplace_back(statement_metric->query_plan_cache_hit);
   }
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);

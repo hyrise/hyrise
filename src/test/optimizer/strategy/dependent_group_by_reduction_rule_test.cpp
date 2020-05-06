@@ -72,11 +72,11 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   std::shared_ptr<Table> table_a, table_b, table_c, table_d, table_e;
   std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_b, stored_table_node_c, stored_table_node_d,
       stored_table_node_e;
-  LQPColumnReference column_a_0, column_a_1, column_a_2;
-  LQPColumnReference column_b_0, column_b_1, column_b_2;
-  LQPColumnReference column_c_0, column_c_1, column_c_2;
-  LQPColumnReference column_d_0;
-  LQPColumnReference column_e_0, column_e_1, column_e_2;
+  std::shared_ptr<LQPColumnExpression> column_a_0, column_a_1, column_a_2;
+  std::shared_ptr<LQPColumnExpression> column_b_0, column_b_1, column_b_2;
+  std::shared_ptr<LQPColumnExpression> column_c_0, column_c_1, column_c_2;
+  std::shared_ptr<LQPColumnExpression> column_d_0;
+  std::shared_ptr<LQPColumnExpression> column_e_0, column_e_1, column_e_2;
 };
 
 // Test simple cases

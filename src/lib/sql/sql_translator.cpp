@@ -202,10 +202,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
     case hsql::kStmtExport:
       return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
+    case hsql::kStmtTransaction:
+      // The transaction statements are handled directly in the SQLPipelineStatement,
+      //  but the translation is still called, so we return a dummy node here.
+      return DummyTableNode::make();
     case hsql::kStmtAlter:
     case hsql::kStmtError:
     case hsql::kStmtRename:
-    case hsql::kStmtTransaction:
       FailInput("Statement type not supported");
   }
   Fail("Invalid enum value");
@@ -342,8 +345,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 
   std::shared_ptr<Table> target_table;
   if (is_meta_table) {
+    auto sql_identifier_resolver =
+        _sql_identifier_resolver ? _sql_identifier_resolver : std::make_shared<SQLIdentifierResolver>();
+    _translate_meta_table(table_name, sql_identifier_resolver);
     AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
-    target_table = Hyrise::get().meta_table_manager.generate_table(table_name);
+    target_table = _meta_tables->at(_trim_meta_table_name(table_name));
   } else {
     AssertInput(Hyrise::get().storage_manager.has_table(table_name),
                 std::string{"Did not find a table with name "} + table_name);
@@ -460,8 +466,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   std::shared_ptr<AbstractLQPNode> data_to_delete_node;
 
   if (is_meta_table) {
-    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
     data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
+    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
   } else {
     data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
     Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
@@ -491,7 +497,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   std::shared_ptr<Table> target_table;
   if (is_meta_table) {
     AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
-    target_table = Hyrise::get().meta_table_manager.generate_table(table_name);
+    target_table = _meta_tables->at(_trim_meta_table_name(table_name));
   } else {
     AssertInput(Hyrise::get().storage_manager.has_table(table_name),
                 std::string{"Did not find a table with name "} + table_name);
@@ -716,8 +722,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     const auto& column_definition = table->column_definitions()[column_id];
-    const auto column_reference = LQPColumnReference{stored_table_node, column_id};
-    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    const auto column_expression = std::make_shared<LQPColumnExpression>(stored_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
@@ -727,13 +732,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
-  AssertInput(MetaTableManager::is_meta_table_name(name), std::string{"Did not find a meta table with name "} + name);
+  AssertInput(Hyrise::get().meta_table_manager.has_table(name), std::string{"Did not find a table with name "} + name);
 
   // MetaTables are non-cacheable because they might contain information about the general system state
   // that can change at any time
   _cacheable = false;
 
-  const auto meta_table_name = name.substr(MetaTableManager::META_PREFIX.size());
+  const auto meta_table_name = _trim_meta_table_name(name);
 
   // Meta tables are integrated in the LQP as static table nodes in order to avoid regeneration at every
   // access in the pipeline afterwards.
@@ -750,8 +755,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
     const auto& column_definition = meta_table->column_definitions()[column_id];
-    const auto column_reference = LQPColumnReference{static_table_node, column_id};
-    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    const auto column_expression = std::make_shared<LQPColumnExpression>(static_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
@@ -997,7 +1001,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
         if (pre_aggregate_expression_set.emplace(argument).second) {
           // Handle COUNT(*)
           const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
-          if (!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
+          if (!column_expression || column_expression->original_column_id != INVALID_COLUMN_ID) {
             pre_aggregate_expressions.emplace_back(argument);
           }
         }
@@ -1228,7 +1232,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
     case hsql::ShowType::kShowColumns: {
       const auto columns_meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
       const auto static_table_node = StaticTableNode::make(columns_meta_table);
-      const auto table_name_column = lqp_column_({static_table_node, ColumnID{0}});
+      const auto table_name_column = lqp_column_(static_table_node, ColumnID{0});
       const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
                                                                          value_(show_statement.name));
       return PredicateNode::make(predicate, static_table_node);
@@ -1563,8 +1567,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               });
               Assert(leaf_node, "No leaf node found below COUNT(*)");
 
-              const auto column_expression =
-                  std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
+              const auto column_expression = std::make_shared<LQPColumnExpression>(leaf_node, INVALID_COLUMN_ID);
 
               aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
@@ -1837,6 +1840,11 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
     expressions.emplace_back(element.expression);
   }
   return expressions;
+}
+
+std::string SQLTranslator::_trim_meta_table_name(const std::string& name) {
+  DebugAssert(MetaTableManager::is_meta_table_name(name), name + " is not a meta table name.");
+  return name.substr(MetaTableManager::META_PREFIX.size());
 }
 
 SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression)

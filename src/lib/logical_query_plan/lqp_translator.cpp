@@ -131,7 +131,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Except:             return _translate_except_node(node);
     case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
 
-      // Maintenance operators
+    // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);

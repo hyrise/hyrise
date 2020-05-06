@@ -86,7 +86,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContext) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -108,7 +108,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.with_transaction_context(context).create_pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -119,10 +119,24 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
   EXPECT_THROW(auto sql_pipeline = SQLPipelineBuilder{_multi_statement_invalid}.create_pipeline(), std::exception);
 }
 
+TEST_F(SQLPipelineTest, ParseErrorDebugMessage) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  try {
+    auto sql_pipeline = SQLPipelineBuilder{_invalid_sql}.create_pipeline();
+    // Fail if the previous command did not throw an exception
+    FAIL();
+  } catch (const std::exception& e) {
+    const auto error_msg = std::string(e.what());
+    // Check that the ^ was actually inserted in the error message
+    EXPECT_TRUE(error_msg.find('^') != std::string::npos);
+  }
+}
+
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // No transaction context
   EXPECT_NO_THROW(
@@ -430,11 +444,11 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   const auto sql =
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
       "UPDATE table_a SET a = 1 WHERE a = 1234";
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
 
   const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(tables.size(), 0);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
   EXPECT_TRUE(transaction_context->aborted());
@@ -466,7 +480,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
-  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
   EXPECT_EQ(tables.size(), 1);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
 
@@ -609,9 +623,6 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   const auto sql_pipeline_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
   EXPECT_FALSE(sql_pipeline_0.pqp_cache);
   EXPECT_FALSE(sql_pipeline_0.lqp_cache);
-  const auto sql_pipeline_statement_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
-  EXPECT_FALSE(sql_pipeline_statement_0.pqp_cache);
-  EXPECT_FALSE(sql_pipeline_statement_0.lqp_cache);
 
   // Default caches
   Hyrise::get().default_pqp_cache = default_pqp_cache;
@@ -619,9 +630,6 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   const auto sql_pipeline_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
   EXPECT_EQ(sql_pipeline_1.pqp_cache, default_pqp_cache);
   EXPECT_EQ(sql_pipeline_1.lqp_cache, default_lqp_cache);
-  const auto sql_pipeline_statement_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
-  EXPECT_EQ(sql_pipeline_statement_1.pqp_cache, default_pqp_cache);
-  EXPECT_EQ(sql_pipeline_statement_1.lqp_cache, default_lqp_cache);
 
   // Local caches
   const auto sql_pipeline_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
@@ -630,24 +638,74 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
                                   .create_pipeline();
   EXPECT_EQ(sql_pipeline_2.pqp_cache, local_pqp_cache);
   EXPECT_EQ(sql_pipeline_2.lqp_cache, local_lqp_cache);
-  const auto sql_pipeline_statement_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
-                                            .with_pqp_cache(local_pqp_cache)
-                                            .with_lqp_cache(local_lqp_cache)
-                                            .create_pipeline_statement();
-  EXPECT_EQ(sql_pipeline_statement_2.pqp_cache, local_pqp_cache);
-  EXPECT_EQ(sql_pipeline_statement_2.lqp_cache, local_lqp_cache);
 
   // No caches
   const auto sql_pipeline_3 =
       SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
   EXPECT_FALSE(sql_pipeline_3.pqp_cache);
   EXPECT_FALSE(sql_pipeline_3.lqp_cache);
-  const auto sql_pipeline_statement_3 = SQLPipelineBuilder{"SELECT * FROM table_a"}
-                                            .with_pqp_cache(nullptr)
-                                            .with_lqp_cache(nullptr)
-                                            .create_pipeline_statement();
-  EXPECT_FALSE(sql_pipeline_statement_3.pqp_cache);
-  EXPECT_FALSE(sql_pipeline_statement_3.lqp_cache);
+}
+
+TEST_F(SQLPipelineTest, PrecheckDDLOperators) {
+  auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
+
+  auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline();
+  EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
+
+  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline();
+  EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
+
+  auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
+}
+
+TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+
+  EXPECT_EQ(_table_a->row_count(), 3);
+
+  {
+    const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
+    (void)conflicting_sql_pipeline.get_result_table();
+  }
+
+  // The UPDATE should have inserted a new version of that row
+  EXPECT_EQ(_table_a->row_count(), 4);
+
+  const auto sql = "INSERT INTO table_a (a, b) VALUES (1, 2.0); UPDATE table_a SET a = a + 1 WHERE b < 457";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Failure);
+  EXPECT_EQ(table, nullptr);
+
+  // The INSERT could not be committed, but still created a row that never became fully visible
+  EXPECT_EQ(_table_a->row_count(), 5);
+
+  const auto verify_table_contents = []() {
+    const auto verification_sql = "SELECT a FROM table_a WHERE b < 457";
+    auto verification_pipeline = SQLPipelineBuilder{verification_sql}.create_pipeline();
+    const auto [verification_status, verification_table] = verification_pipeline.get_result_table();
+    EXPECT_EQ(verification_status, SQLPipelineStatus::Success);
+    EXPECT_EQ(verification_table->get_value<int32_t>("a", 0), 100);
+  };
+  verify_table_contents();
+
+  // Check that this doesn't crash. This should not modify the table a second time.
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Failure);
+  EXPECT_EQ(table2, nullptr);
+  verify_table_contents();
+
+  // The INSERT should not have been executed a second time
+  EXPECT_EQ(_table_a->row_count(), 5);
 }
 
 }  // namespace opossum
