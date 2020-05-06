@@ -114,8 +114,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   std::ostringstream label_stream;
 
-  // use a copy of the stream's default locale with thousand separator
-  const auto& separate_thousands_locale = std::locale(label_stream.getloc(), new SeparateThousands);
+  // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
+  // be avoided whenever possible. Unfortunately, std::locale stores pointers to the facets and does internal
+  // reference counting. std::locale's destructor destructs the locale and the facets whose reference count becomes
+  // zero. This forces us to use a dynamically allocated raw pointer here.
+  const auto& separate_thousands_locale = std::locale(label_stream.getloc(), new SeparateThousandsFacet);
   label_stream.imbue(separate_thousands_locale);
 
   if (!isnan(row_count)) {
