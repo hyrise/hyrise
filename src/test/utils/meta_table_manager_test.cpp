@@ -26,11 +26,16 @@ using MetaTableNames = std::vector<std::string>;
 class MetaTableManagerTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-    return {std::make_shared<MetaTablesTable>(),        std::make_shared<MetaColumnsTable>(),
-            std::make_shared<MetaChunksTable>(),        std::make_shared<MetaChunkSortOrdersTable>(),
-            std::make_shared<MetaSegmentsTable>(),      std::make_shared<MetaSegmentsAccurateTable>(),
-            std::make_shared<MetaPluginsTable>(),       std::make_shared<MetaSettingsTable>(),
-            std::make_shared<MetaCachedQueriesTable>(), std::make_shared<MetaCachedOperatorsTable>(),
+    return {std::make_shared<MetaTablesTable>(),
+            std::make_shared<MetaColumnsTable>(),
+            std::make_shared<MetaChunksTable>(),
+            std::make_shared<MetaChunkSortOrdersTable>(),
+            std::make_shared<MetaSegmentsTable>(),
+            std::make_shared<MetaSegmentsAccurateTable>(),
+            std::make_shared<MetaPluginsTable>(),
+            std::make_shared<MetaSettingsTable>(),
+            std::make_shared<MetaCachedQueriesTable>(),
+            std::make_shared<MetaCachedOperatorsTable>(),
             std::make_shared<MetaLogTable>()};
   }
 

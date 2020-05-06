@@ -50,6 +50,8 @@ class Hyrise : public Singleton<Hyrise> {
   // Plan caches used by the SQLPipelineBuilder if `with_{l/p}qp_cache()` are not used. Both default caches can be
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
   std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
+  std::shared_ptr<SQLPhysicalPlanCacheOld> default_pqp_cache_old;
+  std::shared_ptr<SQLPhysicalPlanCacheLock> default_pqp_cache_lock;
   std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
   // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark

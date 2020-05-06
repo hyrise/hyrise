@@ -19,7 +19,7 @@ inline constexpr size_t DefaultCacheCapacity = 1024;
 template <typename Value, typename Key = std::string>
 class Cache {
  public:
-  using Iterator = typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using Iterator = typename AbstractCache<Key, Value>::ErasedIterator;
 
   explicit Cache(size_t capacity = DefaultCacheCapacity)
       : _impl(std::move(std::make_unique<GDFSCacheOld<Key, Value>>(capacity))) {}
@@ -91,12 +91,12 @@ class Cache {
   Iterator unsafe_end() { return _impl->end(); }
 
   // Returns a reference to the underlying cache.
-  AbstractCacheImpl<Key, Value>& unsafe_cache() { return *_impl; }
-  const AbstractCacheImpl<Key, Value>& unsafe_cache() const { return *_impl; }
+  AbstractCache<Key, Value>& unsafe_cache() { return *_impl; }
+  const AbstractCache<Key, Value>& unsafe_cache() const { return *_impl; }
 
  protected:
   // Underlying cache eviction strategy.
-  std::unique_ptr<AbstractCacheImpl<Key, Value>> _impl;
+  std::unique_ptr<AbstractCache<Key, Value>> _impl;
 
   mutable std::shared_mutex _mutex;
 };

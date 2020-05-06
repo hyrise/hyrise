@@ -9,7 +9,7 @@ namespace opossum {
 
 // Generic template for a cache implementation.
 template <typename Key, typename Value>
-class AbstractCacheImpl {
+class AbstractCache {
  public:
   using KeyValuePair = typename std::pair<Key, Value>;
 
@@ -36,15 +36,17 @@ class AbstractCacheImpl {
     std::unique_ptr<AbstractIterator> _it;
   };
 
-  explicit AbstractCacheImpl(size_t capacity) : _capacity(capacity) {}
+  explicit AbstractCache(size_t capacity) : _capacity(capacity) {}
 
-  virtual ~AbstractCacheImpl() {}
+  virtual ~AbstractCache() {}
 
   // Cache the value at the given key.
   // If the new size exceeds the capacity an item will be evicted.
   // Depending on the underlying strategy, the parameters for cost and size may be used.
   // If they are not intended to be used, we specify constant default values here.
   virtual void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) = 0;
+
+  virtual std::optional<Value> try_get(const Key& query) { return {}; }
 
   // Get the cached value at the given key.
   // Causes undefined behavior if the item is not in the cache.

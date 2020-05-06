@@ -16,6 +16,7 @@
 #include "sql/sql_plan_cache.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "utils/assert.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
 namespace opossum {
@@ -57,7 +58,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
 
     pmr_vector<int32_t> values;
     values.resize(20'000);
-    std::generate(_vec.begin(), _vec.end(), []() {
+    std::generate(values.begin(), values.end(), []() {
       static ValueT v = 0;
       v = (v + 1) % 10'000;
       return v;
@@ -79,186 +80,364 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
 
   void TearDown(::benchmark::State& state) override { MicroBenchmarkBasicFixture::TearDown(state); }
 
+  void do_random_selects(const int32_t cache_size, const int32_t seed) const {
+    std::mt19937 generator(seed);
+    std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
+    for (size_t i = 0; i < 100; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      auto builder = SQLPipelineBuilder{sql_string};
+      auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+      size_t result;
+      benchmark::DoNotOptimize(result);
+      const auto [pipeline_status, table] = sql_pipeline->get_result_table();
+      result = table->row_count();
+      benchmark::ClobberMemory();
+    }
+  }
+
+  void do_random_cache_operations(const int32_t cache_size, const int32_t seed, const size_t ind) const {
+    switch (ind) {
+      case 1:
+        _do_random_cache_operations_a(cache_size, seed);
+        return;
+      case 2:
+        _do_random_cache_operations_b(cache_size, seed);
+        return;
+      case 3:
+        _do_random_cache_operations_c(cache_size, seed);
+        return;
+      default:
+        Fail("Unknown function");
+    }
+  }
+
  protected:
-  std::vector<ValueT> _vec;
+  void _do_random_cache_operations_a(const int32_t cache_size, const int32_t seed) const {
+    std::mt19937 generator(seed);
+    std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
+    auto cache = Hyrise::get().default_pqp_cache;
+
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
+
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
+    }
+  }
+
+  void _do_random_cache_operations_b(const int32_t cache_size, const int32_t seed) const {
+    std::mt19937 generator(seed);
+    std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
+    auto cache = Hyrise::get().default_pqp_cache_old;
+
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
+
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
+    }
+  }
+
+  void _do_random_cache_operations_c(const int32_t cache_size, const int32_t seed) const {
+    std::mt19937 generator(seed);
+    std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
+    auto cache = Hyrise::get().default_pqp_cache_lock;
+
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
+
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
+    }
+  }
+
   std::array<std::string, 2 * 1024> _queries;
   const int32_t _small_cache_size = 10;
   const int32_t _default_cache_size = 1024;
   const std::string _sql_select = "SELECT * FROM foo WHERE a = ";
+  const int32_t _seed = 1337;
+  const size_t _num_repetitions = 1'000'000;
 };
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOldSmall)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheOld>(_small_cache_size);
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    bool cache_hit = false;
-    std::shared_ptr<AbstractOperator> physical_plan;
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
 
-    // Following code is an abbreviated copy from SQLPipelineStatement
-    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
-      cache_hit = true;
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        pqp_cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
     }
-
-    // Cache newly created plan for the according sql statement (only if not already cached)
-    if (!cache_hit) {
-      pqp_cache->set(sql_string, physical_plan);
-    }
-
-    benchmark::ClobberMemory();
   }
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewSmall)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>(_small_cache_size);
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    bool cache_hit = false;
-    std::shared_ptr<AbstractOperator> physical_plan;
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
 
-    // Following code is an abbreviated copy from SQLPipelineStatement
-    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
-      cache_hit = true;
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        pqp_cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
     }
-
-    // Cache newly created plan for the according sql statement (only if not already cached)
-    if (!cache_hit) {
-      pqp_cache->set(sql_string, physical_plan);
-    }
-
-    benchmark::ClobberMemory();
   }
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockSmall)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>(_small_cache_size);
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    bool cache_hit = false;
-    std::shared_ptr<AbstractOperator> physical_plan;
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
 
-    // Following code is an abbreviated copy from SQLPipelineStatement
-    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
-      cache_hit = true;
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        pqp_cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
     }
-
-    // Cache newly created plan for the according sql statement (only if not already cached)
-    if (!cache_hit) {
-      pqp_cache->set(sql_string, physical_plan);
-    }
-
-    benchmark::ClobberMemory();
   }
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOld)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheOld>();
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    bool cache_hit = false;
-    std::shared_ptr<AbstractOperator> physical_plan;
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
 
-    // Following code is an abbreviated copy from SQLPipelineStatement
-    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
-      cache_hit = true;
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        pqp_cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
     }
-
-    // Cache newly created plan for the according sql statement (only if not already cached)
-    if (!cache_hit) {
-      pqp_cache->set(sql_string, physical_plan);
-    }
-
-    benchmark::ClobberMemory();
-
   }
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNew)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheLock>();
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    bool cache_hit = false;
-    std::shared_ptr<AbstractOperator> physical_plan;
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
 
-    // Following code is an abbreviated copy from SQLPipelineStatement
-    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
-      cache_hit = true;
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        pqp_cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
     }
-
-    // Cache newly created plan for the according sql statement (only if not already cached)
-    if (!cache_hit) {
-      pqp_cache->set(sql_string, physical_plan);
-    }
-
-    benchmark::ClobberMemory();
   }
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLock)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheLock>();
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    bool cache_hit = false;
-    std::shared_ptr<AbstractOperator> physical_plan;
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      bool cache_hit = false;
+      std::shared_ptr<AbstractOperator> physical_plan;
 
-    // Following code is an abbreviated copy from SQLPipelineStatement
-    if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
-      cache_hit = true;
+      // Following code is an abbreviated copy from SQLPipelineStatement
+      if (const auto cached_physical_plan = pqp_cache->try_get(sql_string)) {
+        cache_hit = true;
+      }
+
+      // Cache newly created plan for the according sql statement (only if not already cached)
+      if (!cache_hit) {
+        pqp_cache->set(sql_string, physical_plan);
+      }
+
+      benchmark::ClobberMemory();
     }
-
-    // Cache newly created plan for the according sql statement (only if not already cached)
-    if (!cache_hit) {
-      pqp_cache->set(sql_string, physical_plan);
-    }
-
-    benchmark::ClobberMemory();
   }
 }
 
-BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelect)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOldMulti)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  Hyrise::get().default_pqp_cache_old = std::make_shared<SQLPhysicalPlanCacheOld>();
+
+  for (auto _ : state) {
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 10; ++i) {
+      const int32_t seed = dist(generator);
+      threads.push_back(
+          std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 2));
+    }
+
+    for (size_t i = 0; i < 10; ++i) {
+      threads[i].join();
+    }
+  }
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewMulti)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+  for (auto _ : state) {
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 10; ++i) {
+      const int32_t seed = dist(generator);
+      threads.push_back(
+          std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 1));
+    }
+
+    for (size_t i = 0; i < 10; ++i) {
+      threads[i].join();
+    }
+  }
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockMulti)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  Hyrise::get().default_pqp_cache_lock = std::make_shared<SQLPhysicalPlanCacheLock>();
+
+  for (auto _ : state) {
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 10; ++i) {
+      const int32_t seed = dist(generator);
+      threads.push_back(
+          std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 3));
+    }
+
+    for (size_t i = 0; i < 10; ++i) {
+      threads[i].join();
+    }
+  }
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectSingle)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    auto builder = SQLPipelineBuilder{sql_string};
-    auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
-    size_t result;
-    benchmark::DoNotOptimize(result);
-    const auto [pipeline_status, table] = sql_pipeline->get_result_table();
-    result = table->row_count();
-    benchmark::ClobberMemory();
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      auto builder = SQLPipelineBuilder{sql_string};
+      auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+      size_t result;
+      benchmark::DoNotOptimize(result);
+      const auto [pipeline_status, table] = sql_pipeline->get_result_table();
+      result = table->row_count();
+      benchmark::ClobberMemory();
+    }
   }
 }
 
-BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnap)(benchmark::State& state) {
-  std::mt19937 generator(1337);
+BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnapSingle)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
@@ -272,15 +451,65 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnap)(benchmark::State& 
       });
 
   for (auto _ : state) {
-    const int32_t value = dist(generator);
-    const auto sql_string = _queries[value];
-    auto builder = SQLPipelineBuilder{sql_string};
-    auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
-    size_t result;
-    benchmark::DoNotOptimize(result);
-    const auto [pipeline_status, table] = sql_pipeline->get_result_table();
-    result = table->row_count();
-    benchmark::ClobberMemory();
+    for (size_t i = 0; i < _num_repetitions; ++i) {
+      const int32_t value = dist(generator);
+      const auto sql_string = _queries[value];
+      auto builder = SQLPipelineBuilder{sql_string};
+      auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+      size_t result;
+      benchmark::DoNotOptimize(result);
+      const auto [pipeline_status, table] = sql_pipeline->get_result_table();
+      result = table->row_count();
+      benchmark::ClobberMemory();
+    }
+  }
+
+  loop_thread_snap.reset();
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectMulti)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  for (auto _ : state) {
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 10; ++i) {
+      const int32_t seed = dist(generator);
+      threads.push_back(std::thread(&BenchmarkPlaygroundFixture::do_random_selects, this, _default_cache_size, seed));
+    }
+
+    for (size_t i = 0; i < 10; ++i) {
+      threads[i].join();
+    }
+  }
+}
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnapMulti)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  std::unique_ptr<PausableLoopThread> loop_thread_snap =
+      std::make_unique<PausableLoopThread>(std::chrono::seconds(5), [&](size_t) {
+        size_t cached_items;
+        benchmark::DoNotOptimize(cached_items);
+        cached_items = Hyrise::get().default_pqp_cache->snapshot().size();
+        benchmark::ClobberMemory();
+      });
+
+  for (auto _ : state) {
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < 10; ++i) {
+      const int32_t seed = dist(generator);
+      threads.push_back(std::thread(&BenchmarkPlaygroundFixture::do_random_selects, this, _default_cache_size, seed));
+    }
+
+    for (size_t i = 0; i < 10; ++i) {
+      threads[i].join();
+    }
   }
 
   loop_thread_snap.reset();

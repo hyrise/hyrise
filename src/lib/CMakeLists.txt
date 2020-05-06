@@ -9,15 +9,11 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-    cache/abstract_cache_impl.hpp
+    cache/abstract_cache.hpp
     cache/cache.hpp
     cache/gdfs_cache.hpp
     cache/gdfs_cache_lock.hpp
     cache/gdfs_cache_old.hpp
-    cache/gds_cache.hpp
-    cache/lru_cache.hpp
-    cache/lru_k_cache.hpp
-    cache/random_cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp

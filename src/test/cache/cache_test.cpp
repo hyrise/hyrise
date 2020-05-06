@@ -1,11 +1,7 @@
 #include "base_test.hpp"
 
 #include "cache/cache.hpp"
-#include "cache/gdfs_cache.hpp"
-#include "cache/gds_cache.hpp"
-#include "cache/lru_cache.hpp"
-#include "cache/lru_k_cache.hpp"
-#include "cache/random_cache.hpp"
+#include "cache/gdfs_cache_old.hpp"
 
 namespace opossum {
 
@@ -13,132 +9,9 @@ namespace opossum {
 // Not using SQL types in this test, only testing cache eviction.
 class CachePolicyTest : public BaseTest {};
 
-// LRU Strategy
-TEST_F(CachePolicyTest, LRUCacheTest) {
-  LRUCache<int, int> cache(2);
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  cache.set(1, 2);  // Miss, insert.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  ASSERT_EQ(2, cache.get(1));  // Hit.
-
-  cache.set(1, 2);  // Hit.
-  cache.set(2, 4);  // Miss, insert.
-  cache.set(3, 6);  // Miss, evict 1.
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-  ASSERT_EQ(4, cache.get(2));  // Hit.
-  ASSERT_EQ(6, cache.get(3));  // Hit.
-
-  cache.get(2);     // Hit.
-  cache.set(1, 5);  // Miss, evict 3.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-  ASSERT_EQ(5, cache.get(1));  // Hit.
-  ASSERT_EQ(4, cache.get(2));  // Hit.
-}
-
-// LRU-K (K = 2)
-TEST_F(CachePolicyTest, LRU2CacheTest) {
-  LRUKCache<2, int, int> cache(2);
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  cache.set(1, 2);  // Miss, insert.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  cache.set(2, 4);  // Miss, insert.
-  cache.set(3, 6);  // Miss, evict 1.
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-
-  ASSERT_EQ(4, cache.get(2));  // Hit.
-  ASSERT_EQ(6, cache.get(3));  // Hit.
-
-  cache.get(3);     // Hit.
-  cache.get(2);     // Hit.
-  cache.set(1, 5);  // Miss, evict 2.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-
-  ASSERT_EQ(5, cache.get(1));  // Hit.
-  ASSERT_EQ(6, cache.get(3));  // Hit.
-}
-
-// GDS Strategy
-TEST_F(CachePolicyTest, GDSCacheTest) {
-  GDSCache<int, int> cache(2);
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  cache.set(1, 2, 5);  // Miss, insert, L=0, C=5, P=5
-  ASSERT_EQ(5.0, cache.priority(1));
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  ASSERT_EQ(2, cache.get(1));  // Hit.
-  ASSERT_EQ(5.0, cache.priority(1));
-
-  cache.set(1, 2, 5);  // Hit.
-  ASSERT_EQ(5.0, cache.priority(1));
-
-  cache.set(2, 4, 4);  // Miss, insert, L=0, C=4, P=4
-  ASSERT_EQ(4.0, cache.priority(2));
-
-  cache.set(3, 6, 2);  // Miss, evict 2, L=4, C=2, P=6
-  ASSERT_EQ(6.0, cache.priority(3));
-  ASSERT_EQ(4.0, cache.inflation());
-
-  ASSERT_EQ(5.0, cache.queue().top().priority);
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-
-  ASSERT_EQ(6, cache.get(3));  // Hit.
-  ASSERT_EQ(6.0, cache.priority(3));
-  ASSERT_EQ(5.0, cache.queue().top().priority);
-
-  ASSERT_EQ(6, cache.get(3));  // Hit.
-  ASSERT_EQ(6.0, cache.priority(3));
-  ASSERT_EQ(5.0, cache.priority(1));
-  ASSERT_EQ(5.0, cache.queue().top().priority);
-
-  cache.set(2, 5, 4);  // Miss, evict 1, L=5, C=4, P=9
-  ASSERT_EQ(5.0, cache.inflation());
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-}
-
 // GDFS Strategy
 TEST_F(CachePolicyTest, GDFSCacheTest) {
-  GDFSCache<int, int> cache(2);
+  GDFSCacheOld<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
   ASSERT_FALSE(cache.has(2));
@@ -190,50 +63,6 @@ TEST_F(CachePolicyTest, GDFSCacheTest) {
   ASSERT_EQ(cache.frequency(100), 0);
 }
 
-// Random Replacement Strategy
-TEST_F(CachePolicyTest, RandomCacheTest) {
-  RandomCache<int, int> cache(3);
-
-  ASSERT_FALSE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  cache.set(1, 2);  // Miss, insert 1.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_FALSE(cache.has(2));
-  ASSERT_FALSE(cache.has(3));
-
-  ASSERT_EQ(2, cache.get(1));  // Hit.
-
-  cache.set(1, 2);  // Hit.
-  cache.set(2, 4);  // Miss, insert 2.
-  cache.set(3, 6);  // Miss, insert 3.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-  ASSERT_EQ(2, cache.get(1));  // Hit.
-  ASSERT_EQ(4, cache.get(2));  // Hit.
-  ASSERT_EQ(6, cache.get(3));  // Hit.
-  ASSERT_EQ(4, cache.get(2));  // Hit.
-
-  cache.set(1, 5);  // Hit.
-
-  ASSERT_TRUE(cache.has(1));
-  ASSERT_TRUE(cache.has(2));
-  ASSERT_TRUE(cache.has(3));
-  ASSERT_EQ(5, cache.get(1));  // Hit.
-  ASSERT_EQ(4, cache.get(2));  // Hit.
-
-  cache.set(4, 51);  // Miss, evict ?
-  cache.set(5, 52);  // Miss, evict ?
-  cache.set(6, 53);  // Miss, evict ?
-  // We can only expect the most recent insertion to be in the cache.
-  ASSERT_TRUE(cache.has(6));
-  ASSERT_EQ(53, cache.get(6));  // Hit.
-}
-
 // Test the default cache (uses GDFS).
 TEST_F(CachePolicyTest, Iterators) {
   Cache<int, int> cache(2);
@@ -261,8 +90,7 @@ template <typename T>
 class CacheTest : public BaseTest {};
 
 // Here, all cache types are defined.
-using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
-                                    RandomCache<int, int>>;
+using CacheTypes = ::testing::Types<GDFSCacheOld<int, int>, >;
 TYPED_TEST_SUITE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CacheTest, Size) {

@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_cache_impl.hpp"
+#include "abstract_cache.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 #include "utils/assert.hpp"
 
@@ -13,7 +13,7 @@ namespace opossum {
 // Generic cache implementation using the GDFS policy.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class GDFSCacheLock : public AbstractCacheImpl<Key, Value> {
+class GDFSCacheLock : public AbstractCache<Key, Value> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -32,9 +32,9 @@ class GDFSCacheLock : public AbstractCacheImpl<Key, Value> {
   using CacheMap = typename std::unordered_map<Key, Handle>;
   using CacheSnapshot = typename std::unordered_map<Key, GDFSCacheEntry>;
 
-  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using typename AbstractCache<Key, Value>::KeyValuePair;
+  using typename AbstractCache<Key, Value>::AbstractIterator;
+  using typename AbstractCache<Key, Value>::ErasedIterator;
 
   class Iterator : public AbstractIterator {
    public:
@@ -43,7 +43,7 @@ class GDFSCacheLock : public AbstractCacheImpl<Key, Value> {
 
    private:
     friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+    friend class AbstractCache<Key, Value>::ErasedIterator;
 
     IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
@@ -61,40 +61,40 @@ class GDFSCacheLock : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  explicit GDFSCacheLock(size_t capacity = 1024) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCacheLock(size_t capacity = 1024) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     {
-    std::shared_lock<std::shared_mutex> map_lock(_map_mutex);
-    auto it = _map.find(key);
-    if (it != _map.end()) {
-      // Update priority.
-      Handle handle = it->second;
-      std::unique_lock<std::shared_mutex> queue_lock(_queue_mutex);
+      std::shared_lock<std::shared_mutex> map_lock(_map_mutex);
+      auto it = _map.find(key);
+      if (it != _map.end()) {
+        // Update priority.
+        Handle handle = it->second;
+        std::unique_lock<std::shared_mutex> queue_lock(_queue_mutex);
 
-      GDFSCacheEntry& entry = (*handle);
-      entry.value = value;
-      entry.size = size;
-      entry.frequency++;
-      entry.priority = _inflation.load() + static_cast<double>(entry.frequency) / entry.size;
-      _queue.update(handle);
+        GDFSCacheEntry& entry = (*handle);
+        entry.value = value;
+        entry.size = size;
+        entry.frequency++;
+        entry.priority = _inflation.load() + static_cast<double>(entry.frequency) / entry.size;
+        _queue.update(handle);
 
-      return;
+        return;
+      }
     }
-  }
 
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
-  {
-    std::unique_lock<std::shared_mutex> queue_lock(_queue_mutex);
-    if (_queue.size() >= this->_capacity) {
-      auto top = _queue.top();
-      _inflation = top.priority;
-      std::unique_lock<std::shared_mutex> map_lock(_map_mutex);
-      _map.erase(top.key);
-      _queue.pop();
+    {
+      std::unique_lock<std::shared_mutex> queue_lock(_queue_mutex);
+      if (_queue.size() >= this->_capacity) {
+        auto top = _queue.top();
+        _inflation = top.priority;
+        std::unique_lock<std::shared_mutex> map_lock(_map_mutex);
+        _map.erase(top.key);
+        _queue.pop();
+      }
     }
-  }
 
     // Insert new item in cache.
     GDFSCacheEntry entry{key, value, 1, size, 0.0};
@@ -105,7 +105,7 @@ class GDFSCacheLock : public AbstractCacheImpl<Key, Value> {
     _map[key] = handle;
   }
 
-  std::optional<Value> try_get(const Key& query) {
+  virtual std::optional<Value> try_get(const Key& query) {
     if (this->_capacity == 0) return {};
     if (!has(query)) {
       return {};

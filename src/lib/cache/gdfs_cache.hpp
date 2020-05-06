@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_cache_impl.hpp"
+#include "abstract_cache.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 #include "utils/assert.hpp"
 
@@ -13,7 +13,7 @@ namespace opossum {
 // Generic cache implementation using the GDFS policy.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class GDFSCache : public AbstractCacheImpl<Key, Value> {
+class GDFSCache : public AbstractCache<Key, Value> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -32,9 +32,9 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   using CacheMap = typename std::unordered_map<Key, Handle>;
   using CacheSnapshot = typename std::unordered_map<Key, GDFSCacheEntry>;
 
-  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using typename AbstractCache<Key, Value>::KeyValuePair;
+  using typename AbstractCache<Key, Value>::AbstractIterator;
+  using typename AbstractCache<Key, Value>::ErasedIterator;
 
   class Iterator : public AbstractIterator {
    public:
@@ -43,7 +43,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
    private:
     friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+    friend class AbstractCache<Key, Value>::ErasedIterator;
 
     IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
@@ -61,7 +61,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  explicit GDFSCache(size_t capacity = 1024) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCache(size_t capacity = 1024) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
@@ -96,7 +96,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     _map[key] = handle;
   }
 
-  std::optional<Value> try_get(const Key& query) {
+  virtual std::optional<Value> try_get(const Key& query) {
     if (this->_capacity == 0) return {};
     if (!has(query)) {
       return {};

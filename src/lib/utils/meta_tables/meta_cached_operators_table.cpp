@@ -22,7 +22,7 @@ std::shared_ptr<Table> MetaCachedOperatorsTable::_on_generate() const {
   if (!Hyrise::get().default_pqp_cache) return output_table;
 
   //auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
-   //   Hyrise::get().default_pqp_cache->unsafe_cache());
+  //   Hyrise::get().default_pqp_cache->unsafe_cache());
   auto cache_map = Hyrise::get().default_pqp_cache->snapshot();
 
   for (auto iter = cache_map.begin(); iter != cache_map.end(); ++iter) {
