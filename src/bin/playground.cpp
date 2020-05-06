@@ -192,7 +192,7 @@ int main() {
   std::ofstream memory_consumption_csv_file(MEMORY_CONSUMPTION_FILE);
   std::ofstream performance_csv_file(PERFORMANCE_FILE);
 
-  memory_consumption_csv_file << "CONFIG_NAME, MEMORY_CONSUMPTION\n";
+  memory_consumption_csv_file << "CONFIG_NAME, MEMORY_CONSUMPTION,INDEX,TABLE\n";
   performance_csv_file << "CONFIG_NAME,QUERY_ID,EXECUTION_TIME\n";
 
   for (const auto& entry : std::filesystem::directory_iterator(CONFIG_PATH)) {
@@ -298,7 +298,7 @@ int main() {
 
     // Write memory usage of indexes and table to memory consumption csv file 
     auto mem_usage = sorted_table->memory_usage(MemoryUsageCalculationMode::Full) + index_memory_consumption;
-    memory_consumption_csv_file << conf_name << "," << mem_usage << "\n";
+    memory_consumption_csv_file << conf_name << "," << mem_usage << "," << index_memory_consumption << "," << sorted_table->memory_usage(MemoryUsageCalculationMode::Full) <<"\n";
 
     // We load queries here, as the construction of the queries needs the existing actual table
     const auto queries = load_queries_from_csv(WORKLOAD_FILE);
