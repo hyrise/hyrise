@@ -101,7 +101,7 @@ class OperatorsJoinIndexTest : public BaseTest {
       index_side_input = right;
     }
 
-    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join->performance_data());
+    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
       EXPECT_EQ(performance_data.chunks_scanned_with_index,
