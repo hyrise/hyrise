@@ -65,10 +65,6 @@ try {
           release = '-DCMAKE_BUILD_TYPE=Release'
           relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
-          // GCC produces non-deterministics files when precompiled headers are built: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92717
-          // Disable ASLR for the gcc build process (not for the resulting executable) to stop this from happening:
-          disable_aslr = 'setarch x86_64 -R'
-
           // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
           // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
 
@@ -100,7 +96,7 @@ try {
           }
         }, gccDebug: {
           stage("gcc-debug") {
-            sh "cd gcc-debug && ${disable_aslr} make all -j \$(( \$(nproc) / 4))"
+            sh "cd gcc-debug && make all -j \$(( \$(nproc) / 4))"
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -196,7 +192,7 @@ try {
         }, gccRelease: {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             stage("gcc-release") {
-              sh "cd gcc-release && ${disable_aslr} make all -j \$(( \$(nproc) / 6))"
+              sh "cd gcc-release && make all -j \$(( \$(nproc) / 6))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
