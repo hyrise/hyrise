@@ -31,15 +31,18 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   const auto right_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[1]);
   const auto right_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[1]);
 
-  auto predicate_condition = abstract_predicate_expression->predicate_condition;
-
+  const auto predicate_condition = abstract_predicate_expression->predicate_condition;
   if (left_in_left && right_in_right) {
     return OperatorJoinPredicate{{*left_in_left, *right_in_right}, predicate_condition};
   }
 
   if (right_in_left && left_in_right) {
-    predicate_condition = flip_predicate_condition(predicate_condition);
-    return OperatorJoinPredicate{{*right_in_left, *left_in_right}, predicate_condition};
+    std::cout << "Flipped" << std::endl;
+    // Use the left column in found in the right table and vice versa. Flip after construction to avoid code
+    //duplication.
+    auto join_predicate = OperatorJoinPredicate{{*left_in_right, *right_in_left}, predicate_condition};
+    join_predicate.flip();
+    return join_predicate;
   }
 
   return std::nullopt;
@@ -52,6 +55,11 @@ OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& init_column_ids
 void OperatorJoinPredicate::flip() {
   std::swap(column_ids.first, column_ids.second);
   predicate_condition = flip_predicate_condition(predicate_condition);
+  flipped = true;
+}
+
+bool OperatorJoinPredicate::is_flipped() const {
+  return flipped;
 }
 
 bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
