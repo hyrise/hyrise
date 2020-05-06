@@ -171,7 +171,7 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
 
   {
     const auto conflicting_sql = "DELETE FROM " + _table_name + " WHERE a < 4";
-    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline_statement();
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
