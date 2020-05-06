@@ -14,8 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include "memory/numa_memory_resource.hpp"
-
 namespace opossum {
 
 #if HYRISE_NUMA_SUPPORT
@@ -104,8 +102,6 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
     }
   }
 
-  _create_memory_resources();
-
   numa_free_cpumask(affinity_cpu_bitmask);
   numa_free_cpumask(this_node_cpu_bitmask);
 #endif
@@ -128,8 +124,6 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
 
   auto node = TopologyNode(std::move(cpus));
   _nodes.emplace_back(std::move(node));
-
-  _create_memory_resources();
 }
 
 void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
@@ -162,34 +156,15 @@ void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t worke
   }
 
   _num_cpus = num_workers;
-  _create_memory_resources();
 }
 
 const std::vector<TopologyNode>& Topology::nodes() const { return _nodes; }
 
 size_t Topology::num_cpus() const { return _num_cpus; }
 
-boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_id) {
-  DebugAssert(node_id >= 0 && node_id < static_cast<int>(_nodes.size()), "node_id is out of bounds");
-  return &_memory_resources[static_cast<size_t>(node_id)];
-}
-
 void Topology::_clear() {
   _nodes.clear();
-  _memory_resources.clear();
   _num_cpus = 0;
-}
-
-void Topology::_create_memory_resources() {
-  for (auto node_id = int{0}; node_id < static_cast<int>(_nodes.size()); ++node_id) {
-    auto memsource_name = std::stringstream();
-    memsource_name << "numa_" << std::setw(3) << std::setfill('0') << node_id;
-
-    // If we have a fake NUMA topology that has more nodes than our system has available,
-    // distribute the fake nodes among the physically available ones.
-    auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
-    _memory_resources.emplace_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
-  }
 }
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology) {

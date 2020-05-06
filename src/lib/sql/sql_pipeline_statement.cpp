@@ -100,6 +100,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
+const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
+  // Make sure that the SQLTranslator was invoked
+  (void)get_unoptimized_logical_plan();
+
+  return _translation_info;
+}
+
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
   if (_optimized_logical_plan) {
     return _optimized_logical_plan;
