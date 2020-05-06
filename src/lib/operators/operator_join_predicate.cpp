@@ -26,9 +26,9 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
 
   Assert(abstract_predicate_expression->arguments.size() == 2u, "Expected two arguments");
 
-  // It is possible that a join with the left input A and right input B has a join predicate in the form of B.x = A.x
-  // To avoid having the join implementations handle such situations, we check if the predicates sides match. If not,
-  // the columns IDs and the predicate are flipped.
+  // It is possible that a join with left input A and right input B has a join predicate in the form of B.x = A.x. To
+  // avoid having the join implementations handle such situations we check if the predicate sides match. If not, the
+  // column IDs and the predicates are flipped.
   const auto left_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[0]);
   const auto left_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[0]);
   const auto right_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[1]);
