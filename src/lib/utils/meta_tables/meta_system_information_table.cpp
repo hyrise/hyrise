@@ -1,11 +1,10 @@
-#ifdef __linux__
-#include <sched.h>
-#include <sys/sysinfo.h>
+#include <fstream>
+
+#ifdef __APPLE__
+#include <mach/mach.h>
 #endif
 
 #include "hyrise.hpp"
-#include <fstream>
-
 #include "meta_system_information_table.hpp"
 
 namespace opossum {

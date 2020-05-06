@@ -1,13 +1,12 @@
+#include <chrono>
+#include <fstream>
+
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
 
-#include "hyrise.hpp"
-
-#include <chrono>
-#include <fstream>
-
 #include "meta_system_utilization_table.hpp"
+#include "hyrise.hpp"
 
 namespace opossum {
 
