@@ -26,9 +26,7 @@ std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   const auto ram = _ram_size();
   const auto cpu_model = _cpu_model();
 
-  output_table->append({static_cast<int32_t>(cpus),
-                        static_cast<int64_t>(ram),
-                        static_cast<pmr_string>(cpu_model)});
+  output_table->append({static_cast<int32_t>(cpus), static_cast<int64_t>(ram), static_cast<pmr_string>(cpu_model)});
 
   return output_table;
 }

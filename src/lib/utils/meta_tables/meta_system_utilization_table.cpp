@@ -15,16 +15,16 @@ namespace opossum {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
     : AbstractMetaTable(TableColumnDefinitions{{"cpu_system_time", DataType::Long, false},
-                                                     {"cpu_process_time", DataType::Long, false},
-                                                     {"total_time", DataType::Long, false},
-                                                     {"load_average_1_min", DataType::Float, false},
-                                                     {"load_average_5_min", DataType::Float, false},
-                                                     {"load_average_15_min", DataType::Float, false},
-                                                     {"system_memory_free", DataType::Long, false},
-                                                     {"system_memory_available", DataType::Long, false},
-                                                     {"process_virtual_memory", DataType::Long, false},
-                                                     {"process_RSS", DataType::Long, false},
-                                                     {"cpu_affinity_count", DataType::Int, false}}) {}
+                                               {"cpu_process_time", DataType::Long, false},
+                                               {"total_time", DataType::Long, false},
+                                               {"load_average_1_min", DataType::Float, false},
+                                               {"load_average_5_min", DataType::Float, false},
+                                               {"load_average_15_min", DataType::Float, false},
+                                               {"system_memory_free", DataType::Long, false},
+                                               {"system_memory_available", DataType::Long, false},
+                                               {"process_virtual_memory", DataType::Long, false},
+                                               {"process_RSS", DataType::Long, false},
+                                               {"cpu_affinity_count", DataType::Int, false}}) {}
 
 const std::string& MetaSystemUtilizationTable::name() const {
   static const auto name = std::string{"system_utilization"};
