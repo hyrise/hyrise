@@ -10,10 +10,9 @@
 namespace opossum {
 
 MetaSystemInformationTable::MetaSystemInformationTable()
-    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
-                                                     {"system_memory_total_bytes", DataType::Long, false},
-                                                     {"cpu_affinity_count", DataType::Int, false},
-                                                     {"cpu_model", DataType::String, false}}) {}
+    : AbstractMetaTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
+                                               {"system_memory_total_bytes", DataType::Long, false},
+                                               {"cpu_model", DataType::String, false}}) {}
 
 const std::string& MetaSystemInformationTable::name() const {
   static const auto name = std::string{"system_information"};
@@ -23,40 +22,69 @@ const std::string& MetaSystemInformationTable::name() const {
 std::shared_ptr<Table> MetaSystemInformationTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  const auto cpus = _get_cpu_count();
+  const auto cpus = _cpu_count();
+  const auto ram = _ram_size();
+  const auto cpu_model = _cpu_model();
 
+  output_table->append({static_cast<int32_t>(cpus),
+                        static_cast<int64_t>(ram),
+                        static_cast<pmr_string>(cpu_model)});
+
+  return output_table;
+}
+
+// Returns the number of logical processors
+size_t MetaSystemInformationTable::_cpu_count() {
 #ifdef __linux__
-  auto* cpuset = CPU_ALLOC(cpus);
-  const auto size = CPU_ALLOC_SIZE(cpus);
-  sched_getaffinity(0, size, cpuset);
-  const auto cpu_affinity_count = CPU_COUNT_S(size, cpuset);
-  CPU_FREE(cpuset);
-#endif
-#ifdef __APPLE__
-  const auto cpu_affinity_count = cpus;
+  std::ifstream cpu_info_file;
+  size_t processors = 0;
+  try {
+    cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
+    std::string cpu_info_line;
+    while (std::getline(cpu_info_file, cpu_info_line)) {
+      if (cpu_info_line.starts_with("processor")) ++processors;
+    }
+
+    cpu_info_file.close();
+  } catch (std::ios_base::failure& fail) {
+    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
+  }
+
+  return processors;
 #endif
 
-  uint64_t ram;
+#ifdef __APPLE__
+  size_t processors;
+  size_t size = sizeof(processors);
+  const auto ret = sysctlbyname("hw.ncpu", &processors, &size, nullptr, 0);
+  Assert(ret == 0, "Failed to call sysctl hw.ncpu");
+
+  return processors;
+#endif
+
+  Fail("Method not implemented for this platform");
+}
+
+// Returns the physical memory size
+size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
   struct sysinfo memory_info {};
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
 
-  ram = memory_info.totalram * memory_info.mem_unit;
+  return memory_info.totalram * memory_info.mem_unit;
 #endif
 
 #ifdef __APPLE__
+  uint64_t ram;
   size_t size = sizeof(ram);
   const auto ret = sysctlbyname("hw.memsize", &ram, &size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl hw.memsize");
+
+  return ram;
 #endif
 
-  const auto cpu_model = _cpu_model();
-
-  output_table->append({static_cast<int32_t>(cpus), static_cast<int64_t>(ram), static_cast<int32_t>(cpu_affinity_count),
-                        static_cast<pmr_string>(cpu_model)});
-
-  return output_table;
+  Fail("Method not implemented for this platform");
 }
 
 // Returns the CPU model string

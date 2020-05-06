@@ -14,7 +14,7 @@
 namespace opossum {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
-    : AbstractMetaSystemTable(TableColumnDefinitions{{"cpu_system_time", DataType::Long, false},
+    : AbstractMetaTable(TableColumnDefinitions{{"cpu_system_time", DataType::Long, false},
                                                      {"cpu_process_time", DataType::Long, false},
                                                      {"total_time", DataType::Long, false},
                                                      {"load_average_1_min", DataType::Float, false},
@@ -23,7 +23,8 @@ MetaSystemUtilizationTable::MetaSystemUtilizationTable()
                                                      {"system_memory_free", DataType::Long, false},
                                                      {"system_memory_available", DataType::Long, false},
                                                      {"process_virtual_memory", DataType::Long, false},
-                                                     {"process_RSS", DataType::Long, false}}) {}
+                                                     {"process_RSS", DataType::Long, false},
+                                                     {"cpu_affinity_count", DataType::Int, false}}) {}
 
 const std::string& MetaSystemUtilizationTable::name() const {
   static const auto name = std::string{"system_utilization"};
@@ -39,13 +40,15 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   const auto load_avg = _get_load_avg();
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
+  const auto cpu_affinity_count = _get_cpu_affinity_count();
 
   output_table->append({static_cast<int64_t>(system_cpu_ticks), static_cast<int64_t>(process_cpu_ticks),
                         static_cast<int64_t>(total_ticks), load_avg.load_1_min, load_avg.load_5_min,
                         load_avg.load_15_min, static_cast<int64_t>(system_memory_usage.free_memory),
                         static_cast<int64_t>(system_memory_usage.available_memory),
                         static_cast<int64_t>(process_memory_usage.virtual_memory),
-                        static_cast<int64_t>(process_memory_usage.physical_memory)});
+                        static_cast<int64_t>(process_memory_usage.physical_memory),
+                        static_cast<int32_t>(cpu_affinity_count)});
 
   return output_table;
 }
@@ -128,7 +131,7 @@ uint64_t MetaSystemUtilizationTable::_get_system_cpu_time() {
 */
 uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // CLOCK_PROCESS_CPUTIME_ID:
-  // Per-process CPU-time clock (measures CPU time consumed by all threads in the process).
+  // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
 #ifdef __linux__
   struct timespec time_spec {};
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
@@ -186,6 +189,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   auto ret = sysctlbyname("hw.memsize", &physical_memory, &size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl hw.memsize");
 
+  // see reference: https://stackoverflow.com/a/1911863
   vm_size_t page_size;
   vm_statistics64_data_t vm_statistics;
   mach_msg_type_number_t count = sizeof(vm_statistics) / sizeof(natural_t);
@@ -243,6 +247,13 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #endif
 
   Fail("Method not implemented for this platform");
+}
+
+size_t MetaSystemUtilizationTable::_get_cpu_affinity_count() {
+  cpu_set_t cpu_set;
+  CPU_ZERO(&cpu_set);
+  pthread_getaffinity_np(pthread_self(), sizeof(cpu_set), &cpu_set);
+  return CPU_COUNT(&cpu_set);
 }
 
 #ifdef __linux__

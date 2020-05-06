@@ -214,7 +214,7 @@ set(
     utils/meta_tables/meta_table_test.cpp
     utils/meta_tables/meta_plugins_test.cpp
     utils/meta_tables/meta_settings_test.cpp
-    utils/meta_tables/meta_system_information_test.cpp
+    utils/meta_tables/meta_system_utilization_test.cpp
     utils/mock_setting.hpp
     utils/mock_setting.cpp
     utils/plugin_manager_test.cpp
