@@ -62,8 +62,8 @@ try {
           ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
           unity = '-DCMAKE_UNITY_BUILD=ON'
 
-          clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-          clang10 = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
+          clang = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
+          clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
           debug = '-DCMAKE_BUILD_TYPE=Debug'
@@ -92,7 +92,7 @@ try {
           mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake}           ${relwithdebinfo} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
           mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${ccache} ${debug}          ${gcc}            .. &\
           mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${ccache} ${release}        ${gcc}            .. &\
-          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake}           ${debug}          ${clang10}        .. &\
+          mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake}           ${debug}          ${clang9}         .. &\
           wait"
         }
 
@@ -101,10 +101,10 @@ try {
             sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
             sh "./clang-debug/hyriseTest clang-debug"
           }
-        }, clang10Debug: {
-          stage("clang-10-debug") {
-            sh "cd clang-10-debug && make all -j \$(( \$(nproc) / 4))"
-            sh "./clang-10-debug/hyriseTest clang-10-debug"
+        }, clang9Debug: {
+          stage("clang-9-debug") {
+            sh "cd clang-9-debug && make all -j \$(( \$(nproc) / 4))"
+            sh "./clang-9-debug/hyriseTest clang-9-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
