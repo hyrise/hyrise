@@ -445,9 +445,8 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
   {
-    auto pipeline_statement =
-        SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
-    const auto pqp = pipeline_statement.get_physical_plan();
+    auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline();
+    const auto pqp = pipeline_statement.get_physical_plans().at(0);
     lqp_node = pqp->lqp_node;
     EXPECT_FALSE(lqp_node.expired());
   }

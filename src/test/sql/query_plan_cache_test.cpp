@@ -29,10 +29,10 @@ class QueryPlanCacheTest : public BaseTest {
   }
 
   void execute_query(const std::string& query) {
-    auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(cache).create_pipeline_statement();
-    pipeline_statement.get_result_table();
+    auto pipeline = SQLPipelineBuilder{query}.with_pqp_cache(cache).create_pipeline();
+    pipeline.get_result_table();
 
-    if (pipeline_statement.metrics()->query_plan_cache_hit) {
+    if (pipeline.metrics().statement_metrics.at(0)->query_plan_cache_hit) {
       _query_plan_cache_hits++;
     }
   }
@@ -51,16 +51,16 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
   EXPECT_FALSE(cache->has(Q2));
 
   // Execute a query and cache its plan.
-  auto pipeline_statement = SQLPipelineBuilder{Q1}.disable_mvcc().create_pipeline_statement();
-  pipeline_statement.get_result_table();
-  cache->set(Q1, pipeline_statement.get_physical_plan());
+  auto pipeline = SQLPipelineBuilder{Q1}.disable_mvcc().create_pipeline();
+  pipeline.get_result_table();
+  cache->set(Q1, pipeline.get_physical_plans().at(0));
 
   EXPECT_TRUE(cache->has(Q1));
   EXPECT_FALSE(cache->has(Q2));
 
   // Retrieve and execute the cached plan.
   const auto cached_plan = cache->get_entry(Q1);
-  EXPECT_EQ(cached_plan, pipeline_statement.get_physical_plan());
+  EXPECT_EQ(cached_plan, pipeline.get_physical_plans().at(0));
 }
 
 // Test query plan cache with LRU implementation.
@@ -147,7 +147,7 @@ TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
 // that supports retrieving the cache frequency count.
 TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   // Create pipeline and pass pqp cache. Verify that this does not change default_pqp_cache.
-  auto sql_pipeline = SQLPipelineBuilder{Q1}.with_pqp_cache(cache).create_pipeline_statement();
+  auto sql_pipeline = SQLPipelineBuilder{Q1}.with_pqp_cache(cache).create_pipeline();
   EXPECT_EQ(Hyrise::get().default_pqp_cache, nullptr);
 
   // Setting default_pqp_cache and verify it's set.
@@ -156,7 +156,7 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
 
   // Create new pipeline, without setting a cache (default cache set previously). Execute pipeline and check if
   // frequency of query is as expected.
-  auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline_statement();
+  auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline();
   new_sql_pipeline.get_result_table();
   auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
       Hyrise::get().default_pqp_cache->unsafe_cache());
