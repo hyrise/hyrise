@@ -1,5 +1,9 @@
 #include <fstream>
 
+#ifdef __linux__
+#include <sys/sysinfo.h>
+#endif
+
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
