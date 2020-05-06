@@ -30,10 +30,10 @@ using namespace opossum;  // NOLINT
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
-constexpr auto CHUNK_SIZE = size_t{10};
-//constexpr auto CHUNK_SIZE = size_t{100'000};
+constexpr auto CHUNK_SIZE = size_t{1'000'000};
 constexpr auto TABLE_NAME = "PING";
 constexpr auto ORDER_BY_MODE = OrderByMode::Ascending;
+constexpr auto EXECUTION_COUNT = 100;
 
 //Chunk encodings copied from ping data micro benchmark 
 const auto CHUNK_ENCODINGS = std::vector{
@@ -145,7 +145,6 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
  * for now), translates the query, and executes the query (single-threaded).
  */
 float partially_optimize_translate_and_execute_query(const std::pair<std::shared_ptr<AbstractLQPNode>, size_t>& workoad_item) {
-  constexpr auto EXECUTION_COUNT = 17;
   const auto lqp_query = workoad_item.first;
   //const auto frequency = workoad_item.second;
 
