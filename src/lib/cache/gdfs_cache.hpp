@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <shared_mutex>
 #include <unordered_map>
 #include <utility>
 
@@ -10,8 +11,11 @@
 
 namespace opossum {
 
-// Generic cache implementation using the GDFS policy.
-// Note: This implementation is not thread-safe.
+/*
+ * Generic cache implementation using the GDFS policy.
+ * Note: This implementation is only thread-safe for basic cache operations.
+ * To iterate over a cache copy, use snapshot().
+ */
 template <typename Key, typename Value>
 class GDFSCache : public AbstractCache<Key, Value> {
  public:
@@ -61,7 +65,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     }
   };
 
-  explicit GDFSCache(size_t capacity = 1024) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCache(size_t capacity = DefaultCacheCapacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
@@ -96,8 +100,10 @@ class GDFSCache : public AbstractCache<Key, Value> {
   std::optional<Value> try_get(const Key& query) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     if (this->_capacity == 0) return {};
+
     auto it = _map.find(query);
     if (it == _map.end()) return {};
+
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;
@@ -106,10 +112,10 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return entry.value;
   }
 
-  Value& get(const Key& key) {
+  Value& get_entry(const Key& key) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
-    DebugAssert(it != _map.end(), "key not present");
+    DebugAssert(it != _map.end(), "Key not present.");
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;
@@ -151,9 +157,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return (*it->second).priority;
   }
 
-  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
+  ErasedIterator unsafe_begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
 
-  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
+  ErasedIterator unsafe_end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
 
   size_t frequency(const Key& key) {
     const auto it = _map.find(key);

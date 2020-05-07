@@ -4,7 +4,7 @@
 #include <string>
 
 #include "SQLParserResult.h"
-#include "cache/cache.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"

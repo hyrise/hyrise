@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+inline constexpr size_t DefaultCacheCapacity = 1024;
+
 // Generic template for a cache implementation.
 template <typename Key, typename Value>
 class AbstractCache {
@@ -36,7 +38,7 @@ class AbstractCache {
     std::unique_ptr<AbstractIterator> _it;
   };
 
-  explicit AbstractCache(size_t capacity) : _capacity(capacity) {}
+  explicit AbstractCache(size_t capacity = DefaultCacheCapacity) : _capacity(capacity) {}
 
   virtual ~AbstractCache() {}
 
@@ -46,9 +48,13 @@ class AbstractCache {
   // If they are not intended to be used, we specify constant default values here.
   virtual void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) = 0;
 
+  // Tries to fetch the cache entry for the query into the result object. Returns true if the entry was found, false
+  // otherwise.
+  virtual std::optional<Value> try_get(const Key& key) = 0;
+
   // Get the cached value at the given key.
   // Causes undefined behavior if the item is not in the cache.
-  virtual Value& get(const Key& key) = 0;
+  virtual Value& get_entry(const Key& key) = 0;
 
   // Returns true if the cache holds an item at the given key.
   virtual bool has(const Key& key) const = 0;
@@ -62,8 +68,15 @@ class AbstractCache {
   // Resize to the given capacity.
   virtual void resize(size_t capacity) = 0;
 
-  virtual ErasedIterator begin() = 0;
-  virtual ErasedIterator end() = 0;
+  // These methods are named "unsafe_" (similar to tbb's naming) because iterator does not hold a mutex. As such,
+  // modifications to the cache invalidate the iterators. While this is also true for begin()/end() in other data
+  // structures, the Cache class usually deals with concurrency.
+  virtual ErasedIterator unsafe_begin() = 0;
+  virtual ErasedIterator unsafe_end() = 0;
+
+  // To use range based for loops, we forward the unsafe_ iterator.
+  virtual ErasedIterator begin() { return unsafe_begin(); }
+  virtual ErasedIterator end() { return unsafe_end(); }
 
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
