@@ -358,21 +358,33 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   int size_x;
   rl_get_screen_size(&size_y, &size_x);
 
-  const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+  const bool fits_on_one_page_y = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+
+  std::stringstream stream;
+  Print::print(table, flags, stream);
+
+  bool fits_on_one_page_x = true;
+  auto stream_backup = stream.str();
+  std::string line;
+  while (std::getline(stream, line, '\n')) {
+    if (line.length() > static_cast<uint64_t>(size_x)) {
+      fits_on_one_page_x = false;
+      break;
+    }
+  }
+  stream.str(stream_backup);
 
   static bool pagination_disabled = false;
-  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
+  if ((!fits_on_one_page_x || !fits_on_one_page_y) && !std::getenv("TERM") && !pagination_disabled) {
     out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
         "Pagination is disabled.\n\n");
     pagination_disabled = true;
   }
 
-  // Paginate only if table has more rows that fit in the terminal
-  if (fits_on_one_page || pagination_disabled) {
-    Print::print(table, flags, _out);
+  // Paginate only if table has more rows or printed columns that fit in the terminal
+  if ((fits_on_one_page_x && fits_on_one_page_y) || pagination_disabled) {
+    _out << stream.rdbuf();
   } else {
-    std::stringstream stream;
-    Print::print(table, flags, stream);
     _pagination_active = true;
     Pagination(stream).display();
     _pagination_active = false;
