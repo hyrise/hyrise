@@ -83,7 +83,9 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
   void do_random_selects(const int32_t cache_size, const int32_t seed) const {
     std::mt19937 generator(seed);
     std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
-    for (size_t i = 0; i < 100; ++i) {
+    const auto num_repetitions = _num_repetitions / _num_threads;
+
+    for (size_t i = 0; i < num_repetitions; ++i) {
       const int32_t value = dist(generator);
       const auto sql_string = _queries[value];
       auto builder = SQLPipelineBuilder{sql_string};
@@ -117,8 +119,9 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     std::mt19937 generator(seed);
     std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
     auto cache = Hyrise::get().default_pqp_cache;
+    const auto num_repetitions = _num_repetitions / _num_threads;
 
-    for (size_t i = 0; i < _num_repetitions; ++i) {
+    for (size_t i = 0; i < num_repetitions; ++i) {
       const int32_t value = dist(generator);
       const auto sql_string = _queries[value];
       bool cache_hit = false;
@@ -142,8 +145,9 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     std::mt19937 generator(seed);
     std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
     auto cache = Hyrise::get().default_pqp_cache_old;
+    const auto num_repetitions = _num_repetitions / _num_threads;
 
-    for (size_t i = 0; i < _num_repetitions; ++i) {
+    for (size_t i = 0; i < num_repetitions; ++i) {
       const int32_t value = dist(generator);
       const auto sql_string = _queries[value];
       bool cache_hit = false;
@@ -167,8 +171,9 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     std::mt19937 generator(seed);
     std::uniform_int_distribution<int32_t> dist(0, 2 * cache_size - 1);
     auto cache = Hyrise::get().default_pqp_cache_lock;
+    const auto num_repetitions = _num_repetitions / _num_threads;
 
-    for (size_t i = 0; i < _num_repetitions; ++i) {
+    for (size_t i = 0; i < num_repetitions; ++i) {
       const int32_t value = dist(generator);
       const auto sql_string = _queries[value];
       bool cache_hit = false;
@@ -194,6 +199,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
   const std::string _sql_select = "SELECT * FROM foo WHERE a = ";
   const int32_t _seed = 1337;
   const size_t _num_repetitions = 1'000'000;
+  const size_t _num_threads = 10;
 };
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOldSmall)(benchmark::State& state) {
@@ -253,7 +259,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewSmall)(benchmark::S
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockSmall)(benchmark::State& state) {
   std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _small_cache_size - 1);
-  auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>(_small_cache_size);
+  auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheLock>(_small_cache_size);
 
   for (auto _ : state) {
     for (size_t i = 0; i < _num_repetitions; ++i) {
@@ -307,7 +313,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOld)(benchmark::State&
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNew)(benchmark::State& state) {
   std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
-  auto pqp_cache = std::make_shared<SQLPhysicalPlanCacheLock>();
+  auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
 
   for (auto _ : state) {
     for (size_t i = 0; i < _num_repetitions; ++i) {
@@ -365,13 +371,13 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageOldMulti)(benchmark::S
 
   for (auto _ : state) {
     std::vector<std::thread> threads;
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       const int32_t seed = dist(generator);
       threads.push_back(
           std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 2));
     }
 
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       threads[i].join();
     }
   }
@@ -384,13 +390,13 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewMulti)(benchmark::S
 
   for (auto _ : state) {
     std::vector<std::thread> threads;
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       const int32_t seed = dist(generator);
       threads.push_back(
           std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 1));
     }
 
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       threads[i].join();
     }
   }
@@ -403,13 +409,13 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockMulti)(benchmark::
 
   for (auto _ : state) {
     std::vector<std::thread> threads;
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       const int32_t seed = dist(generator);
       threads.push_back(
           std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 3));
     }
 
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       threads[i].join();
     }
   }
@@ -475,12 +481,12 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectMulti)(benchmark::State& sta
 
   for (auto _ : state) {
     std::vector<std::thread> threads;
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       const int32_t seed = dist(generator);
       threads.push_back(std::thread(&BenchmarkPlaygroundFixture::do_random_selects, this, _default_cache_size, seed));
     }
 
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       threads[i].join();
     }
   }
@@ -502,12 +508,12 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnapMulti)(benchmark::St
 
   for (auto _ : state) {
     std::vector<std::thread> threads;
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       const int32_t seed = dist(generator);
       threads.push_back(std::thread(&BenchmarkPlaygroundFixture::do_random_selects, this, _default_cache_size, seed));
     }
 
-    for (size_t i = 0; i < 10; ++i) {
+    for (size_t i = 0; i < _num_threads; ++i) {
       threads[i].join();
     }
   }

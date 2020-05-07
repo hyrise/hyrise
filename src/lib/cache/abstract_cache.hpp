@@ -46,8 +46,6 @@ class AbstractCache {
   // If they are not intended to be used, we specify constant default values here.
   virtual void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) = 0;
 
-  virtual std::optional<Value> try_get(const Key& query) { return {}; }
-
   // Get the cached value at the given key.
   // Causes undefined behavior if the item is not in the cache.
   virtual Value& get(const Key& key) = 0;

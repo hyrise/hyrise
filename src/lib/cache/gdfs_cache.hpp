@@ -83,10 +83,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
     if (_queue.size() >= this->_capacity) {
-      auto top = _queue.top();
-      _inflation = top.priority;
-      _map.erase(top.key);
-      _queue.pop();
+      _evict();
     }
 
     // Insert new item in cache.
@@ -96,16 +93,20 @@ class GDFSCache : public AbstractCache<Key, Value> {
     _map[key] = handle;
   }
 
-  virtual std::optional<Value> try_get(const Key& query) {
+  std::optional<Value> try_get(const Key& query) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     if (this->_capacity == 0) return {};
-    if (!has(query)) {
-      return {};
-    }
-    return get(query);
+    auto it = _map.find(query);
+    if (it == _map.end()) return {};
+    Handle handle = it->second;
+    GDFSCacheEntry& entry = (*handle);
+    entry.frequency++;
+    entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
+    _queue.update(handle);
+    return entry.value;
   }
 
   Value& get(const Key& key) {
-    std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     DebugAssert(it != _map.end(), "key not present");
     Handle handle = it->second;
@@ -116,10 +117,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return entry.value;
   }
 
-  bool has(const Key& key) const {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
-    return _map.find(key) != _map.end();
-  }
+  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
 
   size_t size() const {
     std::shared_lock<std::shared_mutex> lock(_mutex);
@@ -184,7 +182,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
   mutable std::shared_mutex _mutex;
 
   // Inflation value that will be updated whenever an item is evicted.
-  double _inflation;
+  std::atomic<double> _inflation;
 
   void _evict() {
     auto top = _queue.top();
