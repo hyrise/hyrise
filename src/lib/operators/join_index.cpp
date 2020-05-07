@@ -16,7 +16,9 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -52,7 +54,9 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
-      _adjusted_primary_predicate(primary_predicate) {
+      _adjusted_primary_predicate(primary_predicate),
+      _duration_append_matches{},
+      _duration_append_matches_non_inner{} {
   if (_index_side == IndexSide::Left) {
     _adjusted_primary_predicate.flip();
   }
@@ -81,6 +85,7 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
+  Timer execution_timer{};
   Assert(
       supports({_mode, _primary_predicate.predicate_condition,
                 input_table_left()->column_data_type(_primary_predicate.column_ids.first),
@@ -229,6 +234,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
 
     _append_matches_non_inner(is_semi_or_anti_join);
+    const auto& duration_execute = execution_timer.lap();
+    std::cout << "_on_execute: " << format_duration(duration_execute) << '\n';
+    std::cout << "_append_matches: " << format_duration(_duration_append_matches)
+      << " (" << (static_cast<float>(_duration_append_matches.count())/duration_execute.count()) * 100 << "%)" << '\n';
+    std::cout << "_append_matches_non_inner: " << format_duration(_duration_append_matches_non_inner)
+      << " (" << (static_cast<float>(_duration_append_matches_non_inner.count())/duration_execute.count()) * 100 << "%)" << '\n';
   }
 
   // write output chunks
@@ -412,6 +423,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
 void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
                                 const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                                 const ChunkID index_chunk_id) {
+  Timer timer{};
   const auto num_index_matches = std::distance(range_begin, range_end);
 
   if (num_index_matches == 0) {
@@ -444,6 +456,7 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
       _index_matches[index_chunk_id][index_chunk_offset] = true;
     });
   }
+  _duration_append_matches += timer.lap();
 }
 
 void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
@@ -456,6 +469,7 @@ void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, cons
 }
 
 void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
+  Timer timer{};
   // For Full Outer and Left Join we need to add all unmatched rows for the probe side
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
@@ -521,6 +535,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       }
     }
   }
+  _duration_append_matches_non_inner += timer.lap();
 }
 
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
