@@ -184,10 +184,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           }
           performance_data.chunks_scanned_with_index++;
         } else {
+          std::cout << "reference table, no index fallback" << std::endl;
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
         }
       } else {
+        std::cout << "no single chunk reference fallback" << std::endl;
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
       }
@@ -220,6 +222,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         }
         performance_data.chunks_scanned_with_index++;
       } else {
+        std::cout << "data table, no index fallback" << std::endl;
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
       }
