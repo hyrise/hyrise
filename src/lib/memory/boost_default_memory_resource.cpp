@@ -14,7 +14,7 @@ class default_resource_impl : public memory_resource {  // NOLINT
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
-    delete[] static_cast<char*>(p);   // NOLINT
+    operator delete[] (p, static_cast<std::align_val_t>(alignment));   // NOLINT
   }
 
   [[nodiscard]] bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT override { return &other == this; }
