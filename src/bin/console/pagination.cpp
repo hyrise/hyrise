@@ -33,10 +33,11 @@ void Pagination::display() {
   size_t line_count = _lines.size();
   size_t end_line = line_count > _size_y ? line_count - _size_y : 0;
   size_t current_line = 0;
+  size_t current_column = 0;
 
   // Indicator if the display should be reprinted after a keyboard input
   bool reprint = false;
-  _print_page(current_line);
+  _print_page(current_line, current_column);
 
   int key_pressed;
   while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
@@ -105,6 +106,26 @@ void Pagination::display() {
         break;
       }
 
+      case KEY_RIGHT: {
+        const auto half_screen_width = _size_x / 2.0;
+        current_column += half_screen_width;
+        reprint = true;
+        break;
+      }
+
+      case KEY_LEFT: {
+        const auto half_screen_width = _size_x / 2.0;
+        if (current_column != 0) {
+          if (current_column > half_screen_width) {
+            current_column -= half_screen_width;
+          } else {
+            current_column = 0;
+          }
+          reprint = true;
+        }
+        break;
+      }
+
       case 'h': {
         _print_help_screen();
         reprint = true;
@@ -115,7 +136,7 @@ void Pagination::display() {
     }
 
     if (reprint) {
-      _print_page(current_line);
+      _print_page(current_line, current_column);
       reprint = false;
     }
   }
@@ -123,7 +144,7 @@ void Pagination::display() {
   endwin();
 }
 
-void Pagination::_print_page(size_t first_line) {
+void Pagination::_print_page(size_t first_line, size_t first_column) {
   clear();
 
   for (size_t i = first_line; i < first_line + _size_y; ++i) {
@@ -131,7 +152,11 @@ void Pagination::_print_page(size_t first_line) {
       break;
     }
 
-    printw("%s\n", _lines[i].c_str());
+    if (_lines[i].length() > first_column) {
+      printw("%s\n", _lines[i].substr(first_column, _size_x - 1).c_str());
+    } else {
+      printw("\n");
+    }
   }
 
   printw("Press 'q' to quit. ARROW KEYS, PAGE UP/DOWN, for navigation. 'h' for list of all commands.\n");
@@ -148,6 +173,8 @@ void Pagination::_print_help_screen() {
   wprintw(help_screen, "  Available commands:\n\n");
   wprintw(help_screen, "  %-17s- Move down one line.\n", "ARROW DOWN, j");
   wprintw(help_screen, "  %-17s- Move up one line.\n\n", "ARROW UP, k");
+  wprintw(help_screen, "  %-17s- Move right one half screen width.\n", "ARROW RIGHT");
+  wprintw(help_screen, "  %-17s- Move left one half screen width.\n", "ARROW LEFT");
   wprintw(help_screen, "  %-17s- Move down one page.\n", "PAGE DOWN, SPACE");
   wprintw(help_screen, "  %-17s- Move up one page.\n\n", "PAGE UP, b");
   wprintw(help_screen, "  %-17s- Go to first line.\n", "HOME, g, <");
