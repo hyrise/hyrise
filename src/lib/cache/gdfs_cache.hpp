@@ -107,6 +107,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
   }
 
   Value& get(const Key& key) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     DebugAssert(it != _map.end(), "key not present");
     Handle handle = it->second;
@@ -117,7 +118,10 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return entry.value;
   }
 
-  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
+  bool has(const Key& key) const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _map.find(key) != _map.end();
+  }
 
   size_t size() const {
     std::shared_lock<std::shared_mutex> lock(_mutex);

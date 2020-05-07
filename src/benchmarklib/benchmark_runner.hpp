@@ -9,6 +9,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include <algorithm>
+#include <numeric>
+#include <thread>
+
 #include <nlohmann/json.hpp>
 #include "cxxopts.hpp"
 
@@ -24,6 +28,9 @@
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
+
+
+#include "utils/pausable_loop_thread.hpp"
 
 namespace opossum {
 
@@ -91,6 +98,13 @@ class BenchmarkRunner : Noncopyable {
   std::atomic_uint _total_finished_runs{0};
 
   BenchmarkState _state{Duration{0}};
+
+  std::unique_ptr<PausableLoopThread> _loop_thread_snap;
+
+  std::atomic_size_t _cached_items = 0;
+  std::atomic_size_t _cache_calls = 0;
+
+  void _snap();
 };
 
 }  // namespace opossum

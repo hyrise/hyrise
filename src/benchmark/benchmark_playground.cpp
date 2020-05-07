@@ -53,6 +53,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     MicroBenchmarkBasicFixture::SetUp(state);
 
     _clear_cache();
+    /*
     const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
@@ -72,6 +73,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     table->append_chunk(segment_vec, mvcc_data);
     table->last_chunk()->finalize();
     Hyrise::get().storage_manager.add_table("foo", table);
+    */
 
     for (int32_t i = 0; i < 2 * _default_cache_size; i++) {
       _queries[i] = _sql_select + std::to_string(i) + ";";
@@ -402,6 +404,35 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewMulti)(benchmark::S
   }
 }
 
+BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageNewMultiSnap)(benchmark::State& state) {
+  std::mt19937 generator(_seed);
+  std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+  std::unique_ptr<PausableLoopThread> loop_thread_snap =
+      std::make_unique<PausableLoopThread>(std::chrono::seconds(5), [&](size_t) {
+        size_t cached_items;
+        benchmark::DoNotOptimize(cached_items);
+        cached_items = Hyrise::get().default_pqp_cache->snapshot().size();
+        benchmark::ClobberMemory();
+      });
+
+  for (auto _ : state) {
+    std::vector<std::thread> threads;
+    for (size_t i = 0; i < _num_threads; ++i) {
+      const int32_t seed = dist(generator);
+      threads.push_back(
+          std::thread(&BenchmarkPlaygroundFixture::do_random_cache_operations, this, _default_cache_size, seed, 1));
+    }
+
+    for (size_t i = 0; i < _num_threads; ++i) {
+      threads[i].join();
+    }
+  }
+
+  loop_thread_snap.reset();
+}
+
 BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockMulti)(benchmark::State& state) {
   std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
@@ -420,7 +451,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, SimulateCacheUsageLockMulti)(benchmark::
     }
   }
 }
-
+/*
 BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectSingle)(benchmark::State& state) {
   std::mt19937 generator(_seed);
   std::uniform_int_distribution<int32_t> dist(0, 2 * _default_cache_size - 1);
@@ -519,6 +550,6 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, RandomSelectWithSnapMulti)(benchmark::St
   }
 
   loop_thread_snap.reset();
-}
+}*/
 
 }  // namespace opossum
