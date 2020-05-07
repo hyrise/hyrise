@@ -107,20 +107,31 @@ void Pagination::display() {
       }
 
       case KEY_RIGHT: {
-        const auto half_screen_width = _size_x / 2.0;
-        current_column += half_screen_width;
+        ++current_column;
         reprint = true;
         break;
       }
 
       case KEY_LEFT: {
-        const auto half_screen_width = _size_x / 2.0;
+        if (current_column > 0) {
+          --current_column;
+          reprint = true;
+        }
+        break;
+      }
+
+      case 'a': {
         if (current_column != 0) {
-          if (current_column > half_screen_width) {
-            current_column -= half_screen_width;
-          } else {
-            current_column = 0;
-          }
+          current_column = 0;
+          reprint = true;
+        }
+        break;
+      }
+
+      case 'e': {
+        const auto last_column = _lines[current_line].length() - _size_x + 1;
+        if (_lines[current_line].length() > _size_x && current_column < last_column) {
+          current_column = last_column;
           reprint = true;
         }
         break;
@@ -173,12 +184,14 @@ void Pagination::_print_help_screen() {
   wprintw(help_screen, "  Available commands:\n\n");
   wprintw(help_screen, "  %-17s- Move down one line.\n", "ARROW DOWN, j");
   wprintw(help_screen, "  %-17s- Move up one line.\n\n", "ARROW UP, k");
-  wprintw(help_screen, "  %-17s- Move right one half screen width.\n", "ARROW RIGHT");
-  wprintw(help_screen, "  %-17s- Move left one half screen width.\n", "ARROW LEFT");
+  wprintw(help_screen, "  %-17s- Move right one column.\n", "ARROW RIGHT");
+  wprintw(help_screen, "  %-17s- Move left one column.\n", "ARROW LEFT");
   wprintw(help_screen, "  %-17s- Move down one page.\n", "PAGE DOWN, SPACE");
   wprintw(help_screen, "  %-17s- Move up one page.\n\n", "PAGE UP, b");
   wprintw(help_screen, "  %-17s- Go to first line.\n", "HOME, g, <");
   wprintw(help_screen, "  %-17s- Go to last line.\n\n", "END, G, >");
+  wprintw(help_screen, "  %-17s- Go to first column.\n", "a");
+  wprintw(help_screen, "  %-17s- Go to last column.\n", "e");
   wprintw(help_screen, "  %-17s- Quit.\n", "q");
 
   wrefresh(help_screen);
