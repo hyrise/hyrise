@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <valgrind/callgrind.h>
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
@@ -56,7 +57,8 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
       _index_side(index_side),
       _adjusted_primary_predicate(primary_predicate),
       _duration_append_matches{},
-      _duration_append_matches_non_inner{} {
+      _duration_append_matches_non_inner{},
+      _duration_index_ranges_for_value{} {
   if (_index_side == IndexSide::Left) {
     _adjusted_primary_predicate.flip();
   }
@@ -85,6 +87,7 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
+  //CALLGRIND_START_INSTRUMENTATION;
   Timer execution_timer{};
   Assert(
       supports({_mode, _primary_predicate.predicate_condition,
@@ -266,12 +269,21 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   }
 
   const auto tbl = _build_output_table(std::move(chunks));
+
   const auto& duration_execute = execution_timer.lap();
+  auto in_percentage = [&duration_execute](const auto& duration) {
+    return " (" +
+      std::to_string((static_cast<float>(duration.count())/duration_execute.count()) * 100) + "%)";
+  };
+
   std::cout << "Overall index join execution time (_on_execute): " << format_duration(duration_execute) << '\n';
     std::cout << "Time spent in _append_matches: " << format_duration(_duration_append_matches)
-      << " (" << (static_cast<float>(_duration_append_matches.count())/duration_execute.count()) * 100 << "%)" << '\n';
+      << in_percentage(_duration_append_matches) << '\n';
     std::cout << "Time spent in _append_matches_non_inner: " << format_duration(_duration_append_matches_non_inner)
-      << " (" << (static_cast<float>(_duration_append_matches_non_inner.count())/duration_execute.count()) * 100 << "%)" << '\n';
+      << in_percentage(_duration_append_matches_non_inner) << '\n';
+    std::cout << "Time spent in _index_ranges_for_value: " << format_duration(_duration_index_ranges_for_value)
+      << in_percentage(_duration_index_ranges_for_value) << '\n';
+  //CALLGRIND_STOP_INSTRUMENTATION;
   return tbl;
 }
 
@@ -356,7 +368,8 @@ void JoinIndex::_reference_join_two_segments_using_index(
 
 template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                           const std::shared_ptr<AbstractIndex>& index) const {
+                                                           const std::shared_ptr<AbstractIndex>& index) {
+  Timer timer{};
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
 
@@ -368,6 +381,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
     if (probe_side_position.is_null() || indexed_null_values) {
       index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
       index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
+      _duration_index_ranges_for_value += timer.lap();
       return index_ranges;
     }
   }
@@ -419,6 +433,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
     }
     index_ranges.emplace_back(IndexRange{range_begin, range_end});
   }
+  _duration_index_ranges_for_value += timer.lap();
   return index_ranges;
 }
 
