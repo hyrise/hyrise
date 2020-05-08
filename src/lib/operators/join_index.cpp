@@ -7,7 +7,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <valgrind/callgrind.h>
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
@@ -17,6 +16,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
@@ -54,7 +54,9 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
-      _adjusted_primary_predicate(primary_predicate) {
+      _adjusted_primary_predicate(primary_predicate),
+      _duration_append_matches{},
+      _duration_append_matches_non_inner{} {
   if (_index_side == IndexSide::Left) {
     _adjusted_primary_predicate.flip();
   }
@@ -83,7 +85,6 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
-  CALLGRIND_START_INSTRUMENTATION;
   Timer execution_timer{};
   Assert(
       supports({_mode, _primary_predicate.predicate_condition,
@@ -264,8 +265,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
   }
 
-  return _build_output_table(std::move(chunks));
-  CALLGRIND_STOP_INSTRUMENTATION;
+  const auto tbl = _build_output_table(std::move(chunks));
+  const auto& duration_execute = execution_timer.lap();
+  std::cout << "Overall index join execution time (_on_execute): " << format_duration(duration_execute) << '\n';
+    std::cout << "Time spent in _append_matches: " << format_duration(_duration_append_matches)
+      << " (" << (static_cast<float>(_duration_append_matches.count())/duration_execute.count()) * 100 << "%)" << '\n';
+    std::cout << "Time spent in _append_matches_non_inner: " << format_duration(_duration_append_matches_non_inner)
+      << " (" << (static_cast<float>(_duration_append_matches_non_inner.count())/duration_execute.count()) * 100 << "%)" << '\n';
+  return tbl;
 }
 
 void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
@@ -451,6 +458,7 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
       _index_matches[index_chunk_id][index_chunk_offset] = true;
     });
   }
+  _duration_append_matches += timer.lap();
 }
 
 void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
@@ -529,6 +537,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       }
     }
   }
+  _duration_append_matches_non_inner += timer.lap();
 }
 
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
