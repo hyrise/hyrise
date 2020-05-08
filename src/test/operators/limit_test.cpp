@@ -124,13 +124,13 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
 
   const auto result_table_unsorted = limit->get_output();
   for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
-    EXPECT_FALSE(sorted_by);
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
   }
 
   // Verify that the sorted_by flag is set when it's present in input.
-  auto sort = std::make_shared<Sort>(
-      _table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)});
+  const auto sort_definition = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+  auto sort = std::make_shared<Sort>(_table_wrapper, sort_definition);
   sort->execute();
 
   auto limit_sorted = std::make_shared<Limit>(sort, to_expression(int64_t{4}));
@@ -138,11 +138,9 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
 
   const auto result_table_sorted = limit_sorted->get_output();
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
-    ASSERT_TRUE(sorted_by);
-    const auto sorted_by_vector =
-        std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
-    EXPECT_EQ(sorted_by, sorted_by_vector);
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    ASSERT_FALSE(sorted_by.empty());
+    EXPECT_EQ(sorted_by, sort_definition);
   }
 }
 

@@ -936,25 +936,24 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     std::vector<std::shared_ptr<AbstractTask>> output_jobs;
     output_jobs.reserve(_output_pos_lists_left.size());
-    const ColumnID first_join_column = _sort_merge_join._primary_predicate.column_ids.first;
-    const ColumnID second_join_column = static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
+    const ColumnID left_join_column = _sort_merge_join._primary_predicate.column_ids.first;
+    const ColumnID right_join_column = static_cast<ColumnID>(_sort_merge_join.input_table_left()->column_count() +
                                                               _sort_merge_join._primary_predicate.column_ids.second);
     for (auto pos_list_id = size_t{0}; pos_list_id < _output_pos_lists_left.size(); ++pos_list_id) {
       if (_output_pos_lists_left[pos_list_id]->empty() && _output_pos_lists_right[pos_list_id]->empty()) {
         continue;
       }
 
-      auto write_output_chunk = [this, pos_list_id, &output_chunks, first_join_column, second_join_column] {
+      auto write_output_chunk = [this, pos_list_id, &output_chunks, left_join_column, right_join_column] {
         Segments segments;
         _add_output_segments(segments, _sort_merge_join.input_table_left(), _output_pos_lists_left[pos_list_id]);
         _add_output_segments(segments, _sort_merge_join.input_table_right(), _output_pos_lists_right[pos_list_id]);
         auto output_chunk = std::make_shared<Chunk>(std::move(segments));
-        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals &&
-            (_mode == JoinMode::Inner || _mode == JoinMode::Cross) && _secondary_join_predicates.empty()) {
+        if (_sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals && _mode == JoinMode::Inner) {
           output_chunk->finalize();
-          // The join columns are sorted ascending (ensured by radix_cluster_sort)
-          output_chunk->set_sorted_by({SortColumnDefinition(first_join_column, SortMode::Ascending),
-                                       SortColumnDefinition(second_join_column, SortMode::Ascending)});
+          // The join columns are sorted in ascending order (ensured by radix_cluster_sort)
+          output_chunk->set_sorted_by({SortColumnDefinition(left_join_column, SortMode::Ascending),
+                                       SortColumnDefinition(right_join_column, SortMode::Ascending)});
         }
         output_chunks[pos_list_id] = output_chunk;
       };
@@ -980,17 +979,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         output_chunks.end());
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-    // Finalize all mutable chunks
-    const auto chunk_count = result_table->chunk_count();
-    for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto chunk = result_table->get_chunk(chunk_id);
-      // Chunks have already been finalized if their ordered_by attribute was set.
-      // Here, we finalize all remaining chunks.
-      if (chunk->is_mutable()) {
-        chunk->finalize();
-      }
-    }
-    result_table->set_value_clustered_by({first_join_column, second_join_column});
+    result_table->set_value_clustered_by({left_join_column, right_join_column});
 
     return result_table;
   }

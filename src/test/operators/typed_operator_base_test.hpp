@@ -17,10 +17,10 @@ class TypedOperatorBaseTest
     : public BaseTestWithParam<std::tuple<DataType, EncodingType, std::optional<SortMode>, bool /*nullable*/>> {
  public:
   static std::string format(testing::TestParamInfo<ParamType> info) {
-    const auto& [data_type, encoding, order_mode, nullable] = info.param;
+    const auto& [data_type, encoding, sort_mode, nullable] = info.param;
 
     return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
-           (order_mode ? sort_mode_to_string.left.at(*order_mode) : "Unordered") + (nullable ? "" : "Not") + "Nullable";
+           (sort_mode ? sort_mode_to_string.left.at(*sort_mode) : "Unsorted") + (nullable ? "" : "Not") + "Nullable";
   }
 };
 

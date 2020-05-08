@@ -70,12 +70,11 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     }
 
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments), input_chunk->mvcc_data());
-    // The alias operator does not affect sorted_by property
-    // If a chunk was ordered before, it still is after the alias operator
-    const auto sorted_by = input_chunk->sorted_by();
-    if (sorted_by) {
-      output_chunk->finalize();
-      output_chunk->set_sorted_by(*sorted_by);
+    output_chunk->finalize();
+    // The alias operator does not affect sorted_by property. If a chunk was sorted before, it still is after.
+    const auto& sorted_by = input_chunk->sorted_by();
+    if (!sorted_by.empty()) {
+      output_chunk->set_sorted_by(sorted_by);
     }
     output_chunks[chunk_id] = output_chunk;
   }

@@ -158,13 +158,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         }
       }
 
-      std::lock_guard<std::mutex> lock(output_mutex);
       const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
-      const auto sorted_by = chunk_in->sorted_by();
-      if (sorted_by) {
-        chunk->finalize();
-        chunk->set_sorted_by(*sorted_by);
+      chunk->finalize();
+      const auto& sorted_by = chunk_in->sorted_by();
+      if (!sorted_by.empty()) {
+        chunk->set_sorted_by(sorted_by);
       }
+      std::lock_guard<std::mutex> lock(output_mutex);
       output_chunks.emplace_back(chunk);
     });
 

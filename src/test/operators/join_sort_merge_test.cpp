@@ -1,7 +1,6 @@
 #include "base_test.hpp"
 
 #include "operators/join_sort_merge.hpp"
-#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 
@@ -75,8 +74,9 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
   const auto output_table = join_operator->get_output();
 
   const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
-  const auto actual_value_clustering = *(output_table->value_clustered_by());
-  EXPECT_EQ(expected_value_clustering, actual_value_clustering);
+  const auto& actual_value_clustering = output_table->value_clustered_by();
+  EXPECT_FALSE(actual_value_clustering.empty());
+  EXPECT_EQ(actual_value_clustering, expected_value_clustering);
 }
 
 TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
@@ -97,13 +97,14 @@ TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
   test_input->execute();
   join_operator->execute();
 
-  const auto output_table = join_operator->get_output();
+  const auto& output_table = join_operator->get_output();
 
   const auto expected_sorted_columns = std::vector<SortColumnDefinition>{
       SortColumnDefinition(ColumnID{0}, SortMode::Ascending), SortColumnDefinition(ColumnID{4}, SortMode::Ascending)};
   for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
-    const auto actual_sorted_columns = *(output_table->get_chunk(chunk_id)->sorted_by());
-    EXPECT_EQ(expected_sorted_columns, actual_sorted_columns);
+    const auto& actual_sorted_columns = output_table->get_chunk(chunk_id)->sorted_by();
+    EXPECT_FALSE(actual_sorted_columns.empty());
+    EXPECT_EQ(actual_sorted_columns, expected_sorted_columns);
   }
 }
 

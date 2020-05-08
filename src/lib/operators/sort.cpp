@@ -15,8 +15,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
 
   // After we created the output table and initialized the column structure, we can start adding values. Because the
-  // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are
-  // copied column by column for each output row.
+  // values are not sorted by input chunks anymore, we can't process them chunk by chunk. Instead the values are copied
+  // column by column for each output row.
 
   // Ceiling of integer division
   const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
@@ -304,14 +304,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
   }
 
-  auto final_sort_definition = _sort_definitions[0];
+  const auto& final_sort_definition = _sort_definitions[0];
   // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
   const auto output_chunk_count = sorted_table->chunk_count();
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
     output_chunk->finalize();
-    output_chunk->set_sorted_by(SortColumnDefinition(final_sort_definition.column, final_sort_definition.sort_mode));
+    output_chunk->set_sorted_by(final_sort_definition);
   }
   return sorted_table;
 }

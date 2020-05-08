@@ -216,7 +216,7 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
-const std::optional<std::vector<SortColumnDefinition>>& Chunk::sorted_by() const { return _sorted_by; }
+const std::vector<SortColumnDefinition>& Chunk::sorted_by() const { return _sorted_by; }
 
 void Chunk::set_sorted_by(const SortColumnDefinition& sorted_by) {
   set_sorted_by(std::vector<SortColumnDefinition>{sorted_by});

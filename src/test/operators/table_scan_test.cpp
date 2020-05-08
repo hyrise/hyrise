@@ -256,11 +256,11 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   void scan_and_check_sorted_by(const std::shared_ptr<TableWrapper> table_wrapper) const {
     const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
     scan_sorted->execute();
-    const auto result_table_sorted = scan_sorted->get_output();
+    const auto& result_table_sorted = scan_sorted->get_output();
 
-    for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
-      const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
-      ASSERT_TRUE(sorted_by);
+    for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+      const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+      ASSERT_TRUE(!sorted_by.empty());
       const auto sorted_by_vector =
           std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
       EXPECT_EQ(sorted_by, sorted_by_vector);
@@ -1145,11 +1145,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
 }
 
 /**
- * Tests for sorted_by flag forwarding by sort operators
- *
- * Not all operators forward the sorted flag.
- * Note that sortedness being forwarded by table scan is implementation defined.
- * Not all operators forward sortedness and end up with results that are unsorted.
+ * Tests for sorted_by flag forwarding.
  */
 TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
   // Verify that the sorted_by flag is not set when it's not present in left input.
@@ -1157,29 +1153,27 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
       create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_unsorted->execute();
 
-  const auto result_table_unsorted = scan_unsorted->get_output();
+  const auto& result_table_unsorted = scan_unsorted->get_output();
 
-  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
-    const auto sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
-    EXPECT_FALSE(sorted_by);
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
   }
 }
 
 TEST_P(OperatorsTableScanTest, ForwardSortedByFlag) {
-  /* In the current implementation, scans on tables that do not contain ReferenceSegments
-   * are executed chunk-by-chunk. As such, they maintain the ordering that was initially
-   * set in the original setting and forward the ordered_by flag. 
-   * This is not an inherent property of each and every possible scan operator but is the
-   * case for the current implementation.
+  /* In the current implementation, scans on tables that do not contain ReferenceSegments are executed chunk-by-chunk.
+   * As such, they maintain the sort order that was initially set in the original setting and forward the sorted_by
+   * flag. This is not an inherent property of each and every possible scan operator but is the case for the current
+   * implementation.
   */
 
   scan_and_check_sorted_by(get_int_sorted_op());
 }
 
 TEST_P(OperatorsTableScanTest, ForwardSortedByFlagReferencing) {
-  /* Tables with ReferenceSegments are first separated by the ChunkID
-   * (see AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) 
-   * and the order may be disturbed.
+  /* Tables with ReferenceSegments are first separated by the ChunkID (see
+   * AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and the order may be disturbed.
   */
   const auto table = get_int_sorted_op()->table;
 

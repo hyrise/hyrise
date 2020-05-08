@@ -28,7 +28,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // ...
     // 30.25         10
     //
-    // If the table is ordered, NULL values are added up front or to the back.
+    // If the table is sorted, NULL values are added up front or to the back.
     //
     // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.

@@ -212,16 +212,13 @@ class Table : private Noncopyable {
 
   /**
    * Tables may be clustered by one or more columns. Each value within such a column will occur in exactly one chunk.
-   * E.g. all mean values are in one chunk, all odds in another. This information can be used e.g. when executing
+   * E.g., all mean values are in one chunk, all odds in another. This information can be used, e.g., when executing
    * GROUP BY on a clustered column, which can then look at individual chunks instead of the entire table.
    *
-   * Note that value clustering does not imply values being ordered. At the same time, ordered data is not necessarily
-   * clustered as a value could still occur at the on of one chunk and in the beginning of the next.
-   *
-   * If the table is value clustered in any way, the ColumnIDs of the segments by which it is clustered
-   * will be returned.
+   * Note that value clustering does not imply values being sorted. At the same time, sorted data is not necessarily
+   * clustered as a value could still occur at the end of one chunk and in the beginning of the next.
    */
-  const std::optional<std::vector<ColumnID>>& value_clustered_by() const;
+  const std::vector<ColumnID>& value_clustered_by() const;
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
  protected:
@@ -243,7 +240,7 @@ class Table : private Noncopyable {
 
   std::vector<TableConstraintDefinition> _constraint_definitions;
 
-  std::optional<std::vector<ColumnID>> _value_clustered_by;
+  std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;

@@ -47,10 +47,10 @@ class SortedSegmentSearch {
    * _get_first_bound and _get_last_bound are used to retrieve the lower and upper bound in a sorted segment but are
    * independent of its sort order. _get_first_bound will always return the bound with the smaller offset and
    * _get_last_bound will return the bigger offset.
-   * On a segment sorted in ascending order they would work analogously to lower_bound and upper_bound. For descending
-   * sort order _get_first_bound will actually return an upper bound and _get_last_bound the lower one. However, the
-   * first offset will always point to an entry matching the search value, whereas last offset points to the entry
-   * behind the last matching one.
+   * On a segment sorted in ascending sort order they would work analogously to lower_bound and upper_bound. For
+   * descending sort orders, _get_first_bound will actually return an upper bound and _get_last_bound the lower one.
+   * However, the first offset will always point to an entry matching the search value, whereas last offset points to
+   * the entry behind the last matching one.
    */
   IteratorType _get_first_bound(const SearchValueType& search_value, const IteratorType begin,
                                 const IteratorType end) const {
@@ -195,7 +195,7 @@ class SortedSegmentSearch {
    * The function contains four early outs. These are all only for performance reasons and, if removed, would not
    * change the functionality.
    *
-   * Note: All comments within this method are written from the point of ranges in ascending order.
+   * Note: All comments within this method are written from the point of ranges in ascending sort order.
    */
   template <typename ResultConsumer>
   void _handle_not_equals(const ResultConsumer& result_consumer) {
@@ -240,7 +240,7 @@ class SortedSegmentSearch {
   template <typename ResultConsumer>
   void scan_sorted_segment(const ResultConsumer& result_consumer) {
     if (_second_search_value) {
-      // decrease the effective sort range by excluding null values based on their ordering (first or last)
+      // decrease the effective sort range by excluding null values based on their sort order (first or last)
       if (_nullable) {
         if (_is_nulls_first) {
           _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
@@ -255,7 +255,7 @@ class SortedSegmentSearch {
       _set_begin_and_end_positions_for_between_scan();
       result_consumer(_begin, _end);
     } else {
-      // decrease the effective sort range by excluding null values based on their ordering
+      // decrease the effective sort range by excluding null values based on their sort order
       if (_is_nulls_first) {
         _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& _) {
           return segment_position.is_null();
