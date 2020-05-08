@@ -234,12 +234,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
 
     _append_matches_non_inner(is_semi_or_anti_join);
-    const auto& duration_execute = execution_timer.lap();
-    std::cout << "_on_execute: " << format_duration(duration_execute) << '\n';
-    std::cout << "_append_matches: " << format_duration(_duration_append_matches)
-      << " (" << (static_cast<float>(_duration_append_matches.count())/duration_execute.count()) * 100 << "%)" << '\n';
-    std::cout << "_append_matches_non_inner: " << format_duration(_duration_append_matches_non_inner)
-      << " (" << (static_cast<float>(_duration_append_matches_non_inner.count())/duration_execute.count()) * 100 << "%)" << '\n';
   }
 
   // write output chunks
@@ -270,7 +264,15 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (output_segments.at(0)->size() > 0) {
     chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
   }
-  return _build_output_table(std::move(chunks));
+
+  const auto tbl = _build_output_table(std::move(chunks));
+  const auto& duration_execute = execution_timer.lap();
+  std::cout << "Overall index join execution time (_on_execute): " << format_duration(duration_execute) << '\n';
+    std::cout << "Time spent in _append_matches: " << format_duration(_duration_append_matches)
+      << " (" << (static_cast<float>(_duration_append_matches.count())/duration_execute.count()) * 100 << "%)" << '\n';
+    std::cout << "Time spent in _append_matches_non_inner: " << format_duration(_duration_append_matches_non_inner)
+      << " (" << (static_cast<float>(_duration_append_matches_non_inner.count())/duration_execute.count()) * 100 << "%)" << '\n';
+  return tbl;
 }
 
 void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
