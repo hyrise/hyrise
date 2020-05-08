@@ -119,10 +119,10 @@ TEST_F(CacheTest, ResizeShrink) {
   ASSERT_EQ(cache.capacity(), 1u);
   ASSERT_EQ(cache.size(), 1u);
 
-  ASSERT_FALSE(cache.get_entry(1));
-  ASSERT_FALSE(cache.get_entry(2));
-  ASSERT_TRUE(cache.get_entry(3));
-  ASSERT_EQ(cache.get_entry(3), 6);
+  ASSERT_FALSE(cache.try_get(1));
+  ASSERT_FALSE(cache.try_get(2));
+  ASSERT_TRUE(cache.try_get(3));
+  ASSERT_EQ(cache.try_get(3), 6);
 }
 
 // Cache Iterator
