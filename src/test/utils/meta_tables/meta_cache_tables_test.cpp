@@ -29,7 +29,7 @@ class MetaCacheTablesTest : public BaseTest {
     get_table = std::make_shared<GetTable>("int_int");
     get_table->execute();
 
-    queries_table = std::make_shared<Table>(TableColumnDefinitions{{"hash", DataType::String, false},
+    queries_table = std::make_shared<Table>(TableColumnDefinitions{{"hash_value", DataType::String, false},
                                                                    {"frequency", DataType::Int, false},
                                                                    {"sql_string", DataType::String, false}},
                                             TableType::Data);
@@ -98,6 +98,7 @@ TEST_P(MultiCacheMetaTablesTest, DoesNotFailWithoutCache) {
   Hyrise::get().default_pqp_cache = nullptr;
   const auto expected_table = reference_meta_table(GetParam()->name());
   const auto meta_table = generate_meta_table(GetParam());
+  EXPECT_EQ(meta_table->row_count(), 0);
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
