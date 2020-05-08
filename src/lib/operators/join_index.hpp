@@ -103,9 +103,6 @@ class JoinIndex : public AbstractJoinOperator {
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets
   std::vector<std::vector<bool>> _probe_matches;
   std::vector<std::vector<bool>> _index_matches;
-
-  std::chrono::nanoseconds _duration_append_matches;
-  std::chrono::nanoseconds _duration_append_matches_non_inner;
 };
 
 }  // namespace opossum
