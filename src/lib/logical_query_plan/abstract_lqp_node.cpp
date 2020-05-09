@@ -246,7 +246,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // Gather input FDs
+  // Gather input FDs from all input nodes
   auto fds_left = std::vector<FunctionalDependency>();
   auto fds_right = std::vector<FunctionalDependency>();
   if (left_input()) {
@@ -257,30 +257,33 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   // Merge input FDs and remove duplicates, if any
-  auto fds_in = std::vector<FunctionalDependency>();
-  if (fds_right.empty()) {
-    fds_in = fds_left;
-  } else {
+  auto& fds_in = fds_left;
+  if (!fds_right.empty()) {
     // Remove duplicate FDs that might result from e.g. self-joins
     for (const auto& fd_right : fds_right) {
       bool duplicate = std::any_of(fds_left.begin(), fds_left.end(), [&fd_right](const auto& fd_left) {
-        return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size() &&
-                fd_left.first == fd_right.first && fd_left.second == fd_right.second);
+        return (fd_left == fd_right);
       });
       if (!duplicate) {
         fds_in.push_back(fd_right);
       }
     }
-    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
   }
 
-  // Currently, we do not support FDs in conjunction with null values.
-  // In consequence, FDs based on at least one nullable column must be discarded. Some LQP nodes, like for instance
-  // outer joins, change column nullability. Therefore, we check FDs for compliance each time before forwarding.
+  // Currently, we do not support FDs in conjunction with null values. Therefore, we discard FDs, which consist of at
+  // least one nullable column.
+  // Some LQP nodes, like for instance outer joins, change column nullability. As a consequence, we check FDs for
+  // compliance in the following, before forwarding them:
   auto fds_out = std::vector<FunctionalDependency>();
-  const auto node_column_expressions_vec = this->column_expressions();
-  const auto node_column_expressions_set =
-      ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
+
+  // Collect non-nullable columns
+  auto column_expressions = this->column_expressions();
+  auto column_expressions_non_nullable = std::unordered_set<std::shared_ptr<AbstractExpression>>();
+  for(auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+    if(!is_column_nullable(column_id)) {
+      column_expressions_non_nullable.insert(column_expressions.at(column_id));
+    }
+  }
 
   for (const auto& fd : fds_in) {
     // For convenience, create a new container for all the expressions that are involved in the FD
@@ -288,12 +291,11 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fd_expressions.insert(fd.second.begin(), fd.second.end());
 
     if (std::any_of(fd_expressions.cbegin(), fd_expressions.cend(),
-                    [this, &node_column_expressions_set](const auto& expression) {
-                      // Check for nullability, if possible.
-                      return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
+                    [&column_expressions_non_nullable](const auto& expression) {
+                      return column_expressions_non_nullable.contains(expression);
                     })) continue;
 
-    // All FD's expressions that are part of this node's column_expressions are non-nullable.
+    // All FD's expressions are part of this node's non-nullable column_expressions.
     fds_out.push_back(fd);
   }
 
