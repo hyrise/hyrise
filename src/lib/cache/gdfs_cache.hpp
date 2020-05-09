@@ -99,10 +99,10 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
   std::optional<Value> try_get(const Key& query) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
-    if (this->_capacity == 0) return {};
+    if (this->_capacity == 0) return std::nullopt;
 
     auto it = _map.find(query);
-    if (it == _map.end()) return {};
+    if (it == _map.end()) return std::nullopt;
 
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
