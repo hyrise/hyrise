@@ -39,14 +39,16 @@ class JoinIndex : public AbstractJoinOperator {
 
   const std::string& name() const override;
 
-  struct PerformanceData : public StagedOperatorPerformanceData {
+  struct PerformanceData : public StepOperatorPerformanceData {
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
 
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
 
-  enum class OperatorStages : uint8_t { IndexJoining, NestedLoopJoining, OutputWriting };
+  enum class OperatorSteps : uint8_t { IndexJoining, NestedLoopJoining, OutputWriting };
+
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -54,7 +56,6 @@ class JoinIndex : public AbstractJoinOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                              const bool track_index_matches, const bool is_semi_or_anti_join,

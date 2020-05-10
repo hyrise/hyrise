@@ -21,6 +21,11 @@ enum class OperatorType {
   ChangeMetaTable,
   ClusteringPartitioner,
   ClusteringSorter,
+  CreateTable,
+  CreatePreparedPlan,
+  CreateView,
+  DropTable,
+  DropView,
   Delete,
   Difference,
   Export,
@@ -44,12 +49,6 @@ enum class OperatorType {
   UnionPositions,
   Update,
   Validate,
-  CreateTable,
-  CreatePreparedPlan,
-  CreateView,
-  DropTable,
-  DropView,
-
   Mock  // for Tests that need to Mock operators
 };
 

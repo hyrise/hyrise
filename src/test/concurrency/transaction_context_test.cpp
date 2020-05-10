@@ -68,8 +68,8 @@ class CommitFuncOp : public AbstractReadWriteOperator {
 TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions) {
   const auto empty_callback = [](TransactionID) {};
 
-  auto context_1 = manager().new_transaction_context();
-  auto context_2 = manager().new_transaction_context();
+  auto context_1 = manager().new_transaction_context(AutoCommit::No);
+  auto context_2 = manager().new_transaction_context(AutoCommit::No);
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
@@ -98,7 +98,7 @@ TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions
 }
 
 TEST_F(TransactionContextTest, CommitShouldIncreaseCommitIDIfReadWrite) {
-  auto context = manager().new_transaction_context();
+  auto context = manager().new_transaction_context(AutoCommit::No);
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
@@ -116,7 +116,7 @@ TEST_F(TransactionContextTest, CommitShouldIncreaseCommitIDIfReadWrite) {
 }
 
 TEST_F(TransactionContextTest, CommitShouldNotIncreaseCommitIDIfReadOnly) {
-  auto context = manager().new_transaction_context();
+  auto context = manager().new_transaction_context(AutoCommit::No);
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
@@ -132,8 +132,8 @@ TEST_F(TransactionContextTest, CommitShouldNotIncreaseCommitIDIfReadOnly) {
 }
 
 TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
-  auto context_1 = manager().new_transaction_context();
-  auto context_2 = manager().new_transaction_context();
+  auto context_1 = manager().new_transaction_context(AutoCommit::No);
+  auto context_2 = manager().new_transaction_context(AutoCommit::No);
 
   auto context_1_committed = false;
   auto callback_1 = [&context_1_committed](TransactionID) { context_1_committed = true; };
@@ -152,8 +152,8 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
 }
 
 TEST_F(TransactionContextTest, CommitWithFailedOperator) {
-  auto context = manager().new_transaction_context();
-  context->rollback();
+  auto context = manager().new_transaction_context(AutoCommit::No);
+  context->rollback(RollbackReason::Conflict);
   EXPECT_ANY_THROW(context->commit());
 }
 

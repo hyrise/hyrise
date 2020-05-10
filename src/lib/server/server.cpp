@@ -15,10 +15,12 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
                const SendExecutionInfo send_execution_info)
     : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)), _send_execution_info(send_execution_info) {
   std::cout << "Server started at " << server_address() << " and port " << server_port() << std::endl
-            << "Run 'psql -h localhost' to connect to the server" << std::endl;
+            << "Run 'psql -h localhost " << server_address() << "' to connect to the server" << std::endl;
 }
 
 void Server::run() {
+  _is_initialized = false;
+
   // Set scheduler so that the server can execute the tasks on separate threads.
   Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
 
@@ -26,6 +28,7 @@ void Server::run() {
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
+  _is_initialized = true;
   _accept_new_session();
   _io_service.run();
 }
@@ -80,5 +83,7 @@ void Server::shutdown() {
   }
   _io_service.stop();
 }
+
+bool Server::is_initialized() const { return _is_initialized; }
 
 }  // namespace opossum

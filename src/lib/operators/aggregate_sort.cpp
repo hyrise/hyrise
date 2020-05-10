@@ -232,7 +232,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = std::optional<AggregateType>();
     } else {
       // normal average calculation
-      current_primary_aggregate = *current_primary_aggregate / value_count;
+      current_primary_aggregate = *current_primary_aggregate / static_cast<AggregateType>(value_count);
     }
   }
   if constexpr (function == AggregateFunction::StandardDeviationSample &&
@@ -583,7 +583,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   // Append output to result table
-  result_table->append_chunk(_output_segments);
+  if (_output_segments.at(0)->size() > 0) {
+    result_table->append_chunk(_output_segments);
+  }
 
   return result_table;
 }

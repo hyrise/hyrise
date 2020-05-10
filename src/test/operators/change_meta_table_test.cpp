@@ -92,7 +92,7 @@ TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {
 
   EXPECT_THROW(change_meta_table->execute(), std::exception);
 
-  transaction_context->rollback();
+  transaction_context->rollback(RollbackReason::Conflict);
 }
 
 }  // namespace opossum

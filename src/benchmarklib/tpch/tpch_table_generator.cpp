@@ -79,7 +79,7 @@ DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Arg
 float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
-  return dollars + (static_cast<float>(cents)) / 100.0f;
+  return static_cast<float>(dollars) + (static_cast<float>(cents)) / 100.0f;
 }
 
 /**

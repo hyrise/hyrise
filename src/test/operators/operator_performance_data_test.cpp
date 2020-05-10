@@ -133,21 +133,21 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   }
 }
 
-TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
+TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
   auto join = std::make_shared<JoinHash>(
       _table_wrapper, _table_wrapper, JoinMode::Inner,
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
-  auto& perf = static_cast<const StagedOperatorPerformanceData&>(*join->performance_data);
+  auto& perf = static_cast<const StepOperatorPerformanceData&>(*join->performance_data);
 
-  for (const auto stage : magic_enum::enum_values<JoinHash::OperatorStages>()) {
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(stage)).count(), 0);
+  for (const auto step : magic_enum::enum_values<JoinHash::OperatorSteps>()) {
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(step)).count(), 0);
   }
 }
 
 // Check that steps of IndexJoin (indexed chunks/unindexed chunks) are executed as expected.
-TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
+TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   // This test modifies a table. Hence, we create a new one for this test only.
   auto table = load_table("resources/test_data/tbl/int_int.tbl", 2);
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -160,9 +160,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_EQ(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
+    EXPECT_EQ(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
   }
@@ -178,9 +178,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
-    EXPECT_EQ(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
+    EXPECT_EQ(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
   }
@@ -194,15 +194,15 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStageRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
 
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::IndexJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_stage_runtime(*magic_enum::enum_index(JoinIndex::OperatorStages::OutputWriting)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
   }
 }
 
-TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
+TEST_F(OperatorPerformanceDataTest, AggregateHashStepRuntimes) {
   auto aggregate = std::make_shared<AggregateHash>(
       _table_wrapper,
       std::vector<std::shared_ptr<AggregateExpression>>{
@@ -212,10 +212,10 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
 
   aggregate->execute();
 
-  auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(*aggregate->performance_data);
+  auto& step_performance_data = static_cast<const StepOperatorPerformanceData&>(*aggregate->performance_data);
 
-  for (const auto stage : magic_enum::enum_values<AggregateHash::OperatorStages>()) {
-    EXPECT_GT(staged_performance_data.get_stage_runtime(*magic_enum::enum_index(stage)).count(), 0);
+  for (const auto step : magic_enum::enum_values<AggregateHash::OperatorSteps>()) {
+    EXPECT_GT(step_performance_data.get_step_runtime(static_cast<size_t>(step)).count(), 0);
   }
 }
 
@@ -226,7 +226,7 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
 
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
@@ -272,18 +272,43 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
   transaction_context->commit();
 }
 
-// Ensure that only non-zero runtimes are listed but at the same time assume that stages might be skipped and thus zero
+// Ensure that only non-zero runtimes are listed but at the same time assume that steps might be skipped and thus zero
 // runtimes can occur in between non-zero runtimes.
-TEST_F(OperatorPerformanceDataTest, StagedOperatorPerformanceDataToOutputStream) {
-  StagedOperatorPerformanceData performance_data;
-  performance_data.stage_runtimes[0] = std::chrono::nanoseconds{17};
-  performance_data.stage_runtimes[1] = std::chrono::nanoseconds{17};
-  performance_data.stage_runtimes[2] = std::chrono::nanoseconds{0};
-  performance_data.stage_runtimes[3] = std::chrono::nanoseconds{17};
+TEST_F(OperatorPerformanceDataTest, StepOperatorPerformanceDataToOutputStream) {
+  StepOperatorPerformanceData performance_data;
+  performance_data.step_runtimes[0] = std::chrono::nanoseconds{17};
+  performance_data.step_runtimes[1] = std::chrono::nanoseconds{17};
+  performance_data.step_runtimes[2] = std::chrono::nanoseconds{0};
+  performance_data.step_runtimes[3] = std::chrono::nanoseconds{17};
 
   std::stringstream stringstream;
   stringstream << performance_data << std::endl;
-  EXPECT_TRUE(stringstream.str().starts_with("Stage runtimes: 17 ns, 17 ns, 0 ns, 17 ns."));
+  std::cout << stringstream.str() << std::endl;
+  EXPECT_TRUE(stringstream.str().starts_with("Step runtimes: 17 ns, 17 ns, 0 ns, 17 ns."));
+}
+
+TEST_F(OperatorPerformanceDataTest, OutputToStream) {
+  auto performance_data = OperatorPerformanceData{};
+  {
+    std::stringstream stream;
+    stream << performance_data;
+    EXPECT_EQ(stream.str(), "not executed");
+  }
+  {
+    std::stringstream stream;
+    performance_data.executed = true;
+    stream << performance_data;
+    EXPECT_EQ(stream.str(), "executed, but no output");
+  }
+  {
+    std::stringstream stream;
+    performance_data.has_output = true;
+    performance_data.output_row_count = 2u;
+    performance_data.output_chunk_count = 1u;
+    performance_data.walltime = std::chrono::nanoseconds{999u};
+    stream << performance_data;
+    EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns");
+  }
 }
 
 }  // namespace opossum
