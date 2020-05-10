@@ -369,6 +369,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 template <typename SegmentPosition>
 std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
                                                            const std::shared_ptr<AbstractIndex>& index) {
+  // CALLGRIND_START_INSTRUMENTATION;
   Timer timer{};
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
@@ -434,6 +435,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
     index_ranges.emplace_back(IndexRange{range_begin, range_end});
   }
   _duration_index_ranges_for_value += timer.lap();
+  // CALLGRIND_STOP_INSTRUMENTATION;
   return index_ranges;
 }
 
