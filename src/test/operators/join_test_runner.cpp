@@ -638,7 +638,26 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto join_op = configuration.join_operator_factory->create_operator(input_operator_left, input_operator_right,
                                                                             primary_predicate, configuration);
 
-  auto expected_output_table_iter = expected_output_tables.find(configuration);
+  // Configuration parameters that are not used by the JoinVerification operator are irrelevant for caching
+  auto cached_output_configuration = configuration;
+
+  const auto cleared_input_table_configuration = [](const InputTableConfiguration& input_table_configuration) {
+    auto config = input_table_configuration;
+    config.chunk_size = {};
+    config.table_type = {};
+    config.encoding_type = {};
+    config.indexed_chunk_range = {};
+    config.single_chunk_reference_range = {};
+    return config;
+  };
+
+  cached_output_configuration.input_left = cleared_input_table_configuration(cached_output_configuration.input_left);
+  cached_output_configuration.input_right = cleared_input_table_configuration(cached_output_configuration.input_right);
+  cached_output_configuration.join_operator_factory = {};
+  cached_output_configuration.radix_bits = {};
+  cached_output_configuration.index_side = {};
+
+  auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
 
   const auto join_verification =
       std::make_shared<JoinVerification>(input_operator_left, input_operator_right, configuration.join_mode,
@@ -700,7 +719,8 @@ TEST_P(JoinTestRunner, TestJoin) {
     if (expected_output_table_iter == expected_output_tables.end()) {
       join_verification->execute();
       const auto expected_output_table = join_verification->get_output();
-      expected_output_table_iter = expected_output_tables.emplace(configuration, expected_output_table).first;
+      expected_output_table_iter =
+          expected_output_tables.emplace(cached_output_configuration, expected_output_table).first;
     }
     join_op->execute();
   } catch (...) {

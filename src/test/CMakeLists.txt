@@ -74,7 +74,6 @@ set(
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
     memory/segments_using_allocators_test.cpp
-    memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
     operators/change_meta_table_test.cpp

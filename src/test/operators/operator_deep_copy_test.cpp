@@ -192,7 +192,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   const TableColumnDefinitions column_definitions = {
       {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
 
-  auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline_statement();
+  auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline();
   const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
@@ -201,9 +201,9 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   expected_first->append({10, 10, 10});
   EXPECT_TABLE_EQ_UNORDERED(first_result, expected_first);
 
-  SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
+  SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline().get_result_table();
 
-  const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
+  const auto copied_plan = sql_pipeline.get_physical_plans()[0]->deep_copy();
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 

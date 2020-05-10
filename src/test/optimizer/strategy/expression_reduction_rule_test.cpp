@@ -49,7 +49,7 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<MockNode> mock_node, mock_node_for_join;
   std::shared_ptr<AbstractExpression> a, b, c, d, e, a_join;
-  LQPColumnReference s;
+  std::shared_ptr<LQPColumnExpression> s;
   std::shared_ptr<AbstractExpression> a2, b2, c2, d2, e2;
   std::shared_ptr<ExpressionReductionRule> rule;
 };
@@ -151,8 +151,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   Hyrise::get().storage_manager.add_table("agg_table", table);
   const auto stored_table_node = StoredTableNode::make("agg_table");
 
-  const auto col_a = lqp_column_({stored_table_node, ColumnID{0}});
-  const auto col_b = lqp_column_({stored_table_node, ColumnID{1}});
+  const auto col_a = lqp_column_(stored_table_node, ColumnID{0});
+  const auto col_b = lqp_column_(stored_table_node, ColumnID{1});
 
   {
     // SELECT SUM(a), COUNT(a), AVG(a) -> SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)
