@@ -301,7 +301,7 @@ void DisjointClustersAlgo::_perform_clustering() {
         const auto initial_invalidated_rows = initial_chunk->invalid_row_count();
         const auto cluster_keys = _cluster_keys(initial_chunk);
 
-        auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context();
+        auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
         auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, initial_invalidated_rows, clusters, chunk_ids_per_cluster);
         clustering_partitioner->set_transaction_context(partition_transaction);
         clustering_partitioner->execute();
@@ -336,7 +336,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, _table->target_chunk_size());
       sort->execute();
 
-      auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context();
+      auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, invalid_row_counts, sort->get_output());
       clustering_sorter->set_transaction_context(sort_transaction);
       clustering_sorter->execute();
