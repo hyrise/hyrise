@@ -247,7 +247,8 @@ void AbstractTableGenerator::generate_and_store() {
         if (column_ids.size() == 1) {
           table->create_index<GroupKeyIndex>(column_ids);
         } else {
-          table->create_index<CompositeGroupKeyIndex>(column_ids);
+          Fail("We only use GroupKeyIndex in this evaluation.");
+          // table->create_index<CompositeGroupKeyIndex>(column_ids);
         }
 
         std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
