@@ -10,6 +10,10 @@
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
+#include "operators/export.hpp"
+#include "operators/print.hpp"
+#include "operators/table_wrapper.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -120,4 +124,18 @@ int main(int argc, char* argv[]) {
   }
 
   benchmark_runner->run();
+
+  const auto result = SQLPipelineBuilder{"SELECT * FROM " + MetaTableManager::META_PREFIX + "segments"}
+                          .create_pipeline()
+                          .get_result_table()
+                          .second;
+
+  auto table_wrapper = std::make_shared<TableWrapper>(result);
+  table_wrapper->execute();
+
+  auto print = std::make_shared<Print>(table_wrapper);
+  print->execute();
+
+  auto export_ = std::make_shared<Export>(table_wrapper, "./meta_segments.csv", FileType::Csv);  // NOLINT
+  export_->execute();
 }
