@@ -176,7 +176,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
-  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+
+  const auto table = Hyrise::get().storage_manager.get_table("t_a"); // int_int_float.tbl
   table->add_soft_unique_constraint({_a.original_column_id()}, IsPrimaryKey::No);
   table->add_soft_unique_constraint({_a.original_column_id(), _b.original_column_id()}, IsPrimaryKey::No);
 

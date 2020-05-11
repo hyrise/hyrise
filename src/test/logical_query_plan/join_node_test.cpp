@@ -215,7 +215,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
   const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{0}));
   const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{1}));
   // clang-format off
-  const auto self_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_a),
+  const auto self_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
                                              stored_table_node,
                                              stored_table_node);
   // clang-format on
