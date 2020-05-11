@@ -173,12 +173,15 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
 
   pqxx::nontransaction transaction{connection};
 
-  // We delete a tuple of a table, export and re-import it.
+  // We delete a tuple of a table and export it.
   transaction.exec("DELETE FROM table_a WHERE a = 123;");
   transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
   transaction.exec("COPY table_a TO '" + _export_filename + ".csv';");
-  transaction.exec("COPY table_b FROM '" + _export_filename + ".bin';");
-  transaction.exec("COPY table_c FROM '" + _export_filename + ".csv';");
+
+  EXPECT_TRUE(file_exists(_export_filename + ".bin"));
+  EXPECT_TRUE(file_exists(_export_filename + ".csv"));
+  EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float_deleted.bin"));
+  EXPECT_TRUE(compare_files(_export_filename + ".csv", "resources/test_data/bin/int_float_deleted.csv"));
 
   // Get reference table without deleted row
   auto get_table = std::make_shared<GetTable>("table_a");
@@ -189,16 +192,12 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
   validate->execute();
   const auto expected_table = validate->get_output();
 
-  // Check that we did not export the deleted row
+  // Re-import the tables and compare them with the expected one
+  transaction.exec("COPY table_b FROM '" + _export_filename + ".bin';");
+  transaction.exec("COPY table_c FROM '" + _export_filename + ".csv';");
   const auto table_b = Hyrise::get().storage_manager.get_table("table_b");
-  EXPECT_EQ(table_b->row_count(), expected_table->row_count());
   const auto table_c = Hyrise::get().storage_manager.get_table("table_c");
-  EXPECT_EQ(table_c->row_count(), expected_table->row_count());
 
-  EXPECT_TRUE(file_exists(_export_filename + ".bin"));
-  EXPECT_TRUE(file_exists(_export_filename + ".csv"));
-  EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float_deleted.bin"));
-  EXPECT_TRUE(compare_files(_export_filename + ".csv", "resources/test_data/bin/int_float_deleted.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_b, expected_table);
   EXPECT_TABLE_EQ_ORDERED(table_c, expected_table);
 }
