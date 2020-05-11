@@ -1,11 +1,18 @@
 #include "base_test.hpp"
 
 #include "operators/get_table.hpp"
-#include "operators/print.hpp"
 #include "utils/meta_tables/meta_cached_operators_table.hpp"
 #include "utils/meta_tables/meta_cached_queries_table.hpp"
 
 namespace opossum {
+
+#ifdef __GLIBCXX__
+const auto query_hash = pmr_string{"32d82bf8ed3dba39"};
+#elif _LIBCPP_VERSION
+const auto query_hash = pmr_string{"3a912f483a4ece31"};
+#else
+static_assert(false, "Unknown c++ library");
+#endif
 
 class MetaCacheTablesTest : public BaseTest {
  public:
@@ -34,7 +41,7 @@ class MetaCacheTablesTest : public BaseTest {
                                                                    {"frequency", DataType::Int, false},
                                                                    {"sql_string", DataType::String, false}},
                                             TableType::Data);
-    queries_values = {pmr_string{"32d82bf8ed3dba39"}, 1, pmr_string{"abc"}};
+    queries_values = {query_hash, 1, pmr_string{"abc"}};
 
     operators_table = std::make_shared<Table>(TableColumnDefinitions{{"operator", DataType::String, false},
                                                                      {"query_hash", DataType::String, false},
@@ -44,7 +51,7 @@ class MetaCacheTablesTest : public BaseTest {
                                                                      {"output_rows", DataType::Long, false}},
                                               TableType::Data);
     operators_values = {pmr_string{get_table->name()},
-                        pmr_string{"32d82bf8ed3dba39"},
+                        query_hash,
                         pmr_string{get_table->description()},
                         static_cast<int64_t>(get_table->performance_data().walltime.count()),
                         static_cast<int64_t>(1),
@@ -92,7 +99,6 @@ TEST_P(MultiCacheMetaTablesTest, MetaTableGeneration) {
   const auto expected_table = reference_meta_table(GetParam()->name());
   const auto meta_table = generate_meta_table(GetParam());
   expected_table->append(reference_meta_table_values(GetParam()->name()));
-  Print::print(meta_table);
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
