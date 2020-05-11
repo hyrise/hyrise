@@ -221,7 +221,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
   // clang-format on
 
   // Prerequisite
-  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2);  // a => (b,c) and (a,b) => c
+  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2);  // {a} => {b, c} and {a, b} => {c}
 
   // Actual test
   EXPECT_EQ(self_join_node->functional_dependencies().size(), 2);
@@ -263,8 +263,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // clang-format on
 
   // Prerequisite
-  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 1);  // a => b
-  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 1);  // x => y
+  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 1);  // {a} => {b}
+  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 1);  // {x} => {y}
 
   // Actual tests
   EXPECT_EQ(inner_join_node->functional_dependencies().size(), 2);

@@ -223,8 +223,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   const auto stored_table_node_b = StoredTableNode::make("t_b_nullable");
   const auto& fds_a = stored_table_node_a->functional_dependencies();
   const auto& fds_b = stored_table_node_b->functional_dependencies();
-  EXPECT_EQ(fds_a.size(), 0);  // without nullability we should get 2 FDs: a => (b,c) and (a,b) => c
-  EXPECT_EQ(fds_b.size(), 0);  // without nullability we should get 1 FDs: c => (a,b)
+  EXPECT_EQ(fds_a.size(), 0);  // without nullability we should get 2 FDs: {a} => {b, c} and {a, b} => c
+  EXPECT_EQ(fds_b.size(), 0);  // without nullability we should get 1 FDs: {c} => {a, b}
 }
 
-}  // namespace opossum
+} // namespace opossum

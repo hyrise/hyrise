@@ -51,7 +51,7 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
 /**
  * Models a functional dependency (FD), which consists out of two sets of column expressions (Left &
  * Right).
- * The left column set unambigiously identifies the right column set (Left => Right).
+ * The left column set unambigiously identifies the right column set: {Left} => {Right}
  *
  * Example A:
  * Think of a table with three columns: (Semester, CourseID, Lecturer)
