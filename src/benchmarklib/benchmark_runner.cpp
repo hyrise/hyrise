@@ -361,10 +361,22 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
     // want to touch this and potentially break the comparability across commits.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item = !result.successful_runs.empty()
-                                   ? reported_item_duration_ns / static_cast<float>(result.successful_runs.size())
-                                   : std::nanf("");
-    benchmark["avg_real_time_per_iteration"] = time_per_item;
+
+    const auto calculate_average_runtime = [&](const auto runs) -> float {
+      auto runtime_sum_ns = uint64_t{0};
+      for (const auto& benchmark_item : runs) {
+        runtime_sum_ns += benchmark_item.duration.count();
+      }
+      return static_cast<float>(runtime_sum_ns) / static_cast<float>(runs.size());
+    };
+    const auto time_per_succesful_item = !result.successful_runs.empty()
+                              ? calculate_average_runtime(result.successful_runs)
+                              : std::nanf("");
+    const auto time_per_unsuccesful_item = !result.unsuccessful_runs.empty()
+                              ? calculate_average_runtime(result.unsuccessful_runs)
+                              : std::nanf("");
+    benchmark["avg_real_time_per_successful_iteration"] = time_per_succesful_item;
+    benchmark["avg_real_time_per_unsuccessful_iteration"] = time_per_unsuccesful_item;
 
     benchmarks.push_back(benchmark);
   }
