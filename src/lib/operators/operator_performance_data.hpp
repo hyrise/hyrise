@@ -34,7 +34,7 @@ struct OperatorPerformanceData : public Noncopyable {
 struct StepOperatorPerformanceData : public OperatorPerformanceData {
   StepOperatorPerformanceData() : OperatorPerformanceData{} {}
 
-  std::array<std::chrono::nanoseconds, 10> step_runtimes;
+  std::array<std::chrono::nanoseconds, 10> step_runtimes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   std::chrono::nanoseconds get_step_runtime(const size_t step) const { return step_runtimes[step]; }
 

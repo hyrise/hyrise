@@ -33,7 +33,7 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_mutable(const std::shar
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), order_by_mode) };
-  auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, chunk_size);
+  auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, chunk_size, Sort::ForceMaterialization::Yes);
   sort->execute();
   const auto immutable_sorted_table = sort->get_output();
   auto result = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
@@ -64,7 +64,7 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::sh
     auto table_wrapper = std::make_shared<TableWrapper>(new_table);
     table_wrapper->execute();
     const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), order_by_mode) };
-    auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, sort_chunk_size);
+    auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, sort_chunk_size, Sort::ForceMaterialization::Yes);
     sort->execute();
     const auto sorted_table = sort->get_output();
 

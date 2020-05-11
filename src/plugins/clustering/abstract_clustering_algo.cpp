@@ -91,6 +91,7 @@ void AbstractClusteringAlgo::_run_assertions() const {
 
     // Determine the target chunk size.
     // TODO this is hacky, but this class does not know about benchmark_config->chunk_size, and not sure if it should
+    /*
     ChunkOffset target_chunk_size;
     if (Hyrise::get().storage_manager.has_table("lineitem")) {
       target_chunk_size = 25'100;
@@ -99,7 +100,7 @@ void AbstractClusteringAlgo::_run_assertions() const {
     } else {
       Fail("Please provide a default chunk size for this benchmark");
     }
-
+    */
 
     // Iterate over all chunks, and check that ...
     for (ChunkID chunk_id{0};chunk_id < table->chunk_count();chunk_id++) {
@@ -172,8 +173,8 @@ void AbstractClusteringAlgo::_run_assertions() const {
         if (VERBOSE) std::cout << "[" << description() << "] " << "-  All segments are DictionarySegments" << " for table " << table_name << std::endl;
 
         // ... chunks have at most the target chunk size
-        Assert(chunk->size() <= target_chunk_size, "chunk size should be <= " + std::to_string(target_chunk_size)
-          + ", but is " + std::to_string(chunk->size()));
+        //Assert(chunk->size() <= target_chunk_size, "chunk size should be <= " + std::to_string(target_chunk_size)
+        //  + ", but is " + std::to_string(chunk->size()));
         if (VERBOSE) std::cout << "[" << description() << "] " << "-  All chunks have about the expected size" << " for table " << table_name << std::endl;
       }
     }
@@ -275,7 +276,7 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   wrapper->execute();
   Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
   const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column, OrderByMode::Ascending) };
-  auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, size_before_sort);
+  auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, size_before_sort, Sort::ForceMaterialization::Yes);
   sort->execute();
 
   const auto& sort_result = sort->get_output();

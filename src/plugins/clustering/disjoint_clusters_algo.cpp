@@ -333,7 +333,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       auto wrapper = std::make_shared<TableWrapper>(sorting_table);
       wrapper->execute();
       const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column_id, OrderByMode::Ascending) };
-      auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, _table->target_chunk_size());
+      auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, _table->target_chunk_size(), Sort::ForceMaterialization::Yes);
       sort->execute();
 
       auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

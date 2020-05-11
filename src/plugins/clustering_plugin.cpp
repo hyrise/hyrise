@@ -16,7 +16,8 @@ const std::string ClusteringPlugin::description() const { return "This is the Hy
 
 void ClusteringPlugin::start() {
   const auto clustering_config = _read_clustering_config();
-  std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<DisjointClustersAlgo>(DisjointClustersAlgo(clustering_config));
+  std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<SimpleClusteringAlgo>(SimpleClusteringAlgo(clustering_config));
+  //std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<DisjointClustersAlgo>(DisjointClustersAlgo(clustering_config));
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << clustering_algo->description() << std::endl;
 
