@@ -301,7 +301,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 
   // Expect cache to contain validated LQP
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
+  const auto validated_cached_lqp = _lqp_cache->get(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
 
   // Evict validated version by requesting a not validated version
@@ -312,7 +312,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 
   // Expect cache to contain not validated LQP
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto not_validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
+  const auto not_validated_cached_lqp = _lqp_cache->get(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 }
 
@@ -328,7 +328,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
 
   // Expect cache to contain not validated LQP
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto not_validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
+  const auto not_validated_cached_lqp = _lqp_cache->get(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
   // Evict not validated version by requesting a validated version
@@ -339,7 +339,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
 
   // Expect cache to contain not validated LQP
   EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
+  const auto validated_cached_lqp = _lqp_cache->get(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
 }
 

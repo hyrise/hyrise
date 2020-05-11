@@ -2,7 +2,6 @@
 
 #include <list>
 #include <shared_mutex>
-#include <unordered_map>
 #include <utility>
 
 #include "abstract_cache.hpp"
@@ -13,8 +12,8 @@ namespace opossum {
 
 /*
  * Generic cache implementation using the GDFS policy.
- * Note: This implementation is only thread-safe for basic cache operations.
  * To iterate over a cache copy, use snapshot().
+ * Different cache implementations existed in the past, but were retired wit PR 2129.
  */
 template <typename Key, typename Value>
 class GDFSCache : public AbstractCache<Key, Value> {
@@ -32,40 +31,15 @@ class GDFSCache : public AbstractCache<Key, Value> {
     bool operator<(const GDFSCacheEntry& other) const { return priority > other.priority; }
   };
 
-  using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
-  using CacheMap = typename std::unordered_map<Key, Handle>;
-  using CacheSnapshot = typename std::unordered_map<Key, GDFSCacheEntry>;
-
-  using typename AbstractCache<Key, Value>::KeyValuePair;
-  using typename AbstractCache<Key, Value>::AbstractIterator;
-  using typename AbstractCache<Key, Value>::ErasedIterator;
-
-  class Iterator : public AbstractIterator {
-   public:
-    using IteratorType = typename CacheMap::iterator;
-    explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
-
-   private:
-    friend class boost::iterator_core_access;
-    friend class AbstractCache<Key, Value>::ErasedIterator;
-
-    IteratorType _wrapped_iterator;
-    mutable KeyValuePair _tmp_return_value;
-
-    void increment() { ++_wrapped_iterator; }
-
-    bool equal(const AbstractIterator& other) const {
-      return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
-    }
-
-    const KeyValuePair& dereference() const {
-      const auto iter_value = *_wrapped_iterator;
-      _tmp_return_value = {iter_value.first, (*iter_value.second).value};
-      return _tmp_return_value;
-    }
+  struct SnapshotEntry {
+    Value value;
+    size_t frequency;
   };
 
-  explicit GDFSCache(size_t capacity = DefaultCacheCapacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
+  using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
+  using CacheMap = typename std::unordered_map<Key, Handle>;
+
+  explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
@@ -112,7 +86,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return entry.value;
   }
 
-  Value& get_entry(const Key& key) {
+  Value& get(const Key& key) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     DebugAssert(it != _map.end(), "Key not present.");
@@ -148,51 +122,45 @@ class GDFSCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
-  const boost::heap::fibonacci_heap<GDFSCacheEntry>& queue() const { return _queue; }
-
-  double inflation() const { return _inflation; }
-
   double priority(const Key& key) const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     return (*it->second).priority;
   }
 
-  ErasedIterator unsafe_begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
-
-  ErasedIterator unsafe_end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
-
-  size_t frequency(const Key& key) {
+  size_t frequency(const Key& key) const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
     const auto it = _map.find(key);
     if (it == _map.end()) {
       return size_t{0};
     }
-
-    Handle handle = it->second;
-    GDFSCacheEntry& entry = (*handle);
-    return entry.frequency;
+    return (*it->second).frequency;
   }
 
-  CacheSnapshot snapshot() const {
+  std::unordered_map<Key, SnapshotEntry> snapshot() const {
     std::shared_lock<std::shared_mutex> lock(_mutex);
-    CacheSnapshot _map_copy;
+    std::unordered_map<Key, SnapshotEntry> map_copy;
     for (auto it = _map.begin(); it != _map.end(); it++) {
       const auto [key, entry] = *it;
-      _map_copy[key] = *entry;
+      map_copy[key] = SnapshotEntry{(*entry).value, (*entry).frequency};
     }
-    return _map_copy;
+    return map_copy;
   }
 
  protected:
+  friend class CachePolicyTest;
+
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;
 
   // Map to point towards element in the list.
+  // We use a locked map here since TBB's concurrent maps are not safe for erasing.
   CacheMap _map;
 
   mutable std::shared_mutex _mutex;
 
   // Inflation value that will be updated whenever an item is evicted.
-  std::atomic<double> _inflation;
+  double _inflation;
 
   void _evict() {
     auto top = _queue.top();
