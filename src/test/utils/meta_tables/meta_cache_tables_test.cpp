@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "operators/get_table.hpp"
+#include "operators/print.hpp"
 #include "utils/meta_tables/meta_cached_operators_table.hpp"
 #include "utils/meta_tables/meta_cached_queries_table.hpp"
 
@@ -91,6 +92,7 @@ TEST_P(MultiCacheMetaTablesTest, MetaTableGeneration) {
   const auto expected_table = reference_meta_table(GetParam()->name());
   const auto meta_table = generate_meta_table(GetParam());
   expected_table->append(reference_meta_table_values(GetParam()->name()));
+  Print::print(meta_table);
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
