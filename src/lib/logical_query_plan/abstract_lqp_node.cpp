@@ -277,7 +277,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 
   // Collect non-nullable columns
   auto column_expressions = this->column_expressions();
-  auto column_expressions_non_nullable = std::unordered_set<std::shared_ptr<AbstractExpression>>();
+  auto column_expressions_non_nullable = ExpressionUnorderedSet{};
   for(auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
     if(!is_column_nullable(column_id)) {
       column_expressions_non_nullable.insert(column_expressions.at(column_id));
