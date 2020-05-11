@@ -73,8 +73,7 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
  * strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might
  * change in the future.
  */
-using FunctionalDependency = std::pair<std::unordered_set<std::shared_ptr<AbstractExpression>>,
-    std::unordered_set<std::shared_ptr<AbstractExpression>>>;
+using FunctionalDependency = std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>;
 
 class LQPColumnExpression;
 
