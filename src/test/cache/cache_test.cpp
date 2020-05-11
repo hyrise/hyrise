@@ -131,9 +131,9 @@ TEST_F(CacheTest, NoGrowthOverCapacity) {
 
 TEST_F(CacheTest, TryGet) {
   {
-   GDFSCache<int, int> cache(0);
-   cache.set(1, 2);
-   ASSERT_EQ(cache.try_get(1), std::nullopt);
+    GDFSCache<int, int> cache(0);
+    cache.set(1, 2);
+    ASSERT_EQ(cache.try_get(1), std::nullopt);
   }
 
   GDFSCache<int, int> cache(3);
