@@ -144,7 +144,6 @@ TEST_F(ServerTestRunner, TestCopyExport) {
   pqxx::nontransaction transaction{connection};
 
   transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
-  transaction.exec("COPY table_a TO '../resources/test_data/bin/int_float.bin';");
 
   EXPECT_TRUE(file_exists(_export_filename + ".bin"));
   EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float.bin"));
