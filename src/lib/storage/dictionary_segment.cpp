@@ -84,8 +84,8 @@ EncodingType DictionarySegment<T>::encoding_type() const {
 template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
-      static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
+  // access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
+  //     static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
   const auto typed_value = boost::get<T>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
@@ -96,8 +96,8 @@ ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
 template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
-  access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
-      static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
+  // access_counter[SegmentAccessCounter::AccessType::Dictionary] +=
+  //     static_cast<uint64_t>(std::ceil(std::log2(_dictionary->size())));
   const auto typed_value = boost::get<T>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);

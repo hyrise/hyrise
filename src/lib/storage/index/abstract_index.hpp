@@ -88,6 +88,7 @@ class AbstractIndex : private Noncopyable {
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
   Iterator lower_bound(const std::vector<AllTypeVariant>& values) const;
+  Iterator lower_bound(const AllTypeVariant& value) const;
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
@@ -101,6 +102,7 @@ class AbstractIndex : private Noncopyable {
    * @return An Iterator on the position of the first element greater then provided values.
    */
   Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
+  Iterator upper_bound(const AllTypeVariant& value) const;
 
   /**
    * Returns an Iterator to the position of the smallest indexed non-NULL element. This is useful for range queries
@@ -154,6 +156,8 @@ class AbstractIndex : private Noncopyable {
    */
   virtual Iterator _lower_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
+  virtual Iterator _lower_bound(const AllTypeVariant&) const = 0;
+  virtual Iterator _upper_bound(const AllTypeVariant&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;

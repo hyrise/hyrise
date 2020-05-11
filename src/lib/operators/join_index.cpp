@@ -7,7 +7,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <valgrind/callgrind.h>
 
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
@@ -367,12 +366,11 @@ void JoinIndex::_reference_join_two_segments_using_index(
 }
 
 template <typename SegmentPosition>
-std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
+std::array<IndexRange, 2> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
                                                            const std::shared_ptr<AbstractIndex>& index) {
   // CALLGRIND_START_INSTRUMENTATION;
   Timer timer{};
-  std::vector<IndexRange> index_ranges{};
-  index_ranges.reserve(2);
+  std::array<IndexRange, 2> index_ranges{};
 
   // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
   // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
@@ -380,8 +378,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   if (_mode == JoinMode::AntiNullAsTrue) {
     const auto indexed_null_values = index->null_cbegin() != index->null_cend();
     if (probe_side_position.is_null() || indexed_null_values) {
-      index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
-      index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
+      index_ranges[0] = IndexRange{index->cbegin(), index->cend()};
+      index_ranges[1] = IndexRange{index->null_cbegin(), index->null_cend()};
       _duration_index_ranges_for_value += timer.lap();
       return index_ranges;
     }
@@ -393,38 +391,41 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
 
     switch (_adjusted_primary_predicate.predicate_condition) {
       case PredicateCondition::Equals: {
-        range_begin = index->lower_bound({probe_side_position.value()});
-        range_end = index->upper_bound({probe_side_position.value()});
+        range_begin = index->lower_bound(probe_side_position.value());
+        range_end = index->upper_bound(probe_side_position.value());
         break;
       }
       case PredicateCondition::NotEquals: {
         // first, get all values less than the search value
         range_begin = index->cbegin();
-        range_end = index->lower_bound({probe_side_position.value()});
-        index_ranges.emplace_back(IndexRange{range_begin, range_end});
+        range_end = index->lower_bound(probe_side_position.value());
+        index_ranges[0] = IndexRange{range_begin, range_end};
 
         // set range for second half to all values greater than the search value
-        range_begin = index->upper_bound({probe_side_position.value()});
+        range_begin = index->upper_bound(probe_side_position.value());
         range_end = index->cend();
-        break;
+        index_ranges[1] = IndexRange{range_begin, range_end};
+        _duration_index_ranges_for_value += timer.lap();
+
+        return index_ranges;
       }
       case PredicateCondition::GreaterThan: {
         range_begin = index->cbegin();
-        range_end = index->lower_bound({probe_side_position.value()});
+        range_end = index->lower_bound(probe_side_position.value());
         break;
       }
       case PredicateCondition::GreaterThanEquals: {
         range_begin = index->cbegin();
-        range_end = index->upper_bound({probe_side_position.value()});
+        range_end = index->upper_bound(probe_side_position.value());
         break;
       }
       case PredicateCondition::LessThan: {
-        range_begin = index->upper_bound({probe_side_position.value()});
+        range_begin = index->upper_bound(probe_side_position.value());
         range_end = index->cend();
         break;
       }
       case PredicateCondition::LessThanEquals: {
-        range_begin = index->lower_bound({probe_side_position.value()});
+        range_begin = index->lower_bound(probe_side_position.value());
         range_end = index->cend();
         break;
       }
@@ -432,7 +433,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         Fail("Unsupported comparison type encountered");
       }
     }
-    index_ranges.emplace_back(IndexRange{range_begin, range_end});
+    index_ranges[0] = IndexRange{range_begin, range_end};
   }
   _duration_index_ranges_for_value += timer.lap();
   // CALLGRIND_STOP_INSTRUMENTATION;

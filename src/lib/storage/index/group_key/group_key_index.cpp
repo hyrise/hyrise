@@ -88,20 +88,30 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
-  Assert((values.size() == 1), "Group Key Index expects exactly one input value");
+  DebugAssert((values.size() == 1), "Group Key Index expects exactly one input value");
   // the caller is responsible for not passing a NULL value
-  Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
+  DebugAssert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   return _get_positions_iterator_at(value_id);
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
-  Assert((values.size() == 1), "Group Key Index expects exactly one input value");
+  DebugAssert((values.size() == 1), "Group Key Index expects exactly one input value");
   // the caller is responsible for not passing a NULL value
-  Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
+  DebugAssert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
+  return _get_positions_iterator_at(value_id);
+}
+
+GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const AllTypeVariant& value) const {
+  ValueID value_id = _indexed_segment->lower_bound(value);
+  return _get_positions_iterator_at(value_id);
+}
+
+GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const AllTypeVariant& value) const {
+  ValueID value_id = _indexed_segment->upper_bound(value);
   return _get_positions_iterator_at(value_id);
 }
 

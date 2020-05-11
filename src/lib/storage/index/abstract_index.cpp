@@ -48,12 +48,20 @@ AbstractIndex::Iterator AbstractIndex::lower_bound(const std::vector<AllTypeVari
   return _lower_bound(values);
 }
 
+AbstractIndex::Iterator AbstractIndex::lower_bound(const AllTypeVariant& value) const {
+  return _lower_bound(value);
+}
+
 AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert(
       (_get_indexed_segments().size() >= values.size()),
       "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _upper_bound(values);
+}
+
+AbstractIndex::Iterator AbstractIndex::upper_bound(const AllTypeVariant& value) const {
+  return _upper_bound(value);
 }
 
 AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }

@@ -74,6 +74,10 @@ class GroupKeyIndex : public AbstractIndex {
 
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
 
+  Iterator _lower_bound(const AllTypeVariant& value) const final;
+
+  Iterator _upper_bound(const AllTypeVariant& value) const final;
+
   Iterator _cbegin() const final;
 
   Iterator _cend() const final;
