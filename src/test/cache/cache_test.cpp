@@ -118,6 +118,29 @@ TEST_F(CacheTest, Clear) {
   ASSERT_FALSE(cache.has(2));
 }
 
+TEST_F(CacheTest, NoGrowthOverCapacity) {
+  GDFSCache<int, int> cache(3);
+
+  cache.set(1, 2);
+  cache.set(2, 4);
+  cache.set(4, 6);
+  cache.set(6, 8);
+
+  ASSERT_EQ(cache.size(), 3u);
+}
+
+TEST_F(CacheTest, TryGet) {
+  {
+    GDFSCache<int, int> cache(0);
+    cache.set(1, 2);
+    ASSERT_EQ(cache.try_get(1), std::nullopt);
+  }
+
+  GDFSCache<int, int> cache(3);
+  cache.set(1, 2);
+  ASSERT_EQ(cache.try_get(2), std::nullopt);
+}
+
 TEST_F(CacheTest, ResizeGrow) {
   GDFSCache<int, int> cache(3);
 
