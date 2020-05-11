@@ -1,19 +1,23 @@
 #pragma once
 
 #include <list>
+#include <shared_mutex>
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_cache_impl.hpp"
+#include "abstract_cache.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-// Generic cache implementation using the GDFS policy.
-// Note: This implementation is not thread-safe.
+/*
+ * Generic cache implementation using the GDFS policy.
+ * Note: This implementation is only thread-safe for basic cache operations.
+ * To iterate over a cache copy, use snapshot().
+ */
 template <typename Key, typename Value>
-class GDFSCache : public AbstractCacheImpl<Key, Value> {
+class GDFSCache : public AbstractCache<Key, Value> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -30,10 +34,11 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
   using CacheMap = typename std::unordered_map<Key, Handle>;
+  using CacheSnapshot = typename std::unordered_map<Key, GDFSCacheEntry>;
 
-  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using typename AbstractCache<Key, Value>::KeyValuePair;
+  using typename AbstractCache<Key, Value>::AbstractIterator;
+  using typename AbstractCache<Key, Value>::ErasedIterator;
 
   class Iterator : public AbstractIterator {
    public:
@@ -42,7 +47,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
    private:
     friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+    friend class AbstractCache<Key, Value>::ErasedIterator;
 
     IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
@@ -60,9 +65,10 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  explicit GDFSCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCache(size_t capacity = DefaultCacheCapacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -81,10 +87,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
     if (_queue.size() >= this->_capacity) {
-      auto top = _queue.top();
-      _inflation = top.priority;
-      _map.erase(top.key);
-      _queue.pop();
+      _evict();
     }
 
     // Insert new item in cache.
@@ -94,9 +97,13 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     _map[key] = handle;
   }
 
-  Value& get(const Key& key) {
-    auto it = _map.find(key);
-    DebugAssert(it != _map.end(), "key not present");
+  std::optional<Value> try_get(const Key& query) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+    if (this->_capacity == 0) return std::nullopt;
+
+    auto it = _map.find(query);
+    if (it == _map.end()) return std::nullopt;
+
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;
@@ -105,16 +112,36 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     return entry.value;
   }
 
-  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
+  Value& get_entry(const Key& key) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+    auto it = _map.find(key);
+    DebugAssert(it != _map.end(), "Key not present.");
+    Handle handle = it->second;
+    GDFSCacheEntry& entry = (*handle);
+    entry.frequency++;
+    entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
+    _queue.update(handle);
+    return entry.value;
+  }
 
-  size_t size() const { return _map.size(); }
+  bool has(const Key& key) const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _map.find(key) != _map.end();
+  }
+
+  size_t size() const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _map.size();
+  }
 
   void clear() {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     _map.clear();
     _queue.clear();
   }
 
   void resize(size_t capacity) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     while (_queue.size() > capacity) {
       _evict();
     }
@@ -130,9 +157,9 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     return (*it->second).priority;
   }
 
-  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
+  ErasedIterator unsafe_begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
 
-  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
+  ErasedIterator unsafe_end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
 
   size_t frequency(const Key& key) {
     const auto it = _map.find(key);
@@ -145,6 +172,16 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     return entry.frequency;
   }
 
+  CacheSnapshot snapshot() const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    CacheSnapshot _map_copy;
+    for (auto it = _map.begin(); it != _map.end(); it++) {
+      const auto [key, entry] = *it;
+      _map_copy[key] = *entry;
+    }
+    return _map_copy;
+  }
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;
@@ -152,8 +189,10 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   // Map to point towards element in the list.
   CacheMap _map;
 
+  mutable std::shared_mutex _mutex;
+
   // Inflation value that will be updated whenever an item is evicted.
-  double _inflation;
+  std::atomic<double> _inflation;
 
   void _evict() {
     auto top = _queue.top();

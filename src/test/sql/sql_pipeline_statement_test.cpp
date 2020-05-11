@@ -7,7 +7,6 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 
-#include "cache/cache.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"

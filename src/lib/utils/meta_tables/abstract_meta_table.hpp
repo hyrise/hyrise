@@ -37,6 +37,7 @@ class AbstractMetaTable : public Noncopyable {
   friend class MetaSettingsTest;
   friend class MetaSystemUtilizationTest;
   friend class MetaSystemInformationTest;
+  friend class MetaCacheTablesTest;
 
   explicit AbstractMetaTable(const TableColumnDefinitions& column_definitions);
 

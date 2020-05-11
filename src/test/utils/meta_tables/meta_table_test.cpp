@@ -1,9 +1,10 @@
 #include "base_test.hpp"
 
-#include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/meta_cached_operators_table.hpp"
+#include "utils/meta_tables/meta_cached_queries_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -32,15 +33,26 @@ static_assert(false, "Unknown c++ library");
 
 class MetaTableTest : public BaseTest {
  public:
-  static MetaTables meta_tables() {
+  static MetaTables storage_based_meta_tables() {
     return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
             std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
             std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>()};
   }
 
+  static MetaTables cache_based_meta_tables() {
+    return {std::make_shared<MetaCachedOperatorsTable>(), std::make_shared<MetaCachedQueriesTable>()};
+  }
+
+  static MetaTables all_meta_tables() {
+    auto meta_tables = MetaTableTest::storage_based_meta_tables();
+    auto cache_based_meta_tables = MetaTableTest::cache_based_meta_tables();
+    meta_tables.insert(meta_tables.end(), cache_based_meta_tables.begin(), cache_based_meta_tables.end());
+    return meta_tables;
+  }
+
   static MetaTableNames meta_table_names() {
     MetaTableNames names;
-    for (auto& table : MetaTableTest::meta_tables()) {
+    for (auto& table : MetaTableTest::all_meta_tables()) {
       names.push_back(table->name());
     }
 
@@ -55,7 +67,6 @@ class MetaTableTest : public BaseTest {
   const std::string test_file_path = "resources/test_data/tbl/meta_tables/meta_";
   std::shared_ptr<Table> int_int;
   std::shared_ptr<Table> int_int_int_null;
-  std::shared_ptr<const Table> mock_manipulation_values;
 
   void SetUp() {
     Hyrise::reset();
@@ -71,13 +82,6 @@ class MetaTableTest : public BaseTest {
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
-
-    const auto column_definitions = MetaMockTable().column_definitions();
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
-    table->append({pmr_string{"foo"}});
-    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-    table_wrapper->execute();
-    mock_manipulation_values = table_wrapper->get_output();
   }
 
   void TearDown() { Hyrise::reset(); }
@@ -88,19 +92,24 @@ class MetaTableTest : public BaseTest {
 };
 
 class MultiMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
+class MultiStorageMetaTablesTest : public MetaTableTest, public ::testing::WithParamInterface<MetaTable> {};
 
 auto meta_table_test_formatter = [](const ::testing::TestParamInfo<MetaTable> info) {
   auto stream = std::stringstream{};
   stream << info.param->name();
 
   auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !(std::isalnum(c) || c == '_'); }),
+               string.end());
 
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(MetaTable, MultiMetaTablesTest, ::testing::ValuesIn(MetaTableTest::meta_tables()),
+INSTANTIATE_TEST_SUITE_P(MetaTable, MultiMetaTablesTest, ::testing::ValuesIn(MetaTableTest::all_meta_tables()),
                          meta_table_test_formatter);
+
+INSTANTIATE_TEST_SUITE_P(MetaTable, MultiStorageMetaTablesTest,
+                         ::testing::ValuesIn(MetaTableTest::storage_based_meta_tables()), meta_table_test_formatter);
 
 TEST_P(MultiMetaTablesTest, IsImmutable) {
   EXPECT_FALSE(GetParam()->can_insert());
@@ -108,7 +117,17 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
   EXPECT_FALSE(GetParam()->can_delete());
 }
 
-TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
+TEST_P(MultiMetaTablesTest, SQLFeatures) {
+  // TEST SQL features on meta tables
+  const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM " + MetaTableManager::META_PREFIX + GetParam()->name()}
+                          .create_pipeline()
+                          .get_result_table();
+
+  EXPECT_EQ(result.first, SQLPipelineStatus::Success);
+  EXPECT_EQ(result.second->row_count(), 1);
+}
+
+TEST_P(MultiStorageMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
@@ -118,7 +137,7 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
 }
 
-TEST_P(MultiMetaTablesTest, IsDynamic) {
+TEST_P(MultiStorageMetaTablesTest, IsDynamic) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
   SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
   SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
@@ -132,16 +151,6 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
   const auto meta_table = generate_meta_table(GetParam());
 
   EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
-}
-
-TEST_P(MultiMetaTablesTest, SQLFeatures) {
-  // TEST SQL features on meta tables
-  const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM " + MetaTableManager::META_PREFIX + GetParam()->name()}
-                          .create_pipeline()
-                          .get_result_table();
-
-  EXPECT_EQ(result.first, SQLPipelineStatus::Success);
-  EXPECT_EQ(result.second->row_count(), 1);
 }
 
 TEST_F(MetaTableTest, SingleGenerationInPipeline) {
