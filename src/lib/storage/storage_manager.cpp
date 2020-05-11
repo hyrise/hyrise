@@ -42,7 +42,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
 }
 
 void StorageManager::replace_table(const std::string& name, std::shared_ptr<Table> table) {
-  std::unique_lock lock(*_table_mutex);
   _tables[name] = std::move(table);
 }
 

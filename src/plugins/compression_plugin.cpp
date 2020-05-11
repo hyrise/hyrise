@@ -10,7 +10,6 @@
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"

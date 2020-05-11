@@ -28,13 +28,15 @@ class CompressionPlugin : public AbstractPlugin {
   // Budget in megabyte
   class MemoryBudgetSetting : public AbstractSetting {
    public:
-    explicit MemoryBudgetSetting() : AbstractSetting("Plugin::Compression::MemoryBudget", "9999999999") {}
+    explicit MemoryBudgetSetting() : AbstractSetting("Plugin::Compression::MemoryBudget") {}
     const std::string& description() const final {
       static const auto description = std::string{"The memory budget to target for the CompressionPlugin."};
       return description;
     }
     const std::string& get() { return _value; }
     void set(const std::string& value) final { _value = value; }
+
+    std::string _value = "9999999999";
   };
 
   constexpr static std::chrono::milliseconds THREAD_INTERVAL = std::chrono::milliseconds(7'500);
