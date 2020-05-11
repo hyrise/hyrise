@@ -13,6 +13,8 @@
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
+#include "utils/meta_tables/meta_system_information_table.hpp"
+#include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
@@ -24,11 +26,17 @@ using MetaTableNames = std::vector<std::string>;
 class MetaTableManagerTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-    return {std::make_shared<MetaTablesTable>(),   std::make_shared<MetaColumnsTable>(),
-            std::make_shared<MetaChunksTable>(),   std::make_shared<MetaChunkSortOrdersTable>(),
-            std::make_shared<MetaSegmentsTable>(), std::make_shared<MetaSegmentsAccurateTable>(),
-            std::make_shared<MetaPluginsTable>(),  std::make_shared<MetaSettingsTable>(),
-            std::make_shared<MetaLogTable>()};
+    return {std::make_shared<MetaTablesTable>(),
+            std::make_shared<MetaColumnsTable>(),
+            std::make_shared<MetaChunksTable>(),
+            std::make_shared<MetaChunkSortOrdersTable>(),
+            std::make_shared<MetaSegmentsTable>(),
+            std::make_shared<MetaSegmentsAccurateTable>(),
+            std::make_shared<MetaPluginsTable>(),
+            std::make_shared<MetaSettingsTable>(),
+            std::make_shared<MetaLogTable>(),
+            std::make_shared<MetaSystemInformationTable>(),
+            std::make_shared<MetaSystemUtilizationTable>()};
   }
 
   static MetaTableNames meta_table_names() {
