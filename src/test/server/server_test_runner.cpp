@@ -7,9 +7,12 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
+#include "operators/get_table.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
 #include "sql/sql_plan_cache.hpp"
+
 
 namespace opossum {
 
@@ -29,7 +32,9 @@ class ServerTestRunner : public BaseTest {
 
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
-    std::remove(_export_filename.c_str());
+    std::remove((_export_filename + ".bin").c_str());
+    std::remove((_export_filename + ".csv").c_str());
+    std::remove((_export_filename + ".csv.json").c_str());
 
     // Wait to run the server and set the scheduler
     while (!_server->is_initialized()) {
@@ -44,7 +49,9 @@ class ServerTestRunner : public BaseTest {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
 
-    std::remove(_export_filename.c_str());
+    std::remove((_export_filename + ".bin").c_str());
+    std::remove((_export_filename + ".csv").c_str());
+    std::remove((_export_filename + ".csv.json").c_str());
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
@@ -53,7 +60,7 @@ class ServerTestRunner : public BaseTest {
   std::string _connection_string;
 
   std::shared_ptr<Table> _table_a;
-  const std::string _export_filename = test_data_path + "server_test.bin";
+  const std::string _export_filename = test_data_path + "server_test";
 };
 
 TEST_F(ServerTestRunner, TestCacheAndSchedulerInitialization) {
@@ -136,10 +143,11 @@ TEST_F(ServerTestRunner, TestCopyExport) {
 
   pqxx::nontransaction transaction{connection};
 
-  transaction.exec("COPY table_a TO '" + _export_filename + "';");
+  transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
+  transaction.exec("COPY table_a TO '../resources/test_data/bin/int_float.bin';");
 
-  EXPECT_TRUE(file_exists(_export_filename));
-  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float.bin"));
+  EXPECT_TRUE(file_exists(_export_filename + ".bin"));
+  EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float.bin"));
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyExport) {
@@ -168,15 +176,32 @@ TEST_F(ServerTestRunner, TestCopyIntegration) {
 
   // We delete a tuple of a table, export and re-import it.
   transaction.exec("DELETE FROM table_a WHERE a = 123;");
-  transaction.exec("COPY table_a TO '" + _export_filename + "';");
-  transaction.exec("COPY table_b FROM '" + _export_filename + "';");
+  transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
+  transaction.exec("COPY table_a TO '" + _export_filename + ".csv';");
+  transaction.exec("COPY table_b FROM '" + _export_filename + ".bin';");
+  transaction.exec("COPY table_c FROM '" + _export_filename + ".csv';");
+
+  // Get reference table without deleted row
+  auto get_table = std::make_shared<GetTable>("table_a");
+  auto validate = std::make_shared<Validate>(get_table);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
+  validate->set_transaction_context(transaction_context);
+  get_table->execute();
+  validate->execute();
+  const auto expected_table = validate->get_output();
 
   // Check that we did not export the deleted row
-  auto table_b = Hyrise::get().storage_manager.get_table("table_b");
-  EXPECT_EQ(table_b->row_count(), _table_a->row_count() - 1);
+  const auto table_b = Hyrise::get().storage_manager.get_table("table_b");
+  EXPECT_EQ(table_b->row_count(), expected_table->row_count());
+  const auto table_c = Hyrise::get().storage_manager.get_table("table_c");
+  EXPECT_EQ(table_c->row_count(), expected_table->row_count());
 
-  EXPECT_TRUE(file_exists(_export_filename));
-  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float_deleted.bin"));
+  EXPECT_TRUE(file_exists(_export_filename + ".bin"));
+  EXPECT_TRUE(file_exists(_export_filename + ".csv"));
+  EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float_deleted.bin"));
+  EXPECT_TRUE(compare_files(_export_filename + ".csv", "resources/test_data/bin/int_float_deleted.csv"));
+  EXPECT_TABLE_EQ_ORDERED(table_b, expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table_c, expected_table);
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {

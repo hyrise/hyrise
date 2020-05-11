@@ -582,7 +582,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
   // Do not prune away input columns to ChangeMetaTable, ChangeMetaTable needs them all
 
   // clang-format off
-   const auto select_rows_lqp =
+  const auto select_rows_lqp =
   PredicateNode::make(greater_than_(a, 5),
     node_a);
 
