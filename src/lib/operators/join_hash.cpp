@@ -127,7 +127,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
    * JoinMode::Inner        The smaller relation becomes the build side, the bigger the probe side
    * JoinMode::Left/Right   The outer relation becomes the probe side, the inner relation becomes the build side
    * JoinMode::FullOuter    Not supported by JoinHash
-   * JoinMode::Semi/Anti*   The left relation becomes the build side, the right relation becomes the probe side
+   * JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
    */
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||

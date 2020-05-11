@@ -595,6 +595,10 @@ set(
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
     utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_system_information_table.cpp
+    utils/meta_tables/meta_system_information_table.hpp
+    utils/meta_tables/meta_system_utilization_table.cpp
+    utils/meta_tables/meta_system_utilization_table.hpp
     utils/meta_tables/meta_tables_table.cpp
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
