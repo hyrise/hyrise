@@ -10,7 +10,7 @@ namespace boost::container::pmr {
 class default_resource_impl : public memory_resource {  // NOLINT
  public:
   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-    return new (static_cast<std::align_val_t>(alignment)) char[bytes];  // NOLINT
+    return operator new[] (bytes, static_cast<std::align_val_t>(alignment));  // NOLINT
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
