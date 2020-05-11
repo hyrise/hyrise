@@ -34,6 +34,7 @@ RUN apt-get update \
         postgresql-server-dev-all \
         python3 \
         python3-pexpect \
+        software-properties-common \
         sudo \
         systemtap \
         systemtap-sdt-dev \
