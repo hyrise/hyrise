@@ -270,10 +270,9 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     }
   }
 
-  // Currently, we do not support FDs in conjunction with null values. Therefore, we discard FDs, which consist of at
-  // least one nullable column.
-  // Some LQP nodes, like for instance outer joins, change column nullability. As a consequence, we check FDs for
-  // compliance in the following, before forwarding them:
+  // Currently, we do not support FDs in conjunction with null values in their left column set.
+  // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
+  // for compliance and discard them, if necessary.
   auto fds_out = std::vector<FunctionalDependency>();
 
   // Collect non-nullable columns
@@ -286,16 +285,16 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   for (const auto& fd : fds_in) {
-    // For convenience, create a new container for all the expressions that are involved in the FD
-    auto fd_expressions = fd.first;
-    fd_expressions.insert(fd.second.begin(), fd.second.end());
 
-    if (std::any_of(fd_expressions.cbegin(), fd_expressions.cend(),
+    // Check, whether left column set is subset of current node's non-nullable output expressions
+    if (std::any_of(fd.first.cbegin(), fd.first.cend(),
                     [&column_expressions_non_nullable](const auto& expression) {
-                      return column_expressions_non_nullable.contains(expression);
+                      return !column_expressions_non_nullable.contains(expression);
                     })) continue;
 
-    // All FD's expressions are part of this node's non-nullable column_expressions.
+    // We do not check the columns of the FD's right column set since they are allowed to be nullable.
+
+    // FD remains valid, so add it to the output vector
     fds_out.push_back(fd);
   }
 
