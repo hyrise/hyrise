@@ -104,8 +104,8 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
       continue;
     }
 
-    auto left = ExpressionUnorderedSet{};
-    auto right = ExpressionUnorderedSet{};
+    auto left = std::unordered_set<std::shared_ptr<AbstractExpression>>();
+    auto right = std::unordered_set<std::shared_ptr<AbstractExpression>>();
 
     // Gather column expressions for constraint's column ids
     for(auto constraint_column_id : constraint.columns) {
