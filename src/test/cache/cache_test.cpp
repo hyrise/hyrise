@@ -12,7 +12,8 @@ class CachePolicyTest : public BaseTest {
   }
 
   template <typename Key, typename Value>
-  const boost::heap::fibonacci_heap<typename GDFSCache<Key, Value>::GDFSCacheEntry>& queue(GDFSCache<Key, Value>& cache) const {
+  const boost::heap::fibonacci_heap<typename GDFSCache<Key, Value>::GDFSCacheEntry>& queue(
+      GDFSCache<Key, Value>& cache) const {
     return cache._queue;
   }
 };

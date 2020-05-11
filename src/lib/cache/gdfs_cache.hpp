@@ -2,6 +2,7 @@
 
 #include <list>
 #include <shared_mutex>
+#include <unordered_map>
 #include <utility>
 
 #include "abstract_cache.hpp"
@@ -13,7 +14,7 @@ namespace opossum {
 /*
  * Generic cache implementation using the GDFS policy.
  * To iterate over a cache copy, use snapshot().
- * Different cache implementations existed in the past, but were retired wit PR 2129.
+ * Different cache implementations existed in the past, but were retired with PR 2129.
  */
 template <typename Key, typename Value>
 class GDFSCache : public AbstractCache<Key, Value> {
