@@ -65,7 +65,7 @@ namespace opossum {
 const std::string CompressionPlugin::description() const { return "CompressionPlugin"; }
 
 void CompressionPlugin::start() {
-  Hyrise::get().log_manager.add_message(description(), "Initialized!");
+  Hyrise::get().log_manager.add_message(description(), "Initialized!", LogLevel::Info);
   _memory_budget_setting = std::make_shared<MemoryBudgetSetting>();
   _memory_budget_setting->register_at_settings_manager();
   _loop_thread = std::make_unique<PausableLoopThread>(THREAD_INTERVAL, [&](size_t) { _optimize_compression(); });
@@ -79,7 +79,7 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
 
   if (!Hyrise::get().storage_manager.has_table(table_name)) {
     const auto message = "Table " + table_name + " not found. TPC-H data is probably not loaded.";
-    Hyrise::get().log_manager.add_message(description(), message);
+    Hyrise::get().log_manager.add_message(description(), message, LogLevel::Debug);
     return 0ul;
   }
 
@@ -142,7 +142,7 @@ int64_t CompressionPlugin::_compress_column(const std::string table_name, const 
     stringstream << ((memory_change_in_megabytes > 0) ? "saved " : "added ");
     stringstream << std::fixed << std::setprecision(2) << std::abs(memory_change_in_megabytes) << " MB ";
     stringstream << (column_was_accessed ? "." : " (column has never been accessed).");
-    Hyrise::get().log_manager.add_message(description(), stringstream.str());
+    Hyrise::get().log_manager.add_message(description(), stringstream.str(), LogLevel::Warning);
 
     // Sleep after segments have been encoded to lower the impact of the plugin.
     std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_BETWEEN_COLUMNS_MS));
@@ -187,15 +187,17 @@ void CompressionPlugin::_optimize_compression() {
   }
 
   std::stringstream stringstream;
+  LogLevel log_level = LogLevel::Warning;
   if (static_cast<int64_t>(initial_system_memory_usage - achieved_memory_usage_reduction) > memory_budget) {
     stringstream << "Compression optimization finished: The memory budget is infeasible";
+    log_level = LogLevel::Debug;
   } else {
     stringstream << "Compression optimization finished: memory budget is feasible";
   }
   stringstream << " (budget: " << (memory_budget / 1'000'000) << " MB, currrent size of table data: ";
   stringstream << (static_cast<int64_t>(initial_system_memory_usage - achieved_memory_usage_reduction) / 1'000'000);
   stringstream << " MB).";
-  Hyrise::get().log_manager.add_message(description(), stringstream.str());
+  Hyrise::get().log_manager.add_message(description(), stringstream.str(), log_level);
 }
 
 void CompressionPlugin::stop() {

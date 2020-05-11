@@ -34,7 +34,7 @@ void ClusteringPlugin::_optimize_clustering() {
 
   for (auto& [table_name, column_name] : sort_orders) {
     if (!Hyrise::get().storage_manager.has_table(table_name)) {
-      Hyrise::get().log_manager.add_message(description(), "No optimization possible with given parameters for " + table_name + " table!");
+      Hyrise::get().log_manager.add_message(description(), "No optimization possible with given parameters for " + table_name + " table!", LogLevel::Debug);
       return;
     }
     auto table = Hyrise::get().storage_manager.get_table(table_name);
