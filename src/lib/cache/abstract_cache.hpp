@@ -1,44 +1,20 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
+#include <unordered_map>
 #include <utility>
-
-#include <boost/iterator/iterator_facade.hpp>
 
 namespace opossum {
 
-inline constexpr size_t DefaultCacheCapacity = 1024;
+inline constexpr size_t DEFAULT_CACHE_CAPACITY = 1024;
 
 // Generic template for a cache implementation.
+// It guarantees the capacity to be thread-safe. Any other guarantees have to be fulfilled by the implementation.
 template <typename Key, typename Value>
 class AbstractCache {
  public:
-  using KeyValuePair = typename std::pair<Key, Value>;
-
-  struct AbstractIterator {
-    virtual ~AbstractIterator() = default;
-
-    virtual void increment() = 0;
-    virtual bool equal(const AbstractIterator& other) const = 0;
-    virtual const KeyValuePair& dereference() const = 0;
-  };
-
-  class ErasedIterator
-      : public boost::iterator_facade<ErasedIterator, KeyValuePair const, boost::forward_traversal_tag> {
-   public:
-    explicit ErasedIterator(std::unique_ptr<AbstractIterator> it) : _it(std::move(it)) {}
-
-   private:
-    friend class boost::iterator_core_access;
-
-    void increment() { _it->increment(); }
-    bool equal(const ErasedIterator& other) const { return _it->equal(*other._it); }
-    const KeyValuePair& dereference() const { return _it->dereference(); }
-
-    std::unique_ptr<AbstractIterator> _it;
-  };
-
-  explicit AbstractCache(size_t capacity = DefaultCacheCapacity) : _capacity(capacity) {}
+  explicit AbstractCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : _capacity(capacity) {}
 
   virtual ~AbstractCache() {}
 
@@ -54,7 +30,8 @@ class AbstractCache {
 
   // Get the cached value at the given key.
   // Causes undefined behavior if the item is not in the cache.
-  virtual Value& get_entry(const Key& key) = 0;
+  // This cannot be thread-safe since we return a reference here.
+  virtual Value& get(const Key& key) = 0;
 
   // Returns true if the cache holds an item at the given key.
   virtual bool has(const Key& key) const = 0;
@@ -67,16 +44,6 @@ class AbstractCache {
 
   // Resize to the given capacity.
   virtual void resize(size_t capacity) = 0;
-
-  // These methods are named "unsafe_" (similar to tbb's naming) because iterator does not hold a mutex. As such,
-  // modifications to the cache invalidate the iterators. While this is also true for begin()/end() in other data
-  // structures, the Cache class usually deals with concurrency.
-  virtual ErasedIterator unsafe_begin() = 0;
-  virtual ErasedIterator unsafe_end() = 0;
-
-  // To use range based for loops, we forward the unsafe_ iterator.
-  virtual ErasedIterator begin() { return unsafe_begin(); }
-  virtual ErasedIterator end() { return unsafe_end(); }
 
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }

@@ -51,11 +51,9 @@ void MetaCachedOperatorsTable::_process_pqp(
   const auto right_input = op->input_right();
   if (left_input && !visited_pqp_nodes.contains(left_input)) {
     _process_pqp(left_input, query_hex_hash, visited_pqp_nodes, output_table);
-    visited_pqp_nodes.insert(left_input);
   }
   if (right_input && !visited_pqp_nodes.contains(right_input)) {
     _process_pqp(right_input, query_hex_hash, visited_pqp_nodes, output_table);
-    visited_pqp_nodes.insert(right_input);
   }
 }
 

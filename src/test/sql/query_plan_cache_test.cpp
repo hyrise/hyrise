@@ -56,7 +56,7 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
   EXPECT_FALSE(cache->has(Q2));
 
   // Retrieve and execute the cached plan.
-  const auto cached_plan = cache->get_entry(Q1);
+  const auto cached_plan = cache->get(Q1);
   EXPECT_EQ(cached_plan, pipeline_statement.get_physical_plan());
 }
 
