@@ -74,7 +74,6 @@ set(
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
     memory/segments_using_allocators_test.cpp
-    memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
     operators/alias_operator_test.cpp
     operators/change_meta_table_test.cpp
@@ -216,6 +215,7 @@ set(
     utils/meta_tables/meta_table_test.cpp
     utils/meta_tables/meta_plugins_test.cpp
     utils/meta_tables/meta_settings_test.cpp
+    utils/meta_tables/meta_system_utilization_test.cpp
     utils/mock_setting.hpp
     utils/mock_setting.cpp
     utils/plugin_manager_test.cpp

@@ -161,8 +161,6 @@ set(
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
     memory/boost_default_memory_resource.cpp
-    memory/numa_memory_resource.cpp
-    memory/numa_memory_resource.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     null_value.hpp
@@ -592,6 +590,10 @@ set(
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
     utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_system_information_table.cpp
+    utils/meta_tables/meta_system_information_table.hpp
+    utils/meta_tables/meta_system_utilization_table.cpp
+    utils/meta_tables/meta_system_utilization_table.hpp
     utils/meta_tables/meta_tables_table.cpp
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
@@ -651,7 +653,7 @@ if (NOT APPLE)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
-    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
 
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
