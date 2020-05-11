@@ -5,7 +5,7 @@
 namespace opossum {
 
 MetaCachedQueriesTable::MetaCachedQueriesTable()
-    : AbstractMetaTable(TableColumnDefinitions{{"hash_value", DataType::String, false},
+    : AbstractMetaTable(TableColumnDefinitions{{"statement_hash", DataType::String, false},
                                                {"frequency", DataType::Int, false},
                                                {"sql_string", DataType::String, false}}) {}
 
