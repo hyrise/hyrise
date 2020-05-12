@@ -24,6 +24,21 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions()
   return left_input()->column_expressions();
 }
 
+std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
+  switch(union_mode) {
+    case UnionMode::All:
+      // No guarantees, since UnionAll can break any FD depending on the input.
+      return {};
+    case UnionMode::Positions:
+      // By definition, UnionPositions requires both input tables to have the same table origin and structure.
+      // Therefore, we can forward the FDs of either the left or right input node.
+      DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(), "Expected "
+                  "both input nodes to have the same FDs.");
+      return left_input()->functional_dependencies();
+  }
+  Fail("Unhandled UnionMode");
+}
+
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 
