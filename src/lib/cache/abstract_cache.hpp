@@ -23,7 +23,7 @@ class AbstractCache {
   // If they are not intended to be used, we specify constant default values here.
   virtual void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) = 0;
 
-  // Tries to fetch a cache
+  // Tries to fetch a cache entry. We cannot return a reference since this could not be thread-safe.
   virtual std::optional<Value> try_get(const Key& key) = 0;
 
   // Returns true if the cache holds an item at the given key.
