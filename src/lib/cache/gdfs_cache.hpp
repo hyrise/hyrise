@@ -2,7 +2,6 @@
 
 #include <list>
 #include <shared_mutex>
-#include <unordered_map>
 #include <utility>
 
 #include "abstract_cache.hpp"
@@ -32,13 +31,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
     bool operator<(const GDFSCacheEntry& other) const { return priority > other.priority; }
   };
 
-  struct SnapshotEntry {
-    Value value;
-    size_t frequency;
-  };
-
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
   using CacheMap = typename std::unordered_map<Key, Handle>;
+  using SnapshotEntry = typename AbstractCache<Key, Value>::SnapshotEntry;
 
   explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
@@ -122,12 +117,6 @@ class GDFSCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
-  double priority(const Key& key) const {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
-    auto it = _map.find(key);
-    return (*it->second).priority;
-  }
-
   size_t frequency(const Key& key) const {
     std::shared_lock<std::shared_mutex> lock(_mutex);
     const auto it = _map.find(key);
@@ -139,9 +128,8 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
   std::unordered_map<Key, SnapshotEntry> snapshot() const {
     std::shared_lock<std::shared_mutex> lock(_mutex);
-    std::unordered_map<Key, SnapshotEntry> map_copy;
-    for (auto it = _map.begin(); it != _map.end(); it++) {
-      const auto [key, entry] = *it;
+    std::unordered_map<Key, SnapshotEntry> map_copy(_map.size());
+    for (const auto& [key, entry] : _map) {
       map_copy[key] = SnapshotEntry{(*entry).value, (*entry).frequency};
     }
     return map_copy;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
+#include <unordered_map>
 #include <utility>
 
 namespace opossum {
@@ -45,6 +47,14 @@ class AbstractCache {
 
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
+
+  struct SnapshotEntry {
+    Value value;
+    std::optional<size_t> frequency;
+  };
+
+  // Provide a copy of the entries to iterate over them in a thread-safe way
+  virtual std::unordered_map<Key, SnapshotEntry> snapshot() const = 0;
 
  protected:
   // Remove an element from the cache according to the cache algorithm's strategy

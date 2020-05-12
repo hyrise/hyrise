@@ -7,14 +7,20 @@ namespace opossum {
 class CachePolicyTest : public BaseTest {
  protected:
   template <typename Key, typename Value>
-  double inflation(GDFSCache<Key, Value>& cache) const {
+  double inflation(const GDFSCache<Key, Value>& cache) const {
     return cache._inflation;
   }
 
   template <typename Key, typename Value>
   const boost::heap::fibonacci_heap<typename GDFSCache<Key, Value>::GDFSCacheEntry>& queue(
-      GDFSCache<Key, Value>& cache) const {
+      const GDFSCache<Key, Value>& cache) const {
     return cache._queue;
+  }
+
+  template <typename Key, typename Value>
+  const typename GDFSCache<Key, Value>::GDFSCacheEntry get_full_entry(const GDFSCache<Key, Value>& cache,
+                                                                      const Key& key) const {
+    return *(cache._map.find(key)->second);
   }
 };
 
@@ -27,24 +33,29 @@ TEST_F(CachePolicyTest, GDFSCacheTest) {
   ASSERT_FALSE(cache.has(3));
 
   cache.set(1, 2);  // Miss, insert, L=0, Fr=1
-  ASSERT_EQ(1.0, cache.priority(1));
+  ASSERT_EQ(1.0, get_full_entry(cache, 1).priority);
+  ASSERT_EQ(1, get_full_entry(cache, 1).frequency);
 
   ASSERT_TRUE(cache.has(1));
   ASSERT_FALSE(cache.has(2));
   ASSERT_FALSE(cache.has(3));
 
   ASSERT_EQ(2, cache.get(1));  // Hit, L=0, Fr=2
-  ASSERT_EQ(2.0, cache.priority(1));
+  ASSERT_EQ(2.0, get_full_entry(cache, 1).priority);
+  ASSERT_EQ(2, get_full_entry(cache, 1).frequency);
 
   cache.set(1, 2);  // Hit, L=0, Fr=3
-  ASSERT_EQ(3.0, cache.priority(1));
+  ASSERT_EQ(3.0, get_full_entry(cache, 1).priority);
+  ASSERT_EQ(3, get_full_entry(cache, 1).frequency);
 
   cache.set(2, 4);  // Miss, insert, L=0, Fr=1
-  ASSERT_EQ(1.0, cache.priority(2));
+  ASSERT_EQ(1.0, get_full_entry(cache, 2).priority);
+  ASSERT_EQ(1, get_full_entry(cache, 2).frequency);
 
   cache.set(3, 6);  // Miss, evict 2, L=1, Fr=1
-  ASSERT_EQ(2.0, cache.priority(3));
+  ASSERT_EQ(2.0, get_full_entry(cache, 3).priority);
   ASSERT_EQ(1.0, inflation(cache));
+  ASSERT_EQ(1, get_full_entry(cache, 3).frequency);
 
   ASSERT_EQ(2.0, queue(cache).top().priority);
 
@@ -53,41 +64,25 @@ TEST_F(CachePolicyTest, GDFSCacheTest) {
   ASSERT_TRUE(cache.has(3));
 
   ASSERT_EQ(6, cache.get(3));  // Hit, L=1, Fr=2
-  ASSERT_EQ(3.0, cache.priority(3));
+  ASSERT_EQ(3.0, get_full_entry(cache, 3).priority);
   ASSERT_EQ(3.0, queue(cache).top().priority);
+  ASSERT_EQ(2, get_full_entry(cache, 3).frequency);
 
   ASSERT_EQ(6, cache.get(3));  // Hit, L=1, Fr=3
-  ASSERT_EQ(4.0, cache.priority(3));
-  ASSERT_EQ(3.0, cache.priority(1));
+  ASSERT_EQ(4.0, get_full_entry(cache, 3).priority);
+  ASSERT_EQ(3.0, get_full_entry(cache, 1).priority);
   ASSERT_EQ(3.0, queue(cache).top().priority);
+  ASSERT_EQ(3, get_full_entry(cache, 3).frequency);
 
   cache.set(2, 5);  // Miss, evict 1, L=1, Fr=3
   ASSERT_EQ(3.0, inflation(cache));
+  ASSERT_EQ(1, get_full_entry(cache, 2).frequency);
 
   ASSERT_FALSE(cache.has(1));
   ASSERT_TRUE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
 
-  ASSERT_EQ(cache.frequency(3), 3);
-  ASSERT_EQ(cache.frequency(100), 0);
-}
-
-TEST_F(CachePolicyTest, GDFSSnapshotTest) {
-  GDFSCache<int, int> cache(5);
-  const auto values = {1, 2, 3, 4, 5};
-  for (const auto value : values) {
-    cache.set(value, value);
-  }
-
-  const auto snapshot = cache.snapshot();
-  for (const auto value : values) {
-    const auto it = snapshot.find(value);
-    EXPECT_NE(it, snapshot.end());
-
-    const auto entry = it->second;
-    EXPECT_EQ(entry.value, value);
-    EXPECT_EQ(entry.frequency, 1);
-  }
+  ASSERT_EQ(3, get_full_entry(cache, 3).frequency);
 }
 
 class CacheTest : public BaseTest {};
@@ -176,6 +171,24 @@ TEST_F(CacheTest, ResizeShrink) {
   ASSERT_FALSE(cache.try_get(2));
   ASSERT_TRUE(cache.try_get(3));
   ASSERT_EQ(cache.try_get(3), 6);
+}
+
+TEST_F(CacheTest, Snapshot) {
+  GDFSCache<int, int> cache(5);
+  const auto values = {1, 2, 3, 4, 5};
+  for (const auto value : values) {
+    cache.set(value, value);
+  }
+
+  const auto snapshot = cache.snapshot();
+  for (const auto value : values) {
+    const auto it = snapshot.find(value);
+    EXPECT_NE(it, snapshot.end());
+
+    const auto entry = it->second;
+    EXPECT_EQ(entry.value, value);
+    EXPECT_EQ(entry.frequency, 1);
+  }
 }
 
 }  // namespace opossum
