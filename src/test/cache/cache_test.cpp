@@ -40,7 +40,7 @@ TEST_F(CachePolicyTest, GDFSCacheTest) {
   ASSERT_FALSE(cache.has(2));
   ASSERT_FALSE(cache.has(3));
 
-  ASSERT_EQ(2, cache.get(1));  // Hit, L=0, Fr=2
+  ASSERT_EQ(2, cache.try_get(1));  // Hit, L=0, Fr=2
   ASSERT_EQ(2.0, get_full_entry(cache, 1).priority);
   ASSERT_EQ(2, get_full_entry(cache, 1).frequency);
 
@@ -63,12 +63,12 @@ TEST_F(CachePolicyTest, GDFSCacheTest) {
   ASSERT_FALSE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
 
-  ASSERT_EQ(6, cache.get(3));  // Hit, L=1, Fr=2
+  ASSERT_EQ(6, cache.try_get(3));  // Hit, L=1, Fr=2
   ASSERT_EQ(3.0, get_full_entry(cache, 3).priority);
   ASSERT_EQ(3.0, queue(cache).top().priority);
   ASSERT_EQ(2, get_full_entry(cache, 3).frequency);
 
-  ASSERT_EQ(6, cache.get(3));  // Hit, L=1, Fr=3
+  ASSERT_EQ(6, cache.try_get(3));  // Hit, L=1, Fr=3
   ASSERT_EQ(4.0, get_full_entry(cache, 3).priority);
   ASSERT_EQ(3.0, get_full_entry(cache, 1).priority);
   ASSERT_EQ(3.0, queue(cache).top().priority);

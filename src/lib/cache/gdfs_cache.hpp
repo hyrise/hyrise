@@ -1,8 +1,6 @@
 #pragma once
 
-#include <list>
 #include <shared_mutex>
-#include <utility>
 
 #include "abstract_cache.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
@@ -10,9 +8,9 @@
 
 namespace opossum {
 
-/*
+/**
  * Generic cache implementation using the GDFS policy.
- * To iterate over a cache copy, use snapshot().
+ * To iterate over the cache in a thread-safe manner, use the copy provided by snapshot().
  * Different cache implementations existed in the past, but were retired with PR 2129.
  */
 template <typename Key, typename Value>
@@ -81,21 +79,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return entry.value;
   }
 
-  Value& get(const Key& key) {
-    std::unique_lock<std::shared_mutex> lock(_mutex);
-    auto it = _map.find(key);
-    DebugAssert(it != _map.end(), "Key not present.");
-    Handle handle = it->second;
-    GDFSCacheEntry& entry = (*handle);
-    entry.frequency++;
-    entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
-    _queue.update(handle);
-    return entry.value;
-  }
-
   bool has(const Key& key) const {
     std::shared_lock<std::shared_mutex> lock(_mutex);
-    return _map.find(key) != _map.end();
+    return _map.contains(key);
   }
 
   size_t size() const {
@@ -117,15 +103,6 @@ class GDFSCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
-  size_t frequency(const Key& key) const {
-    std::shared_lock<std::shared_mutex> lock(_mutex);
-    const auto it = _map.find(key);
-    if (it == _map.end()) {
-      return size_t{0};
-    }
-    return (*it->second).frequency;
-  }
-
   std::unordered_map<Key, SnapshotEntry> snapshot() const {
     std::shared_lock<std::shared_mutex> lock(_mutex);
     std::unordered_map<Key, SnapshotEntry> map_copy(_map.size());
@@ -137,14 +114,20 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
  protected:
   friend class CachePolicyTest;
+  friend class QueryPlanCacheTest;
 
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;
 
   // Map to point towards element in the list.
-  // We use a locked map here since TBB's concurrent maps are not safe for erasing.
   CacheMap _map;
 
+  /**
+   * Locking this data structure is easier than using a concurrent data structure (e.g. TBB) as
+   * (1) both the queue and the map would have to be concurrent data structures,
+   * (2) their modifications would have to be synchronized, and
+   * (3) TBB's concurrent_unordered_map does not provide safe deletion and concurrent_hash_map is difficult to use.
+   */
   mutable std::shared_mutex _mutex;
 
   // Inflation value that will be updated whenever an item is evicted.

@@ -3,7 +3,6 @@
 #include <atomic>
 #include <optional>
 #include <unordered_map>
-#include <utility>
 
 namespace opossum {
 
@@ -24,14 +23,8 @@ class AbstractCache {
   // If they are not intended to be used, we specify constant default values here.
   virtual void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) = 0;
 
-  // Tries to fetch the cache entry for the query into the result object. Returns true if the entry was found, false
-  // otherwise.
+  // Tries to fetch a cache
   virtual std::optional<Value> try_get(const Key& key) = 0;
-
-  // Get the cached value at the given key.
-  // Causes undefined behavior if the item is not in the cache.
-  // This cannot be thread-safe since we return a reference here.
-  virtual Value& get(const Key& key) = 0;
 
   // Returns true if the cache holds an item at the given key.
   virtual bool has(const Key& key) const = 0;

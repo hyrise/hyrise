@@ -34,6 +34,8 @@ class QueryPlanCacheTest : public BaseTest {
     }
   }
 
+  size_t query_frequency(const std::string& key) const { return (*(cache->_map.find(key)->second)).frequency; }
+
   const std::string Q1 = "SELECT * FROM table_a;";
   const std::string Q2 = "SELECT * FROM table_b;";
   const std::string Q3 = "SELECT * FROM table_a WHERE a > 1;";
@@ -56,7 +58,7 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
   EXPECT_FALSE(cache->has(Q2));
 
   // Retrieve and execute the cached plan.
-  const auto cached_plan = cache->get(Q1);
+  const auto cached_plan = cache->try_get(Q1);
   EXPECT_EQ(cached_plan, pipeline.get_physical_plans().at(0));
 }
 
@@ -104,7 +106,7 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   // frequency of query is as expected.
   auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline();
   new_sql_pipeline.get_result_table();
-  EXPECT_EQ(1, cache->frequency(Q1));
+  EXPECT_EQ(1, query_frequency(Q1));
 }
 
 }  // namespace opossum
