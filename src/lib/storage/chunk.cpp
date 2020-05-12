@@ -13,6 +13,7 @@
 #include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -224,6 +225,34 @@ void Chunk::set_sorted_by(const SortColumnDefinition& sorted_by) {
 
 void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
+  if (sorted_by.empty())
+    throw std::invalid_argument( "received negative value" );
+  Assert(!sorted_by.empty(), "Passed vector of sort definitions is empty.");
+
+  if (HYRISE_DEBUG) {
+    for (const auto& sorted_by_column : sorted_by) {
+      const auto& sorted_segment = get_segment(sorted_by_column.column);
+      if (sorted_segment->size() < 2) break;
+
+
+
+      segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+        if (sorted_by_column.sort_mode == SortMode::Ascending) {
+          Assert(std::is_sorted(begin, end, [](const auto& left, const auto& right) {
+            if (left.is_null() || right.is_null()) return false;
+            return left.value() < right.value();
+          }), "Setting an ascending sort order for a segment which is not sorted accordingly.");
+        // TODO(mrks): change to else{} with #2110
+        } else if (sorted_by_column.sort_mode == SortMode::Descending) {
+          Assert(std::is_sorted(begin, end, [](const auto& left, const auto& right) {
+            if (left.is_null() || right.is_null()) return false;
+            return left.value() > right.value();
+          }), "Setting a descending sort order for a segment which is not sorted accordingly.");
+        }
+      });
+    }
+  }
+
   _sorted_by = sorted_by;
 }
 

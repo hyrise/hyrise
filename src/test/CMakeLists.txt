@@ -75,6 +75,7 @@ set(
     lossless_cast_test.cpp
     memory/segments_using_allocators_test.cpp
     operators/aggregate_test.cpp
+    operators/aggregate_sort_test.cpp
     operators/alias_operator_test.cpp
     operators/change_meta_table_test.cpp
     operators/delete_test.cpp

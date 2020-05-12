@@ -64,19 +64,28 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
   test_table->append({1, 2, 5});
 
   const auto test_input = std::make_shared<TableWrapper>(test_table);
-
-  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals};
-  const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Left, primary_predicate);
-
   test_input->execute();
-  join_operator->execute();
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals};
 
-  const auto output_table = join_operator->get_output();
+  // For inner joins, both join columns are clustered
+  {
+    const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Inner, primary_predicate);
+    join_operator->execute();
 
-  const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
-  const auto& actual_value_clustering = output_table->value_clustered_by();
-  EXPECT_FALSE(actual_value_clustering.empty());
-  EXPECT_EQ(actual_value_clustering, expected_value_clustering);
+    const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
+    const auto& actual_value_clustering = join_operator->get_output()->value_clustered_by();
+    EXPECT_FALSE(actual_value_clustering.empty());
+    EXPECT_EQ(actual_value_clustering, expected_value_clustering);
+  }
+
+  // For outer joins, the table cannot be clustered as table clustering is not defined for NULL values
+  {
+    const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Left, primary_predicate);
+    join_operator->execute();
+
+    const auto& actual_value_clustering = join_operator->get_output()->value_clustered_by();
+    EXPECT_TRUE(actual_value_clustering.empty());
+  }
 }
 
 TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {

@@ -48,11 +48,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     auto lineitem_table = sm.get_table("lineitem");
 
-    // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
-    // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
-    // assumed missing support of non-inclusive between predicates).
-    // This order is not necessarily the order Hyrise uses (estimates can be vastly off) or which might eventually
-    // be calculated by more sophisticated cost models.
+    // Predicates as in TPC-H Q6, ordered by selectivity. Not necessarily the same order as determined by the optimizer
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
                                            lineitem_table->column_is_nullable(ColumnID{6}), "");
     _tpchq6_discount_predicate = std::make_shared<BetweenExpression>(

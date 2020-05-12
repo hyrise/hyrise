@@ -219,14 +219,14 @@ TEST_F(StorageChunkTest, RemoveIndex) {
 
 TEST_F(StorageChunkTest, OrderedBy) {
   EXPECT_TRUE(chunk->sorted_by().empty());
-  const auto sorted_by_vector_single_column = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0},
-                                                                                SortMode::Ascending)};
+  const auto sorted_by_vector_single_column =
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
   chunk->finalize();
   chunk->set_sorted_by(sorted_by_vector_single_column);
   EXPECT_EQ(chunk->sorted_by(), sorted_by_vector_single_column);
 
   const auto sorted_by_vector_two_columns = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                      SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
+                                                        SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
   chunk->set_sorted_by(sorted_by_vector_two_columns);
   EXPECT_EQ(chunk->sorted_by(), sorted_by_vector_two_columns);
 

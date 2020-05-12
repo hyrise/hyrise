@@ -29,7 +29,7 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
  protected:
   void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
   void _scan_generic_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                                     const SortMode sorted_by) const;
+                                    const SortMode sorted_by) const;
 
   // Optimized scan on ValueSegments
   void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;

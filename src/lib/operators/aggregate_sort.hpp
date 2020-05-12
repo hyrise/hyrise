@@ -116,8 +116,12 @@ class AggregateSort : public AbstractAggregateOperator {
                                       [[maybe_unused]] const uint64_t unique_value_count) const;
 
  private:
-  static std::shared_ptr<Table> _sort_within_chunks(const std::shared_ptr<const Table>& input_table,
-                                                    const std::vector<ColumnID>& groupby_column_ids);
+  /**
+   * Sort the whole input table by sorting each chunk individually. Should only be used if caller can guarantee that
+   * each value in the group by columns does only occur in exactly one chunk (i.e., table is value clustered).
+   */
+  static std::shared_ptr<Table> _sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
+                                                       const std::vector<ColumnID>& groupby_column_ids);
 
   static Segments _get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id);
 };

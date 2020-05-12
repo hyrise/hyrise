@@ -129,7 +129,8 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
   }
 
   // Verify that the sorted_by flag is set when it's present in input.
-  const auto sort_definition = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+  const auto sort_definition =
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
   auto sort = std::make_shared<Sort>(_table_wrapper, sort_definition);
   sort->execute();
 

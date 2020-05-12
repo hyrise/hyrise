@@ -365,9 +365,38 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
-    
+
     Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
   }
+
+  if (HYRISE_DEBUG) {
+    if (chunk_count > 1) {
+      for (const auto column_id : value_clustered_by) {
+        resolve_data_type(_column_definitions[column_id].data_type, [&](const auto column_data_type) {
+          using ColumnDataType = typename decltype(column_data_type)::type;
+
+          auto value_to_chunk_map = std::unordered_map<ColumnDataType, ChunkID>{};
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto& chunk = get_chunk(chunk_id);
+            const auto& segment = chunk->get_segment(column_id);
+            segment_with_iterators<ColumnDataType>(*segment, [&](auto iter, const auto end) {
+              Assert(!iter->is_null(), "Value clustering is not defined for columns storing NULLs.");
+
+              for (; iter != end; ++iter) {
+                const auto& value = iter->value();
+                const auto& [iter, inserted] = value_to_chunk_map.try_emplace(value, chunk_id);
+                if (!inserted) {
+                  Assert(value_to_chunk_map[value] == chunk_id, "Table cannot be set to value-clustered as same value "
+                                                                "is found in more than one chunk");
+                }
+              }
+            });
+          }
+        });
+      }
+    }
+  }
+
   _value_clustered_by = value_clustered_by;
 }
 

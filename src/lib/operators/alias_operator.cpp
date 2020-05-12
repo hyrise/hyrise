@@ -74,7 +74,19 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     // The alias operator does not affect sorted_by property. If a chunk was sorted before, it still is after.
     const auto& sorted_by = input_chunk->sorted_by();
     if (!sorted_by.empty()) {
-      output_chunk->set_sorted_by(sorted_by);
+      auto sort_definitions = std::vector<SortColumnDefinition>{};
+      sort_definitions.reserve(sorted_by.size());
+
+      // Adapt column ids
+      for (const auto sort_definition : sorted_by) {
+        const auto it = std::find(_column_ids.cbegin(), _column_ids.cend(), sort_definition.column);
+        Assert(it != _column_ids.cend(), "Chunk is sorted by an invalid column ID.");
+        const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};
+        sort_definitions.emplace_back(SortColumnDefinition(index,
+                                                           sort_definition.sort_mode));
+      }
+
+      output_chunk->set_sorted_by(sort_definitions);
     }
     output_chunks[chunk_id] = output_chunk;
   }

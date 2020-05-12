@@ -47,7 +47,8 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
   }
 
   // Verify that the sorted_by flag is set when it's present in input.
-  const auto sort_definition = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+  const auto sort_definition =
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
   auto sort = std::make_shared<Sort>(table_wrapper, sort_definition);
   sort->execute();
 
@@ -57,8 +58,9 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlag) {
   const auto result_table_sorted = alias_operator_sorted->get_output();
   for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
-    ASSERT_FALSE(sorted_by.empty());
-    EXPECT_EQ(sorted_by, sort_definition);
+    ASSERT_EQ(sorted_by.size(), 1);
+    EXPECT_EQ(sorted_by.front().column, ColumnID{1});
+    EXPECT_EQ(sorted_by.front().sort_mode, SortMode::Ascending);
   }
 }
 

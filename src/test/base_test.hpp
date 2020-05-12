@@ -88,6 +88,8 @@ bool file_exists(const std::string& name);
 
 bool compare_files(const std::string& original_file, const std::string& created_file);
 
+std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table);
+
 const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},
     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},

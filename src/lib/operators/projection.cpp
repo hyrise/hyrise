@@ -236,11 +236,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       std::vector<SortColumnDefinition> transformed;
       transformed.reserve(sorted_by.size());
       for (const auto& [column_id, mode] : sorted_by) {
-        if (!input_column_to_output_column.count(column_id)) continue;  // column is not present in output expression list
+        if (!input_column_to_output_column.count(column_id)) {
+          continue;  // column is not present in output expression list
+        }
         const auto projected_column_id = input_column_to_output_column[column_id];
         transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
-      chunk->set_sorted_by(transformed);
+      if (!transformed.empty()) {
+        chunk->set_sorted_by(transformed);  
+      }
     }
 
     output_chunks[chunk_id] = chunk;
