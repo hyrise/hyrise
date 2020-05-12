@@ -22,7 +22,7 @@ class OperatorJoinPredicateTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, a_b, b_a, b_b;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b;
 };
 
 TEST_F(OperatorJoinPredicateTest, FromExpression) {
@@ -31,12 +31,14 @@ TEST_F(OperatorJoinPredicateTest, FromExpression) {
   EXPECT_EQ(predicate_a->column_ids.first, ColumnID{0});
   EXPECT_EQ(predicate_a->column_ids.second, ColumnID{1});
   EXPECT_EQ(predicate_a->predicate_condition, PredicateCondition::Equals);
+  EXPECT_FALSE(predicate_a->is_flipped());
 
   const auto predicate_b = OperatorJoinPredicate::from_expression(*less_than_(b_a, a_b), *node_a, *node_b);
   ASSERT_TRUE(predicate_b);
   EXPECT_EQ(predicate_b->column_ids.first, ColumnID{1});
   EXPECT_EQ(predicate_b->column_ids.second, ColumnID{0});
   EXPECT_EQ(predicate_b->predicate_condition, PredicateCondition::GreaterThan);
+  EXPECT_TRUE(predicate_b->is_flipped());
 }
 
 TEST_F(OperatorJoinPredicateTest, FromExpressionImpossible) {

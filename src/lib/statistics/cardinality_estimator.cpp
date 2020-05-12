@@ -198,6 +198,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
           estimate_union_node(*union_node, left_input_table_statistics, right_input_table_statistics);
     } break;
 
+    // Currently there is no actual estimation being done and we always apply the worst case
+    case LQPNodeType::Intersect:
+    case LQPNodeType::Except: {
+      output_table_statistics = left_input_table_statistics;
+    } break;
+
     // These Node types should not be relevant during query optimization. Return an empty TableStatistics object for
     // them
     case LQPNodeType::CreateTable:

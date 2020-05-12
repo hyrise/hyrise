@@ -35,10 +35,13 @@ std::optional<Target> lossy_variant_cast(const AllTypeVariant& source) {
       result = boost::get<SourceDataType>(source);
     } else {
       if constexpr (std::is_same_v<pmr_string, SourceDataType> == std::is_same_v<pmr_string, Target>) {
+        using CommonDataType = std::common_type_t<SourceDataType, Target>;
         const auto source_value = boost::get<SourceDataType>(source);
-        if (source_value > std::numeric_limits<Target>::max()) {
+        if (static_cast<CommonDataType>(source_value) >
+            static_cast<CommonDataType>(std::numeric_limits<Target>::max())) {
           result = std::numeric_limits<Target>::max();
-        } else if (source_value < std::numeric_limits<Target>::lowest()) {
+        } else if (static_cast<CommonDataType>(source_value) <
+                   static_cast<CommonDataType>(std::numeric_limits<Target>::lowest())) {
           result = std::numeric_limits<Target>::lowest();
         } else {
           result = static_cast<Target>(boost::get<SourceDataType>(source));

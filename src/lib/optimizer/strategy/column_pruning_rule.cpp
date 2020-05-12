@@ -16,6 +16,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -66,14 +67,12 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
-    case LQPNodeType::Export:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
     case LQPNodeType::Root:
     case LQPNodeType::Sort:
     case LQPNodeType::StaticTable:
     case LQPNodeType::StoredTable:
-    case LQPNodeType::Union:
     case LQPNodeType::Validate:
     case LQPNodeType::Mock: {
       for (const auto& expression : node->node_expressions) {
@@ -85,7 +84,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-      // Handling COUNT(*) (which is represented as an LQPColumnReference with a valid original_node and an
+      // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
       // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
       // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
       // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
@@ -150,10 +149,26 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       }
     } break;
 
+    case LQPNodeType::Union: {
+      const auto& union_node = static_cast<const UnionNode&>(*node);
+      Assert(union_node.set_operation_mode == SetOperationMode::Positions,
+             "Currently, ColumnPruningRule can only handle UnionNodes in Positions mode");
+      // UnionNode does not require any expressions itself for the Positions mode. Once we add actual unions from two
+      // tables, we will probably have to change something here in this rule that the required expressions are kept on
+      // both the left and right sides.
+    } break;
+
+    case LQPNodeType::Intersect:
+    case LQPNodeType::Except: {
+      Fail("Intersect and Except are not supported yet");
+      // Not sure what needs to happen here. That partially depends on how intersect and except are finally implemented.
+    } break;
+
     // No pruning of the input columns for these nodes as they need them all.
     case LQPNodeType::CreateTable:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
+    case LQPNodeType::Export:
     case LQPNodeType::Update:
     case LQPNodeType::ChangeMetaTable: {
       const auto& left_input_expressions = node->left_input()->column_expressions();
@@ -237,16 +252,14 @@ void try_join_to_semi_rewrite(
       const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       if (!column) return false;
 
-      const auto& column_reference = column->column_reference;
-      const auto& stored_table_node =
-          std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
+      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
       if (!stored_table_node) return false;
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
       for (const auto& table_constraint : table->get_soft_unique_constraints()) {
         // This currently does not handle multi-column constraints, but that should be easy to add once needed.
         if (table_constraint.columns.size() > 1) continue;
-        if (table_constraint.columns[0] == column_reference.original_column_id()) {
+        if (table_constraint.columns[0] == column->original_column_id) {
           return true;
         }
       }
@@ -338,7 +351,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
           }
 
           const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-          pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
+          pruned_column_ids.emplace_back(column_expression->original_column_id);
         }
 
         if (pruned_column_ids.size() == node->column_expressions().size()) {

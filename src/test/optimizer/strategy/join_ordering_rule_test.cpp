@@ -40,7 +40,7 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  LQPColumnReference a_a, b_b, c_c, d_d;
+  std::shared_ptr<LQPColumnExpression> a_a, b_b, c_c, d_d;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
   std::shared_ptr<JoinOrderingRule> rule;
 };

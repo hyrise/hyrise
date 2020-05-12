@@ -60,8 +60,8 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   EXPECT_EQ(scaled_attribute_statistics->min_max_filter->min, 0);
   EXPECT_EQ(scaled_attribute_statistics->min_max_filter->max, 100);
 
-  EXPECT_FLOAT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).first, 0);
-  EXPECT_FLOAT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
+  EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).first, 0);
+  EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
 
   EXPECT_FLOAT_EQ(attribute_statistics.null_value_ratio->ratio, 0.2f);
 }
@@ -90,8 +90,8 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   EXPECT_EQ(scaled_attribute_statistics->min_max_filter->min, 51);
   EXPECT_EQ(scaled_attribute_statistics->min_max_filter->max, 100);
 
-  EXPECT_FLOAT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).first, 51);
-  EXPECT_FLOAT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
+  EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).first, 51);
+  EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
 
   EXPECT_FLOAT_EQ(attribute_statistics.null_value_ratio->ratio, 0.2f);
 }

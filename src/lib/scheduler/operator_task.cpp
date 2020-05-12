@@ -62,8 +62,8 @@ void OperatorTask::_on_execute() {
         // the expected default case
         break;
 
-      case TransactionPhase::Aborted:
-      case TransactionPhase::RolledBack:
+      case TransactionPhase::Conflicted:
+      case TransactionPhase::RolledBackAfterConflict:
         // The transaction already failed. No need to execute this.
         if (auto read_write_operator = std::dynamic_pointer_cast<AbstractReadWriteOperator>(_op)) {
           // Essentially a noop, because no modifications are recorded yet. Better be on the safe side though.
@@ -74,7 +74,10 @@ void OperatorTask::_on_execute() {
 
       case TransactionPhase::Committing:
       case TransactionPhase::Committed:
-        Fail("Trying to execute operators for a transaction that is already committed");
+        Fail("Trying to execute an operator for a transaction that is already committed");
+
+      case TransactionPhase::RolledBackByUser:
+        Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
     }
   }
 
@@ -89,7 +92,7 @@ void OperatorTask::_on_execute() {
   if (rw_operator && rw_operator->execute_failed()) {
     Assert(context, "Read/Write operator cannot have been executed without a context.");
 
-    context->rollback();
+    context->rollback(RollbackReason::Conflict);
   }
 
   // Get rid of temporary tables that are not needed anymore

@@ -5,16 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "memory/numa_memory_resource.hpp"
 #include "types.hpp"
-
-namespace boost {
-namespace container {
-namespace pmr {
-class memory_resource;
-}
-}  // namespace container
-}  // namespace boost
 
 namespace opossum {
 
@@ -82,8 +73,6 @@ class Topology final : public Noncopyable {
 
   size_t num_cpus() const;
 
-  boost::container::pmr::memory_resource* get_memory_resource(int node_id);
-
  private:
   Topology();
 
@@ -96,7 +85,6 @@ class Topology final : public Noncopyable {
   void _init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
   void _clear();
-  void _create_memory_resources();
 
   std::vector<TopologyNode> _nodes;
   uint32_t _num_cpus{0};
@@ -104,8 +92,6 @@ class Topology final : public Noncopyable {
   bool _filtered_by_affinity{false};
 
   static const int _number_of_hardware_nodes;
-
-  std::vector<NUMAMemoryResource> _memory_resources;
 };
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology);

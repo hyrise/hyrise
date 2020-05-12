@@ -35,7 +35,7 @@ class SemiJoinReductionRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<MockNode> _node_a, _node_b, _node_c;
-  LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a;
+  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a;
   std::shared_ptr<SemiJoinReductionRule> _rule{std::make_shared<SemiJoinReductionRule>()};
 };
 

@@ -47,6 +47,8 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
+    DebugAssert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
+                "Empty chunk other than mutable chunk at the end was found");
     DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
                 "Supply MvccData for Chunks iff Table uses MVCC");
     DebugAssert(chunk->column_count() == column_count(), "Invalid Chunk column count");
@@ -235,6 +237,16 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
     for (const auto& segment : segments) {
       const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
       Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+    }
+
+    // Check that existing chunks are not empty
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
+      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
     }
   }
 

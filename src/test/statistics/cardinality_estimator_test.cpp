@@ -16,7 +16,6 @@
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -101,9 +100,9 @@ class CardinalityEstimatorTest : public BaseTest {
          GenericHistogram<int32_t>::with_single_bin(50, 60, 100, 5),
          GenericHistogram<int32_t>::with_single_bin(110, 1100, 100, 2)});
 
-    d_a = LQPColumnReference{node_d, ColumnID{0}};
-    d_b = LQPColumnReference{node_d, ColumnID{1}};
-    d_c = LQPColumnReference{node_d, ColumnID{2}};
+    d_a = std::make_shared<LQPColumnExpression>(node_d, ColumnID{0});
+    d_b = std::make_shared<LQPColumnExpression>(node_d, ColumnID{1});
+    d_c = std::make_shared<LQPColumnExpression>(node_d, ColumnID{2});
 
     /**
      * node_e
@@ -143,7 +142,7 @@ class CardinalityEstimatorTest : public BaseTest {
   }
 
   CardinalityEstimator estimator;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
 };
 
@@ -533,7 +532,7 @@ TEST_F(CardinalityEstimatorTest, PredicateWithOneBetweenPredicate) {
        {PredicateCondition::BetweenInclusive, PredicateCondition::BetweenLowerExclusive,
         PredicateCondition::BetweenUpperExclusive, PredicateCondition::BetweenExclusive}) {
     const auto between_predicate =
-        std::make_shared<BetweenExpression>(between_predicate_condition, lqp_column_(a_a), value_(10), value_(89));
+        std::make_shared<BetweenExpression>(between_predicate_condition, a_a, value_(10), value_(89));
 
     // clang-format off
     const auto input_lqp =
@@ -868,7 +867,7 @@ TEST_F(CardinalityEstimatorTest, Union) {
 
   // clang-format off
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     node_a,
     node_b);
   // clang-format on

@@ -115,7 +115,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // In case the initial query plan root returned the same columns in the same column order and was not a projection,
     // it is likely that the result of the current aggregate was either the root itself or only operators followed that
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
-    // by adding a projection with the initial column_references since we changed the column order by moving columns
+    // by adding a projection with the initial column expressions since we changed the column order by moving columns
     // from the group-by list to the aggregations.
     if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
         root_lqp->type != LQPNodeType::Projection) {

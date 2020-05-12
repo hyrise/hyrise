@@ -26,11 +26,17 @@ struct OperatorJoinPredicate {
    */
   void flip();
 
+  /**
+   * Returns whether OperatorJoinPredicate has been flipped or not.
+   */
+  bool is_flipped() const;
+
   OperatorJoinPredicate(const ColumnIDPair& init_column_ids, const PredicateCondition init_predicate_condition);
 
   // `.first` is the Column in the left input, `.second` is the column in the right input
   ColumnIDPair column_ids;
   PredicateCondition predicate_condition;
+  bool flipped = false;
 };
 
 // For gtest

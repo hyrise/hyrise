@@ -14,10 +14,10 @@ namespace opossum {
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
 
-LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
+std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::string& name) const {
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_id = table->column_id_by_name(name);
-  return {shared_from_this(), column_id};
+  return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 }
 
 void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
@@ -79,7 +79,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_express
       }
 
       (*_column_expressions)[output_column_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), stored_column_id});
+          std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
       ++output_column_id;
     }
   }

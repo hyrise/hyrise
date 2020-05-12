@@ -40,7 +40,7 @@ class AbstractCostEstimatorTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a;
-  LQPColumnReference a_a;
+  std::shared_ptr<LQPColumnExpression> a_a;
 };
 
 TEST_F(AbstractCostEstimatorTest, DiamondShape) {
@@ -49,7 +49,7 @@ TEST_F(AbstractCostEstimatorTest, DiamondShape) {
   const auto predicate_a = PredicateNode::make(less_than_equals_(a_a, 5), node_a);
   const auto predicate_b = PredicateNode::make(equals_(a_a, 5), predicate_a);
   const auto predicate_c = PredicateNode::make(equals_(a_a, 6), predicate_b);
-  const auto union_node = UnionNode::make(UnionMode::Positions, predicate_b, predicate_c);
+  const auto union_node = UnionNode::make(SetOperationMode::Positions, predicate_b, predicate_c);
 
   const auto mock_costs =
       MockCosts{{node_a, 13.0f}, {predicate_a, 1.0f}, {predicate_b, 3.0f}, {predicate_c, 5.0f}, {union_node, 7.0f}};
@@ -82,7 +82,7 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
   const auto predicate_b = PredicateNode::make(equals_(a_a, 5), predicate_a);
   const auto predicate_c = PredicateNode::make(equals_(a_a, 6), predicate_b);
   const auto predicate_d = PredicateNode::make(equals_(a_a, 7), predicate_b);
-  const auto union_node = UnionNode::make(UnionMode::Positions, predicate_d, predicate_c);
+  const auto union_node = UnionNode::make(SetOperationMode::Positions, predicate_d, predicate_c);
 
   const auto mock_costs = MockCosts{{node_a, 13.0f},     {predicate_a, 1.0f},  {predicate_b, 3.0f},
                                     {predicate_c, 5.0f}, {predicate_d, 99.0f}, {union_node, 9.0f}};
