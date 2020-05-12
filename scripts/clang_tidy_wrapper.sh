@@ -15,5 +15,4 @@ if grep "$file_relative_to_source" $cmake_source_dir/.clang-tidy-ignore > /dev/n
 	exit 0
 else
 	exec clang-tidy-10 $file $@
-  exit $?
 fi
