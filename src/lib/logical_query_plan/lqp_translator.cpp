@@ -356,6 +356,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   //       primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
   // }
 
+  // TPC-H 19
+  // if (join_node->description() == "[Join] Mode: Semi [p_partkey = l_partkey]") { //||    // 1
+  //     return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
+  //       primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
+  // }
+
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
   const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
