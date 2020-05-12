@@ -98,7 +98,11 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
   const auto& column_expressions = this->column_expressions();
 
   for (const auto& constraint : unique_constraints) {
-    // We support FDs for non-nullable columns only
+
+    // We build FDs from two column sets: LeftColumnSet => RightColumnSet
+    // The left column set has to be
+    //  a) unique (a guarantee already provided by the current unique constraint) and
+    //  b) non-nullable
     if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
                     [this](const auto column_id) { return this->is_column_nullable(column_id); })) {
       continue;
@@ -107,16 +111,15 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     auto left = ExpressionUnorderedSet{};
     auto right = ExpressionUnorderedSet{};
 
-    // Gather column expressions for constraint's column ids
+    // Gather column expressions for constraint's column ids (FD's left column set)
     for(auto constraint_column_id : constraint.columns) {
       const auto lqp_column = column_expressions.at(constraint_column_id);
       left.insert(lqp_column);
     }
-
     Assert(left.size() == constraint.columns.size(),
            "Failed to collect all column expressions for constraint's column ids");
 
-    // Collect all columns that are not part of the non-NULL unique constraint. These will form the right side of the FD.
+    // Collect column expressions of the FD's right column set
     std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()),
                  [&left](std::shared_ptr<AbstractExpression> column_expr) { return !(left.contains(column_expr)); });
 
