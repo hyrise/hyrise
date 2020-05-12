@@ -63,7 +63,7 @@ void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
   // TODO: hack: assume that no other chunk is appended between append_mutable_chunk() and getting the id of the last chunk
   const auto num_chunks_before_append = _table->chunk_count();
   _table->append_mutable_chunk();        
-  const auto& last_chunk = _table->get_chunk(num_chunks_before_append);
+  const auto& last_chunk = _table->last_chunk();
   Assert(last_chunk, "failed to get last chunk");
   Assert(_table->chunk_count() == num_chunks_before_append + 1, "some additional chunk appeared");
   _clusters[cluster_key] = last_chunk;
