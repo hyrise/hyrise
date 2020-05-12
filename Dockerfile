@@ -9,7 +9,9 @@ RUN apt-get update \
         bc \
         clang-9 \
         clang-10 \
+        clang-format-9 \
         clang-format-10 \
+        clang-tidy-9 \
         clang-tidy-10 \
         cmake \
         curl \
