@@ -48,9 +48,7 @@ AbstractIndex::Iterator AbstractIndex::lower_bound(const std::vector<AllTypeVari
   return _lower_bound(values);
 }
 
-AbstractIndex::Iterator AbstractIndex::lower_bound(const AllTypeVariant& value) const {
-  return _lower_bound(value);
-}
+AbstractIndex::Iterator AbstractIndex::lower_bound(const AllTypeVariant& value) const { return _lower_bound(value); }
 
 AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert(
@@ -60,9 +58,7 @@ AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVari
   return _upper_bound(values);
 }
 
-AbstractIndex::Iterator AbstractIndex::upper_bound(const AllTypeVariant& value) const {
-  return _upper_bound(value);
-}
+AbstractIndex::Iterator AbstractIndex::upper_bound(const AllTypeVariant& value) const { return _upper_bound(value); }
 
 AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
 

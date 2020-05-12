@@ -71,8 +71,8 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  std::array<IndexRange, 2>  _index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                  const std::shared_ptr<AbstractIndex>& index);
+  std::array<IndexRange, 2> _index_ranges_for_value(const SegmentPosition probe_side_position,
+                                                    const std::shared_ptr<AbstractIndex>& index);
 
   void _append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
@@ -107,7 +107,6 @@ class JoinIndex : public AbstractJoinOperator {
   std::chrono::nanoseconds _duration_append_matches;
   std::chrono::nanoseconds _duration_append_matches_non_inner;
   std::chrono::nanoseconds _duration_index_ranges_for_value;
-
 };
 
 }  // namespace opossum

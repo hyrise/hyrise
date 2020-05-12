@@ -306,10 +306,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   // const auto& right = join_node->right_input();
   // std::cout << join_node->description() << std::endl;
   // if (left) {
-  //   std::cout << "left: " << left->description() << std::endl;   
+  //   std::cout << "left: " << left->description() << std::endl;
   // }
   // if (right) {
-  //   std::cout << "right: " << right->description() << std::endl;   
+  //   std::cout << "right: " << right->description() << std::endl;
   // }
 
   // if (join_node->join_mode == JoinMode::Cross) {
@@ -335,26 +335,26 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
   // TPC-H Q7
-  // if (//join_node->description() == "[Join] Mode: Semi [s_nationkey = n_nationkey]") { //|| // 1
-  //    //join_node->description() == "[Join] Mode: Semi [s_suppkey = l_suppkey]") { // ||     // 3 
-  //    //join_node->description() == "[Join] Mode: Semi [c_nationkey = n_nationkey]") { //||  // 4
-  //    join_node->description() == "[Join] Mode: Semi [c_custkey = o_custkey]") {             // 6
-  //     return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode, 
-  //       primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
+  // if (  //join_node->description() == "[Join] Mode: Semi [s_nationkey = n_nationkey]") { //|| // 1
+  //     //join_node->description() == "[Join] Mode: Semi [s_suppkey = l_suppkey]") { // ||     // 3
+  //     //join_node->description() == "[Join] Mode: Semi [c_nationkey = n_nationkey]") { //||  // 4
+  //     join_node->description() == "[Join] Mode: Semi [c_custkey = o_custkey]") {  // 6
+  //   return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
+  //                                      primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
   // }
 
   // TPC-H Q8
   // if (//join_node->description() == "[Join] Mode: Semi [p_partkey = l_partkey]") { //||    // 3
-  //    join_node->description() == "[Join] Mode: Semi [l_orderkey = o_orderkey]") { // ||  // 5 
-  //     return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode, 
+  //    join_node->description() == "[Join] Mode: Semi [l_orderkey = o_orderkey]") { // ||  // 5
+  //     return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
   //       primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
   // }
 
   // TPC-H 17
-  if (join_node->description() == "[Join] Mode: Semi [p_partkey = l_partkey]") { //||    // 1 & 3
-      return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode, 
-        primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
-  }
+  // if (join_node->description() == "[Join] Mode: Semi [p_partkey = l_partkey]") { //||    // 1 & 3
+  //     return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
+  //       primary_join_predicate, std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
+  // }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 
