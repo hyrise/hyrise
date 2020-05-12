@@ -151,7 +151,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
   // Constraint across all columns => No more columns available to create a functional dependency from
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint({_a.original_column_id(), _b.original_column_id(), _c.original_column_id()},
+  table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id, _c->original_column_id},
                                     IsPrimaryKey::No);
 
   EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
@@ -159,7 +159,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint({_a.original_column_id()}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 1);
@@ -167,19 +167,19 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
 
   // Check left
   EXPECT_EQ(fd.first.size(), 1);
-  EXPECT_TRUE(fd.first.contains(lqp_column_(_a)));
+  EXPECT_TRUE(fd.first.contains(_a));
 
   // Check right
   EXPECT_EQ(fd.second.size(), 2);
-  EXPECT_TRUE(fd.second.contains(lqp_column_(_b)));
-  EXPECT_TRUE(fd.second.contains(lqp_column_(_c)));
+  EXPECT_TRUE(fd.second.contains(_b));
+  EXPECT_TRUE(fd.second.contains(_c));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
 
   const auto table = Hyrise::get().storage_manager.get_table("t_a"); // int_int_float.tbl
-  table->add_soft_unique_constraint({_a.original_column_id()}, IsPrimaryKey::No);
-  table->add_soft_unique_constraint({_a.original_column_id(), _b.original_column_id()}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 2);
@@ -188,21 +188,21 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
 
   // Check left of fd1
   EXPECT_EQ(fd1.first.size(), 1);
-  EXPECT_TRUE(fd1.first.contains(lqp_column_(_a)));
+  EXPECT_TRUE(fd1.first.contains(_a));
 
   // Check right of fd1
   EXPECT_EQ(fd1.second.size(), 2);
-  EXPECT_TRUE(fd1.second.contains(lqp_column_(_b)));
-  EXPECT_TRUE(fd1.second.contains(lqp_column_(_c)));
+  EXPECT_TRUE(fd1.second.contains(_b));
+  EXPECT_TRUE(fd1.second.contains(_c));
 
   // Check left of fd2
   EXPECT_EQ(fd2.first.size(), 2);
-  EXPECT_TRUE(fd2.first.contains(lqp_column_(_a)));
-  EXPECT_TRUE(fd2.first.contains(lqp_column_(_b)));
+  EXPECT_TRUE(fd2.first.contains(_a));
+  EXPECT_TRUE(fd2.first.contains(_b));
 
   // Check right of fd2
   EXPECT_EQ(fd2.second.size(), 1);
-  EXPECT_TRUE(fd2.second.contains(lqp_column_(_c)));
+  EXPECT_TRUE(fd2.second.contains(_c));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {

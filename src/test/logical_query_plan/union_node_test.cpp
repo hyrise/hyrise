@@ -85,7 +85,7 @@ TEST_F(UnionNodeTest, DiscardFunctionalDependencies) {
   const auto table_name = "t_a";
   Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  table->add_soft_unique_constraint({_a.original_column_id()}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
   const auto stored_table_node = StoredTableNode::make(table_name);
   EXPECT_EQ(stored_table_node->functional_dependencies().size(), 1);
   // Create ValidateNode as it is required by UnionPositions
@@ -93,13 +93,13 @@ TEST_F(UnionNodeTest, DiscardFunctionalDependencies) {
   EXPECT_EQ(validate_node->functional_dependencies().size(), 1);
 
   // Test UnionAll (discard FDs)
-  auto union_all_node = UnionNode::make(UnionMode::All);
+  auto union_all_node = UnionNode::make(SetOperationMode::All);
   union_all_node->set_left_input(stored_table_node);
   union_all_node->set_right_input(stored_table_node);
   EXPECT_EQ(union_all_node->functional_dependencies().size(), 0);
 
   // Test UnionPositions (forward FDs)
-  auto union_positions_node = UnionNode::make(UnionMode::All);
+  auto union_positions_node = UnionNode::make(SetOperationMode::All);
   union_positions_node->set_left_input(validate_node);
   union_positions_node->set_right_input(validate_node);
 

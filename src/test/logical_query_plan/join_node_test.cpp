@@ -60,12 +60,12 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) {
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_join_node->column_expressions().size(), 5u);
-  EXPECT_EQ(*_join_node->column_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_join_node->column_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_join_node->column_expressions().at(2), *_t_a_c);
-  EXPECT_EQ(*_join_node->column_expressions().at(3), *_t_b_x);
-  EXPECT_EQ(*_join_node->column_expressions().at(4), *_t_b_y);
+  ASSERT_EQ(_cross_join_node->column_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(2), *_t_a_c);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(3), *_t_b_x);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(4), *_t_b_y);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(0), *_t_a_a);
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
@@ -212,8 +212,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
 
   // Prepare Self-JoinNode
   const auto stored_table_node = StoredTableNode::make(table_name);
-  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{0}));
-  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{1}));
+  const auto join_column_a = std::make_shared<LQPColumnExpression>(stored_table_node, ColumnID{0});
+  const auto join_column_b = std::make_shared<LQPColumnExpression>(stored_table_node, ColumnID{1});
   // clang-format off
   const auto self_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
                                              stored_table_node,
@@ -245,8 +245,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // Prepare JoinNodes
   const auto stored_table_node_a = StoredTableNode::make(table_name_a);
   const auto stored_table_node_b = StoredTableNode::make(table_name_b);
-  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node_a, ColumnID{0}));
-  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node_b, ColumnID{0}));
+  const auto join_column_a = std::make_shared<LQPColumnExpression>(stored_table_node_a, ColumnID{0});
+  const auto join_column_b = std::make_shared<LQPColumnExpression>(stored_table_node_b, ColumnID{0});
   // clang-format off
   const auto inner_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
                                  stored_table_node_a,
