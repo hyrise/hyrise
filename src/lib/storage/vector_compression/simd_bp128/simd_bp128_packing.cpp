@@ -297,7 +297,7 @@ void SimdBp128Packing::unpack_block(const uint128_t* in, uint32_t* out, const ui
     return;
   }
 
-  auto simd_in = reinterpret_cast<const simd_type*>(in);
+  const auto* simd_in = reinterpret_cast<const simd_type*>(in);
   auto simd_out = reinterpret_cast<simd_type*>(out);
 
   simd_type in_reg = *simd_in++;
