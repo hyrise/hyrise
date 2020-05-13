@@ -28,8 +28,8 @@ namespace opossum {
 template <typename T>
 void test_output(const std::shared_ptr<AbstractOperator> in,
                  const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
-                 const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, const size_t chunk_size,
-                 const bool test_aggregate_on_reference_table = true) {
+                 const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name,
+                 const size_t chunk_size) {
   // Load expected results from file.
   std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -54,16 +54,14 @@ void test_output(const std::shared_ptr<AbstractOperator> in,
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
 
-  if (test_aggregate_on_reference_table) {
-    // Perform a TableScan to create a reference table
-    const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
-    table_scan->execute();
+  // Perform a TableScan to create a reference table
+  const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
+  table_scan->execute();
 
-    // Perform the Aggregate on a reference table
-    const auto aggregate = std::make_shared<T>(table_scan, aggregates, groupby_column_ids);
-    aggregate->execute();
-    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
-  }
+  // Perform the Aggregate on a reference table
+  const auto aggregate = std::make_shared<T>(table_scan, aggregates, groupby_column_ids);
+  aggregate->execute();
+  EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
 }
 
 /**
@@ -100,7 +98,7 @@ class AggregateSortTest : public BaseTest {
 };
 
 TEST_F(AggregateSortTest, SingleAggregateMaxSorted) {
-  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
