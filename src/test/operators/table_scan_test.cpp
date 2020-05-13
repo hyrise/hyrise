@@ -1027,6 +1027,13 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
     // Cannot use ColumnBetweenTableScanImpl as lower bound is not a value
   }
 
+  {
+    const auto abstract_impl = TableScan{get_int_float_op(), between_exclusive_(column_a, 3, column_b)}.create_impl();
+    const auto impl = dynamic_cast<ExpressionEvaluatorTableScanImpl*>(abstract_impl.get());
+    ASSERT_TRUE(impl);
+    // Cannot use ColumnBetweenTableScanImpl as upper bound is not a value
+  }
+
   // clang-format on
 }
 

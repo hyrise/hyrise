@@ -81,7 +81,7 @@ SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 <= a;
 SELECT * FROM id_int_int_int_100 WHERE 91 >= a AND 20 < a;
 SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 < a;
 
--- Scans with BETWEEN that cannot be handled by ColumnBetweenTableScanImpl
+-- Scans with BETWEEN that cannot be handled by ColumnBetweenTableScanImpl, which supports scalar predicates only
 SELECT * FROM mixed WHERE 10 BETWEEN b AND 40
 SELECT * FROM mixed WHERE c BETWEEN b AND 100
 SELECT * FROM mixed WHERE b + 10 BETWEEN b AND c
