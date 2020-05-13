@@ -43,10 +43,10 @@ class LQPFindSubplanMismatchTest : public BaseTest {
     std::shared_ptr<SortNode> sort_node;
     std::shared_ptr<ProjectionNode> projection_node;
 
-    LQPColumnReference table_a_a;
-    LQPColumnReference table_b_a;
-    LQPColumnReference table_c_a;
-    LQPColumnReference table_c_b;
+    std::shared_ptr<LQPColumnExpression> table_a_a;
+    std::shared_ptr<LQPColumnExpression> table_b_a;
+    std::shared_ptr<LQPColumnExpression> table_c_b;
+    std::shared_ptr<LQPColumnExpression> table_c_c;
   };
 
   void SetUp() override {
@@ -62,22 +62,22 @@ class LQPFindSubplanMismatchTest : public BaseTest {
     query_nodes.mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
     query_nodes.mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});
 
-    query_nodes.table_a_a = LQPColumnReference{query_nodes.stored_table_node_a, ColumnID{0}};
-    query_nodes.table_b_a = LQPColumnReference{query_nodes.mock_node_a, ColumnID{0}};
-    query_nodes.table_c_a = LQPColumnReference{query_nodes.mock_node_b, ColumnID{0}};
-    query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, ColumnID{1}};
+    query_nodes.table_a_a = query_nodes.stored_table_node_a->get_column("a");
+    query_nodes.table_b_a = query_nodes.mock_node_a->get_column("a");
+    query_nodes.table_c_b = query_nodes.mock_node_b->get_column("b");
+    query_nodes.table_c_c = query_nodes.mock_node_b->get_column("c");
 
     query_nodes.predicate_node_a = PredicateNode::make(less_than_(query_nodes.table_a_a, 41));
     query_nodes.predicate_node_b = PredicateNode::make(between_inclusive_(query_nodes.table_a_a, 42, 45));
     query_nodes.union_node = UnionNode::make(SetOperationMode::Positions);
     query_nodes.limit_node = LimitNode::make(to_expression(10));
-    query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals_(query_nodes.table_a_a, query_nodes.table_c_b));
+    query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals_(query_nodes.table_a_a, query_nodes.table_c_c));
 
     query_nodes.aggregate_node =
-        AggregateNode::make(expression_vector(query_nodes.table_c_b), expression_vector(sum_(query_nodes.table_c_a)));
+        AggregateNode::make(expression_vector(query_nodes.table_c_c), expression_vector(sum_(query_nodes.table_c_b)));
 
     query_nodes.sort_node =
-        SortNode::make(expression_vector(query_nodes.table_c_b), std::vector<OrderByMode>{OrderByMode::Ascending});
+        SortNode::make(expression_vector(query_nodes.table_c_c), std::vector<OrderByMode>{OrderByMode::Ascending});
     query_nodes.projection_node = ProjectionNode::make(expression_vector(query_nodes.table_a_a));
   }
 

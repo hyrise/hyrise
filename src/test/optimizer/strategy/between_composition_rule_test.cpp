@@ -38,7 +38,7 @@ class BetweenCompositionTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<MockNode> _node_a, _node_b;
-  LQPColumnReference _a_a, _a_b, _a_c, _b_a;
+  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _a_c, _b_a;
   std::shared_ptr<BetweenCompositionRule> _rule;
 };
 

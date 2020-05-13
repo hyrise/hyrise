@@ -83,8 +83,6 @@ class LQPTranslatorTest : public BaseTest {
     int_float_node = StoredTableNode::make("table_int_float");
     int_float_a = int_float_node->get_column("a");
     int_float_b = int_float_node->get_column("b");
-    int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
-    int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
 
     int_string_node = StoredTableNode::make("table_int_string");
     int_string_a = int_string_node->get_column("a");
@@ -101,9 +99,8 @@ class LQPTranslatorTest : public BaseTest {
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
   std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
-  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a,
-      int_float5_d;
-  std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
+  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b,
+      int_float5_a, int_float5_d;
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
@@ -130,8 +127,8 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
    * LQP resembles:
    *   SELECT a + b FROM table_int_float;
    */
-  const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression,
-                                                                   int_float_b_expression);
+  const auto a_plus_b_lqp =
+      std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a, int_float_b);
   const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({a_plus_b_lqp});
   const auto projection_node = ProjectionNode::make(projection_expressions, int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(projection_node);
@@ -448,9 +445,8 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
   {
-    auto pipeline_statement =
-        SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
-    const auto pqp = pipeline_statement.get_physical_plan();
+    auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline();
+    const auto pqp = pipeline_statement.get_physical_plans().at(0);
     lqp_node = pqp->lqp_node;
     EXPECT_FALSE(lqp_node.expired());
   }

@@ -358,7 +358,21 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   int size_x;
   rl_get_screen_size(&size_y, &size_x);
 
-  const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+  std::stringstream stream;
+  Print::print(table, flags, stream);
+
+  bool fits_on_one_page = true;
+  auto stream_backup = stream.str();
+  std::string line;
+  size_t line_count = 0;
+  while (std::getline(stream, line, '\n')) {
+    ++line_count;
+    if (line.length() > static_cast<uint64_t>(size_x) || line_count > static_cast<uint64_t>(size_y) - 2) {
+      fits_on_one_page = false;
+      break;
+    }
+  }
+  stream.str(stream_backup);
 
   static bool pagination_disabled = false;
   if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
@@ -367,12 +381,10 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
     pagination_disabled = true;
   }
 
-  // Paginate only if table has more rows that fit in the terminal
+  // Paginate only if table has more rows or printed columns that fit in the terminal
   if (fits_on_one_page || pagination_disabled) {
-    Print::print(table, flags, _out);
+    _out << stream.rdbuf();
   } else {
-    std::stringstream stream;
-    Print::print(table, flags, stream);
     _pagination_active = true;
     Pagination(stream).display();
     _pagination_active = false;

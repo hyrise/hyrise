@@ -31,7 +31,7 @@ class LQPUtilsTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, a_b, b_x, b_y;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_x, b_y;
 };
 
 TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {

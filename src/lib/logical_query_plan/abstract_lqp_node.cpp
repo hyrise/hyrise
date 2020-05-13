@@ -59,9 +59,8 @@ AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
     : type(node_type), node_expressions(init_node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
-  Assert(
-      _outputs.empty(),
-      "Bug detected. There are outputs that should still reference to this node. Thus this node shouldn't get deleted");
+  Assert(_outputs.empty(),
+         "There are outputs that should still reference this node. Thus this node shouldn't get deleted");
 
   // We're in the destructor, thus we must make sure we're not calling any virtual methods - so we're doing the removal
   // directly instead of calling set_input_left/right(nullptr)

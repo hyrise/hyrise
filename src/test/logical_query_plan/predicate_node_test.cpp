@@ -17,14 +17,14 @@ class PredicateNodeTest : public BaseTest {
                                             load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
-    _i = {_table_node, ColumnID{0}};
-    _f = {_table_node, ColumnID{1}};
+    _i = lqp_column_(_table_node, ColumnID{0});
+    _f = lqp_column_(_table_node, ColumnID{1});
 
     _predicate_node = PredicateNode::make(equals_(_i, 5), _table_node);
   }
 
   std::shared_ptr<StoredTableNode> _table_node;
-  LQPColumnReference _i, _f;
+  std::shared_ptr<LQPColumnExpression> _i, _f;
   std::shared_ptr<PredicateNode> _predicate_node;
 };
 
@@ -33,7 +33,7 @@ TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description
 TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
   const auto equal_table_node = StoredTableNode::make("table_a");
-  LQPColumnReference equal_i{equal_table_node, ColumnID{0}};
+  const auto equal_i = equal_table_node->get_column("i");
 
   const auto other_predicate_node_a = PredicateNode::make(equals_(_i, 5), _table_node);
   const auto other_predicate_node_b = PredicateNode::make(equals_(_f, 5), _table_node);

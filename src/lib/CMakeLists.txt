@@ -9,13 +9,8 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-    cache/abstract_cache_impl.hpp
-    cache/cache.hpp
+    cache/abstract_cache.hpp
     cache/gdfs_cache.hpp
-    cache/gds_cache.hpp
-    cache/lru_cache.hpp
-    cache/lru_k_cache.hpp
-    cache/random_cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -143,8 +138,6 @@ set(
     logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
-    logical_query_plan/lqp_column_reference.cpp
-    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
@@ -168,8 +161,6 @@ set(
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
     memory/boost_default_memory_resource.cpp
-    memory/numa_memory_resource.cpp
-    memory/numa_memory_resource.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     null_value.hpp
@@ -599,6 +590,10 @@ set(
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
     utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_system_information_table.cpp
+    utils/meta_tables/meta_system_information_table.hpp
+    utils/meta_tables/meta_system_utilization_table.cpp
+    utils/meta_tables/meta_system_utilization_table.hpp
     utils/meta_tables/meta_tables_table.cpp
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
@@ -658,7 +653,7 @@ if (NOT APPLE)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
-    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
 
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
