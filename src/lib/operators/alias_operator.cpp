@@ -78,7 +78,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       sort_definitions.reserve(sorted_by.size());
 
       // Adapt column ids
-      for (const auto sort_definition : sorted_by) {
+      for (const auto& sort_definition : sorted_by) {
         const auto it = std::find(_column_ids.cbegin(), _column_ids.cend(), sort_definition.column);
         Assert(it != _column_ids.cend(), "Chunk is sorted by an invalid column ID.");
         const auto index = ColumnID{static_cast<uint16_t>(std::distance(_column_ids.cbegin(), it))};

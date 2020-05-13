@@ -23,7 +23,7 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
   // Create sort definition vector from group by list for sort operator
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   sort_definitions.reserve(column_ids.size());
-  for (const auto column_id : column_ids) {
+  for (const auto& column_id : column_ids) {
     sort_definitions.emplace_back(SortColumnDefinition{column_id, SortMode::Ascending});
   }
 
