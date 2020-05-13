@@ -6,7 +6,7 @@ namespace opossum {
 
 MetaCachedOperatorsTable::MetaCachedOperatorsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"operator", DataType::String, false},
-                                               {"statement_hash", DataType::String, false},
+                                               {"query_hash", DataType::String, false},
                                                {"description", DataType::String, false},
                                                {"walltime_ns", DataType::Long, false},
                                                {"output_chunks", DataType::Long, false},
@@ -23,8 +23,7 @@ std::shared_ptr<Table> MetaCachedOperatorsTable::_on_generate() const {
 
   const auto cache_map = Hyrise::get().default_pqp_cache->snapshot();
 
-  for (auto iter = cache_map.begin(); iter != cache_map.end(); ++iter) {
-    const auto& [query_string, entry] = *iter;
+  for (const auto& [query_string, entry] : cache_map) {
     std::stringstream query_hex_hash;
     query_hex_hash << std::hex << std::hash<std::string>{}(query_string);
 
@@ -51,11 +50,9 @@ void MetaCachedOperatorsTable::_process_pqp(
   const auto right_input = op->input_right();
   if (left_input && !visited_pqp_nodes.contains(left_input)) {
     _process_pqp(left_input, query_hex_hash, visited_pqp_nodes, output_table);
-    visited_pqp_nodes.insert(left_input);
   }
   if (right_input && !visited_pqp_nodes.contains(right_input)) {
     _process_pqp(right_input, query_hex_hash, visited_pqp_nodes, output_table);
-    visited_pqp_nodes.insert(right_input);
   }
 }
 

@@ -36,11 +36,11 @@ class MetaTableManagerTest : public BaseTest {
             std::make_shared<MetaSegmentsAccurateTable>(),
             std::make_shared<MetaPluginsTable>(),
             std::make_shared<MetaSettingsTable>(),
+            std::make_shared<MetaLogTable>(),
             std::make_shared<MetaSystemInformationTable>(),
             std::make_shared<MetaSystemUtilizationTable>(),
             std::make_shared<MetaCachedQueriesTable>(),
-            std::make_shared<MetaCachedOperatorsTable>(),
-            std::make_shared<MetaLogTable>()};
+            std::make_shared<MetaCachedOperatorsTable>()};
   }
 
   static MetaTableNames meta_table_names() {

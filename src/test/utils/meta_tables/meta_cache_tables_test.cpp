@@ -19,6 +19,14 @@ class MetaCacheTablesTest : public BaseTest {
   std::vector<AllTypeVariant> queries_values;
   std::vector<AllTypeVariant> operators_values;
 
+#ifdef __GLIBCXX__
+  const pmr_string query_hash = pmr_string{"32d82bf8ed3dba39"};
+#elif _LIBCPP_VERSION
+  const pmr_string query_hash = pmr_string{"3a912f483a4ece31"};
+#else
+  static_assert(false, "Unknown c++ library");
+#endif
+
   void SetUp() {
     Hyrise::reset();
     auto& storage_manager = Hyrise::get().storage_manager;
@@ -29,21 +37,21 @@ class MetaCacheTablesTest : public BaseTest {
     get_table = std::make_shared<GetTable>("int_int");
     get_table->execute();
 
-    queries_table = std::make_shared<Table>(TableColumnDefinitions{{"statement_hash", DataType::String, false},
+    queries_table = std::make_shared<Table>(TableColumnDefinitions{{"hash_value", DataType::String, false},
                                                                    {"frequency", DataType::Int, false},
                                                                    {"sql_string", DataType::String, false}},
                                             TableType::Data);
-    queries_values = {pmr_string{"32d82bf8ed3dba39"}, 1, pmr_string{"abc"}};
+    queries_values = {query_hash, 1, pmr_string{"abc"}};
 
     operators_table = std::make_shared<Table>(TableColumnDefinitions{{"operator", DataType::String, false},
-                                                                     {"statement_hash", DataType::String, false},
+                                                                     {"query_hash", DataType::String, false},
                                                                      {"description", DataType::String, false},
                                                                      {"walltime_ns", DataType::Long, false},
                                                                      {"output_chunks", DataType::Long, false},
                                                                      {"output_rows", DataType::Long, false}},
                                               TableType::Data);
     operators_values = {pmr_string{get_table->name()},
-                        pmr_string{"32d82bf8ed3dba39"},
+                        query_hash,
                         pmr_string{get_table->description()},
                         static_cast<int64_t>(get_table->performance_data().walltime.count()),
                         static_cast<int64_t>(1),
