@@ -120,7 +120,8 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
 
     // Collect column expressions of the FD's right column set
     std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()),
-                 [&left](std::shared_ptr<AbstractExpression> column_expr) { return !(left.contains(column_expr)); });
+                 [&left](const std::shared_ptr<AbstractExpression> &column_expr) { return !(left.contains(column_expr));
+                 });
 
     // Create functional dependency
     if (!right.empty() && std::all_of(right.cbegin(), right.cend(), [this](const auto& right_column_expr) {
