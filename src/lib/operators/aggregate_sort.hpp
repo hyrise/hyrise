@@ -118,7 +118,7 @@ class AggregateSort : public AbstractAggregateOperator {
  private:
   /**
    * Sort the whole input table by sorting each chunk individually. Should only be used if caller can guarantee that
-   * each value in the group by columns does only occur in exactly one chunk (i.e., table is value clustered).
+   * each value in the group by columns does only occur in exactly one chunk (i.e., table is clustered by value).
    */
   static std::shared_ptr<Table> _sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
                                                        const std::vector<ColumnID>& groupby_column_ids);
