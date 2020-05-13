@@ -58,7 +58,6 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const Exp
           aggregate_node.node_expressions.end());
       Assert(aggregate_node.aggregate_expressions_begin_idx < begin_idx_before,
              "Failed to remove column from group-by list.");
-
       // Add the ANY() aggregate to the list of aggregate columns.
       const auto aggregate_any_expression = any_(group_by_column);
       aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
@@ -90,28 +89,35 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
 
     // Gather group-by columns
-    ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
-    auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
-    std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx,
+    const auto fetch_group_by_columns = [&aggregate_node]() {
+      ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
+      auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
+      std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx,
               std::inserter(group_by_columns, group_by_columns.end()));
+      return group_by_columns;
+    };
+    auto group_by_columns = fetch_group_by_columns();
 
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
     std::sort(fds.begin(), fds.end(),
               [](const auto& fd_left, const auto& fd_right) { return fd_left.first.size() < fd_right.first.size(); });
 
-    // --- Main ---
-    // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint. Multiple
-    // constraints might result in different group-by lists (depending on the number of columns of the constraint).
-    // We stop as soon as one constraint successfully reduced the group-by list. There is no advantage in a second
-    // reduction if the first reduction was successful, because no further columns will be removed. Hence, as soon as
-    // one reduction took place, we can ignore the remaining constraints.
+    // --- Main: Reduction phase ---
+    // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint.
     auto group_by_list_changed = false;
     for (const auto& fd : fds) {
-      group_by_list_changed |= remove_dependent_group_by_columns(fd, group_by_columns, aggregate_node);
-      if (group_by_list_changed) break;
+      // Early exit: The FD's left column set has to be a subset of the group-by columns
+      if(group_by_columns.size() < fd.first.size()) continue;
+
+      bool success = remove_dependent_group_by_columns(fd, group_by_columns, aggregate_node);
+      if(success) {
+        // Refresh data structures correspondingly
+        group_by_list_changed = true;
+        group_by_columns = fetch_group_by_columns();
+      }
     }
 
-    // --- Finish ---
+    // --- Finish: Ensure correct column order ---
     // In case the initial query plan root returned the same columns in the same column order and was not a projection,
     // it is likely that the result of the current aggregate was either the root itself or only operators followed that
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
