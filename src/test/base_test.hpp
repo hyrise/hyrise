@@ -7,7 +7,7 @@
 
 #include "gtest/gtest.h"
 
-#include "cache/cache.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"

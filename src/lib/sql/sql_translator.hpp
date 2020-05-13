@@ -26,7 +26,7 @@ class Table;
  * cacheable :                            indicates if the resulting LQP can be cached
  * parameter_ids_of_value_placeholders :  the parameter ids of value placeholders
 */
-struct TranslationInfo {
+struct SQLTranslationInfo {
   bool cacheable{true};
   std::vector<ParameterID> parameter_ids_of_value_placeholders{};
 };
@@ -38,7 +38,7 @@ struct TranslationInfo {
 */
 struct SQLTranslationResult {
   std::vector<std::shared_ptr<AbstractLQPNode>> lqp_nodes;
-  TranslationInfo translation_info;
+  SQLTranslationInfo translation_info;
 };
 
 /**

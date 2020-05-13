@@ -1,7 +1,9 @@
 #include "strategy_base_test.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -554,6 +556,41 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneDeleteInputs) {
   DeleteNode::make(
     PredicateNode::make(greater_than_(a, 5),
       node_a));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+  const auto expected_lqp = lqp->deep_copy();
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, DoNotPruneExportInputs) {
+  // Do not prune away input columns to Export, Export needs them all
+
+  // clang-format off
+  const auto lqp =
+  ExportNode::make("dummy", "dummy.csv", FileType::Auto,
+    PredicateNode::make(greater_than_(a, 5),
+      node_a));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+  const auto expected_lqp = lqp->deep_copy();
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
+  // Do not prune away input columns to ChangeMetaTable, ChangeMetaTable needs them all
+
+  // clang-format off
+  const auto select_rows_lqp =
+  PredicateNode::make(greater_than_(a, 5),
+    node_a);
+
+  const auto lqp =
+  ChangeMetaTableNode::make("dummy", MetaTableChangeType::Update,
+    select_rows_lqp,
+    ProjectionNode::make(expression_vector(a, add_(b, 1), c),
+      select_rows_lqp));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
