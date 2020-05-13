@@ -217,23 +217,25 @@ TEST_F(StorageChunkTest, RemoveIndex) {
             indexes_for_segment_0.cend());
 }
 
-TEST_F(StorageChunkTest, OrderedBy) {
+TEST_F(StorageChunkTest, SetSortedInformationSingle) {
   EXPECT_TRUE(chunk->sorted_by().empty());
-  const auto sorted_by_vector_single_column =
-      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+  const auto sorted_by = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
   chunk->finalize();
-  chunk->set_sorted_by(sorted_by_vector_single_column);
-  EXPECT_EQ(chunk->sorted_by(), sorted_by_vector_single_column);
+  chunk->set_sorted_by(sorted_by);
+  EXPECT_EQ(chunk->sorted_by().size(), 1);
+  EXPECT_EQ(chunk->sorted_by().front(), sorted_by);
+}
 
-  const auto sorted_by_vector_two_columns = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
-                                                        SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
-  chunk->set_sorted_by(sorted_by_vector_two_columns);
-  EXPECT_EQ(chunk->sorted_by(), sorted_by_vector_two_columns);
-
-  const auto single_sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
-  chunk->set_sorted_by(single_sort_column_definition);
-  const auto sorted_by_vector = std::vector{single_sort_column_definition};
+TEST_F(StorageChunkTest, SetSortedInformationVector) {
+  EXPECT_TRUE(chunk->sorted_by().empty());
+  const auto sorted_by_vector = std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
+                                            SortColumnDefinition(ColumnID{1}, SortMode::Descending)};
+  chunk->finalize();
+  chunk->set_sorted_by(sorted_by_vector);
   EXPECT_EQ(chunk->sorted_by(), sorted_by_vector);
+
+  // Resetting the sorted information is not allowed
+  EXPECT_THROW(chunk->set_sorted_by(sorted_by_vector), std::logic_error);
 }
 
 }  // namespace opossum
