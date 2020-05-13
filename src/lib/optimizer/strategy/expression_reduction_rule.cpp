@@ -213,7 +213,7 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   // Find next value according to ASCII-table
   constexpr int MAX_ASCII_VALUE = 127;
-  if (current_character_value == MAX_ASCII_VALUE) {
+  if (current_character_value >= MAX_ASCII_VALUE) {
     // current_character_value + 1 would overflow; use regexp-based LIKE for this edge case
     return;
   }
