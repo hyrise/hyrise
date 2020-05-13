@@ -5,8 +5,8 @@
 #include <mach/mach.h>
 #endif
 
-#include "meta_system_utilization_table.hpp"
 #include "hyrise.hpp"
+#include "meta_system_utilization_table.hpp"
 
 namespace opossum {
 

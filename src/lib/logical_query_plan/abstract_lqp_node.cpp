@@ -262,9 +262,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   if (!fds_right.empty()) {
     // Remove duplicate FDs that might result from e.g. self-joins
     for (const auto& fd_right : fds_right) {
-      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(), [&fd_right](const auto& fd_left) {
-        return (fd_left == fd_right);
-      });
+      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
+                                   [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
       if (!duplicate) {
         fds_in.push_back(fd_right);
       }
@@ -279,19 +278,18 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // Collect non-nullable columns
   auto column_expressions = this->column_expressions();
   auto column_expressions_non_nullable = ExpressionUnorderedSet{};
-  for(auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-    if(!is_column_nullable(column_id)) {
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+    if (!is_column_nullable(column_id)) {
       column_expressions_non_nullable.insert(column_expressions.at(column_id));
     }
   }
 
   for (const auto& fd : fds_in) {
-
     // Check, whether left column set is subset of current node's non-nullable output expressions
-    if (std::any_of(fd.first.cbegin(), fd.first.cend(),
-                    [&column_expressions_non_nullable](const auto& expression) {
-                      return !column_expressions_non_nullable.contains(expression);
-                    })) continue;
+    if (std::any_of(fd.first.cbegin(), fd.first.cend(), [&column_expressions_non_nullable](const auto& expression) {
+          return !column_expressions_non_nullable.contains(expression);
+        }))
+      continue;
 
     // We do not check the columns of the FD's right column set since they are allowed to be nullable.
 

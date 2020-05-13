@@ -98,7 +98,6 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
   const auto& column_expressions = this->column_expressions();
 
   for (const auto& constraint : unique_constraints) {
-
     // We build FDs from two column sets: LeftColumnSet => RightColumnSet
     // The left column set has to be
     //  a) unique (a guarantee already provided by the current unique constraint) and
@@ -112,7 +111,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     auto right = ExpressionUnorderedSet{};
 
     // Gather column expressions for constraint's column ids (FD's left column set)
-    for(auto constraint_column_id : constraint.columns) {
+    for (auto constraint_column_id : constraint.columns) {
       const auto lqp_column = column_expressions.at(constraint_column_id);
       left.insert(lqp_column);
     }

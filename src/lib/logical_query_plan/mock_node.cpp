@@ -62,9 +62,7 @@ void MockNode::set_functional_dependencies(const std::vector<FunctionalDependenc
   _functional_dependencies = fds;
 }
 
-std::vector<FunctionalDependency> MockNode::functional_dependencies() const {
-  return _functional_dependencies;
-}
+std::vector<FunctionalDependency> MockNode::functional_dependencies() const { return _functional_dependencies; }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),

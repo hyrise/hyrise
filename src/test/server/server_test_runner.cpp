@@ -13,7 +13,6 @@
 #include "server/server.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-
 namespace opossum {
 
 // This class tests supported operations of the server implementation. This does not include statements with named

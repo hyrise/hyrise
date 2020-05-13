@@ -281,11 +281,10 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
 // Check, whether we can reduce the group-by list twice.
 TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
-
   // Since this is a special FD-scenario that can not be generated from UniqueConstraints and StoredTableNodes at the
   // moment, we have to use a custom MockNode:
-  auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"},
-      {DataType::Int, "c"}, {DataType::Int, "d"}, {DataType::Int, "e"}});
+  auto mock_node = MockNode::make(MockNode::ColumnDefinitions{
+      {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}, {DataType::Int, "e"}});
   auto a = mock_node->get_column("a");
   auto b = mock_node->get_column("b");
   auto c = mock_node->get_column("c");

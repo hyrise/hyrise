@@ -25,7 +25,7 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions()
 }
 
 std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
-  switch(set_operation_mode) {
+  switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::All:
       // No guarantees, since UnionAll can break any FD depending on the input.
@@ -33,7 +33,8 @@ std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
     case SetOperationMode::Positions:
       // By definition, UnionPositions requires both input tables to have the same table origin and structure.
       // Therefore, we can forward the FDs of either the left or right input node.
-      DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(), "Expected "
+      DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(),
+                  "Expected "
                   "both input nodes to have the same FDs.");
       return left_input()->functional_dependencies();
   }

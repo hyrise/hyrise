@@ -25,7 +25,7 @@ using namespace opossum;  // NOLINT
  * @returns   Boolean value denoting whether at the group-by list of @param aggregate_node changed.
  */
 bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const ExpressionUnorderedSet& group_by_columns,
-                                    AggregateNode& aggregate_node) {
+                                       AggregateNode& aggregate_node) {
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list
@@ -93,7 +93,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
       auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
       std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx,
-              std::inserter(group_by_columns, group_by_columns.end()));
+                std::inserter(group_by_columns, group_by_columns.end()));
       return group_by_columns;
     };
     auto group_by_columns = fetch_group_by_columns();
@@ -107,10 +107,10 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     auto group_by_list_changed = false;
     for (const auto& fd : fds) {
       // Early exit: The FD's left column set has to be a subset of the group-by columns
-      if(group_by_columns.size() < fd.first.size()) continue;
+      if (group_by_columns.size() < fd.first.size()) continue;
 
       bool success = remove_dependent_group_by_columns(fd, group_by_columns, aggregate_node);
-      if(success) {
+      if (success) {
         // Refresh data structures correspondingly
         group_by_list_changed = true;
         group_by_columns = fetch_group_by_columns();
