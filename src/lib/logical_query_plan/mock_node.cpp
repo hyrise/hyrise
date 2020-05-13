@@ -58,6 +58,14 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
   return false;
 }
 
+void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+  _functional_dependencies = fds;
+}
+
+std::vector<FunctionalDependency> MockNode::functional_dependencies() const {
+  return _functional_dependencies;
+}
+
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
