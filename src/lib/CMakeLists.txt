@@ -574,6 +574,10 @@ set(
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
     utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_cached_operators_table.cpp
+    utils/meta_tables/meta_cached_operators_table.hpp
+    utils/meta_tables/meta_cached_queries_table.cpp
+    utils/meta_tables/meta_cached_queries_table.hpp
     utils/meta_tables/meta_chunk_sort_orders_table.cpp
     utils/meta_tables/meta_chunk_sort_orders_table.hpp
     utils/meta_tables/meta_chunks_table.cpp

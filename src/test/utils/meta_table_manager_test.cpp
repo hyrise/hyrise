@@ -5,6 +5,8 @@
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/meta_tables/meta_cached_operators_table.hpp"
+#include "utils/meta_tables/meta_cached_queries_table.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
@@ -36,7 +38,9 @@ class MetaTableManagerTest : public BaseTest {
             std::make_shared<MetaSettingsTable>(),
             std::make_shared<MetaLogTable>(),
             std::make_shared<MetaSystemInformationTable>(),
-            std::make_shared<MetaSystemUtilizationTable>()};
+            std::make_shared<MetaSystemUtilizationTable>(),
+            std::make_shared<MetaCachedQueriesTable>(),
+            std::make_shared<MetaCachedOperatorsTable>()};
   }
 
   static MetaTableNames meta_table_names() {

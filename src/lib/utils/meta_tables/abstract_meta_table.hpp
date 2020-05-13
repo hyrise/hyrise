@@ -33,6 +33,7 @@ class AbstractMetaTable : public Noncopyable {
   friend class MetaTableManager;
   friend class MetaTableManagerTest;
   friend class MetaTableTest;
+  friend class MetaCacheTablesTest;
   friend class MetaPluginsTest;
   friend class MetaSettingsTest;
   friend class MetaSystemUtilizationTest;
