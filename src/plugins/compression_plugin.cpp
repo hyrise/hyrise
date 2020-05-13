@@ -163,6 +163,11 @@ void CompressionPlugin::_optimize_compression() {
     if (_stop_requested) {
       break;
     }
+
+    if (!Hyrise::get().storage_manager.has_table(column_config[1])) {
+      continue;
+    }
+
     if (memory_usage_reduction > 0 && memory_usage_reduction < achieved_memory_usage_reduction) {
       // If we want to reduce and we have already reduced more than requested: break.
       break;
