@@ -293,6 +293,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   }
 
   if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+    // The ColumnBetweenTableScanImpl expects both values to be of the same data type as the column that is being
+    // scanned. We retrieve the lower and upper bounds of the BetweenExpression, perform a
+    // lossless_predicate_variant_cast into the column's data type and reassemble the between condition.
+
     auto predicate_condition = between_expression->predicate_condition;
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
 
@@ -324,7 +328,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     predicate_condition = conditions_to_between(lower_condition, upper_condition);
 
-    // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
+    // Predicate pattern: <column of type T> BETWEEN <value of type T> AND <value of type T>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
