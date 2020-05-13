@@ -4,9 +4,6 @@
 
 #include "base_test.hpp"
 
-#include "cache/gdfs_cache.hpp"
-#include "cache/lru_cache.hpp"
-#include "cache/lru_k_cache.hpp"
 #include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
@@ -37,6 +34,8 @@ class QueryPlanCacheTest : public BaseTest {
     }
   }
 
+  size_t query_frequency(const std::string& key) const { return (*(cache->_map.find(key)->second)).frequency; }
+
   const std::string Q1 = "SELECT * FROM table_a;";
   const std::string Q2 = "SELECT * FROM table_b;";
   const std::string Q3 = "SELECT * FROM table_a WHERE a > 1;";
@@ -59,38 +58,13 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
   EXPECT_FALSE(cache->has(Q2));
 
   // Retrieve and execute the cached plan.
-  const auto cached_plan = cache->get_entry(Q1);
+  const auto cached_plan = cache->try_get(Q1);
   EXPECT_EQ(cached_plan, pipeline.get_physical_plans().at(0));
-}
-
-// Test query plan cache with LRU implementation.
-TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
-  cache->replace_cache_impl<LRUCache<std::string, std::shared_ptr<AbstractOperator>>>(2);
-
-  // Execute the queries in arbitrary order.
-  execute_query(Q1);  // Miss.
-  execute_query(Q2);  // Miss.
-  execute_query(Q1);  // Hit.
-  execute_query(Q3);  // Miss, evict Q2.
-  execute_query(Q3);  // Hit.
-  execute_query(Q1);  // Hit.
-  execute_query(Q2);  // Miss, evict Q3.
-  execute_query(Q1);  // Hit.
-  execute_query(Q3);  // Miss, evict Q2.
-  execute_query(Q1);  // Hit.
-
-  EXPECT_TRUE(cache->has(Q1));
-  EXPECT_FALSE(cache->has(Q2));
-  EXPECT_TRUE(cache->has(Q3));
-  EXPECT_FALSE(cache->has("SELECT * FROM test;"));
-
-  // Check for the expected number of hits.
-  EXPECT_EQ(5u, _query_plan_cache_hits);
 }
 
 // Test query plan cache with GDFS implementation.
 TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
-  cache->replace_cache_impl<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>>(2);
+  cache = std::make_shared<SQLPhysicalPlanCache>(2);
 
   // Execute the queries in arbitrary order.
   execute_query(Q1);  // Miss.
@@ -117,32 +91,6 @@ TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
   EXPECT_EQ(9u, _query_plan_cache_hits);
 }
 
-// Test query plan cache with LRUK implementation.
-TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
-  cache->replace_cache_impl<LRUKCache<2, std::string, std::shared_ptr<AbstractOperator>>>(2);
-
-  // Execute the queries in arbitrary order.
-  execute_query(Q1);  // Miss.
-  execute_query(Q2);  // Miss.
-  execute_query(Q2);  // Hit.
-  execute_query(Q1);  // Hit.
-  execute_query(Q3);  // Miss, evict Q1.
-  execute_query(Q3);  // Hit.
-  execute_query(Q1);  // Miss, evict Q2.
-  execute_query(Q2);  // Miss, evict Q1.
-  execute_query(Q1);  // Miss, evict Q2.
-  execute_query(Q3);  // Hit.
-  execute_query(Q1);  // Hit.
-
-  EXPECT_TRUE(cache->has(Q1));
-  EXPECT_FALSE(cache->has(Q2));
-  EXPECT_TRUE(cache->has(Q3));
-  EXPECT_FALSE(cache->has("SELECT * FROM test;"));
-
-  // Check for the expected number of hits.
-  EXPECT_EQ(5u, _query_plan_cache_hits);
-}
-
 // Check access to PQP cache. When set, check the underlying cache implementation, and verify that it is a GDFS cache
 // that supports retrieving the cache frequency count.
 TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
@@ -158,9 +106,7 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   // frequency of query is as expected.
   auto new_sql_pipeline = SQLPipelineBuilder{Q1}.create_pipeline();
   new_sql_pipeline.get_result_table();
-  auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(
-      Hyrise::get().default_pqp_cache->unsafe_cache());
-  EXPECT_EQ(1, gdfs_cache.frequency(Q1));
+  EXPECT_EQ(1, query_frequency(Q1));
 }
 
 }  // namespace opossum
