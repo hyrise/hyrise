@@ -67,7 +67,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
-    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
