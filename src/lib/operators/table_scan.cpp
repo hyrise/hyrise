@@ -209,6 +209,11 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.
+   *
+   * Many implementations require the comparison values to be of the same column type. If we were to cast the values
+   * to the column type, `int_column = 16.25` would turn into `int_column = 16`, which is obviously wrong. As such, we
+   * use lossless casts to guarantee safe type conversions. This was introduced by #1550.
+   *
    * Use the ExpressionEvaluator as a powerful, but slower fallback if no dedicated scanning implementation exists for
    * an expression.
    */
