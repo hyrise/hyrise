@@ -371,7 +371,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
 
   if constexpr (HYRISE_DEBUG) {
     if (chunk_count > 1) {
-      for (const auto column_id : value_clustered_by) {
+      for (const auto& column_id : value_clustered_by) {
         resolve_data_type(_column_definitions[column_id].data_type, [&](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
@@ -386,8 +386,9 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
                 const auto& value = iter->value();
                 const auto& [iter, inserted] = value_to_chunk_map.try_emplace(value, chunk_id);
                 if (!inserted) {
-                  Assert(value_to_chunk_map[value] == chunk_id, "Table cannot be set to value-clustered as same value "
-                                                                "is found in more than one chunk");
+                  Assert(value_to_chunk_map[value] == chunk_id,
+                         "Table cannot be set to value-clustered as same value "
+                         "is found in more than one chunk");
                 }
               }
             });

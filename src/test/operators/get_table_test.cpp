@@ -288,8 +288,9 @@ TEST_F(OperatorsGetTableTest, Copy) {
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   auto table = Hyrise::get().storage_manager.get_table("int_int_float");
   table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
-  table->get_chunk(ChunkID{1})->set_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
-                                               SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
+  table->get_chunk(ChunkID{1})
+      ->set_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
+                       SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
 
   // single column pruned
   {

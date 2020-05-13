@@ -69,7 +69,8 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
 
   // For inner joins, both join columns are clustered
   {
-    const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Inner, primary_predicate);
+    const auto join_operator =
+        std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Inner, primary_predicate);
     join_operator->execute();
 
     const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
@@ -80,7 +81,8 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
 
   // For outer joins, the table cannot be clustered as table clustering is not defined for NULL values
   {
-    const auto join_operator = std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Left, primary_predicate);
+    const auto join_operator =
+        std::make_shared<JoinSortMerge>(test_input, test_input, JoinMode::Left, primary_predicate);
     join_operator->execute();
 
     const auto& actual_value_clustering = join_operator->get_output()->value_clustered_by();

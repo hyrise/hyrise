@@ -243,7 +243,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
       }
       if (!transformed.empty()) {
-        chunk->set_sorted_by(transformed);  
+        chunk->set_sorted_by(transformed);
       }
     }
 

@@ -980,8 +980,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         output_chunks.end());
 
     auto result_table = _sort_merge_join._build_output_table(std::move(output_chunks));
-    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter
-        && _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
+    if (_mode != JoinMode::Left && _mode != JoinMode::Right && _mode != JoinMode::FullOuter &&
+        _sort_merge_join._primary_predicate.predicate_condition == PredicateCondition::Equals) {
       // Table clustering is not defined for columns storing NULL values. Additionally, clustering is not given for
       // non-equal predicates.
       result_table->set_value_clustered_by({left_join_column, right_join_column});
