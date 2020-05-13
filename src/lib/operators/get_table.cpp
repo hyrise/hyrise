@@ -40,7 +40,7 @@ const std::string& GetTable::name() const {
 std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
 

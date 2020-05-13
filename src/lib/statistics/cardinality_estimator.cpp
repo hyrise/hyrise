@@ -95,7 +95,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
     join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
     if (join_graph_bitmask) {
-      const auto cached_statistics =
+      auto cached_statistics =
           cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->column_expressions());
       if (cached_statistics) {
         return cached_statistics;
@@ -344,8 +344,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
       }
 
-      const auto output_table_statistics =
-          std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+      auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
       return output_table_statistics;
     } else if (logical_expression->logical_operator == LogicalOperator::And) {
@@ -356,8 +355,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto first_predicate_statistics = estimate_predicate_node(*first_predicate_node, input_table_statistics);
 
       const auto second_predicate_node = PredicateNode::make(logical_expression->right_operand(), first_predicate_node);
-      const auto second_predicate_statistics =
-          estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
+      auto second_predicate_statistics = estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
 
       return second_predicate_statistics;
     }
@@ -506,7 +504,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 
   const auto row_count = Cardinality{left_input_table_statistics->row_count + right_input_table_statistics->row_count};
 
-  const auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+  auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 
   return output_table_statistics;
 }

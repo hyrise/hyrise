@@ -56,7 +56,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     return "Column #"s + std::to_string(column_id);
   };
 
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
   stream << name() << separator << "(" << _mode << " Join where "

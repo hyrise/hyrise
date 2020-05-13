@@ -33,7 +33,7 @@ std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
 
-  const auto task = std::make_shared<OperatorTask>(op);
+  auto task = std::make_shared<OperatorTask>(op);
   task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_input_left()) {
