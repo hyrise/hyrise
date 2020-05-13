@@ -229,7 +229,7 @@ void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
     throw std::invalid_argument( "received negative value" );
   Assert(!sorted_by.empty(), "Passed vector of sort definitions is empty.");
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     for (const auto& sorted_by_column : sorted_by) {
       const auto& sorted_segment = get_segment(sorted_by_column.column);
       if (sorted_segment->size() < 2) break;

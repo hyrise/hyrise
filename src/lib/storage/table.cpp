@@ -369,7 +369,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
     Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
   }
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     if (chunk_count > 1) {
       for (const auto column_id : value_clustered_by) {
         resolve_data_type(_column_definitions[column_id].data_type, [&](const auto column_data_type) {
