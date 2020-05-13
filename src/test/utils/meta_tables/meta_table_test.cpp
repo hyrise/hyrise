@@ -79,6 +79,8 @@ class MetaTableTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
+  void TearDown() { Hyrise::reset(); }
+
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager._add(table);
   }
