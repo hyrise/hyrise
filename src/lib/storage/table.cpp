@@ -383,7 +383,7 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
               Assert(!iter->is_null(), "Value clustering is not defined for columns storing NULLs.");
 
               for (; iter != end; ++iter) {
-                const auto& value = iter->value();
+                const auto value = iter->value();
                 const auto& [iter, inserted] = value_to_chunk_map.try_emplace(value, chunk_id);
                 if (!inserted) {
                   Assert(value_to_chunk_map[value] == chunk_id,
