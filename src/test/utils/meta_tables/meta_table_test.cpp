@@ -58,7 +58,6 @@ class MetaTableTest : public BaseTest {
   std::shared_ptr<const Table> mock_manipulation_values;
 
   void SetUp() {
-    Hyrise::reset();
     auto& storage_manager = Hyrise::get().storage_manager;
 
     int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
@@ -79,8 +78,6 @@ class MetaTableTest : public BaseTest {
     table_wrapper->execute();
     mock_manipulation_values = table_wrapper->get_output();
   }
-
-  void TearDown() { Hyrise::reset(); }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager._add(table);
@@ -123,10 +120,12 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
   SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
   SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
 
-  Hyrise::get()
+  if (GetParam()->name() == "chunk_sort_orders") {
+    Hyrise::get()
       .storage_manager.get_table("int_int")
       ->get_chunk(ChunkID{0})
       ->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+  }
 
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
   const auto meta_table = generate_meta_table(GetParam());
