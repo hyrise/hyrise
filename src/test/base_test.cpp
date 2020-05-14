@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "cache/cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"

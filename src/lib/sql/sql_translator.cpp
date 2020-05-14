@@ -1546,13 +1546,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
           case AggregateFunction::Avg:
-          case AggregateFunction::StandardDeviationSample:
-            return std::make_shared<AggregateExpression>(
+          case AggregateFunction::StandardDeviationSample: {
+            aggregate_expression = std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+          } break;
           case AggregateFunction::Any:
             Fail("ANY() is an internal aggregation function.");
           case AggregateFunction::Count:
-          case AggregateFunction::CountDistinct:
+          case AggregateFunction::CountDistinct: {
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
 
@@ -1574,7 +1575,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               aggregate_expression = std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
             }
+          } break;
         }
+
+        // Check that the aggregate can be calculated on the given expression
+        const auto aggregate_data_type = aggregate_expression->data_type();
+        AssertInput(aggregate_data_type != DataType::Null,
+                    std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
+                        " for input data type " +
+                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()));
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
         //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2
