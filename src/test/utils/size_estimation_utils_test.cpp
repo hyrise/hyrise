@@ -17,8 +17,9 @@ TEST_F(SizeEstimationUtilsTest, SingleString) {
   auto long_string1 = std::string{"thisisareallylongstringitholdsapproximatelylessthanamillionbytes"};
   auto long_string2 = pmr_string{"thisisareallylongstringitholdsapproximatelylessthanamillionbytes"};
 
-  EXPECT_EQ(string_heap_size(long_string1), 65);
-  EXPECT_EQ(string_heap_size(long_string2), 65);
+  // Using >= because the library might overallocate memory
+  EXPECT_GE(string_heap_size(long_string1), 65);
+  EXPECT_GE(string_heap_size(long_string2), 65);
 }
 
 // Check early out of estimation
