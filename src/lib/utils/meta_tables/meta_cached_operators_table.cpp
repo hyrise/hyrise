@@ -6,7 +6,7 @@ namespace opossum {
 
 MetaCachedOperatorsTable::MetaCachedOperatorsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"operator", DataType::String, false},
-                                               {"query_hash", DataType::String, false},
+                                               {"statement_hash", DataType::String, false},
                                                {"description", DataType::String, false},
                                                {"walltime_ns", DataType::Long, false},
                                                {"output_chunks", DataType::Long, false},

@@ -37,14 +37,14 @@ class MetaCacheTablesTest : public BaseTest {
     get_table = std::make_shared<GetTable>("int_int");
     get_table->execute();
 
-    queries_table = std::make_shared<Table>(TableColumnDefinitions{{"hash_value", DataType::String, false},
+    queries_table = std::make_shared<Table>(TableColumnDefinitions{{"statement_hash", DataType::String, false},
                                                                    {"frequency", DataType::Int, false},
                                                                    {"sql_string", DataType::String, false}},
                                             TableType::Data);
     queries_values = {query_hash, 1, pmr_string{"abc"}};
 
     operators_table = std::make_shared<Table>(TableColumnDefinitions{{"operator", DataType::String, false},
-                                                                     {"query_hash", DataType::String, false},
+                                                                     {"statement_hash", DataType::String, false},
                                                                      {"description", DataType::String, false},
                                                                      {"walltime_ns", DataType::Long, false},
                                                                      {"output_chunks", DataType::Long, false},
