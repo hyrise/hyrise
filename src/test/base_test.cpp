@@ -195,7 +195,9 @@ bool compare_files(const std::string& original_file, const std::string& created_
   return ((iterator_original == end) && (iterator_created == end));
 }
 
-std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table) {
+std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table) {
+  Assert(table->type() == TableType::Data, "Input table already is a reference table");
+
   auto pos_list = std::make_shared<RowIDPosList>();
   pos_list->reserve(table->row_count());
 

@@ -124,9 +124,9 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
 
   if (GetParam()->name() == "chunk_sort_orders") {
     Hyrise::get()
-      .storage_manager.get_table("int_int")
-      ->get_chunk(ChunkID{0})
-      ->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
+        .storage_manager.get_table("int_int")
+        ->get_chunk(ChunkID{0})
+        ->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
 
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");

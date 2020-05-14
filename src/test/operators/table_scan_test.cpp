@@ -516,7 +516,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValue
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWithNullValues) {
   auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
   table_wrapper->execute();
 
   const auto predicate = greater_than_(get_column_expression(table_wrapper, ColumnID{0}),
@@ -548,7 +548,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatCol
   auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
   table_wrapper->execute();
 
   const auto predicate = greater_than_(get_column_expression(table_wrapper, ColumnID{0}),
@@ -720,7 +720,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutNulls) {
   auto table = load_table("resources/test_data/tbl/int_float.tbl", 4);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -732,7 +732,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutN
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
   auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -746,7 +746,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedSegments) 
   auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
-  auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
+  auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -1132,8 +1132,8 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
 TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
   // In the current implementation, scans on tables that do not contain ReferenceSegments are executed chunk-by-chunk.
   // As each input chunks will lead to one output chunk (assuming there are qualifying tuples), the position is set to
-  // guarantee that only a single chunk is referenced. Hence, the scan maintains the sort order that was initially set
-  // and forwards the sorted_by flag.
+  // guarantee that only a single chunk is referenced. Hence, the scan ensures that the sort order that was initially
+  // set is forwarded.
   const auto scan_sorted =
       create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::LessThanEquals, 1234);
   scan_sorted->execute();
@@ -1145,7 +1145,6 @@ TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
 
   const auto expected_sorted_by =
       std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
-  EXPECT_EQ(result_chunk_sorted->sorted_by(), expected_sorted_by);
   EXPECT_EQ(result_chunk_sorted->sorted_by(), expected_sorted_by);
 }
 
@@ -1169,7 +1168,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   pos_list_2->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_2->guarantee_single_chunk();
 
-  const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
+  const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
   ref_table->get_chunk(ChunkID{0})->finalize();
@@ -1191,7 +1190,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
     EXPECT_TRUE(ref_segment->pos_list()->references_single_chunk());
 
     const auto& chunk_sorted_by = result_chunk_sorted->sorted_by();
-    ASSERT_FALSE(chunk_sorted_by.empty());
+    ASSERT_EQ(chunk_sorted_by, std::vector{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)});
   }
 }
 
@@ -1212,7 +1211,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   auto pos_list_2 = std::make_shared<RowIDPosList>();
   pos_list_2->emplace_back(RowID{ChunkID{1}, 0});
 
-  const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
+  const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
 
   ref_table->get_chunk(ChunkID{0})->finalize();

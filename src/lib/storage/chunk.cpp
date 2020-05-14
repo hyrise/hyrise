@@ -242,7 +242,6 @@ void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
                                   return left.value() < right.value();
                                 }),
                  "Setting an ascending sort order for a segment which is not sorted accordingly.");
-          // TODO(mrks): change to else{} with #2110
         } else if (sorted_by_column.sort_mode == SortMode::Descending) {
           Assert(std::is_sorted(begin, end,
                                 [](const auto& left, const auto& right) {
@@ -250,6 +249,8 @@ void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
                                   return left.value() > right.value();
                                 }),
                  "Setting a descending sort order for a segment which is not sorted accordingly.");
+        } else if (sorted_by_column.sort_mode == SortMode::DescendingNullsLast) {
+          // TODO(mrks): change to else{} with #2110
         }
       });
     }

@@ -40,9 +40,9 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
   // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
-  // dictionary segments with string data and a given position list. In this case, the optimized
-  // _scan_dictionary_segment() path if faster than the sorted search. Without this workaround, TPC-H Q6 would lose up
-  // to 30%. When the iterator issues of #1531 are resolved, the current workaround should be revisited.
+  // pre-filtered dictionary segments with string data. In this case, the optimized _scan_dictionary_segment() path if
+  // faster than the sorted search. Without this workaround, TPC-H Q6 would lose up to 30%. When the iterator issues of
+  // #1531 are resolved, the current workaround should be revisited.
   const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
   if (!chunk_sorted_by.empty() &&
       !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {

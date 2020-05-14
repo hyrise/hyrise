@@ -297,8 +297,7 @@ Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table
 
 std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
                                                              const std::vector<ColumnID>& groupby_column_ids) {
-  auto output_table =
-      std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::nullopt, UseMvcc::No);
+  auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -308,14 +307,14 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
     // const auto& chunk = input_table->get_chunk(chunk_id);  // TODO: why not?
     auto single_chunk_to_sort_as_vector = std::vector{chunk};
     auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), input_table->type(),
-                                                            std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+                                                            std::move(single_chunk_to_sort_as_vector));
 
     const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
     auto output_sorted_by = chunk_sorted_by;
 
     // We can skip sorting the chunk only if we group by a single column and the chunk is sorted by that column. We do
     // not store information about cascadingly sorted chunks, which we would need for skipping the sort step with
-    // multiple group by columns. The sort mode can be neglected as the aggregate only requires consecutivesness of
+    // multiple group by columns. The sort mode can be neglected as the aggregate only requires consecutiveness of
     // values.
     const auto single_column_group_by = groupby_column_ids.size() == 1;
     const auto chunk_sorted_by_first_group_by_column =
@@ -325,8 +324,8 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
 
     if (single_column_group_by && chunk_sorted_by_first_group_by_column) {
       if (input_table->type() == TableType::Data) {
-        // Since the chunks to be sorted will be referencing chunks (to avoid materialization), input chunks from data
-        // tables are forwarded using an EntirePosList.
+        // Since the chunks that actually have to be sorted will be returned as referencing chunks, we need to forward
+        // the already sorted input chunks as such too, using an EntireChunkPosList.
         const auto column_count = input_table->column_count();
         const auto pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk->size());
         auto reference_segments = Segments{};
@@ -448,7 +447,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     * If there is a value clustering for a column, it means that all tuples with the same value in that column are in
     * the same chunk. Therefore, if one of the value clustering columns is part of the group by vector, we can skip
     * sorting the whole table and sort on a per-chunk basis instead. Values that would end up in the same cluster are
-    * already in the same chunk.
+    * already in the same chunk. In the current definition of value clustering, NULL values must not occur.
     *
     * If the value clustering doesn't match the columns we group by, we need to sort the whole table to achieve the
     * consecutiveness of equal values we need (table-wide sort information is not tracked yet).
@@ -527,7 +526,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       // Iterate over all chunks and insert RowIDs when values change
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = sorted_table->get_chunk(chunk_id);
-        if (!chunk) continue;
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
         const auto& segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value.has_value() == position.is_null() ||

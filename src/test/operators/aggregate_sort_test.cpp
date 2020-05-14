@@ -27,11 +27,9 @@ namespace opossum {
 
 void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
                            const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
-                           const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name,
-                           const size_t chunk_size) {
+                           const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name) {
   // Load expected results from file.
-  std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
-  EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
+  std::shared_ptr<Table> expected_result = load_table(file_name);
 
   auto aggregates = std::vector<std::shared_ptr<AggregateExpression>>{};
   const auto& table = in->get_output();
@@ -53,14 +51,16 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
     EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
   }
 
-  // Perform a TableScan to create a reference table
-  const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
-  table_scan->execute();
+  {
+    // Perform a TableScan to create a reference table
+    const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
+    table_scan->execute();
 
-  // Perform the Aggregate on a reference table
-  const auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregates, groupby_column_ids);
-  aggregate->execute();
-  EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    // Perform the Aggregate on a reference table
+    const auto aggregate = std::make_shared<AggregateSort>(table_scan, aggregates, groupby_column_ids);
+    aggregate->execute();
+    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+  }
 }
 
 /**
@@ -102,41 +102,37 @@ TEST_F(AggregateSortTest, SingleAggregateMaxSorted) {
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_aggregate_output(sort, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
-                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl",
-                          Chunk::DEFAULT_SIZE);
+                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/max.tbl");
   }
 }
 
 TEST_F(AggregateSortTest, SingleAggregateMinSorted) {
-  for (auto sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_aggregate_output(sort, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
-                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl",
-                          Chunk::DEFAULT_SIZE);
+                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min.tbl");
   }
 }
 
 TEST_F(AggregateSortTest, SingleAggregateSumSorted) {
-  for (auto sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_aggregate_output(sort, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
-                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl",
-                          Chunk::DEFAULT_SIZE);
+                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/sum.tbl");
   }
 }
 
 TEST_F(AggregateSortTest, SingleAggregateAvgSorted) {
-  for (auto sort_by_column_id = ColumnID{0}; sort_by_column_id <= ColumnID{1}; ++sort_by_column_id) {
+  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
     test_aggregate_output(sort, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
-                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl",
-                          Chunk::DEFAULT_SIZE);
+                          "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/avg.tbl");
   }
 }
 
@@ -192,7 +188,7 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
 
   // Run aggregation on the value clustered table (each chunk will be sorted)
   test_clustered_table_input(table_sorted_value_clustered);
-  test_clustered_table_input(to_referencing_table(table_sorted_value_clustered));
+  test_clustered_table_input(to_simple_reference_table(table_sorted_value_clustered));
 
   // Run aggregation on the value clustered table with sorted flag (no sorting required)
   const auto chunk_count = table_sorted_value_clustered->chunk_count();
@@ -201,7 +197,7 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
     chunk->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
   }
   test_clustered_table_input(table_sorted_value_clustered);
-  test_clustered_table_input(to_referencing_table(table_sorted_value_clustered));
+  test_clustered_table_input(to_simple_reference_table(table_sorted_value_clustered));
 }
 
 }  // namespace opossum

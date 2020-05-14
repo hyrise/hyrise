@@ -17,8 +17,7 @@ const std::string& MetaChunkSortOrdersTable::name() const {
 
 /**
  * Chunks can be sorted independently by multiple columns (e.g., as the result of an equi sort-merge join or
- * accidentally). Each sort order must apply independently to the whole chunk. Hence, cascading sort orders for chunks
- * (e.g, after a sort operation with multiple columns) are not supported.
+ * accidentally). We do not track secondary sort orders, meaning that for `ORDER BY a, b`, only a is reported.
  */
 std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);

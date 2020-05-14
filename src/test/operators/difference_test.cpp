@@ -102,7 +102,6 @@ TEST_F(OperatorsDifferenceTest, ForwardSortedByFlag) {
   const auto& result_table_sorted = difference_sorted->get_output();
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
     const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
-    ASSERT_FALSE(sorted_by.empty());
     EXPECT_EQ(sorted_by, sort_definition);
   }
 }

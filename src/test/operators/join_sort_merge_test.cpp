@@ -75,7 +75,6 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
 
     const std::vector<ColumnID> expected_value_clustering{ColumnID{0}, ColumnID{4}};
     const auto& actual_value_clustering = join_operator->get_output()->value_clustered_by();
-    EXPECT_FALSE(actual_value_clustering.empty());
     EXPECT_EQ(actual_value_clustering, expected_value_clustering);
   }
 
@@ -114,7 +113,6 @@ TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
       SortColumnDefinition(ColumnID{0}, SortMode::Ascending), SortColumnDefinition(ColumnID{4}, SortMode::Ascending)};
   for (auto chunk_id = ChunkID{0}; chunk_id < output_table->chunk_count(); ++chunk_id) {
     const auto& actual_sorted_columns = output_table->get_chunk(chunk_id)->sorted_by();
-    EXPECT_FALSE(actual_sorted_columns.empty());
     EXPECT_EQ(actual_sorted_columns, expected_sorted_columns);
   }
 }

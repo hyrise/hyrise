@@ -88,7 +88,10 @@ bool file_exists(const std::string& name);
 
 bool compare_files(const std::string& original_file, const std::string& created_file);
 
-std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table);
+// Converts a data table to a reference table. Note that this does not cover all variations of ReferenceSegments.
+// Single-chunk guarantees (and the lack thereof), ordered and unordered PosLists, etc. should be tested individually
+// where necessary.
+std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table);
 
 const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},

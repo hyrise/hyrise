@@ -139,9 +139,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
               filtered_pos_list->guarantee_single_chunk();
             } else {
               // When segments reference multiple chunks, we do not keep the sort order of the input chunk. The main
-              // reason is that several table scan split the pos lists by chunks and thus shuffle the data. There are
-              // cases where we could still exploit sorting (e.g., a sort operation following by a scan that does not
-              // split the pos list [e.g., IS NULL scan]), but prefer the safe and defensive path for now.
+              // reason is that several table scan implementations split the pos lists by chunks (see
+              // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and thus shuffle the data. While this
+              // does not affect all scan implementations, we chose the safe and defensive path for now.
               keep_chunk_sort_order = false;
             }
 

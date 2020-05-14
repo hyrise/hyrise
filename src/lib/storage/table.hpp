@@ -217,6 +217,8 @@ class Table : private Noncopyable {
    *
    * Note that value clustering does not imply values being sorted. At the same time, sorted data is not necessarily
    * clustered as a value could still occur at the end of one chunk and in the beginning of the next.
+   *
+   * To avoid ambiguities, we do not accept NULL values here.
    */
   const std::vector<ColumnID>& value_clustered_by() const;
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
