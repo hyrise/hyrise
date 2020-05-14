@@ -3,7 +3,7 @@
 | Name                      | Version          | Platform |                              Optional |
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
-| boost                     | >= 1.65.0        |    All   |                                    No |
+| boost                     | >= 1.70.0        |    All   |                                    No |
 | clang                     | >= 9.0           |    All   |                 Yes, if gcc installed |
 | clang-format              | >= 9.0           |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 9.0           |    All   |                         Yes (linting) |
@@ -18,7 +18,7 @@
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |
-| python                    | >= 2.7 && < 3    |    All   |         Yes (linting and tests in CI) |
+| python                    | 3                |    All   |         Yes (linting and tests in CI) |
 | readline                  | >= 7             |    All   |                                    No |
 | sqlite3                   | >= 3             |    All   |                                    No |
 | systemtap                 | any              |    Linux |                                    No |

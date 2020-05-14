@@ -224,7 +224,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
     const auto num_successful_runs = result.successful_runs.size();
     const auto duration_per_item =
-        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
+        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / static_cast<float>(num_successful_runs) : NAN;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
@@ -361,17 +361,18 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
     // want to touch this and potentially break the comparability across commits.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item =
-        !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
+    const auto time_per_item = !result.successful_runs.empty()
+                                   ? reported_item_duration_ns / static_cast<float>(result.successful_runs.size())
+                                   : std::nanf("");
     benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }
 
-  // Gather information on the (estimated) table size
+  // Gather information on the table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled);
+    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   nlohmann::json summary{

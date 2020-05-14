@@ -6,6 +6,7 @@
 
 #include "hyrise.hpp"
 #include "import_export/binary/binary_parser.hpp"
+#include "import_export/binary/binary_writer.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 

@@ -24,28 +24,28 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
     _table_a = std::make_shared<StoredTableNode>("a");
-    _a_a = LQPColumnReference(_table_a, ColumnID{0});
-    _a_b = LQPColumnReference(_table_a, ColumnID{1});
+    _a_a = _table_a->get_column("a");
+    _a_b = _table_a->get_column("b");
 
     Hyrise::get().storage_manager.add_table("b", load_table("resources/test_data/tbl/int_float2.tbl"));
     _table_b = std::make_shared<StoredTableNode>("b");
-    _b_a = LQPColumnReference(_table_b, ColumnID{0});
-    _b_b = LQPColumnReference(_table_b, ColumnID{1});
+    _b_a = _table_b->get_column("a");
+    _b_b = _table_b->get_column("b");
 
     Hyrise::get().storage_manager.add_table("c", load_table("resources/test_data/tbl/int_float3.tbl"));
     _table_c = std::make_shared<StoredTableNode>("c");
-    _c_a = LQPColumnReference(_table_c, ColumnID{0});
-    _c_b = LQPColumnReference(_table_c, ColumnID{1});
+    _c_a = _table_c->get_column("a");
+    _c_b = _table_c->get_column("b");
 
     Hyrise::get().storage_manager.add_table("d", load_table("resources/test_data/tbl/int_int3.tbl"));
     _table_d = std::make_shared<StoredTableNode>("d");
-    _d_a = LQPColumnReference(_table_d, ColumnID{0});
-    _d_b = LQPColumnReference(_table_d, ColumnID{1});
+    _d_a = _table_d->get_column("a");
+    _d_b = _table_d->get_column("b");
 
     Hyrise::get().storage_manager.add_table("e", load_table("resources/test_data/tbl/int_int4.tbl"));
     _table_e = std::make_shared<StoredTableNode>("e");
-    _e_a = LQPColumnReference(_table_e, ColumnID{0});
-    _e_b = LQPColumnReference(_table_e, ColumnID{1});
+    _e_a = _table_e->get_column("a");
+    _e_b = _table_e->get_column("b");
 
     _rule = std::make_shared<PredicatePlacementRule>();
 
@@ -72,7 +72,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   std::shared_ptr<AbstractLQPNode> _subquery_lqp;
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c, _table_d, _table_e;
-  LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a, _e_b;
+  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a, _e_b;
   std::shared_ptr<ProjectionNode> _projection_pushdown_node;
   std::shared_ptr<opossum::LQPSubqueryExpression> _subquery_c, _subquery;
 };
@@ -184,7 +184,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
       _table_a));
 
   const auto input_lqp =
-  UnionNode::make(UnionMode::All,
+  UnionNode::make(SetOperationMode::All,
     PredicateNode::make(greater_than_(_a_a, 2),
       PredicateNode::make(less_than_(_a_b, 5),
        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(3.2, DataType::Float)),
@@ -200,7 +200,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
       _table_a));
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::All,
+  UnionNode::make(SetOperationMode::All,
     ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(3.2, DataType::Float)),
       PredicateNode::make(greater_than_(_a_a, 2),
         PredicateNode::make(less_than_(_a_b, 5),
@@ -446,14 +446,14 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
   // clang-format off
   const auto input_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subquery), _table_a);
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(exists_(_subquery),
       input_predicate_node_with_multiple_outputs),
     input_predicate_node_with_multiple_outputs);
 
   const auto expected_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subquery), _table_a);
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
+  UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(exists_(_subquery),
       expected_predicate_node_with_multiple_outputs),
     expected_predicate_node_with_multiple_outputs);

@@ -169,7 +169,7 @@ bool TPCCNewOrder::_on_execute() {
     }
 
     // Calculate price of line item (OL_AMOUNT)
-    const auto ol_amount = order_line.ol_quantity * i_price;
+    const auto ol_amount = static_cast<float>(order_line.ol_quantity) * i_price;
 
     // Add to ORDER_LINE
     // TODO(anyone): This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and

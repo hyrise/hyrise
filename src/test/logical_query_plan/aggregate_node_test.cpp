@@ -20,9 +20,9 @@ class AggregateNodeTest : public BaseTest {
     _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-    _a = {_mock_node, ColumnID{0}};
-    _b = {_mock_node, ColumnID{1}};
-    _c = {_mock_node, ColumnID{2}};
+    _a = _mock_node->get_column("a");
+    _b = _mock_node->get_column("b");
+    _c = _mock_node->get_column("c");
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
@@ -32,21 +32,21 @@ class AggregateNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<AggregateNode> _aggregate_node;
-  LQPColumnReference _a, _b, _c;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
 TEST_F(AggregateNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_aggregate_node->column_expressions().size(), 4u);
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(0), *lqp_column_(_a));
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(1), *lqp_column_(_c));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(0), *_a);
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(1), *_c);
   EXPECT_EQ(*_aggregate_node->column_expressions().at(2), *sum_(add_(_a, _b)));
   EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum_(add_(_a, _c)));
 }
 
 TEST_F(AggregateNodeTest, NodeExpressions) {
   ASSERT_EQ(_aggregate_node->node_expressions.size(), 4u);
-  EXPECT_EQ(*_aggregate_node->node_expressions.at(0), *lqp_column_(_a));
-  EXPECT_EQ(*_aggregate_node->node_expressions.at(1), *lqp_column_(_c));
+  EXPECT_EQ(*_aggregate_node->node_expressions.at(0), *_a);
+  EXPECT_EQ(*_aggregate_node->node_expressions.at(1), *_c);
   EXPECT_EQ(*_aggregate_node->node_expressions.at(2), *sum_(add_(_a, _b)));
   EXPECT_EQ(*_aggregate_node->node_expressions.at(3), *sum_(add_(_a, _c)));
 }
@@ -81,7 +81,9 @@ TEST_F(AggregateNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_d);
 
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_a->hash());
-  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_b->hash());
+  // _aggregate_node and different_aggregate_node_b are known to conflict because we do not recurse deep enough to
+  // identify the difference in the aggregate expressions. That is acceptable, as long as the comparison identifies
+  // the two nodes as non-equal.
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_c->hash());
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_d->hash());
 }

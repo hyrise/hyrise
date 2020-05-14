@@ -32,16 +32,16 @@ class ExpressionTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("int_float_with_null", table_int_float_with_null);
 
     int_float_node = StoredTableNode::make("int_float");
-    a = {int_float_node, ColumnID{0}};
-    b = {int_float_node, ColumnID{1}};
+    a = int_float_node->get_column("a");
+    b = int_float_node->get_column("b");
 
     int_float_node_nullable = StoredTableNode::make("int_float_with_null");
-    a_nullable = {int_float_node_nullable, ColumnID{0}};
-    b_nullable = {int_float_node_nullable, ColumnID{1}};
+    a_nullable = int_float_node_nullable->get_column("a");
+    b_nullable = int_float_node_nullable->get_column("b");
   }
 
-  LQPColumnReference a, b;
-  LQPColumnReference a_nullable, b_nullable;
+  std::shared_ptr<LQPColumnExpression> a, b;
+  std::shared_ptr<LQPColumnExpression> a_nullable, b_nullable;
   std::shared_ptr<StoredTableNode> int_float_node, int_float_node_nullable;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_b, lqp_c;
   std::shared_ptr<Table> table_int_float, table_int_float_with_null;
@@ -126,7 +126,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(unary_minus_(5)->requires_computation());
   EXPECT_FALSE(placeholder_(ParameterID{5})->requires_computation());
   EXPECT_FALSE(correlated_parameter_(ParameterID{5}, a)->requires_computation());
-  EXPECT_FALSE(lqp_column_(a)->requires_computation());
+  EXPECT_FALSE(a->requires_computation());
   EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
   EXPECT_FALSE(value_(5)->requires_computation());
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
@@ -280,8 +280,8 @@ TEST_F(ExpressionTest, IsNullable) {
 TEST_F(ExpressionTest, StaticTableNode) {
   {
     const auto static_table_node = StaticTableNode::make(table_int_float);
-    const auto col_a = lqp_column_({static_table_node, ColumnID{0}});
-    const auto col_b = lqp_column_({static_table_node, ColumnID{1}});
+    const auto col_a = lqp_column_(static_table_node, ColumnID{0});
+    const auto col_b = lqp_column_(static_table_node, ColumnID{1});
     EXPECT_EQ(col_a->as_column_name(), "a");
     EXPECT_EQ(col_a->data_type(), DataType::Int);
     EXPECT_EQ(col_a->is_nullable_on_lqp(*static_table_node), false);
@@ -292,7 +292,7 @@ TEST_F(ExpressionTest, StaticTableNode) {
 
   {
     const auto static_table_node = StaticTableNode::make(table_int_float_with_null);
-    const auto col_a = lqp_column_({static_table_node, ColumnID{0}});
+    const auto col_a = lqp_column_(static_table_node, ColumnID{0});
     EXPECT_EQ(col_a->as_column_name(), "a");
     EXPECT_EQ(col_a->data_type(), DataType::Int);
     EXPECT_EQ(col_a->is_nullable_on_lqp(*static_table_node), true);
@@ -305,7 +305,7 @@ TEST_F(ExpressionTest, EqualsAndHash) {
   // AggregateExpression
   expressions.emplace_back(__LINE__, count_(5));
   expressions.emplace_back(__LINE__, count_(null_()));
-  expressions.emplace_back(__LINE__, sum_(lqp_column_(a)));
+  expressions.emplace_back(__LINE__, sum_(a));
 
   // ArithmeticExpression
   expressions.emplace_back(__LINE__, sub_(5, 3));
@@ -378,8 +378,8 @@ TEST_F(ExpressionTest, EqualsAndHash) {
   expressions.emplace_back(__LINE__, or_(1, 0));
 
   // LQPColumnExpression
-  expressions.emplace_back(__LINE__, lqp_column_(a));
-  expressions.emplace_back(__LINE__, lqp_column_(b));
+  expressions.emplace_back(__LINE__, a);
+  expressions.emplace_back(__LINE__, b);
 
   // LQPSubqueryExpression
   expressions.emplace_back(__LINE__, lqp_subquery_(int_float_node));
@@ -449,7 +449,7 @@ TEST_F(ExpressionTest, IsCountStar) {
   EXPECT_FALSE(AggregateExpression::is_count_star(*count_(a)));
   EXPECT_FALSE(AggregateExpression::is_count_star(*sum_(a)));
   EXPECT_FALSE(AggregateExpression::is_count_star(*add_(a, 1)));
-  EXPECT_FALSE(AggregateExpression::is_count_star(*lqp_column_(a)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*a));
 }
 
 }  // namespace opossum

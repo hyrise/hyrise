@@ -54,11 +54,11 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
    */
   static constexpr auto block_size = 2048u;
 
-  explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
+  explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, std::optional<pmr_vector<bool>> null_values,
                                    std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
-  const pmr_vector<bool>& null_values() const;
+  const std::optional<pmr_vector<bool>>& null_values() const;
   const BaseCompressedVector& offset_values() const;
 
   /**
@@ -70,7 +70,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
-    if (_null_values[chunk_offset]) {
+    if (_null_values && (*_null_values)[chunk_offset]) {
       return std::nullopt;
     }
     const auto minimum = _block_minima[chunk_offset / block_size];
@@ -98,7 +98,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
  private:
   const pmr_vector<T> _block_minima;
-  const pmr_vector<bool> _null_values;
+  const std::optional<pmr_vector<bool>> _null_values;
   const std::unique_ptr<const BaseCompressedVector> _offset_values;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };

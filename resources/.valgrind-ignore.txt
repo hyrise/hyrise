@@ -60,3 +60,11 @@
    Memcheck:Cond
    fun:_ZN7opossum14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
 }
+
+# https://github.com/hyrise/hyrise/pull/1851#issuecomment-618937388
+{
+   <PR_1851_memcheck>
+   Memcheck:Cond
+   ...
+   fun:_ZN7testing9internal220PrintBytesInObjectToEPKhmPSo
+}

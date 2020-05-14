@@ -209,6 +209,11 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.
+   *
+   * Many implementations require the comparison values to be of the same column type. If we were to cast the values
+   * to the column type, `int_column = 16.25` would turn into `int_column = 16`, which is obviously wrong. As such, we
+   * use lossless casts to guarantee safe type conversions. This was introduced by #1550.
+   *
    * Use the ExpressionEvaluator as a powerful, but slower fallback if no dedicated scanning implementation exists for
    * an expression.
    */
@@ -293,6 +298,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   }
 
   if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+    // The ColumnBetweenTableScanImpl expects both values to be of the same data type as the column that is being
+    // scanned. We retrieve the lower and upper bounds of the BetweenExpression, perform a
+    // lossless_predicate_variant_cast into the column's data type and reassemble the between condition.
+
     auto predicate_condition = between_expression->predicate_condition;
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
 
@@ -300,8 +309,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
     if (lower_bound_value) {
-      const auto adjusted_predicate_and_value =
-          lossless_predicate_variant_cast(lower_condition, *lower_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
+          lower_condition, *lower_bound_value, between_expression->value()->data_type());
       if (adjusted_predicate_and_value) {
         lower_condition = adjusted_predicate_and_value->first;
         lower_bound_value = adjusted_predicate_and_value->second;
@@ -312,8 +321,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
     if (upper_bound_value) {
-      const auto adjusted_predicate_and_value =
-          lossless_predicate_variant_cast(upper_condition, *upper_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
+          upper_condition, *upper_bound_value, between_expression->value()->data_type());
       if (adjusted_predicate_and_value) {
         upper_condition = adjusted_predicate_and_value->first;
         upper_bound_value = adjusted_predicate_and_value->second;
@@ -324,7 +333,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     predicate_condition = conditions_to_between(lower_condition, upper_condition);
 
-    // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
+    // Predicate pattern: <column of type T> BETWEEN <value of type T> AND <value of type T>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,

@@ -48,7 +48,7 @@ class DpCcpTest : public BaseTest {
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
-  LQPColumnReference a_a, b_a, c_a, d_a;
+  std::shared_ptr<LQPColumnExpression> a_a, b_a, c_a, d_a;
 };
 
 TEST_F(DpCcpTest, JoinOrdering) {

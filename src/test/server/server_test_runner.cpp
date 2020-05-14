@@ -7,10 +7,12 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
+#include "operators/get_table.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "server/server.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-#include "server/server.hpp"
 
 namespace opossum {
 
@@ -24,16 +26,20 @@ class ServerTestRunner : public BaseTest {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
-    // Set scheduler so that the server can execute the tasks on separate threads.
-    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-
     auto server_runner = [](Server& server) { server.run(); };
 
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
 
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
-    std::remove(_export_filename.c_str());
+    std::remove((_export_filename + ".bin").c_str());
+    std::remove((_export_filename + ".csv").c_str());
+    std::remove((_export_filename + ".csv.json").c_str());
+
+    // Wait to run the server and set the scheduler
+    while (!_server->is_initialized()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
   }
 
   void TearDown() override {
@@ -43,7 +49,9 @@ class ServerTestRunner : public BaseTest {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
 
-    std::remove(_export_filename.c_str());
+    std::remove((_export_filename + ".bin").c_str());
+    std::remove((_export_filename + ".csv").c_str());
+    std::remove((_export_filename + ".csv.json").c_str());
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
@@ -52,8 +60,14 @@ class ServerTestRunner : public BaseTest {
   std::string _connection_string;
 
   std::shared_ptr<Table> _table_a;
-  const std::string _export_filename = test_data_path + "server_test.bin";
+  const std::string _export_filename = test_data_path + "server_test";
 };
+
+TEST_F(ServerTestRunner, TestCacheAndSchedulerInitialization) {
+  EXPECT_NE(std::dynamic_pointer_cast<NodeQueueScheduler>(Hyrise::get().scheduler()), nullptr);
+  EXPECT_NE(Hyrise::get().default_lqp_cache, nullptr);
+  EXPECT_NE(Hyrise::get().default_pqp_cache, nullptr);
+}
 
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
@@ -97,8 +111,6 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
 TEST_F(ServerTestRunner, TestCopyImport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   transaction.exec("COPY another_table FROM 'resources/test_data/tbl/int_float.tbl';");
@@ -110,8 +122,6 @@ TEST_F(ServerTestRunner, TestCopyImport) {
 TEST_F(ServerTestRunner, TestInvalidCopyImport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed
@@ -131,21 +141,17 @@ TEST_F(ServerTestRunner, TestInvalidCopyImport) {
 TEST_F(ServerTestRunner, TestCopyExport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
-  transaction.exec("COPY table_a TO '" + _export_filename + "';");
+  transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
 
-  EXPECT_TRUE(file_exists(_export_filename));
-  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float.bin"));
+  EXPECT_TRUE(file_exists(_export_filename + ".bin"));
+  EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float.bin"));
 }
 
 TEST_F(ServerTestRunner, TestInvalidCopyExport) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed
@@ -165,28 +171,40 @@ TEST_F(ServerTestRunner, TestInvalidCopyExport) {
 TEST_F(ServerTestRunner, TestCopyIntegration) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
-  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
-  // We delete a tuple of a table, export and re-import it.
+  // We delete a tuple of a table and export it.
   transaction.exec("DELETE FROM table_a WHERE a = 123;");
-  transaction.exec("COPY table_a TO '" + _export_filename + "';");
-  transaction.exec("COPY table_b FROM '" + _export_filename + "';");
+  transaction.exec("COPY table_a TO '" + _export_filename + ".bin';");
+  transaction.exec("COPY table_a TO '" + _export_filename + ".csv';");
 
-  // Check that we did not export the deleted row
-  auto table_b = Hyrise::get().storage_manager.get_table("table_b");
-  EXPECT_EQ(table_b->row_count(), _table_a->row_count() - 1);
+  EXPECT_TRUE(file_exists(_export_filename + ".bin"));
+  EXPECT_TRUE(file_exists(_export_filename + ".csv"));
+  EXPECT_TRUE(compare_files(_export_filename + ".bin", "resources/test_data/bin/int_float_deleted.bin"));
+  EXPECT_TRUE(compare_files(_export_filename + ".csv", "resources/test_data/bin/int_float_deleted.csv"));
 
-  EXPECT_TRUE(file_exists(_export_filename));
-  EXPECT_TRUE(compare_files(_export_filename, "resources/test_data/bin/int_float_deleted.bin"));
+  // Get reference table without deleted row
+  auto get_table = std::make_shared<GetTable>("table_a");
+  auto validate = std::make_shared<Validate>(get_table);
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
+  validate->set_transaction_context(transaction_context);
+  get_table->execute();
+  validate->execute();
+  const auto expected_table = validate->get_output();
+
+  // Re-import the tables and compare them with the expected one
+  transaction.exec("COPY table_b FROM '" + _export_filename + ".bin';");
+  transaction.exec("COPY table_c FROM '" + _export_filename + ".csv';");
+  const auto table_b = Hyrise::get().storage_manager.get_table("table_b");
+  const auto table_c = Hyrise::get().storage_manager.get_table("table_c");
+
+  EXPECT_TABLE_EQ_ORDERED(table_b, expected_table);
+  EXPECT_TABLE_EQ_ORDERED(table_c, expected_table);
 }
 
 TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use SQL that we do not support. Nontransactions auto
-  // commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed SQL statement
@@ -198,6 +216,54 @@ TEST_F(ServerTestRunner, TestInvalidStatement) {
   // Check whether server is still running and connection established
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), _table_a->row_count());
+}
+
+TEST_F(ServerTestRunner, TestTransactionCommit) {
+  pqxx::connection connection{_connection_string};
+  pqxx::connection verification_connection{_connection_string};
+
+  pqxx::transaction transaction{connection};
+  transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
+
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), 4);
+
+  {
+    pqxx::transaction verification_transaction{verification_connection};
+    const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
+    EXPECT_EQ(verification_result.size(), 3);
+  }
+
+  transaction.commit();
+
+  {
+    pqxx::transaction verification_transaction{verification_connection};
+    const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
+    EXPECT_EQ(verification_result.size(), 4);
+  }
+}
+
+TEST_F(ServerTestRunner, TestTransactionRollback) {
+  pqxx::connection connection{_connection_string};
+
+  pqxx::transaction transaction{connection};
+  transaction.exec("INSERT INTO table_a (a, b) VALUES (1, 2);");
+
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), 4);
+
+  transaction.abort();
+
+  pqxx::transaction verification_transaction{connection};
+  const auto verification_result = verification_transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(verification_result.size(), 3);
+}
+
+TEST_F(ServerTestRunner, TestInvalidTransactionFlow) {
+  pqxx::connection connection{_connection_string};
+
+  pqxx::transaction transaction{connection};
+  EXPECT_THROW(transaction.exec("BEGIN;"), pqxx::sql_error);
 }
 
 TEST_F(ServerTestRunner, TestMultipleConnections) {
@@ -230,6 +296,37 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   transaction.exec("INSERT INTO table_a VALUES (1, 1.0);");
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), expected_num_rows);
+}
+
+TEST_F(ServerTestRunner, TestShutdownDuringExecution) {
+  // Test that open sessions are allowed to finish before the server is destroyed. This is more relevant for tests
+  // than for the actual execution. In "real-life", i.e., during our experiments, we usually simply kill the server.
+  // In tests however, the server finishing while sessions might not be completely finished could lead to issues
+  // like #1977.
+
+  pqxx::connection insert_connection{_connection_string};
+  pqxx::nontransaction insert_transaction{insert_connection};
+  for (auto i = 0; i < (HYRISE_DEBUG ? 6 : 8); ++i) {
+    insert_transaction.exec("INSERT INTO table_a SELECT * FROM table_a;");
+  }
+
+  // These should run for a while, one should finish earlier
+  std::thread([&] {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    transaction.exec("SELECT * FROM table_a t1, table_a t2");
+  }).detach();
+
+  std::thread([&] {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    transaction.exec("SELECT * FROM table_a t1, table_a t2 WHERE t1.a = 123");
+  }).detach();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // No assertions here. If the server would destroy resources early, we would expect to see errors in asan/tsan and
+  // segfaults in regular execution.
 }
 
 TEST_F(ServerTestRunner, TestPreparedStatement) {
@@ -372,7 +469,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
       // Retrieve the future so that exceptions stored in its state are thrown
       thread_future.get();
@@ -395,7 +492,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   EXPECT_GE(conflicted_increments, 1);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
-  EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
+  EXPECT_EQ(final_sum - initial_sum, successful_increments);
 }
 
 }  // namespace opossum

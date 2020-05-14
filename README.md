@@ -28,13 +28,15 @@ The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guid
 
 ## Native Setup
 You can install the dependencies on your own or use the install_dependencies.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS Catalina (10.15) and Ubuntu 19.10 (apt-get).
+The install script was tested under macOS Catalina (10.15) and Ubuntu 20.04 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
 
 ## Setup using Docker
-To get all dependencies of Hyrise in a docker image, run
+If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
+
+Otherwise, to get all dependencies of Hyrise into a Docker image, run
 ```
 docker build -t hyrise .
 ```
@@ -50,6 +52,7 @@ Inside the container, you can then checkout Hyrise and run `./install_dependenci
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
 Advisable names for this directory would be `cmake-build-{debug,release}`, depending on the build type.
 Within this directory call `cmake ..` to configure the build.
+By default, we use very strict compiler flags (beyond `-Wextra`, including `-Werror`). If you use one of the officially supported environments, this should not be an issue. If you simply want to test Hyrise on a different system and run into issues, you can call `cmake -DHYRISE_RELAXED_BUILD=On ..`, which will disable these strict checks.
 Subsequent calls to CMake, e.g., when adding files to the build will not be necessary, the generated Makefiles will take care of that.
 
 ### Compiler choice
@@ -60,7 +63,7 @@ To use a different one, call `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILE
 Starting with cmake 3.16, you can use `-DCMAKE_UNITY_BUILD=On` to perform unity builds. For a complete (re-)build or when multiple files have to be rebuilt, these are usually faster, as the relative cost of starting a compiler process and loading the most common headers is reduced. However, this only makes sense for debug builds. See our [blog post](https://medium.com/hyrise/reducing-hyrises-build-time-8523135aed72) on reducing the compilation time for details.
 
 ### ccache
-For development, we suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this works for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
+For development, you may want to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. On the downside, we have seen random build failures on our CI server, which is why we do not recommend ccache anymore but merely list it as an option. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this worked for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
 
 ### Build
 Simply call `make -j*`, where `*` denotes the number of threads to use.
@@ -104,7 +107,7 @@ When trying to optimize the time spent building the project, it is often helpful
 - Jan Kossmann
 - Markus Dreseler
 - Martin Boissier
-- Stefan Klauck
+- Stefan Halfpap
 
 
 Contact: firstname.lastname@hpi.de
@@ -116,6 +119,8 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Böhme
 -   Timo      Djürken
 -   Fabian    Dumke
+-   Leonard   Geier
+-   Richard   Ebeling
 -   Fabian    Engel
 -   Moritz    Eyssen
 -   Martin    Fischer
@@ -127,19 +132,23 @@ Contact: firstname.lastname@hpi.de
 -   Carl      Gödecken
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Ivan      Illic
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   David     Justen
+-   Youri     Kaminsky
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
 -   Sven      Lehmann
+-   Till      Lehmann
 -   Tom       Lichtenstein
 -   Daniel    Lindner
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
+-   Dominik   Meier
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
@@ -162,4 +171,3 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
-
