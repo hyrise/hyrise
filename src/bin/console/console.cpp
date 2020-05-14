@@ -282,8 +282,6 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  // Store the transaction context as potentially modified by the pipeline. It might be a new context if a transaction
-  // was started or nullptr if we are in auto-commit mode or the last transaction was finished.
   _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
 
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
@@ -741,12 +739,19 @@ int Console::_visualize(const std::string& input) {
       try {
         if (!no_execute) {
           _sql_pipeline->get_result_table();
+
+          // Store the transaction context as potentially modified by the pipeline. It might be a new context if a
+          // transaction was started or nullptr if we are in auto-commit mode or the last transaction was finished.
+          _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
         }
 
         PQPVisualizer visualizer;
         visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
+
+        _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
+
         return ReturnCode::Error;
       }
     } break;

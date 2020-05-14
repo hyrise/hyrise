@@ -28,6 +28,7 @@ def check_exit_status(console):
 
 def main():
 	console = initialize()
+
 	build_dir = sys.argv[1]
 	lib_suffix = ""
 
@@ -77,13 +78,6 @@ def main():
 	console.expect("840")
 	console.sendline("txinfo")
 	console.expect("auto-commit mode")
-
-	# Test that visualization does not change the transaction state
-	console.sendline("begin")
-	console.sendline("visulize lqp commit")
-	console.sendline("visulize noexec rollback")
-	console.sendline("txinfo")
-	console.expect("Active transaction")
 
 	# Test invalid transaction handling
 	console.sendline("begin")
