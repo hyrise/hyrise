@@ -36,11 +36,11 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
     Hyrise::get().benchmark_runner = benchmark_runner;
     benchmark_runner->run();
 
-    auto& pqp_cache = Hyrise::get().default_pqp_cache;
+    const auto& pqp_cache = Hyrise::get().default_pqp_cache;
+    auto cache_map = pqp_cache->snapshot();
 
-    for (auto pqp_entry = pqp_cache->unsafe_begin(); pqp_entry != pqp_cache->unsafe_end(); ++pqp_entry) {
-      const auto& [query_string, physical_query_plan] = *pqp_entry;
-      _feature_exporter.export_to_csv(physical_query_plan);
+    for (const auto& [_, entry] : cache_map) {
+      _feature_exporter.export_to_csv(entry.value);
     }
 
     // Clear pqp cache for next benchmark run

@@ -26,7 +26,7 @@ class OperatorFeatureExporter {
          op_type_id != static_cast<int>(OperatorType::Validate); ++op_type_id) {
       const auto op_type = static_cast<OperatorType>(op_type_id);
 
-      // If we find an header for a given OperatorType, create a CSV Writer
+      // If we find a header for a given OperatorType, create a CSV Writer
       if (headers.find(op_type) != headers.end()) {
         std::stringstream path;
         path << _path_to_dir << "/" << _map_operator_type(op_type) << ".csv";

@@ -66,8 +66,6 @@ struct ColumnDataDistribution {
   double max_value;
 };
 
-std::ostream& operator<<(std::ostream& stream, const ColumnDataDistribution column_data_distribution);
-
 struct ColumnSpecification {
   ColumnSpecification(const ColumnDataDistribution& init_data_distribution, const DataType& init_data_type,
                       const std::optional<SegmentEncodingSpec> init_segment_encoding_spec = std::nullopt,

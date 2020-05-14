@@ -30,8 +30,8 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
   Fail("Not implemented yet: Only TableScans are currently supported.");
 }
 
-void CalibrationLQPGenerator::_generate_table_scans
-(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) {
+void CalibrationLQPGenerator::_generate_table_scans(
+    const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) {
   // selectivity resolution determines in how many LQPs with a different selectivity are generated
   // increase this value for providing more training data to the model
   // The resulting LQPs are equally distributed from 0% to 100% selectivity.
@@ -71,7 +71,8 @@ void CalibrationLQPGenerator::_generate_table_scans
         const auto step_cursor = static_cast<uint32_t>(selectivity_step * step_size);
 
         const ColumnDataType lower_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(step_cursor);
-        const auto min_val = SyntheticTableGenerator::generate_value<ColumnDataType>(distribution.min_value);
+        const auto min_val =
+            SyntheticTableGenerator::generate_value<ColumnDataType>(static_cast<int>(distribution.min_value));
 
         auto get_predicate_node_based_on = [column, lower_bound](const std::shared_ptr<AbstractLQPNode>& base) {
           return PredicateNode::make(greater_than_(column, lower_bound), base);
@@ -85,7 +86,7 @@ void CalibrationLQPGenerator::_generate_table_scans
           // generate reference scans to base original LQP on
           // that reduce the overall selectivity stepwise
           const double reference_scan_step_size =
-                  (distribution.max_value - step_cursor) / reference_scan_selectivity_resolution;
+              (distribution.max_value - step_cursor) / reference_scan_selectivity_resolution;
           for (uint32_t step = 0; step < reference_scan_selectivity_resolution; step++) {
             const ColumnDataType upper_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(
                 static_cast<uint32_t>(step * reference_scan_step_size));
@@ -98,11 +99,11 @@ void CalibrationLQPGenerator::_generate_table_scans
           }
 
           // add reference scan with full pos list
-          _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(
-                  greater_than_equals_(column, min_val), stored_table_node)));
+          _generated_lpqs.emplace_back(get_predicate_node_based_on(
+              PredicateNode::make(greater_than_equals_(column, min_val), stored_table_node)));
           // add reference scan with empty pos list
-          _generated_lpqs.emplace_back(get_predicate_node_based_on(PredicateNode::make(
-                  less_than_(column, min_val), stored_table_node)));
+          _generated_lpqs.emplace_back(
+              get_predicate_node_based_on(PredicateNode::make(less_than_(column, min_val), stored_table_node)));
         }
 
         // LIKE and IN predicates for strings
