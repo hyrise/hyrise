@@ -45,7 +45,7 @@ int main() {
     benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
   }
 
-  const auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
+  auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
   auto lqp_generator = CalibrationLQPGenerator();
   auto table_exporter = TableFeatureExporter(PATH_TRAIN);
 
@@ -66,8 +66,11 @@ int main() {
     feature_exporter.export_to_csv(pqp);
   }
 
+  feature_exporter.flush();
+
   for (const auto& table : tables) {
     table_exporter.export_table(table);
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
+  table_exporter.flush();
 }

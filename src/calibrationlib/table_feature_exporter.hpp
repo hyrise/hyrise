@@ -16,25 +16,37 @@ class TableFeatureExporter {
 
   void export_table(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
 
-  const std::map<TableFeatureExportType, std::vector<std::string>> headers = {
-      {TableFeatureExportType::TABLE, {"TABLE_NAME", "ROW_COUNT", "CHUNK_SIZE"}},
-      {TableFeatureExportType::COLUMN, {"TABLE_NAME", "COLUMN_NAME", "COLUMN_DATA_TYPE"}},
+  void flush();
+
+ protected:
+  std::map<TableFeatureExportType, std::shared_ptr<Table>> _tables = {
+      {TableFeatureExportType::TABLE,
+       std::make_shared<Table>(_column_definitions.at(TableFeatureExportType::TABLE), TableType::Data)},
+      {TableFeatureExportType::COLUMN,
+       std::make_shared<Table>(_column_definitions.at(TableFeatureExportType::COLUMN), TableType::Data)},
       {TableFeatureExportType::SEGMENT,
-       {"TABLE_NAME", "COLUMN_NAME", "CHUNK_ID", "ENCODING_TYPE", "COMPRESSION_TYPE"}}};
+       std::make_shared<Table>(_column_definitions.at(TableFeatureExportType::SEGMENT), TableType::Data)}};
 
  private:
+  static inline std::map<TableFeatureExportType, TableColumnDefinitions> _column_definitions = {
+      {TableFeatureExportType::TABLE, TableColumnDefinitions{{"TABLE_NAME", DataType::String, false},
+                                                             {"ROW_COUNT", DataType::Long, false},
+                                                             {"CHUNK_SIZE", DataType::Int, false}}},
+      {TableFeatureExportType::COLUMN, TableColumnDefinitions{{"TABLE_NAME", DataType::String, false},
+                                                              {"COLUMN_NAME", DataType::String, false},
+                                                              {"COLUMN_DATA_TYPE", DataType::Long, false}}},
+      {TableFeatureExportType::SEGMENT, TableColumnDefinitions{{"TABLE_NAME", DataType::String, false},
+                                                               {"COLUMN_NAME", DataType::String, false},
+                                                               {"CHUNK_ID", DataType::Int, false},
+                                                               {"ENCODING_TYPE", DataType::String, false},
+                                                               {"COMPRESSION_TYPE", DataType::String, false}}}};
+
+  const std::map<TableFeatureExportType, std::string> _table_names = {
+      {TableFeatureExportType::TABLE, "table_meta"},
+      {TableFeatureExportType::COLUMN, "column_meta"},
+      {TableFeatureExportType::SEGMENT, "segment_meta"}};
+
   const std::string& _path_to_dir;
-
-  const std::string _table_meta_file_name = "table_meta";
-  const std::string _column_meta_file_name = "column_meta";
-  const std::string _segment_meta_file_name = "segment_meta";
-
-  CSVWriter _table_csv_writer =
-      CSVWriter(_path_to_dir + "/" + _table_meta_file_name + ".csv", headers.at(TableFeatureExportType::TABLE));
-  CSVWriter _column_csv_writer =
-      CSVWriter(_path_to_dir + "/" + _column_meta_file_name + ".csv", headers.at(TableFeatureExportType::COLUMN));
-  CSVWriter _segment_csv_writer =
-      CSVWriter(_path_to_dir + "/" + _segment_meta_file_name + ".csv", headers.at(TableFeatureExportType::SEGMENT));
 
   void _export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
   void _export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);

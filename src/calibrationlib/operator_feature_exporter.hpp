@@ -2,8 +2,10 @@
 
 #include <string>
 
-#include <operators/abstract_operator.hpp>
 #include "csv_writer.hpp"
+#include "import_export/csv/csv_writer.hpp"
+#include "operators/abstract_operator.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -11,34 +13,33 @@ class OperatorFeatureExporter {
  public:
   explicit OperatorFeatureExporter(const std::string& path_to_dir);
 
-  void export_to_csv(const std::shared_ptr<const AbstractOperator> op) const;
-  const std::map<OperatorType, std::vector<std::string>> headers = {
-      {OperatorType::TableScan, std::vector<std::string>({"INPUT_ROWS_LEFT", "OUTPUT_ROWS", "RUNTIME_NS", "SCAN_TYPE",
-                                                          "TABLE_NAME", "COLUMN_NAME", "SCAN_IMPLEMENTATION"})}};
+  void export_to_csv(const std::shared_ptr<const AbstractOperator> op);
+
+  void flush();
+
+ protected:
+  std::map<OperatorType, std::shared_ptr<Table>> _tables = {
+      {OperatorType::TableScan,
+       std::make_shared<Table>(OperatorFeatureExporter::_column_definitions.at(OperatorType::TableScan),
+                               TableType::Data)}};
+
+  // TODO: make this more generic: every operator should be exported easily
+  // Like dumping everything in one table and filter out in Notebook
+  static inline std::map<OperatorType, TableColumnDefinitions> _column_definitions = {
+      {OperatorType::TableScan, TableColumnDefinitions{{"INPUT_ROWS_LEFT", DataType::Long, true},
+                                                       {"OUTPUT_ROWS", DataType::Long, true},
+                                                       {"RUNTIME_NS", DataType::Long, true},
+                                                       {"SCAN_TYPE", DataType::String, false},
+                                                       {"TABLE_NAME", DataType::String, false},
+                                                       {"COLUMN_NAME", DataType::Long, false},
+                                                       {"SCAN_IMPLEMENTATION", DataType::Long, false}}}};
 
  private:
   const std::string& _path_to_dir;
 
-  const std::map<OperatorType, std::shared_ptr<CSVWriter>> _csv_writers = [&]() {
-    auto csv_writers_per_operator = std::map<OperatorType, std::shared_ptr<CSVWriter>>();
-
-    for (int op_type_id = static_cast<int>(OperatorType::Projection);
-         op_type_id != static_cast<int>(OperatorType::Validate); ++op_type_id) {
-      const auto op_type = static_cast<OperatorType>(op_type_id);
-
-      // If we find a header for a given OperatorType, create a CSV Writer
-      if (headers.find(op_type) != headers.end()) {
-        std::stringstream path;
-        path << _path_to_dir << "/" << _map_operator_type(op_type) << ".csv";
-        csv_writers_per_operator.emplace(op_type,
-                                         std::make_shared<CSVWriter>(CSVWriter(path.str(), headers.at(op_type))));
-      }
-    }
-    return csv_writers_per_operator;
-  }();
-
-  void _export_typed_operator(const std::shared_ptr<const AbstractOperator> op) const;
-  void _export_table_scan(const std::shared_ptr<const AbstractOperator> op) const;
+  void _export_typed_operator(const std::shared_ptr<const AbstractOperator>& op,
+                              std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_operators);
+  void _export_table_scan(const std::shared_ptr<const AbstractOperator> op);
 
   // TODO(Bouncner): use magic_enum.name when available
   const std::string _map_operator_type(const OperatorType op_type) {

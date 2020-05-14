@@ -18,7 +18,7 @@ class CalibrationBenchmarkRunner {
   void run_benchmark(const BenchmarkType type, const float scale_factor, const int number_of_executions);
 
  private:
-  const OperatorFeatureExporter _feature_exporter;
+  OperatorFeatureExporter _feature_exporter;
   TableFeatureExporter _table_exporter;
 
   std::shared_ptr<BenchmarkConfig> _config;

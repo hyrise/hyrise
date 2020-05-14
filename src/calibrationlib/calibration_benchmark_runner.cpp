@@ -37,7 +37,7 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
     benchmark_runner->run();
 
     const auto& pqp_cache = Hyrise::get().default_pqp_cache;
-    auto cache_map = pqp_cache->snapshot();
+    const auto cache_map = pqp_cache->snapshot();
 
     for (const auto& [_, entry] : cache_map) {
       _feature_exporter.export_to_csv(entry.value);
@@ -47,6 +47,8 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
     pqp_cache->clear();
   }
 
+  _feature_exporter.flush();
+
   const std::vector<std::string> table_names = Hyrise::get().storage_manager.table_names();
   for (const auto& table_name : table_names) {
     auto table = Hyrise::get().storage_manager.get_table(table_name);
@@ -54,6 +56,8 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
 
     Hyrise::get().storage_manager.drop_table(table_name);
   }
+
+  _table_exporter.flush();
 }
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tcph(const float scale_factor) const {
