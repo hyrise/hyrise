@@ -135,8 +135,9 @@ Console::Console()
   Hyrise::get().default_lqp_cache = _lqp_cache;
 
   // Register default commands to Console
-  register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
-  register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
+  register_command("exit", std::bind(&Console::exit, this));
+  register_command("quit", std::bind(&Console::exit, this));
+
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
@@ -269,9 +270,15 @@ int Console::_eval_sql(const std::string& sql) {
     _sql_pipeline->get_result_tables();
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
+    out("Following statements have not been executed.\n");
+    if (!_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
       out("All previous statements have been committed.\n");
     }
+
+    // Store the transaction context as potentially modified by the pipeline. It might be a new context if a transaction
+    // was started or nullptr if we are in auto-commit mode or the last transaction was finished.
+    _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
+
     return ReturnCode::Error;
   }
 
@@ -280,17 +287,7 @@ int Console::_eval_sql(const std::string& sql) {
   _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
 
   const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
-  if (pipeline_status == SQLPipelineStatus::Failure) {
-    _handle_rollback();
-    out("A transaction conflict has been detected:");
-    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
-    if (_explicitly_created_transaction_context) {
-      out("The transaction has been rolled back");
-    } else {
-      out("The statement was rolled back, but previous statements have been auto-committed");
-    }
-    return ReturnCode::Error;
-  }
+  // Failed (i.e., conflicted) pipelines should be impossible in the single-user console
   Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
   auto row_count = table ? table->row_count() : 0;
@@ -395,7 +392,21 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 // Command functions
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
-int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
+int Console::exit() {
+  auto& console = opossum::Console::get();
+
+  if (_explicitly_created_transaction_context) {
+    _explicitly_created_transaction_context->rollback(RollbackReason::User);
+    console.out("A transaction was still open and has been rolled back.\n");
+  }
+
+  console.out("Bye.\n");
+
+  // Timestamp dump only to logfile
+  console.out("--- Session end --- " + current_timestamp() + "\n", false);
+
+  return Console::ReturnCode::Quit;
+}
 
 int Console::_help(const std::string&) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
@@ -719,7 +730,6 @@ int Console::_visualize(const std::string& input) {
         }
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
-        _handle_rollback();
         return ReturnCode::Error;
       }
 
@@ -737,7 +747,6 @@ int Console::_visualize(const std::string& input) {
         visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
-        _handle_rollback();
         return ReturnCode::Error;
       }
     } break;
@@ -1003,17 +1012,6 @@ char* Console::_command_generator_setting_scheduler(const char* text, int state)
   return _command_generator(text, state, {"on", "off"});
 }
 
-bool Console::_handle_rollback() {
-  auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-  if (failed_pipeline && failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
-    out("The transaction has been rolled back.\n");
-    _explicitly_created_transaction_context = nullptr;
-    return true;
-  }
-
-  return false;
-}
-
 }  // namespace opossum
 
 int main(int argc, char** argv) {
@@ -1086,8 +1084,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  console.out("Bye.\n");
-
-  // Timestamp dump only to logfile
-  console.out("--- Session end --- " + current_timestamp() + "\n", false);
+  console.exit();
 }

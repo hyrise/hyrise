@@ -82,6 +82,8 @@ class Console : public Singleton<Console> {
    */
   static void handle_signal(int sig);
 
+  int exit();
+
  protected:
   /*
    * Non-public constructor, since Console is a Singleton.
@@ -106,7 +108,6 @@ class Console : public Singleton<Console> {
   int _eval_sql(const std::string& sql);
 
   // Command functions, registered to be called from the Console
-  int _exit(const std::string& args);
   int _help(const std::string& args);
   int _generate_tpcc(const std::string& args);
   int _generate_tpch(const std::string& args);

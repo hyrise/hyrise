@@ -78,6 +78,33 @@ def main():
 	console.sendline("txinfo")
 	console.expect("auto-commit mode")
 
+	# Test that visualization does not change the transaction state
+	console.sendline("begin")
+	console.sendline("visulize lqp commit")
+	console.sendline("visulize noexec rollback")
+	console.sendline("txinfo")
+	console.expect("Active transaction")
+
+	# Test invalid transaction handling
+	console.sendline("begin")
+	console.sendline("insert into test (a) values (18);")
+	console.sendline("begin")
+	console.expect("Cannot begin transaction inside an active transaction.")
+	console.sendline("txinfo")
+	console.expect("Active transaction")
+	console.sendline("rollback")
+	console.expect("0 rows total")
+	console.sendline("txinfo")
+	console.expect("auto-commit mode")
+	console.sendline("begin; delete from test; begin; insert into test (a) values (20);")
+	console.sendline("txinfo")
+	console.expect("Active transaction")
+	console.sendline("select sum(a) from test")
+	console.expect("0")
+	console.sendline("rollback")
+	console.sendline("select sum(a) from test")
+	console.expect("840")
+
 	# Test TPCH generation
 	console.sendline("generate_tpch     0.01   7")
 	console.expect("Generating tables done")
@@ -99,8 +126,12 @@ def main():
 	console.sendline("select * from meta_plugins")
 	console.expect("hyriseTestPlugin")
 
+	# Create a transaction that is still open when the console exists. It will be rolled back.
+	console.sendline("begin")
+
 	# Test exit command
 	console.sendline("exit")
+	console.expect("rolled back")
 	console.expect("Bye.")
 
 	close_console(console)
