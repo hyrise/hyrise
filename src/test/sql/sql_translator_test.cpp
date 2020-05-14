@@ -2473,6 +2473,8 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT SUM(b) FROM int_string;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a FROM int_string GROUP BY a HAVING SUM(b) > 2;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
