@@ -8,11 +8,17 @@ namespace opossum {
 class SizeEstimationUtilsTest : public BaseTest {};
 
 TEST_F(SizeEstimationUtilsTest, SingleString) {
-  auto string1 = std::string{"a"};
-  auto string2 = pmr_string{"b"};
+  auto short_string1 = std::string{"a"};
+  auto short_string2 = pmr_string{"b"};
 
-  EXPECT_EQ(string_heap_size(string1), 0);
-  EXPECT_EQ(string_heap_size(string2), 0);
+  EXPECT_EQ(string_heap_size(short_string1), 0);
+  EXPECT_EQ(string_heap_size(short_string2), 0);
+
+  auto long_string1 = std::string{"thisisareallylongstringitholdsapproximatelylessthanamillionbytes"};
+  auto long_string2 = pmr_string{"thisisareallylongstringitholdsapproximatelylessthanamillionbytes"};
+
+  EXPECT_EQ(string_heap_size(long_string1), 65);
+  EXPECT_EQ(string_heap_size(long_string2), 65);
 }
 
 // Check early out of estimation
