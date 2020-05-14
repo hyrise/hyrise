@@ -11,8 +11,9 @@ namespace opossum {
  */
 template <typename T>
 size_t string_heap_size(const T& string) {
-  // Get the default pre-allocated capacity of SSO strings.
-  const auto sso_string_capacity = T{}.capacity();
+  // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so
+  // we use a really short one here.
+  const auto sso_string_capacity = T{"."}.capacity();
 
   if (string.capacity() > sso_string_capacity) {
     // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
@@ -21,9 +22,8 @@ size_t string_heap_size(const T& string) {
     return string.capacity() + 1;
   }
 
-  // valgrind is drunk. This could be `return 0`, but valgrind doesn't like it.
-  DebugAssert(string.capacity() - sso_string_capacity == 0, "SSO does not meet expectations");
-  return string.capacity() - sso_string_capacity;
+  DebugAssert(string.capacity() == sso_string_capacity, "SSO does not meet expectations");
+  return 0;
 }
 
 /**
