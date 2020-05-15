@@ -45,8 +45,6 @@ void StoredTableColumnAlignmentRule::recursively_gather_stored_table_nodes(
     // pruned chunk ids
     if (aligned_pruned_column_ids_for_node.contains(stored_table_node)) {
       auto& aligned_pruned_column_ids = aligned_pruned_column_ids_for_node[stored_table_node];
-      if (aligned_pruned_column_ids.empty()) {
-      }
       std::vector<ColumnID> updated_pruned_column_ids{};
       updated_pruned_column_ids.reserve(aligned_pruned_column_ids.size() +
                                         stored_table_node->pruned_column_ids().size());
