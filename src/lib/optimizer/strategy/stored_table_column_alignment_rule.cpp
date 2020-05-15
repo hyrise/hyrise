@@ -41,7 +41,7 @@ void StoredTableColumnAlignmentRule::recursively_gather_stored_table_nodes(
     auto& gathered_stored_table_nodes = gathered_stored_table_nodes_for_node[stored_table_node];
     gathered_stored_table_nodes.emplace_back(stored_table_node);
 
-    // update minimum superset of pruned column ids for a StoredTableNodes with the same table name and same set of
+    // update maximum superset of pruned column ids for a StoredTableNodes with the same table name and same set of
     // pruned chunk ids
     if (aligned_pruned_column_ids_for_node.contains(stored_table_node)) {
       auto& aligned_pruned_column_ids = aligned_pruned_column_ids_for_node[stored_table_node];
