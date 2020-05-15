@@ -242,41 +242,45 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1, 1},
-                                                                     pmr_vector<bool>{true, true, false, false});
+                                                               pmr_vector<bool>{true, true, false, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
   EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
 
   EXPECT_NO_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)));
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)), std::logic_error);
+  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
+               std::logic_error);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{0, 2, 1, 1},
-                                                                     pmr_vector<bool>{true, false, false, false});
+                                                               pmr_vector<bool>{true, false, false, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
   EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
 
   // Currently, NULL values always come first when sorted.
   EXPECT_NO_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)));
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)), std::logic_error);
+  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
+               std::logic_error);
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationUnexpectedNULLs) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1},
-                                                                     pmr_vector<bool>{false, true, false});
+  auto value_segment =
+      std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, true, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
   EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
 
   // Sorted values, but NULLs always come first in Hyrise when vector is sorted.
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)), std::logic_error);
-  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)), std::logic_error);
+  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending)),
+               std::logic_error);
+  EXPECT_THROW(chunk_with_nulls->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending)),
+               std::logic_error);
 }
 
 }  // namespace opossum
