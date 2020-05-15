@@ -39,6 +39,8 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksEqualColumns) {
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}}));
+  EXPECT_EQ(_stored_table_node_left->hash(), _stored_table_node_right->hash());
+  EXPECT_EQ(*_stored_table_node_left, *_stored_table_node_right);
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns) {
@@ -49,6 +51,8 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}}));
+  EXPECT_EQ(_stored_table_node_left->hash(), _stored_table_node_right->hash());
+  EXPECT_EQ(*_stored_table_node_left, *_stored_table_node_right);
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentColumns) {
@@ -60,6 +64,8 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentCol
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}, ColumnID{1}}));
+  EXPECT_NE(_stored_table_node_left->hash(), _stored_table_node_right->hash());
+  EXPECT_NE(*_stored_table_node_left, *_stored_table_node_right);
 }
 
 TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentColumns) {
@@ -72,6 +78,8 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
 
   EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), (std::vector{ColumnID{0}}));
   EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), (std::vector{ColumnID{0}, ColumnID{1}}));
+  EXPECT_NE(_stored_table_node_left->hash(), _stored_table_node_right->hash());
+  EXPECT_NE(*_stored_table_node_left, *_stored_table_node_right);
 }
 
 }  // namespace opossum
