@@ -1131,9 +1131,8 @@ TEST_P(OperatorsTableScanTest, KeepOrderByFlagUnset) {
 
 TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
   // In the current implementation, scans on tables that do not contain ReferenceSegments are executed chunk-by-chunk.
-  // As each input chunks will lead to one output chunk (assuming there are qualifying tuples), the position is set to
-  // guarantee that only a single chunk is referenced. Hence, the scan ensures that the sort order that was initially
-  // set is forwarded.
+  // Each input chunk will lead to one output chunk (assuming there are qualifying tuples). The position list thus
+  // references only a single chunk, allowing the scan to simply forward the initial sorting order.
   const auto scan_sorted =
       create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::LessThanEquals, 1234);
   scan_sorted->execute();
