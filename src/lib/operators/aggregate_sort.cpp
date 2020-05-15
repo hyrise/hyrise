@@ -300,17 +300,12 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
   auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
   const auto chunk_count = input_table->chunk_count();
+  const auto column_count = input_table->column_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    if (!input_table->get_chunk(chunk_id)) continue;
-
-    const auto chunk = std::make_shared<Chunk>(_get_segments_of_chunk(input_table, chunk_id));
-    // const auto& chunk = input_table->get_chunk(chunk_id);  // TODO: why not?
-    auto single_chunk_to_sort_as_vector = std::vector{chunk};
-    auto single_chunk_table = std::make_shared<const Table>(input_table->column_definitions(), input_table->type(),
-                                                            std::move(single_chunk_to_sort_as_vector));
+    const auto chunk = input_table->get_chunk(chunk_id);
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
-    auto output_sorted_by = chunk_sorted_by;
 
     // We can skip sorting the chunk only if we group by a single column and the chunk is sorted by that column. We do
     // not store information about cascadingly sorted chunks, which we would need for skipping the sort step with
@@ -326,7 +321,6 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
       if (input_table->type() == TableType::Data) {
         // Since the chunks that actually have to be sorted will be returned as referencing chunks, we need to forward
         // the already sorted input chunks as such too, using an EntireChunkPosList.
-        const auto column_count = input_table->column_count();
         const auto pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk->size());
         auto reference_segments = Segments{};
         reference_segments.reserve(column_count);
@@ -343,7 +337,16 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
         output_table->append_chunk(_get_segments_of_chunk(input_table, chunk_id));
       }
     } else {
+      // Creating a new table holding only the current chunk and pass it to the sort operator.
+      auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), input_table->type());
+      Segments segments;
+      segments.reserve(column_count);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        segments.emplace_back(chunk->get_segment(column_id));
+      }
+      single_chunk_table->append_chunk(segments);
       const auto sorted_single_chunk_table = sort_table_by_column_ids(single_chunk_table, groupby_column_ids);
+
       output_table->append_chunk(_get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
     }
   }
