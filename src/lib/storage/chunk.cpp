@@ -227,7 +227,7 @@ void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
   Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
   // Currently, we assume that set_sorted_by is called only once at most. As such, there should be no existing sorting
   // and the new sorting should contain at least one column. Feel free to remove this assertion if necessary.
-  Assert(sorted_by.size() > 0 && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
+  Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& sorted_by_column : sorted_by) {

@@ -210,7 +210,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
 
-  // Collect information about which input table columns correspond to the expression (output) columns.
+  // Maps input columns to output columns (which may be reordered). Only contains input column IDs that are forwarded
+  // to the output without modfications.
   auto input_column_to_output_column = std::unordered_map<ColumnID, ColumnID>{};
   for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
     const auto& expression = expressions[expression_id];
