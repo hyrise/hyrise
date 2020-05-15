@@ -107,7 +107,7 @@ TEST_F(AggregateSortTest, SingleAggregateMaxSorted) {
 }
 
 TEST_F(AggregateSortTest, SingleAggregateMinSorted) {
-  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
@@ -117,7 +117,7 @@ TEST_F(AggregateSortTest, SingleAggregateMinSorted) {
 }
 
 TEST_F(AggregateSortTest, SingleAggregateSumSorted) {
-  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
@@ -127,7 +127,7 @@ TEST_F(AggregateSortTest, SingleAggregateSumSorted) {
 }
 
 TEST_F(AggregateSortTest, SingleAggregateAvgSorted) {
-  for (const auto sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
+  for (const auto& sort_by_column_id : {ColumnID{0}, ColumnID{1}}) {
     const auto sort = std::make_shared<Sort>(
         this->_table_wrapper_1, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_by_column_id}});
     sort->execute();
