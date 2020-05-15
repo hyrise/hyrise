@@ -12,12 +12,12 @@ namespace opossum {
 // enable hash based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
   size_t operator()(const std::shared_ptr<StoredTableNode>& node) const {
-  	size_t hash{0};
-	boost::hash_combine(hash, node->table_name);
-	for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
-	  boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
-	}
-	return hash;
+    size_t hash{0};
+    boost::hash_combine(hash, node->table_name);
+    for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
+      boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
+    }
+    return hash;
   }
 };
 
@@ -30,16 +30,16 @@ struct StoredTableNodeSharedPtrEqual final {
 };
 
 template <typename Value>
-using StoredTableNodeUnorderedMap =
-  std::unordered_map<std::shared_ptr<StoredTableNode>, Value, StoredTableNodeSharedPtrHash,
-  StoredTableNodeSharedPtrEqual>;
+using StoredTableNodeUnorderedMap = std::unordered_map<std::shared_ptr<StoredTableNode>, Value,
+                                                       StoredTableNodeSharedPtrHash, StoredTableNodeSharedPtrEqual>;
 
 class StoredTableColumnAlignmentRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
-  void recursively_gather_stored_table_nodes(const std::shared_ptr<AbstractLQPNode>& node,
-  	StoredTableNodeUnorderedMap<std::vector<std::shared_ptr<StoredTableNode>>>& gathered_stored_table_nodes_for_node,
-  	StoredTableNodeUnorderedMap<std::vector<ColumnID>>& aligned_pruned_column_ids_for_node) const;
+  void recursively_gather_stored_table_nodes(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      StoredTableNodeUnorderedMap<std::vector<std::shared_ptr<StoredTableNode>>>& gathered_stored_table_nodes_for_node,
+      StoredTableNodeUnorderedMap<std::vector<ColumnID>>& aligned_pruned_column_ids_for_node) const;
 };
 
 }  // namespace opossum
