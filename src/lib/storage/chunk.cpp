@@ -238,14 +238,16 @@ void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
         if (sorted_by_column.sort_mode == SortMode::Ascending) {
           Assert(std::is_sorted(begin, end,
                                 [](const auto& left, const auto& right) {
-                                  if (left.is_null() || right.is_null()) return false;
+                                  if (left.is_null()) return true;
+                                  if (right.is_null()) return false;
                                   return left.value() < right.value();
                                 }),
                  "Setting an ascending sort order for a segment which is not sorted accordingly.");
         } else if (sorted_by_column.sort_mode == SortMode::Descending) {
           Assert(std::is_sorted(begin, end,
                                 [](const auto& left, const auto& right) {
-                                  if (left.is_null() || right.is_null()) return false;
+                                  if (left.is_null()) return true;
+                                  if (right.is_null()) return false;
                                   return left.value() > right.value();
                                 }),
                  "Setting a descending sort order for a segment which is not sorted accordingly.");
