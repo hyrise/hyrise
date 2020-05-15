@@ -365,8 +365,8 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
  *    - depending on characteristics of the input table, sorting can either be skipped (input already sorted by group
  *      by column) or sorting can be limited to chunks instead of sorting the whole table (input table is clustered)
  * 4. Find the group boundaries.
- *    - The unit of aggregation (either chunks or the whole table, depending on the table clustering) is now sorted by
- *      all group by columns.
+ *    - The unit of aggregation (either chunks or the whole table, depending on the table's value clustering) is now
+ *      sorted by all group by columns.
  *    - As a result, all rows that fall into the same group are consecutive within that unit.
  *    - Thus, we can find all group boundaries (specifically their first element) by iterating over the group by
  *      columns and storing RowIDs of rows where the value of any group by column changes.
