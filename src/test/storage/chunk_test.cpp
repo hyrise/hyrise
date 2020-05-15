@@ -241,8 +241,8 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
 TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1},
-                                                                     pmr_vector<bool>{true, false, false});
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1, 1},
+                                                                     pmr_vector<bool>{true, true, false, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
   EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
@@ -254,8 +254,8 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{0, 2, 1},
-                                                                     pmr_vector<bool>{true, false, false});
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{0, 2, 1, 1},
+                                                                     pmr_vector<bool>{true, false, false, false});
   auto chunk_with_nulls = std::make_shared<Chunk>(Segments{value_segment});
   chunk_with_nulls->finalize();
   EXPECT_TRUE(chunk_with_nulls->sorted_by().empty());
