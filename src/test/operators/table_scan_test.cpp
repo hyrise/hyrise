@@ -1177,7 +1177,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(ref_table));
   table_wrapper->execute();
 
-  const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::LessThanEquals, 3);
+  const auto scan_sorted = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::LessThanEquals, 4);
   scan_sorted->execute();
 
   EXPECT_EQ(scan_sorted->get_output()->chunk_count(), 2);
