@@ -13,10 +13,11 @@ namespace opossum {
 // GetTable operator is created and executed. In some queries, the ColumnPruningRule and ChunkPruningRule provide an
 // LQP with multiple StoredTableNodes where the table names and sets of pruned chunks are equal but the sets of pruned
 // columns are different. This leads to the creation and execution of different GetTable operators.
+// TODO(Marcel) add an example, see github review feedback
 //
-// This rule identifies StoredTableNodes with equal table names and sets of pruned chunks and aligns the pruned columns
-// so that the sets of pruned columns are equal which means that the PQP sub plan memoization is effective for theses
-// StoredTableNodes and only one GetTable operator is created.
+// This rule identifies StoredTableNodes that differ only in the pruned columns. It then intersects the lists of pruned
+// columns. While this means that some columns are left unpruned, it makes the job easier for the memoization in the
+// LQPTranslator. In our experiments, this has led to significant performance improvements and negligible reductions.
 class StoredTableColumnAlignmentRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
