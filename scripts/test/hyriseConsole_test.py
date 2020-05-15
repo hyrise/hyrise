@@ -28,6 +28,7 @@ def check_exit_status(console):
 
 def main():
 	console = initialize()
+	console.logfile = sys.stdout.buffer
 
 	build_dir = sys.argv[1]
 	lib_suffix = ""
