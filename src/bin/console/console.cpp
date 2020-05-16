@@ -135,8 +135,8 @@ Console::Console()
   Hyrise::get().default_lqp_cache = _lqp_cache;
 
   // Register default commands to Console
-  register_command("exit", std::bind(&Console::exit, this));
-  register_command("quit", std::bind(&Console::exit, this));
+  register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
+  register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
 
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
@@ -152,6 +152,18 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+}
+
+Console::~Console() {
+  if (_explicitly_created_transaction_context) {
+    _explicitly_created_transaction_context->rollback(RollbackReason::User);
+    out("A transaction was still open and has been rolled back.\n");
+  }
+
+  out("Bye.\n");
+
+  // Timestamp dump only to logfile
+  out("--- Session end --- " + current_timestamp() + "\n", false);
 }
 
 int Console::read() {
@@ -390,21 +402,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 // Command functions
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
-int Console::exit() {
-  auto& console = opossum::Console::get();
-
-  if (_explicitly_created_transaction_context) {
-    _explicitly_created_transaction_context->rollback(RollbackReason::User);
-    console.out("A transaction was still open and has been rolled back.\n");
-  }
-
-  console.out("Bye.\n");
-
-  // Timestamp dump only to logfile
-  console.out("--- Session end --- " + current_timestamp() + "\n", false);
-
-  return Console::ReturnCode::Quit;
-}
+int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
@@ -1088,6 +1086,4 @@ int main(int argc, char** argv) {
       console.set_prompt("!> ");
     }
   }
-
-  console.exit();
 }
