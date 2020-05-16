@@ -205,7 +205,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   }
 }
 
-std::shared_ptr<Chunk> Table::last_chunk() {
+std::shared_ptr<Chunk> Table::last_chunk() const {
   DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
@@ -355,6 +355,47 @@ void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, 
 
     _constraint_definitions.push_back(new_constraint);
   }
+}
+
+const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
+
+void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
+  // Ensure that all chunks are finalized because the table should not be altered afterwards.
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = get_chunk(chunk_id);
+    if (!chunk) continue;
+
+    Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
+  }
+
+  if constexpr (HYRISE_DEBUG) {
+    if (chunk_count > 1) {
+      for (const auto& column_id : value_clustered_by) {
+        resolve_data_type(_column_definitions[column_id].data_type, [&](const auto column_data_type) {
+          using ColumnDataType = typename decltype(column_data_type)::type;
+
+          auto value_to_chunk_map = std::unordered_map<ColumnDataType, ChunkID>{};
+          for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto& chunk = get_chunk(chunk_id);
+            const auto& segment = chunk->get_segment(column_id);
+            segment_iterate<ColumnDataType>(*segment, [&](const auto position) {
+              Assert(!position.is_null(), "Value clustering is not defined for columns storing NULLs.");
+
+              const auto& [iter, inserted] = value_to_chunk_map.try_emplace(position.value(), chunk_id);
+              if (!inserted) {
+                Assert(iter->second == chunk_id,
+                       "Table cannot be set to value-clustered as same value "
+                       "is found in more than one chunk");
+              }
+            });
+          }
+        });
+      }
+    }
+  }
+
+  _value_clustered_by = value_clustered_by;
 }
 
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {

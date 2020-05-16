@@ -9,6 +9,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "operators/difference.hpp"
 #include "operators/projection.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -77,6 +78,32 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
   auto difference = std::make_shared<Difference>(_table_wrapper_a, table_wrapper_d);
 
   EXPECT_THROW(difference->execute(), std::exception);
+}
+
+TEST_F(OperatorsDifferenceTest, ForwardSortedByFlag) {
+  // Verify that the sorted_by flag is not set when it's not present in left input.
+  const auto difference_unsorted = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
+  difference_unsorted->execute();
+
+  const auto& result_table_unsorted = difference_unsorted->get_output();
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
+  }
+
+  // Verify that the sorted_by flag is set when it's present in left input.
+  const auto sort_definition = std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0})};
+  const auto sort = std::make_shared<Sort>(_table_wrapper_a, sort_definition);
+  sort->execute();
+
+  const auto difference_sorted = std::make_shared<Difference>(sort, _table_wrapper_b);
+  difference_sorted->execute();
+
+  const auto& result_table_sorted = difference_sorted->get_output();
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_EQ(sorted_by, sort_definition);
+  }
 }
 
 }  // namespace opossum

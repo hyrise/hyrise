@@ -12,10 +12,10 @@ struct TestData {
   std::vector<int32_t> expected;
 };
 
-using Params = std::tuple<TestData, opossum::OrderByMode, bool>;
+using Params = std::tuple<TestData, opossum::SortMode, bool>;
 
 auto table_scan_sorted_segment_search_test_formatter = [](const ::testing::TestParamInfo<Params> info) {
-  return opossum::order_by_mode_to_string.left.at(std::get<1>(info.param)) +
+  return opossum::sort_mode_to_string.left.at(std::get<1>(info.param)) +
          std::get<0>(info.param).predicate_condition_string + (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
 };
 
@@ -28,14 +28,14 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
   void SetUp() override {
     bool nullable;
     TestData test_data;
-    std::tie(test_data, _order_by, nullable) = GetParam();
+    std::tie(test_data, _sorted_by, nullable) = GetParam();
     _predicate_condition = test_data.predicate_condition;
     _nullable = nullable;
     _search_value = test_data.search_value;
     _expected = test_data.expected;
 
-    const bool ascending = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::AscendingNullsLast;
-    const bool nulls_first = _order_by == OrderByMode::Ascending || _order_by == OrderByMode::Descending;
+    const bool ascending = _sorted_by == SortMode::Ascending || _sorted_by == SortMode::AscendingNullsLast;
+    const bool nulls_first = _sorted_by == SortMode::Ascending || _sorted_by == SortMode::Descending;
 
     if (!ascending) {
       std::reverse(_expected.begin(), _expected.end());
@@ -67,7 +67,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
   bool _nullable;
   int32_t _search_value;
   std::vector<int32_t> _expected;
-  OrderByMode _order_by;
+  SortMode _sorted_by;
 };
 
 // clang-format off
@@ -117,8 +117,8 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {}},  // NOLINT
             TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {4, 4}}),  // NOLINT
 
-        ::testing::Values(OrderByMode::Ascending, OrderByMode::AscendingNullsLast, OrderByMode::Descending,
-                          OrderByMode::DescendingNullsLast),
+        ::testing::Values(SortMode::Ascending, SortMode::AscendingNullsLast, SortMode::Descending,
+                          SortMode::DescendingNullsLast),
         ::testing::Bool()),  // nullable
     table_scan_sorted_segment_search_test_formatter);
 // clang-format on
@@ -127,7 +127,7 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   const auto iterable = create_iterable_from_segment(*_segment);
   iterable.with_iterators([&](auto input_begin, auto input_end) {
     auto sorted_segment_search =
-        SortedSegmentSearch(input_begin, input_end, _order_by, _nullable, _predicate_condition, _search_value);
+        SortedSegmentSearch(input_begin, input_end, _sorted_by, _nullable, _predicate_condition, _search_value);
     sorted_segment_search.scan_sorted_segment([&](auto output_begin, auto output_end) {
       ASSERT_EQ(std::distance(output_begin, output_end), _expected.size());
 

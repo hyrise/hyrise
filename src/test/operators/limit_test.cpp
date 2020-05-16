@@ -8,6 +8,7 @@
 
 #include "expression/expression_functional.hpp"
 #include "operators/limit.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
@@ -115,6 +116,32 @@ TEST_F(OperatorsLimitTest, Limit10ReferenceSegment) {
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_10();
+}
+
+TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
+  auto limit = std::make_shared<Limit>(_table_wrapper, to_expression(int64_t{4}));
+  limit->execute();
+
+  const auto result_table_unsorted = limit->get_output();
+  for (ChunkID chunk_id{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
+  }
+
+  // Verify that the sorted_by flag is set when it's present in input.
+  const auto sort_definition =
+      std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID{0}, SortMode::Ascending)};
+  auto sort = std::make_shared<Sort>(_table_wrapper, sort_definition);
+  sort->execute();
+
+  auto limit_sorted = std::make_shared<Limit>(sort, to_expression(int64_t{4}));
+  limit_sorted->execute();
+
+  const auto result_table_sorted = limit_sorted->get_output();
+  for (ChunkID chunk_id{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_EQ(sorted_by, sort_definition);
+  }
 }
 
 }  // namespace opossum

@@ -832,7 +832,7 @@ TEST_F(CardinalityEstimatorTest, Projection) {
 TEST_F(CardinalityEstimatorTest, Sort) {
   // clang-format off
   const auto input_lqp =
-  SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending},
+  SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::Ascending},
                  node_a);
   // clang-format on
 

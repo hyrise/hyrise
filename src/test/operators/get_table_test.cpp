@@ -287,8 +287,10 @@ TEST_F(OperatorsGetTableTest, Copy) {
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   auto table = Hyrise::get().storage_manager.get_table("int_int_float");
-  table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
-  table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{2}, OrderByMode::Descending});
+  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
+  table->get_chunk(ChunkID{1})
+      ->set_sorted_by({SortColumnDefinition(ColumnID{1}, SortMode::Ascending),
+                       SortColumnDefinition(ColumnID{2}, SortMode::Descending)});
 
   // single column pruned
   {
@@ -296,13 +298,13 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
         std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
     get_table->execute();
 
-    auto get_table_output = get_table->get_output();
+    const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 2);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->first, ColumnID{0});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{1});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->second, OrderByMode::Ascending);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
-    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->sorted_by().front().column, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().column, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().sort_mode, SortMode::Descending);
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{2})->sorted_by().empty());
   }
 
   // multiple columns pruned
@@ -311,11 +313,11 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
                                                          std::vector{ColumnID{0}, ColumnID{1}});
     get_table->execute();
 
-    auto get_table_output = get_table->get_output();
+    const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 1);
-    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{0});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->sorted_by().empty());
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().column, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().sort_mode, SortMode::Descending);
   }
 
   // no columns pruned
@@ -324,10 +326,12 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
         std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
     get_table->execute();
 
-    auto get_table_output = get_table->get_output();
+    const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 3);
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{2});
-    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().column, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().front().sort_mode, SortMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().back().column, ColumnID{2});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->sorted_by().back().sort_mode, SortMode::Descending);
   }
 
   // pruning the columns on which chunks are sorted
@@ -336,10 +340,10 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
                                                          std::vector{ColumnID{0}, ColumnID{2}});
     get_table->execute();
 
-    auto get_table_output = get_table->get_output();
+    const auto& get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 1);
-    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
-    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->sorted_by().empty());
+    EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->sorted_by().empty());
   }
 }
 
