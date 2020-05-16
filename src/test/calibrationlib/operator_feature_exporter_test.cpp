@@ -41,6 +41,7 @@ class OperatorFeatureExporterTest : public BaseTest {
 
 // Check if performance data is added to csv.
 // This does not check if the export of specific table_scan implementations works. (e.g. Table)
+/*
 TEST_F(OperatorFeatureExporterTest, TableScanExport) {
   const auto headers = _feature_exporter.headers.at(OperatorType::TableScan);
 
@@ -70,5 +71,6 @@ TEST_F(OperatorFeatureExporterTest, TableScanExport) {
     EXPECT_EQ(raw_values.size(), headers.size());
   }
 }
+*/
 
 }  // namespace opossum

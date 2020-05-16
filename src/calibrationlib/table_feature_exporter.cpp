@@ -1,10 +1,11 @@
-#include "fstream"
-#include "string"
+#include "table_feature_exporter.hpp"
+
+#include <fstream>
+#include <string>
 
 #include "constant_mappings.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
-#include "table_feature_exporter.hpp"
 
 namespace opossum {
 TableFeatureExporter::TableFeatureExporter(const std::string& path_to_dir) : _path_to_dir(path_to_dir) {}

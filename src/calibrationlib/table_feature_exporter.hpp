@@ -3,7 +3,6 @@
 #include <string>
 
 #include "calibration_table_wrapper.hpp"
-#include "csv_writer.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -34,7 +33,7 @@ class TableFeatureExporter {
                                                              {"CHUNK_SIZE", DataType::Int, false}}},
       {TableFeatureExportType::COLUMN, TableColumnDefinitions{{"TABLE_NAME", DataType::String, false},
                                                               {"COLUMN_NAME", DataType::String, false},
-                                                              {"COLUMN_DATA_TYPE", DataType::Long, false}}},
+                                                              {"COLUMN_DATA_TYPE", DataType::String, false}}},
       {TableFeatureExportType::SEGMENT, TableColumnDefinitions{{"TABLE_NAME", DataType::String, false},
                                                                {"COLUMN_NAME", DataType::String, false},
                                                                {"CHUNK_ID", DataType::Int, false},

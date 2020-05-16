@@ -72,5 +72,6 @@ int main() {
     table_exporter.export_table(table);
     Hyrise::get().storage_manager.drop_table(table->get_name());
   }
+
   table_exporter.flush();
 }

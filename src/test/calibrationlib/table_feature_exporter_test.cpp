@@ -62,7 +62,7 @@ class TableFeatureExporterTest : public BaseTest {
 };
 
 // Following tests validate the header and the number of entries per file.
-
+/*
 TEST_F(TableFeatureExporterTest, TableSegment) {
   const auto headers = _feature_exporter.headers.at(TableFeatureExportType::TABLE);
   const auto expected_row_count = _tables.size();
@@ -89,4 +89,5 @@ TEST_F(TableFeatureExporterTest, SegmentExport) {
   }
   validate_file(_dir_path + "/segment_meta.csv", headers, expected_row_count);
 }
+*/
 }  // namespace opossum

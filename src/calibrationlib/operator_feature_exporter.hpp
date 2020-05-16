@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include "csv_writer.hpp"
 #include "import_export/csv/csv_writer.hpp"
 #include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
@@ -31,8 +30,8 @@ class OperatorFeatureExporter {
                                                        {"RUNTIME_NS", DataType::Long, true},
                                                        {"SCAN_TYPE", DataType::String, false},
                                                        {"TABLE_NAME", DataType::String, false},
-                                                       {"COLUMN_NAME", DataType::Long, false},
-                                                       {"SCAN_IMPLEMENTATION", DataType::Long, false}}}};
+                                                       {"COLUMN_NAME", DataType::String, false},
+                                                       {"SCAN_IMPLEMENTATION", DataType::String, false}}}};
 
  private:
   const std::string& _path_to_dir;

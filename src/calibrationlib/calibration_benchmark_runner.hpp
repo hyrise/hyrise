@@ -4,6 +4,7 @@
 
 #include <benchmark_config.hpp>
 #include <benchmark_runner.hpp>
+
 #include "operator_feature_exporter.hpp"
 #include "table_feature_exporter.hpp"
 
