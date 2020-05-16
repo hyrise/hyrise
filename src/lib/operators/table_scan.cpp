@@ -108,15 +108,15 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       Segments out_segments;
 
       /**
-       * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
-       * directly use the matches to construct the reference segments of the output. If it is a reference segment,
-       * we need to resolve the row IDs so that they reference the physical data segments (value, dictionary) instead,
-       * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
-       * between segments as much as possible. Position lists can be shared between two segments iff
-       * (a) they point to the same table and
-       * (b) the reference segments of the input table point to the same positions in the same order
-       *     (i.e. they share their position list).
+       * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can directly use
+       * the matches to construct the reference segments of the output. If it is a reference segment, we need to
+       * resolve the row IDs so that they reference the physical data segments (value, dictionary) instead, since we
+       * don’t allow multi-level referencing. To save time and space, we want to share position lists between segments
+       * as much as possible. Position lists can be shared between two segments iff (a) they point to the same table
+       * and (b) the reference segments of the input table point to the same positions in the same order (i.e. they
+       * share their position list).
        */
+      auto keep_chunk_sort_order = true;
       if (in_table->type() == TableType::References) {
         auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
@@ -137,6 +137,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             filtered_pos_list = std::make_shared<RowIDPosList>(matches_out->size());
             if (pos_list_in->references_single_chunk()) {
               filtered_pos_list->guarantee_single_chunk();
+            } else {
+              // When segments reference multiple chunks, we do not keep the sort order of the input chunk. The main
+              // reason is that several table scan implementations split the pos lists by chunks (see
+              // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and thus shuffle the data. While this
+              // does not affect all scan implementations, we chose the safe and defensive path for now.
+              keep_chunk_sort_order = false;
             }
 
             size_t offset = 0;
@@ -158,8 +164,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         }
       }
 
+      const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
+      chunk->finalize();
+      if (keep_chunk_sort_order && !chunk_in->sorted_by().empty()) {
+        chunk->set_sorted_by(chunk_in->sorted_by());
+      }
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator()));
+      output_chunks.emplace_back(chunk);
     });
 
     jobs.push_back(job_task);

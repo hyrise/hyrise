@@ -98,9 +98,9 @@ const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_f
     {hsql::kDatetimeMinute, DatetimeComponent::Minute}, {hsql::kDatetimeSecond, DatetimeComponent::Second},
 };
 
-const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending},
-    {hsql::kOrderDesc, OrderByMode::Descending},
+const std::unordered_map<hsql::OrderType, SortMode> order_type_to_sort_mode = {
+    {hsql::kOrderAsc, SortMode::Ascending},
+    {hsql::kOrderDesc, SortMode::Descending},
 };
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
@@ -1198,16 +1198,16 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   const auto input_lqp = _current_lqp;
 
   std::vector<std::shared_ptr<AbstractExpression>> expressions(order_list.size());
-  std::vector<OrderByMode> order_by_modes(order_list.size());
+  std::vector<SortMode> sort_modes(order_list.size());
   for (auto expression_idx = size_t{0}; expression_idx < order_list.size(); ++expression_idx) {
     const auto& order_description = order_list[expression_idx];
     expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
-    order_by_modes[expression_idx] = order_type_to_order_by_mode.at(order_description->type);
+    sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
   }
 
   _current_lqp = _add_expressions_if_unavailable(_current_lqp, expressions);
 
-  _current_lqp = SortNode::make(expressions, order_by_modes, _current_lqp);
+  _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
   const auto input_column_expressions = input_lqp->column_expressions();

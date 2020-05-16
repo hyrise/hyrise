@@ -74,7 +74,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that sort order, indexes, and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
-  Assert(first_chunk->ordered_by(), "Ordering information was lost");
+  Assert(!first_chunk->sorted_by().empty(), "Sorting information was lost");
   if (_config->indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");

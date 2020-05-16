@@ -323,7 +323,7 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
   auto input_lqp =
   PredicateNode::make(greater_than_(a, 200),
     ProjectionNode::make(expression_vector(b, a),
-      SortNode::make(expression_vector(b), std::vector<OrderByMode>{OrderByMode::Ascending},
+      SortNode::make(expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
         ValidateNode::make(
           stored_table_node))));
   // clang-format on

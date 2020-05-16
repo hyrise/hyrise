@@ -164,7 +164,7 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<OrderByMode>{OrderByMode::Ascending},
+    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -353,12 +353,12 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInOrderBy) {
   const auto actual_lqp_b = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
   const auto aliases = std::vector<std::string>({"x", "y"});
-  const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Ascending});
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-    SortNode::make(expression_vector(int_float_a, int_float_b), order_by_modes,
+    SortNode::make(expression_vector(int_float_a, int_float_b), sort_modes,
       stored_table_node_int_float));
   // clang-format on
 
@@ -1189,13 +1189,12 @@ TEST_F(SQLTranslatorTest, SubquerySelectList) {
 TEST_F(SQLTranslatorTest, OrderByTest) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
 
-  const auto order_by_modes =
-      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
 
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), order_by_modes,
+    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), sort_modes,
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -2809,16 +2808,16 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
     IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
                        stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
         ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending },
+            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{ SortMode::Ascending },
                            stored_table_node_int_int_int))))));
   // clang-format on
 

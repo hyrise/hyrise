@@ -306,13 +306,13 @@ TEST_F(LQPTranslatorTest, Sort) {
    *   SELECT a, b FROM int_float ORDER BY a, a + b DESC, b ASC
    */
 
-  const auto order_by_modes =
-      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::AscendingNullsLast});
+  const auto sort_modes =
+      std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::AscendingNullsLast});
 
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), order_by_modes,
+    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), sort_modes,
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         int_float_node)));
 
@@ -329,13 +329,13 @@ TEST_F(LQPTranslatorTest, Sort) {
   ASSERT_TRUE(sort);
 
   EXPECT_EQ(sort->sort_definitions().at(0).column, ColumnID{1});
-  EXPECT_EQ(sort->sort_definitions().at(0).order_by_mode, OrderByMode::Ascending);
+  EXPECT_EQ(sort->sort_definitions().at(0).sort_mode, SortMode::Ascending);
 
   EXPECT_EQ(sort->sort_definitions().at(1).column, ColumnID{0});
-  EXPECT_EQ(sort->sort_definitions().at(1).order_by_mode, OrderByMode::Descending);
+  EXPECT_EQ(sort->sort_definitions().at(1).sort_mode, SortMode::Descending);
 
   EXPECT_EQ(sort->sort_definitions().at(2).column, ColumnID{2});
-  EXPECT_EQ(sort->sort_definitions().at(2).order_by_mode, OrderByMode::AscendingNullsLast);
+  EXPECT_EQ(sort->sort_definitions().at(2).sort_mode, SortMode::AscendingNullsLast);
 
   const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort->input_left());
   ASSERT_TRUE(projection_b);

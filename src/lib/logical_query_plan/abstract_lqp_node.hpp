@@ -164,7 +164,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * expression for each column.
    *
    * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the
-   * expressions (e.g. column names in the AliasNode, OrderByModes in the SortNode) gets adjusted accordingly.
+   * expressions (e.g. column names in the AliasNode, SortModes in the SortNode) gets adjusted accordingly.
    */
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
