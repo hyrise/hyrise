@@ -63,7 +63,7 @@ To use a different one, call `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILE
 Starting with cmake 3.16, you can use `-DCMAKE_UNITY_BUILD=On` to perform unity builds. For a complete (re-)build or when multiple files have to be rebuilt, these are usually faster, as the relative cost of starting a compiler process and loading the most common headers is reduced. However, this only makes sense for debug builds. See our [blog post](https://medium.com/hyrise/reducing-hyrises-build-time-8523135aed72) on reducing the compilation time for details.
 
 ### ccache
-For development, we suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this works for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
+For development, you may want to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. On the downside, we have seen random build failures on our CI server, which is why we do not recommend ccache anymore but merely list it as an option. To use ccache, add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call. You will need to [adjust some ccache settings](https://ccache.dev/manual/latest.html#_precompiled_headers) either in your environment variables or in your [ccache config](https://ccache.dev/manual/latest.html#_configuration) so that ccache can handle the precompiled headers. On our CI server, this worked for us: `CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=1`.
 
 ### Build
 Simply call `make -j*`, where `*` denotes the number of threads to use.
@@ -107,7 +107,7 @@ When trying to optimize the time spent building the project, it is often helpful
 - Jan Kossmann
 - Markus Dreseler
 - Martin Boissier
-- Stefan Klauck
+- Stefan Halfpap
 
 
 Contact: firstname.lastname@hpi.de
@@ -131,14 +131,17 @@ Contact: firstname.lastname@hpi.de
 -   Carl      Gödecken
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Ivan      Illic
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   David     Justen
+-   Youri     Kaminsky
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
 -   Sven      Lehmann
+-   Till      Lehmann
 -   Tom       Lichtenstein
 -   Daniel    Lindner
 -   Alexander Löser
@@ -165,4 +168,3 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
-

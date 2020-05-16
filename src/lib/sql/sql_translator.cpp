@@ -98,9 +98,9 @@ const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_f
     {hsql::kDatetimeMinute, DatetimeComponent::Minute}, {hsql::kDatetimeSecond, DatetimeComponent::Second},
 };
 
-const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending},
-    {hsql::kOrderDesc, OrderByMode::Descending},
+const std::unordered_map<hsql::OrderType, SortMode> order_type_to_sort_mode = {
+    {hsql::kOrderAsc, SortMode::Ascending},
+    {hsql::kOrderDesc, SortMode::Descending},
 };
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
@@ -202,10 +202,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
     case hsql::kStmtExport:
       return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
+    case hsql::kStmtTransaction:
+      // The transaction statements are handled directly in the SQLPipelineStatement,
+      //  but the translation is still called, so we return a dummy node here.
+      return DummyTableNode::make();
     case hsql::kStmtAlter:
     case hsql::kStmtError:
     case hsql::kStmtRename:
-    case hsql::kStmtTransaction:
       FailInput("Statement type not supported");
   }
   Fail("Invalid enum value");
@@ -719,8 +722,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     const auto& column_definition = table->column_definitions()[column_id];
-    const auto column_reference = LQPColumnReference{stored_table_node, column_id};
-    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    const auto column_expression = std::make_shared<LQPColumnExpression>(stored_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
@@ -753,8 +755,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
     const auto& column_definition = meta_table->column_definitions()[column_id];
-    const auto column_reference = LQPColumnReference{static_table_node, column_id};
-    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    const auto column_expression = std::make_shared<LQPColumnExpression>(static_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
@@ -1000,7 +1001,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
         if (pre_aggregate_expression_set.emplace(argument).second) {
           // Handle COUNT(*)
           const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
-          if (!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
+          if (!column_expression || column_expression->original_column_id != INVALID_COLUMN_ID) {
             pre_aggregate_expressions.emplace_back(argument);
           }
         }
@@ -1197,16 +1198,16 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   const auto input_lqp = _current_lqp;
 
   std::vector<std::shared_ptr<AbstractExpression>> expressions(order_list.size());
-  std::vector<OrderByMode> order_by_modes(order_list.size());
+  std::vector<SortMode> sort_modes(order_list.size());
   for (auto expression_idx = size_t{0}; expression_idx < order_list.size(); ++expression_idx) {
     const auto& order_description = order_list[expression_idx];
     expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
-    order_by_modes[expression_idx] = order_type_to_order_by_mode.at(order_description->type);
+    sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
   }
 
   _current_lqp = _add_expressions_if_unavailable(_current_lqp, expressions);
 
-  _current_lqp = SortNode::make(expressions, order_by_modes, _current_lqp);
+  _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
   const auto input_column_expressions = input_lqp->column_expressions();
@@ -1231,7 +1232,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
     case hsql::ShowType::kShowColumns: {
       const auto columns_meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
       const auto static_table_node = StaticTableNode::make(columns_meta_table);
-      const auto table_name_column = lqp_column_({static_table_node, ColumnID{0}});
+      const auto table_name_column = lqp_column_(static_table_node, ColumnID{0});
       const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
                                                                          value_(show_statement.name));
       return PredicateNode::make(predicate, static_table_node);
@@ -1545,13 +1546,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
           case AggregateFunction::Avg:
-          case AggregateFunction::StandardDeviationSample:
-            return std::make_shared<AggregateExpression>(
+          case AggregateFunction::StandardDeviationSample: {
+            aggregate_expression = std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+          } break;
           case AggregateFunction::Any:
             Fail("ANY() is an internal aggregation function.");
           case AggregateFunction::Count:
-          case AggregateFunction::CountDistinct:
+          case AggregateFunction::CountDistinct: {
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
 
@@ -1566,15 +1568,22 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               });
               Assert(leaf_node, "No leaf node found below COUNT(*)");
 
-              const auto column_expression =
-                  std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
+              const auto column_expression = std::make_shared<LQPColumnExpression>(leaf_node, INVALID_COLUMN_ID);
 
               aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
               aggregate_expression = std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
             }
+          } break;
         }
+
+        // Check that the aggregate can be calculated on the given expression
+        const auto aggregate_data_type = aggregate_expression->data_type();
+        AssertInput(aggregate_data_type != DataType::Null,
+                    std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
+                        " for input data type " +
+                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()));
 
         // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
         //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2

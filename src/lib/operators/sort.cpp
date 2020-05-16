@@ -15,8 +15,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   auto output = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::Data, output_chunk_size);
 
   // After we created the output table and initialized the column structure, we can start adding values. Because the
-  // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are
-  // copied column by column for each output row.
+  // values are not sorted by input chunks anymore, we can't process them chunk by chunk. Instead the values are copied
+  // column by column for each output row.
 
   // Ceiling of integer division
   const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
@@ -260,7 +260,7 @@ std::shared_ptr<const Table> Sort::_on_execute() {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.order_by_mode);
+      auto sort_impl = SortImpl<ColumnDataType>(input_table, sort_definition.column, sort_definition.sort_mode);
       previously_sorted_pos_list = sort_impl.sort(previously_sorted_pos_list);
     });
   }
@@ -304,14 +304,14 @@ std::shared_ptr<const Table> Sort::_on_execute() {
         write_reference_output_table(input_table, std::move(*previously_sorted_pos_list), _output_chunk_size);
   }
 
-  auto final_sort_definition = _sort_definitions[0];
-  // Set the ordered_by attribute of the output's chunks according to the most significant sort operation, which is the
+  const auto& final_sort_definition = _sort_definitions[0];
+  // Set the sorted_by attribute of the output's chunks according to the most significant sort operation, which is the
   // column the table was sorted by last.
   const auto output_chunk_count = sorted_table->chunk_count();
   for (auto output_chunk_id = ChunkID{0}; output_chunk_id < output_chunk_count; ++output_chunk_id) {
     const auto& output_chunk = sorted_table->get_chunk(output_chunk_id);
     output_chunk->finalize();
-    output_chunk->set_ordered_by(std::make_pair(final_sort_definition.column, final_sort_definition.order_by_mode));
+    output_chunk->set_sorted_by(final_sort_definition);
   }
   return sorted_table;
 }
@@ -322,8 +322,8 @@ class Sort::SortImpl {
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
-           const OrderByMode order_by_mode = OrderByMode::Ascending)
-      : _table_in(table_in), _column_id(column_id), _order_by_mode(order_by_mode) {
+           const SortMode sort_mode = SortMode::Ascending)
+      : _table_in(table_in), _column_id(column_id), _sort_mode(sort_mode) {
     const auto row_count = _table_in->row_count();
     _row_id_value_vector.reserve(row_count);
     _null_value_rows.reserve(row_count);
@@ -341,16 +341,19 @@ class Sort::SortImpl {
       std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
                        [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
     };
-    if (_order_by_mode == OrderByMode::Ascending) {
+    if (_sort_mode == SortMode::Ascending) {
       sort_with_comparator(std::less<>{});
     } else {
       sort_with_comparator(std::greater<>{});
     }
 
-    // 2b. Insert null rows if necessary
+    // 2b. Insert null rows in front of all non-NULL rows
     if (!_null_value_rows.empty()) {
       // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
-      // a NULLS LAST mode, but never used it over multiple years.
+      // a NULLS LAST mode, but never used it over multiple years. Different databases have different behaviors, and
+      // storing NULLs first even for descending orders is somewhat uncommon:
+      //   https://docs.mendix.com/refguide/null-ordering-behavior
+      // For Hyrise, we found that storing NULLs first is the method that requires the least amount of code.
       _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
     }
 
@@ -416,7 +419,7 @@ class Sort::SortImpl {
 
   // column to sort by
   const ColumnID _column_id;
-  const OrderByMode _order_by_mode;
+  const SortMode _sort_mode;
 
   std::vector<RowIDValuePair> _row_id_value_vector;
 

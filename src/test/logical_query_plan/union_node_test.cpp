@@ -16,9 +16,9 @@ class UnionNodeTest : public BaseTest {
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
     _mock_node3 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}}, "t_v");
 
-    _a = {_mock_node1, ColumnID{0}};
-    _b = {_mock_node1, ColumnID{1}};
-    _c = {_mock_node1, ColumnID{2}};
+    _a = _mock_node1->get_column("a");
+    _b = _mock_node1->get_column("b");
+    _c = _mock_node1->get_column("c");
 
     _union_node = UnionNode::make(SetOperationMode::Positions);
     _union_node->set_left_input(_mock_node1);
@@ -27,9 +27,9 @@ class UnionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
   std::shared_ptr<UnionNode> _union_node;
-  LQPColumnReference _a;
-  LQPColumnReference _b;
-  LQPColumnReference _c;
+  std::shared_ptr<LQPColumnExpression> _a;
+  std::shared_ptr<LQPColumnExpression> _b;
+  std::shared_ptr<LQPColumnExpression> _c;
 };
 
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: Positions"); }

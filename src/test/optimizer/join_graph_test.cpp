@@ -25,7 +25,7 @@ class JoinGraphTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  LQPColumnReference a_a, b_a, c_a;
+  std::shared_ptr<LQPColumnExpression> a_a, b_a, c_a;
 };
 
 TEST_F(JoinGraphTest, FindPredicates) {

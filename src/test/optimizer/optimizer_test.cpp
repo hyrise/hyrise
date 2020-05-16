@@ -37,7 +37,7 @@ class OptimizerTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  LQPColumnReference a, b, x, y, u;
+  std::shared_ptr<LQPColumnExpression> a, b, x, y, u;
   std::shared_ptr<AbstractLQPNode> subquery_lqp_a, subquery_lqp_b;
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_b;
 };
@@ -120,7 +120,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
     std::shared_ptr<AbstractExpression> out_of_plan_expression;
   };
 
-  optimizer.add_rule(std::make_unique<LQPBreakingRule>(lqp_column_(x)));
+  optimizer.add_rule(std::make_unique<LQPBreakingRule>(x));
 
   EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
 }

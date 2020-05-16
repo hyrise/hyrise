@@ -50,7 +50,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
 
   // Create a join node
   const auto static_table_node = std::make_shared<StaticTableNode>(list_as_table);
-  const auto right_column = std::make_shared<LQPColumnExpression>(LQPColumnReference{static_table_node, ColumnID{0}});
+  const auto right_column = std::make_shared<LQPColumnExpression>(static_table_node, ColumnID{0});
   const auto join_predicate =
       std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_column);
   const auto join_mode = is_negated ? JoinMode::AntiNullAsTrue : JoinMode::Semi;

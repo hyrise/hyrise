@@ -11,6 +11,7 @@
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -77,7 +78,7 @@ void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID 
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -89,7 +90,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result =
       load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", 2u);
@@ -107,7 +108,7 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
-  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto validate1 = std::make_shared<Validate>(_gt);
   validate1->set_transaction_context(t1_context);
@@ -117,7 +118,7 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
   EXPECT_EQ(validate1->get_output()->row_count(), 8);
   t1_context->commit();
 
-  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // Select one row for deletion
   auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "13");
@@ -207,7 +208,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // This optimization is possible, if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
-  auto context = std::make_shared<TransactionContext>(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -236,6 +237,45 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
+}
+
+TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
+  const auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+
+  const auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
+  validate_unsorted->set_transaction_context(context);
+  validate_unsorted->execute();
+
+  const auto& result_table_unsorted = validate_unsorted->get_output();
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
+  }
+
+  // Verify that the sorted_by flag is set when it's present in left input.
+  // Since Validate can not be executed after Sort, we need to load a sorted table.
+  const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", 2);
+  const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
+  const auto chunk_count = sorted_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = sorted_table->get_chunk(chunk_id);
+    if (!chunk) continue;
+    chunk->set_sorted_by(sort_column_definition);
+  }
+  const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
+  sorted_table_wrapper->execute();
+
+  const auto validate_sorted = std::make_shared<Validate>(sorted_table_wrapper);
+  validate_sorted->set_transaction_context(context);
+  validate_sorted->execute();
+
+  const auto& result_table_sorted = validate_sorted->get_output();
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    ASSERT_FALSE(sorted_by.empty());
+    const auto sorted_by_vector = std::vector<SortColumnDefinition>{sort_column_definition};
+    EXPECT_EQ(sorted_by, sorted_by_vector);
+  }
 }
 
 }  // namespace opossum

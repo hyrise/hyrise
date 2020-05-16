@@ -25,7 +25,6 @@
 #include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -109,8 +108,8 @@ class SQLTranslatorTest : public BaseTest {
   static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
   static inline std::shared_ptr<StoredTableNode> stored_table_node_int_float, stored_table_node_int_string,
       stored_table_node_int_float2, stored_table_node_int_float5, stored_table_node_int_int_int;
-  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d, int_float2_a,
-      int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
+  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d,
+      int_float2_a, int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
 };
 
 TEST_F(SQLTranslatorTest, NoFromClause) {
@@ -165,7 +164,7 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<OrderByMode>{OrderByMode::Ascending},
+    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<SortMode>{SortMode::Ascending},
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -354,12 +353,12 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInOrderBy) {
   const auto actual_lqp_b = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
   const auto aliases = std::vector<std::string>({"x", "y"});
-  const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Ascending});
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-    SortNode::make(expression_vector(int_float_a, int_float_b), order_by_modes,
+    SortNode::make(expression_vector(int_float_a, int_float_b), sort_modes,
       stored_table_node_int_float));
   // clang-format on
 
@@ -1190,13 +1189,12 @@ TEST_F(SQLTranslatorTest, SubquerySelectList) {
 TEST_F(SQLTranslatorTest, OrderByTest) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
 
-  const auto order_by_modes =
-      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::Ascending});
+  const auto sort_modes = std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::Ascending});
 
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), order_by_modes,
+    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), sort_modes,
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float)));
   // clang-format on
@@ -1892,11 +1890,12 @@ TEST_F(SQLTranslatorTest, ShowTables) {
 TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
 
-  // clang-format off
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
   const auto static_table_node = StaticTableNode::make(meta_table);
-  const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
+  const auto table_name_column =
+      std::make_shared<LQPColumnExpression>(static_table_node, meta_table->column_id_by_name("table_name"));
 
+  // clang-format off
   const auto expected_lqp =
       PredicateNode::make(equals_(table_name_column, "int_float"),
         static_table_node);
@@ -1921,8 +1920,10 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
 
-  const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
-  const LQPColumnReference column_count_column{static_table_node, meta_table->column_id_by_name("column_count")};
+  const auto table_name_column =
+      std::make_shared<LQPColumnExpression>(static_table_node, meta_table->column_id_by_name("table_name"));
+  const auto column_count_column =
+      std::make_shared<LQPColumnExpression>(static_table_node, meta_table->column_id_by_name("column_count"));
 
   const auto expected_subquery_lqp =
       ProjectionNode::make(expression_vector(table_name_column, column_count_column), static_table_node);
@@ -1937,7 +1938,8 @@ TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
-  const LQPColumnReference table_name_column{static_table_node, meta_table->column_id_by_name("table_name")};
+  const auto table_name_column =
+      std::make_shared<LQPColumnExpression>(static_table_node, meta_table->column_id_by_name("table_name"));
 
   const auto a_equals_b = equals_(table_name_column, table_name_column);
   const auto expected_lqp = JoinNode::make(JoinMode::Inner, a_equals_b, static_table_node, static_table_node);
@@ -2086,7 +2088,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
   // clang-format off
   const auto expected_lqp =
    ChangeMetaTableNode::make("meta_plugins", MetaTableChangeType::Delete,
-    PredicateNode::make(equals_(LQPColumnReference(select_node, meta_table->column_id_by_name("name")), "foo"),
+    PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "foo"),
                         select_node),
     DummyTableNode::make());
   // clang-format on
@@ -2162,12 +2164,12 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
 
   // clang-format off
   const auto row_subquery_lqp =
-  PredicateNode::make(equals_(LQPColumnReference(select_node, meta_table->column_id_by_name("name")), "bar"),
+  PredicateNode::make(equals_(lqp_column_(select_node, meta_table->column_id_by_name("name")), "bar"),
                       select_node);
 
-  const auto expressions = expression_vector(LQPColumnReference(select_node,
+  const auto expressions = expression_vector(lqp_column_(select_node,
                                                                 meta_table->column_id_by_name("name")), "foo",
-                                             LQPColumnReference(select_node,
+                                             lqp_column_(select_node,
                                                                 meta_table->column_id_by_name("description")));
 
   const auto expected_lqp =
@@ -2470,6 +2472,8 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT SUM(b) FROM int_string;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a FROM int_string GROUP BY a HAVING SUM(b) > 2;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
@@ -2804,16 +2808,16 @@ TEST_F(SQLTranslatorTest, ComplexSetOperationQuery) {
 
   // clang-format off
   const auto expected_lqp =
-  SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+  SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
     IntersectNode::make(SetOperationMode::Unique,
       ProjectionNode::make(expression_vector(int_int_int_a),
-        SortNode::make(expression_vector(int_int_int_a), std::vector<OrderByMode>{ OrderByMode::Ascending },
+        SortNode::make(expression_vector(int_int_int_a), std::vector<SortMode>{ SortMode::Ascending },
                        stored_table_node_int_int_int)),
       LimitNode::make(value_(10),
         ExceptNode::make(SetOperationMode::Unique,
           ProjectionNode::make(expression_vector(int_int_int_b), stored_table_node_int_int_int),
           ProjectionNode::make(expression_vector(int_int_int_c),
-            SortNode::make(expression_vector(int_int_int_c), std::vector<OrderByMode>{ OrderByMode::Ascending },
+            SortNode::make(expression_vector(int_int_int_c), std::vector<SortMode>{ SortMode::Ascending },
                            stored_table_node_int_int_int))))));
   // clang-format on
 

@@ -45,7 +45,7 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   const auto get_table = std::make_shared<GetTable>(table_name);
   const auto validate = std::make_shared<Validate>(get_table);
   const auto delete_op = std::make_shared<Delete>(validate);
-  const auto transaction_context = hyrise.transaction_manager.new_transaction_context();
+  const auto transaction_context = hyrise.transaction_manager.new_transaction_context(AutoCommit::No);
   delete_op->set_transaction_context_recursively(transaction_context);
   get_table->execute();
   validate->execute();

@@ -105,7 +105,10 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
+  ExecutionInformation execution_information;
+
+  std::tie(execution_information, _transaction_context) =
+      QueryHandler::execute_pipeline(query, _send_execution_info, _transaction_context);
 
   if (!execution_information.error_message.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error_message);
@@ -122,8 +125,9 @@ void Session::_handle_simple_query() {
       _postgres_protocol_handler->send_execution_info(execution_information.pipeline_metrics);
     }
     _postgres_protocol_handler->send_command_complete(
-        ResultSerializer::build_command_complete_message(execution_information.root_operator, row_count));
+        ResultSerializer::build_command_complete_message(execution_information, row_count));
   }
+
   _postgres_protocol_handler->send_ready_for_query();
 }
 
@@ -163,9 +167,9 @@ void Session::_handle_bind_command() {
 
 void Session::_sync() {
   _postgres_protocol_handler->read_sync_packet();
-  if (_transaction) {
-    _transaction->commit();
-    _transaction.reset();
+  if (_transaction_context) {
+    _transaction_context->commit();
+    _transaction_context.reset();
   }
   _postgres_protocol_handler->send_ready_for_query();
 }
@@ -187,8 +191,10 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
-  physical_plan->set_transaction_context_recursively(_transaction);
+  if (!_transaction_context) {
+    _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  }
+  physical_plan->set_transaction_context_recursively(_transaction_context);
 
   const auto result_table = QueryHandler::execute_prepared_plan(physical_plan);
 

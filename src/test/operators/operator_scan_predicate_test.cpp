@@ -19,7 +19,7 @@ class OperatorScanPredicateTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node;
-  LQPColumnReference a, b, c;
+  std::shared_ptr<LQPColumnExpression> a, b, c;
 };
 
 TEST_F(OperatorScanPredicateTest, FromExpression) {

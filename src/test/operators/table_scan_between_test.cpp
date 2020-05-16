@@ -28,24 +28,24 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
     // ...
     // 30.25         10
     //
-    // If the table is ordered, NULL values are added up front or to the back.
+    // If the table is sorted, NULL values are added up front or to the back.
     //
     // As the first column is TYPE CASTED, it contains 10 for an int column, the string "10.25" for a string column etc.
     // We chose .25 because that can be exactly expressed in a float.
 
-    const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
+    const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
 
-    const bool descending = ordered_by_mode == OrderByMode::Descending;
-    const int number_of_nulls = (nullable && ordered_by_mode) ? 3 : 0;
+    const bool descending = sort_mode == SortMode::Descending;
+    const int number_of_nulls = nullable && sort_mode ? 3 : 0;
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
 
     const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, 6);
 
     // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
-    resolve_data_type(data_type, [&, nullable = nullable, ordered_by_mode = ordered_by_mode](const auto type) {
+    resolve_data_type(data_type, [&, nullable = nullable, sort_mode = sort_mode](const auto type) {
       using Type = typename decltype(type)::type;
-      if (nullable && ordered_by_mode) {
+      if (nullable) {
         for (int i = 0; i < number_of_nulls; ++i) {
           data_table->append({NullValue{}, i});
         }
@@ -58,7 +58,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
           double_value = 10.25 + i * 2.0;
         }
 
-        if (nullable && !ordered_by_mode && i % 3 == 2) {
+        if (nullable && !sort_mode && i % 3 == 2) {
           data_table->append({NullValue{}, i + number_of_nulls});
         } else {
           if constexpr (std::is_same_v<pmr_string, Type>) {
@@ -70,13 +70,13 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
       }
     });
 
-    if (ordered_by_mode) {
+    data_table->last_chunk()->finalize();
+
+    if (sort_mode) {
       for (ChunkID chunk_id{0}; chunk_id < data_table->chunk_count(); ++chunk_id) {
-        data_table->get_chunk(chunk_id)->set_ordered_by(std::make_pair(ColumnID{0}, *ordered_by_mode));
+        data_table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(ColumnID{0}, *sort_mode));
       }
     }
-
-    data_table->last_chunk()->finalize();
 
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
@@ -101,10 +101,10 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
   // }
   void _test_between_scan(std::vector<std::tuple<AllTypeVariant, AllTypeVariant, std::vector<int>>>& tests,
                           PredicateCondition predicate_condition) {
-    const auto& [data_type, encoding, ordered_by_mode, nullable] = GetParam();
-    const bool descending = ordered_by_mode == OrderByMode::Descending;
-    const bool ascending = ordered_by_mode == OrderByMode::Ascending;
-    const int number_of_nulls = (nullable && ordered_by_mode) ? 3 : 0;
+    const auto& [data_type, encoding, sort_mode, nullable] = GetParam();
+    const bool ascending = sort_mode == SortMode::Ascending;
+    const bool descending = sort_mode == SortMode::Descending;
+    const int number_of_nulls = nullable && sort_mode ? 3 : 0;
     std::ignore = encoding;
     resolve_data_type(data_type, [&, nullable = nullable](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;

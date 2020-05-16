@@ -74,8 +74,8 @@ set(
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
     memory/segments_using_allocators_test.cpp
-    memory/numa_memory_resource_test.cpp
     operators/aggregate_test.cpp
+    operators/aggregate_sort_test.cpp
     operators/alias_operator_test.cpp
     operators/change_meta_table_test.cpp
     operators/delete_test.cpp
@@ -148,6 +148,7 @@ set(
     server/query_handler_test.cpp
     server/read_buffer_test.cpp
     server/result_serializer_test.cpp
+    server/transaction_handling_test.cpp
     server/write_buffer_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp
@@ -215,6 +216,7 @@ set(
     utils/meta_tables/meta_table_test.cpp
     utils/meta_tables/meta_plugins_test.cpp
     utils/meta_tables/meta_settings_test.cpp
+    utils/meta_tables/meta_system_utilization_test.cpp
     utils/mock_setting.hpp
     utils/mock_setting.cpp
     utils/plugin_manager_test.cpp
