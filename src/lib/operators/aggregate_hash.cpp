@@ -620,6 +620,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // Fast path for clustered tables
   const auto chunk_count = input_table->chunk_count();
   if (!input_table->value_clustered_by().empty() && chunk_count > 1) {
+	 // TODO: check if clustered by group_by key
     std::shared_ptr<Table> result;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);

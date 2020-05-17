@@ -575,6 +575,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // }
     // std::cout << _column_ids.first << std::endl;
     // std::cout << _column_ids.second << std::endl;
+    // TODO: use switch on JoinMode
     if (_radix_bits > 0 && _mode == JoinMode::Left) {
       if (!_probe_input_table->column_definitions()[_column_ids.first].nullable) {
         result->set_value_clustered_by({_column_ids.second});
