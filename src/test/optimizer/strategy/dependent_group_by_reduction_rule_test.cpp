@@ -201,7 +201,7 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 }
 
 // Test that the plan stays the same (no alias, no projection) for a table with a primary key but no removable columns
-TEST_F(DependentGroupByReductionRuleTest, AggregteButNoChanges) {
+TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0)), stored_table_node_a);

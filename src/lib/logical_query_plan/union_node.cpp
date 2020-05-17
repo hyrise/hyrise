@@ -34,8 +34,7 @@ std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
       // By definition, UnionPositions requires both input tables to have the same table origin and structure.
       // Therefore, we can forward the FDs of either the left or right input node.
       DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(),
-                  "Expected "
-                  "both input nodes to have the same FDs.");
+                  "Expected both input nodes to have the same FDs.");
       return left_input()->functional_dependencies();
   }
   Fail("Unhandled UnionMode");
