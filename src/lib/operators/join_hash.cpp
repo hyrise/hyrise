@@ -120,6 +120,12 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto build_column_id = ColumnID{};
   auto probe_column_id = ColumnID{};
 
+  // std::cout << description(DescriptionMode::SingleLine) << std::endl;
+  // std::cout << "left is (" << _primary_predicate.column_ids.first << ")" << input_table_left()->column_definitions()[_primary_predicate.column_ids.first].nullable
+  //           << std::endl;
+  // std::cout << "right is (" << _primary_predicate.column_ids.second << ")" << input_table_left()->column_definitions()[_primary_predicate.column_ids.second].nullable
+  //           << std::endl;
+
   /**
    * Build and probe side are assigned as follows (depending only on JoinMode, except for inner joins where input
    * relation sizes are considered):
@@ -556,10 +562,32 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
 
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
+      output_chunks[output_chunk_id]->finalize();
       ++output_chunk_id;
     }
 
-    return _join_hash._build_output_table(std::move(output_chunks));
+    auto result = _join_hash._build_output_table(std::move(output_chunks));
+    // if (_radix_bits > 0 && (_mode == JoinMode::Inner || _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+    //   // is clustered as we radix-partitioned
+    // } if (_radix_bits == 0 && (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+    //   // if (input is clustered  on column)
+    //     // is clustered
+    // }
+    // std::cout << _column_ids.first << std::endl;
+    // std::cout << _column_ids.second << std::endl;
+    if (_radix_bits > 0 && _mode == JoinMode::Left) {
+      if (!_probe_input_table->column_definitions()[_column_ids.first].nullable) {
+        result->set_value_clustered_by({_column_ids.second});
+      }
+      // else {
+      //   std::cout << "second miss " << std::endl;
+      // }
+    }
+    // else {
+    //   std::cout << "first miss " << std::endl;
+    // }
+
+    return result;
   }
 };
 

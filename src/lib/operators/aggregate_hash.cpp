@@ -14,6 +14,7 @@
 #include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
@@ -612,6 +613,52 @@ void AggregateHash::_aggregate() {
 }
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
+  const auto& input_table = input_table_left();
+
+  // std::cout << description(DescriptionMode::SingleLine) << std::endl;
+
+  // Fast path for clustered tables
+  const auto chunk_count = input_table->chunk_count();
+  if (!input_table->value_clustered_by().empty() && chunk_count > 1) {
+    std::shared_ptr<Table> result;
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+      // Creating a new table holding only the current chunk and pass it to the sort operator.
+      auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), input_table->type());
+      const auto column_count = input_table->column_count();
+      Segments segments;
+      segments.reserve(column_count);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        segments.emplace_back(chunk->get_segment(column_id));
+      }
+      single_chunk_table->append_chunk(segments);
+
+      const auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+      table_wrapper->execute();
+
+      const auto single_chunk_aggregate = std::make_shared<AggregateHash>(table_wrapper, _aggregates, _groupby_column_ids);
+      single_chunk_aggregate->execute();
+      const auto& chunk_result = single_chunk_aggregate->get_output();
+
+      if (chunk_id == 0) {
+        result = std::make_shared<Table>(chunk_result->column_definitions(), chunk_result->type());
+      }
+      
+      const auto chunk_result_column_count = chunk_result->column_count();
+      const auto& result_chunk = chunk_result->get_chunk(ChunkID{0});
+      Segments result_segments;
+      result_segments.reserve(chunk_result_column_count);
+      for (auto column_id = ColumnID{0}; column_id < chunk_result_column_count; ++column_id) {
+        result_segments.emplace_back(result_chunk->get_segment(column_id));
+      }
+      result->append_chunk(result_segments);
+    }
+
+    return result;
+  }
+
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
@@ -632,8 +679,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
-
-  const auto& input_table = input_table_left();
 
   /**
    * Write group-by columns.
