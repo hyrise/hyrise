@@ -196,37 +196,6 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
-  // In case of self-joins, the implementation has to ensure that FDs are not outputted twice.
-
-  // Create a table of 3 columns (a, b, c)
-  TableColumnDefinitions column_definitions{
-      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-  const auto table_name = "table";
-  Hyrise::get().storage_manager.add_table(table_name, table);
-
-  // Add unique constraints
-  table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
-  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
-
-  // Prepare Self-JoinNode
-  const auto stored_table_node = StoredTableNode::make(table_name);
-  const auto join_column_a = std::make_shared<LQPColumnExpression>(stored_table_node, ColumnID{0});
-  const auto join_column_b = std::make_shared<LQPColumnExpression>(stored_table_node, ColumnID{1});
-  // clang-format off
-  const auto self_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
-                                             stored_table_node,
-                                             stored_table_node);
-  // clang-format on
-
-  // Prerequisite
-  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2);  // {a} => {b, c} and {a, b} => {c}
-
-  // Actual test
-  EXPECT_EQ(self_join_node->functional_dependencies().size(), 2);
-}
-
 TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // Create two tables of 2 columns each
   TableColumnDefinitions column_definitions_a{{"a", DataType::Int, false}, {"b", DataType::Int, false}};

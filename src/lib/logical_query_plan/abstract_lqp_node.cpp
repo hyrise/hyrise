@@ -256,19 +256,19 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   if (right_input()) {
     fds_right = right_input()->functional_dependencies();
   }
-
-  // Merge input FDs and remove duplicates, if any
-  auto& fds_in = fds_left;
+#if HYRISE_DEBUG
   if (!fds_right.empty()) {
-    // Remove duplicate FDs that might result from e.g. self-joins
     for (const auto& fd_right : fds_right) {
       bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
                                    [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
-      if (!duplicate) {
-        fds_in.push_back(fd_right);
-      }
+      DebugAssert(!duplicate, "Unexpected duplicate functional dependency found in " +
+                                  this->description(DescriptionMode::Short));
     }
   }
+#endif
+
+  auto& fds_in = fds_left;
+  fds_in.insert(fds_in.end(), fds_right.cbegin(), fds_right.cend());
 
   // Currently, we do not support FDs in conjunction with null values in their left column set.
   // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
