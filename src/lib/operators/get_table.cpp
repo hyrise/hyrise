@@ -216,10 +216,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
+      // Pruned chunks are always marked as immutable as they are (as of now) only consumed by read-only operators.
+      (*output_chunks_iter)->finalize();
+
       if (output_chunk_sorted_by) {
-        // Finalizing the output chunk here is safe because this path is only taken for
-        // a sorted chunk. Chunks should never be sorted when they are still mutable
-        (*output_chunks_iter)->finalize();
         (*output_chunks_iter)->set_sorted_by(*output_chunk_sorted_by);
       }
 

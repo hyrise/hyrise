@@ -46,6 +46,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 
       // adding newly filled chunk to the output table
       output_chunks[output_chunk_idx] = std::make_shared<Chunk>(output_segments);
+      output_chunks[output_chunk_idx]->finalize();
       ++output_chunk_idx;
     }
   }

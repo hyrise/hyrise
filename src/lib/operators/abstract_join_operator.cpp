@@ -103,6 +103,15 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
     }
   }
 
+  const auto chunk_count = chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    // Mark all created chunks as immutable. Since certain joins need to finalize() themselves (e.g., to set sort
+    // orders when applicable), we need to check that a chunk is not already marked as immutable.
+    if (chunks[chunk_id]->is_mutable()) {
+      chunks[chunk_id]->finalize();
+    }
+  }
+
   return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 

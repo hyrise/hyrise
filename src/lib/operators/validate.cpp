@@ -149,7 +149,9 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
+    const auto column_count = chunk_in->column_count();
     Segments output_segments;
+    output_segments.reserve(column_count);
     std::shared_ptr<const AbstractPosList> pos_list_out = std::make_shared<const RowIDPosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
@@ -197,7 +199,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
-      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
         const auto reference_segment =
             std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id));
         const auto referenced_column_id = reference_segment->referenced_column_id();
@@ -228,7 +230,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       }
 
       // Create actual ReferenceSegment objects.
-      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
         auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list_out);
         output_segments.push_back(ref_segment_out);
       }

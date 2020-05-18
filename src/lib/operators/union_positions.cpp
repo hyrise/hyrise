@@ -141,6 +141,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     }
 
     out_table->append_chunk(output_segments);
+    out_table->last_chunk()->finalize();
   };
 
   /**

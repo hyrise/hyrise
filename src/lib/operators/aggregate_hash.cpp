@@ -677,6 +677,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
+    output->last_chunk()->finalize();
   }
 
   return output;

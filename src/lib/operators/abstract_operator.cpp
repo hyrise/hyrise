@@ -67,6 +67,30 @@ void AbstractOperator::execute() {
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
                 reinterpret_cast<uintptr_t>(this));
 
+  // Chunks from operators other than GetTable should be immutable
+  if constexpr (HYRISE_DEBUG) {
+    // We exclude the TableWrapper (heavily used in tests with arbitrary tables) and modifiying operators.
+    if (const auto ro_operator = std::dynamic_pointer_cast<const AbstractReadOnlyOperator>(_input_left) &&
+                                 _input_left->type() != OperatorType::TableWrapper) {
+      const auto check_input_table = [&](const std::shared_ptr<const Table>& input_table) {
+        const auto chunk_count = input_table->chunk_count();
+        for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
+          const auto chunk = input_table->get_chunk(chunk_id);
+          Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+          DebugAssert(input_table->type() == TableType::Data || !chunk->is_mutable(),
+                      std::string{"Operator "} + _input_left->name() + " received an unexpected mutable chunk.");
+        }
+      };
+
+      if (_input_left) {
+        check_input_table(_input_left->get_output());
+      }
+      if (_input_right) {
+        check_input_table(_input_right->get_output());
+      }
+    }
+  }
+
   // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
     if (lqp_node) {

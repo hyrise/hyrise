@@ -91,6 +91,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
 
     std::lock_guard<std::mutex> lock(output_mutex);
     _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
+    _out_table->last_chunk()->finalize();
   });
 
   job_task->schedule();
