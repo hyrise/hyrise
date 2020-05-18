@@ -19,16 +19,20 @@ class OperatorFeatureExporter {
  protected:
   void _export_operator(const std::shared_ptr<const AbstractOperator>& op);
 
+  void _add_aggregate_details(const std::shared_ptr<const AbstractOperator>& op);
+
+  void _add_join_details(const std::shared_ptr<const AbstractOperator>& op);
+
   void _add_table_scan_details(const std::shared_ptr<const AbstractOperator>& op,
                                const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                const std::shared_ptr<const AbstractLQPNode>& original_node);
 
   std::shared_ptr<Table> _output_table =
       std::make_shared<Table>(TableColumnDefinitions{{"OPERATOR_NAME", DataType::String, false},
-                                                     {"INPUT_ROWS_LEFT", DataType::Long, true},
-                                                     {"INPUT_ROWS_RIGHT", DataType::Long, true},
-                                                     {"OUTPUT_ROWS", DataType::Long, true},
-                                                     {"RUNTIME_NS", DataType::Long, true},
+                                                     {"INPUT_ROWS_LEFT", DataType::Long, false},
+                                                     {"INPUT_ROWS_RIGHT", DataType::Long, false},
+                                                     {"OUTPUT_ROWS", DataType::Long, false},
+                                                     {"RUNTIME_NS", DataType::Long, false},
                                                      {"OPERATOR_DETAIL", DataType::String, true},
                                                      {"TABLE_NAME", DataType::String, true},
                                                      {"COLUMN_NAME", DataType::String, true},

@@ -6,6 +6,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/abstract_join_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/visit_pqp.hpp"
 #include "utils/assert.hpp"
@@ -28,10 +29,10 @@ void OperatorFeatureExporter::flush() {
 
 void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const AbstractOperator>& op) {
   _current_row = {pmr_string{op->name()},
-                  NULL_VALUE,
-                  NULL_VALUE,
-                  NULL_VALUE,
-                  NULL_VALUE,
+                  int64_t{0},
+                  int64_t{0},
+                  int64_t{0},
+                  int64_t{0},
                   NULL_VALUE,
                   NULL_VALUE,
                   NULL_VALUE,
@@ -48,6 +49,21 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
   if (op->performance_data().has_output) {
     _current_row[3] = static_cast<int64_t>(op->performance_data().output_row_count);
     _current_row[4] = static_cast<int64_t>(op->performance_data().walltime.count());
+  }
+
+  switch (op->type()) {
+    case OperatorType::Aggregate:
+      _add_aggregate_details(op);
+      break;
+    case OperatorType::JoinHash:
+    case OperatorType::JoinIndex:
+    case OperatorType::JoinNestedLoop:
+    case OperatorType::JoinSortMerge:
+    case OperatorType::JoinVerification:
+      _add_join_details(op);
+      break;
+    default:
+      break;
   }
 
   const auto node = op->lqp_node;
@@ -79,13 +95,28 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
   _output_table->append(_current_row);
 }
 
+void OperatorFeatureExporter::_add_aggregate_details(const std::shared_ptr<const AbstractOperator>& op) {
+  DebugAssert(op->type() == OperatorType::Aggregate, "Expected AggregateOperator");
+  _current_row[0] = pmr_string{"Aggregate"};
+  _current_row[8] = pmr_string{op->name()};
+}
+
+void OperatorFeatureExporter::_add_join_details(const std::shared_ptr<const AbstractOperator>& op) {
+  _current_row[0] = pmr_string{"Join"};
+  _current_row[8] = pmr_string{op->name()};
+  const auto join = std::dynamic_pointer_cast<const AbstractJoinOperator>(op);
+  std::stringstream join_mode;
+  join_mode << join->mode();
+  _current_row[5] = pmr_string{join_mode.str()};
+}
+
 void OperatorFeatureExporter::_add_table_scan_details(const std::shared_ptr<const AbstractOperator>& op,
                                                       const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                                       const std::shared_ptr<const AbstractLQPNode>& original_node) {
-  DebugAssert(op->type() == OperatorType::TableScan, "Expected operator of type: TableScan but got another one");
   _current_row[5] = original_node == lqp_node->left_input() ? pmr_string{"COLUMN_SCAN"} : pmr_string{"REFERENCE_SCAN"};
   const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op);
   Assert(table_scan->_impl_description != "Unset", "Expected TableScan to be executed.");
   _current_row[8] = pmr_string{table_scan->_impl_description};
 }
+
 }  // namespace opossum

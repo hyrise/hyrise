@@ -77,10 +77,11 @@ def calculate_error(test_X, y_true, y_pred, model):
     R2 = model.score(test_X, y_pred)
 
     # logarithm of the accuracy ratio (LnQ)
+    # TODO: causes overflow regularly
     LNQ = 1/len(y_true) * np.sum(np.exp(np.divide(y_pred, y_true)))
 
     # mean absolute percentage error (MAPE)
-    MAPE = np.mean(100 * (np.divide(np.abs(y_true - y_pred), y_true)))
+    MAPE = np.mean(100 * np.divide(np.abs(y_true - y_pred), y_true))
 
     scores = {'RMSE': '%.3f' % RMSE, 'R2': '%.3f' % R2, 'LNQ': '%.3f' % LNQ, 'MAPE': '%.3f' % MAPE}
 
@@ -108,12 +109,13 @@ def add_dummy_types(train, test, cols):
 
 def parse_arguments(opt=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-train', help='Path to training data in csv format')
+    parser.add_argument('-train', help='Path to training data in csv format', metavar='TRAIN_PATH')
     # in case no test data is given, the training data will be split into training and test data
-    parser.add_argument('--test', help='Path test data in csv format')
-    parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'},
-                        help='Model type: choose from "linear", "lasso", "ridge", "boost"; Boost is the default')
-    parser.add_argument('--out', help='Output folder')
+    parser.add_argument('--test', help='Path to test data in csv format. If absent, training data will be split',
+                        metavar='TEST_PATH')
+    parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'}, action='append', nargs='+',
+                        help='Model type. Boost is the default')
+    parser.add_argument('--out', help='Output folder', metavar='OUT_PATH')
 
     if (opt):
         return parser.parse_args(opt)
@@ -143,11 +145,11 @@ def main(args):
     out = 'costModelOutput'
     scores = {}
 
+    # We have achieved the best results with this model
+    model_types = ['boost']
+
     if args.m:
-        model_types = [args.m]
-    else:
-        # We have achieved the best results with this model
-        model_types = ['boost']
+        model_types = args.m[0]
 
     if args.test:
         train_data, test_data = import_data(args)
@@ -166,12 +168,12 @@ def main(args):
         os.makedirs(os.path.join(out, 'plots'))
 
     # one single model for everything
-    for type in model_types:
+    for model_type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(),
                                                   ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
-        gmodel = train_model(gtrain_data, type)
-        scores[f'{type}_general_model'] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
-        filename = os.path.join(out, 'models', f'{type}_general_model.sav')
+        gmodel = train_model(gtrain_data, model_type)
+        scores[f'{model_type}_general_model'] = generate_model_plot(gmodel, gtest_data, model_type, 'all', 'all',out)
+        filename = os.path.join(out, 'models', f'{model_type}_general_model.sav')
         joblib.dump(gmodel, filename)
 
     # make separate models for different scan operators and combinations of encodings/compressions
@@ -196,18 +198,19 @@ def main(args):
 
             # if there is training data for this combination, train a model
             if not model_train_data.empty:
-                for type in model_types:
+                for model_type in model_types:
                     model_train_data, model_test_data = add_dummy_types(model_train_data.copy(),
                                                                         model_test_data.copy(),
                                                                         ['COMPRESSION_TYPE', 'SCAN_TYPE', 'DATA_TYPE'])
-                    model = train_model(model_train_data, type)
+                    model = train_model(model_train_data, model_type)
 
-                    model_name = f'{type}_{encoding}_{implementation_type}_model'
+                    model_name = f'{model_type}_{encoding}_{implementation_type}_model'
                     filename = os.path.join(out, 'models', f'split_{model_name}.sav')
                     joblib.dump(model, filename)
 
                     if not model_test_data.empty:
-                        scores[model_name] = generate_model_plot(model, model_test_data, type, encoding, implementation_type, out)
+                        scores[model_name] = generate_model_plot(model, model_test_data, model_type, encoding,
+                                                                 implementation_type, out)
     log(scores, out)
 
 
