@@ -156,7 +156,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
   table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id, _c->original_column_id},
                                     IsPrimaryKey::No);
 
-  EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
@@ -164,17 +164,10 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
+  const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
+
   EXPECT_EQ(fds.size(), 1);
-  const auto fd = fds.at(0);
-
-  // Check left
-  EXPECT_EQ(fd.first.size(), 1);
-  EXPECT_TRUE(fd.first.contains(_a));
-
-  // Check right
-  EXPECT_EQ(fd.second.size(), 2);
-  EXPECT_TRUE(fd.second.contains(_b));
-  EXPECT_TRUE(fd.second.contains(_c));
+  EXPECT_EQ(fds.at(0), fd_expected);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
@@ -183,27 +176,13 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
+
+  const auto fd1_expected = FunctionalDependency{{_a}, {_b, _c}};
+  const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
+
   EXPECT_EQ(fds.size(), 2);
-  const auto fd1 = fds.at(0);
-  const auto fd2 = fds.at(1);
-
-  // Check left of fd1
-  EXPECT_EQ(fd1.first.size(), 1);
-  EXPECT_TRUE(fd1.first.contains(_a));
-
-  // Check right of fd1
-  EXPECT_EQ(fd1.second.size(), 2);
-  EXPECT_TRUE(fd1.second.contains(_b));
-  EXPECT_TRUE(fd1.second.contains(_c));
-
-  // Check left of fd2
-  EXPECT_EQ(fd2.first.size(), 2);
-  EXPECT_TRUE(fd2.first.contains(_a));
-  EXPECT_TRUE(fd2.first.contains(_b));
-
-  // Check right of fd2
-  EXPECT_EQ(fd2.second.size(), 1);
-  EXPECT_TRUE(fd2.second.contains(_c));
+  EXPECT_EQ(fds.at(0), fd1_expected);
+  EXPECT_EQ(fds.at(1), fd2_expected);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {

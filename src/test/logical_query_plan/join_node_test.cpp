@@ -237,9 +237,9 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // clang-format on
 
   // Prerequisite
-  EXPECT_EQ(mock_node_a->functional_dependencies().size(), 1);  // {a} => {b}
+  EXPECT_EQ(mock_node_a->functional_dependencies().size(), 1);
   EXPECT_EQ(mock_node_a->functional_dependencies().at(0), fd_ab);
-  EXPECT_EQ(mock_node_b->functional_dependencies().size(), 1);  // {x} => {y}
+  EXPECT_EQ(mock_node_b->functional_dependencies().size(), 1);
   EXPECT_EQ(mock_node_b->functional_dependencies().at(0), fd_xy);
 
   // Actual tests

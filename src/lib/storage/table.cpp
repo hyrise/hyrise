@@ -328,7 +328,7 @@ const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints
 }
 
 void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
-  Assert(_type == TableType::Data, "Constraints are not meant to be used in conjunction with reference tables.");
+  Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
   for (const auto& column_id : column_ids) {
     Assert(column_id < column_count(), "ColumnID out of range");
     Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),

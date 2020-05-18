@@ -67,7 +67,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_express
     const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
     // Build `_expression` with respect to the `_pruned_column_ids`
-    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
+    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size()); // <- does this make sense?
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
     auto output_column_id = ColumnID{0};

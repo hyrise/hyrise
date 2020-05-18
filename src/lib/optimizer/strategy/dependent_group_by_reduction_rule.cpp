@@ -39,7 +39,6 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const Exp
   // Every column that is functionally dependent gets moved from the group-by list to the aggregate list. For this
   // purpose it is wrapped in an ANY() expression.
   for (const auto& group_by_column : group_by_columns) {
-    DebugAssert(group_by_column->type != ExpressionType::Aggregate, "Unexpected group-by-column type.");
     if (fd.second.contains(group_by_column)) {
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
