@@ -7,6 +7,7 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/visit_pqp.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -15,8 +16,10 @@ namespace opossum {
 OperatorFeatureExporter::OperatorFeatureExporter(const std::string& path_to_dir) : _path_to_dir(path_to_dir) {}
 
 void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const AbstractOperator> op) {
-  std::unordered_set<std::shared_ptr<const AbstractOperator>> visited_operators;
-  if (op) _export_typed_operator(op, visited_operators);
+  visit_pqp(op, [&](const auto& node){
+    _export_typed_operator(node);
+    return PQPVisitation::VisitInputs;
+  });
 }
 
 void OperatorFeatureExporter::flush() {
@@ -24,13 +27,10 @@ void OperatorFeatureExporter::flush() {
     std::stringstream path;
     path << _path_to_dir << "/" << _map_operator_type(op_type) << ".csv";
     CsvWriter::write(*table, path.str());
-    _tables[op_type] = std::make_shared<Table>(_column_definitions.at(op_type), TableType::Data);
   }
 }
 
-void OperatorFeatureExporter::_export_typed_operator(
-    const std::shared_ptr<const AbstractOperator>& op,
-    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_operators) {
+void OperatorFeatureExporter::_export_typed_operator(const std::shared_ptr<const AbstractOperator>& op) {
   switch (op->type()) {
     case OperatorType::TableScan:
       _export_table_scan(op);
@@ -38,22 +38,10 @@ void OperatorFeatureExporter::_export_typed_operator(
     default:
       break;
   }
-
-  visited_operators.insert(op);
-
-  auto left_input = op->input_left();
-  if (left_input && !visited_operators.contains(left_input)) {
-    _export_typed_operator(left_input, visited_operators);
-  }
-
-  auto right_input = op->input_right();
-  if (right_input && !visited_operators.contains(right_input)) {
-    _export_typed_operator(right_input, visited_operators);
-  }
 }
 
 // Export features of a table scan operator
-void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const AbstractOperator> op) {
+void OperatorFeatureExporter::_export_table_scan(const std::shared_ptr<const AbstractOperator>& op) {
   DebugAssert(op->type() == OperatorType::TableScan, "Expected operator of type: TableScan but got another one");
   auto output_table = _tables.at(op->type());
   const auto node = op->lqp_node;

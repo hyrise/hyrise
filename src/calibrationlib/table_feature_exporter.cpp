@@ -19,7 +19,7 @@ void TableFeatureExporter::export_table(std::shared_ptr<const CalibrationTableWr
 void TableFeatureExporter::flush() {
   for (auto& [export_type, table] : _tables) {
     std::stringstream path;
-    path << _path_to_dir << "/" << _table_names.at(export_type) << "_new.csv";
+    path << _path_to_dir << "/" << _table_names.at(export_type) << ".csv";
     CsvWriter::write(*table, path.str());
     _tables[export_type] = std::make_shared<Table>(_column_definitions.at(export_type), TableType::Data);
   }

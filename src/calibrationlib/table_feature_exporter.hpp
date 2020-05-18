@@ -45,7 +45,7 @@ class TableFeatureExporter {
       {TableFeatureExportType::COLUMN, "column_meta"},
       {TableFeatureExportType::SEGMENT, "segment_meta"}};
 
-  const std::string& _path_to_dir;
+  const std::string _path_to_dir;
 
   void _export_table_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);
   void _export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper);

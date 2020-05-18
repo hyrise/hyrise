@@ -7,7 +7,6 @@ import pandas as pd
 import warnings
 
 from prepare_calibration_data import import_train_data
-from prepare_tpch import import_test_data
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import LinearRegression
@@ -61,7 +60,7 @@ def generate_model_plot(model, test_data, method, encoding, scan, out):
     plt.xlim([axis_min, axis_max])
     plt.xlabel("Real Time")
     plt.ylabel("Predicted Time")
-    output_path = f'{out}/plots/{method}_{encoding}_{scan}'
+    output_path = os.path.join(out, 'plots', f'{method}_{encoding}_{scan}')
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
 
@@ -89,12 +88,12 @@ def calculate_error(test_X, y_true, y_pred, model):
 
 
 def log(scores, out):
-    with open(f'{out}/log.txt', 'w') as file:
+    with open(os.path.join(out, 'log.txt'), 'w') as file:
         for entry in scores:
             file.write(f"{entry}: {scores[entry]} \n")
 
 
-# needed for prediction with one-hot-encoding in case trainings and test data don't have the same set of values in a
+# needed for prediction with one-hot-encoding in case training and test data don't have the same set of values in a
 # categorical data column
 def add_dummy_types(train, test, cols):
     for col in cols:
@@ -109,10 +108,11 @@ def add_dummy_types(train, test, cols):
 
 def parse_arguments(opt=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-train', help='Trainingsdata in csv format', action='append', nargs='+')
-    # in case no test data is given, the trainings data will be split into trainings and test data
-    parser.add_argument('--test', help='Testdata in csv format', action='append', nargs='+')
-    parser.add_argument('--m', help='Model type: choose from "linear", "lasso", "ridge", "boost"; Boost is the default"')
+    parser.add_argument('-train', help='Path to training data in csv format')
+    # in case no test data is given, the training data will be split into training and test data
+    parser.add_argument('--test', help='Path test data in csv format')
+    parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'},
+                        help='Model type: choose from "linear", "lasso", "ridge", "boost"; Boost is the default')
     parser.add_argument('--out', help='Output folder')
 
     if (opt):
@@ -122,15 +122,15 @@ def parse_arguments(opt=None):
 
 
 def import_data(args):
-    test_data = import_train_data(args.test[0])
+    test_data = import_train_data(args.test)
     test_data = test_data.dropna()
 
-    train_data = import_train_data(args.train[0])
+    train_data = import_train_data(args.train)
     train_data = train_data.dropna()
 
-    # check whether trainings and testdata have the same format
+    # check whether training and test data have the same format
     if test_data.columns.all() != train_data.columns.all():
-        warnings.warn("Warning: Trainings- and Testdata do not have the same format. Unmatched columns will be ignored!")
+        warnings.warn("Warning: Training and Test data do not have the same format. Unmatched columns will be ignored!")
 
     inter = train_data.columns.intersection(test_data.columns)
     test_data = test_data[inter.tolist()]
@@ -159,25 +159,25 @@ def main(args):
     if args.out:
         out = args.out
 
-    if not os.path.exists(f"{out}/models"):
-        os.makedirs(f"{out}/models")
+    if not os.path.exists(os.path.join(out, 'models')):
+        os.makedirs(os.path.join(out, 'models'))
 
-    if not os.path.exists(f"{out}/plots"):
-        os.makedirs(f"{out}/plots")
+    if not os.path.exists(os.path.join(out, 'plots')):
+        os.makedirs(os.path.join(out, 'plots'))
 
     # one single model for everything
     for type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
         scores[f'{type}_general_model'] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
-        filename = f'{out}/models/{type}_general_model.sav'
+        filename = os.path.join(out, 'models', f'{type}_general_model.sav')
         joblib.dump(gmodel, filename)
 
     # make separate models for different scan operators and combinations of encodings/compressions
     for encoding in train_data['ENCODING'].unique():
         for implementation_type in train_data['SCAN_IMPLEMENTATION'].unique():
             try:
-                # if there is no given test data set, split the given trainings data into test and trainings data
+                # if there is no given test data set, split the given training data into test and training data
                 if not args.test:
                         model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['ENCODING'] == encoding) &
                                                                                             (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
@@ -187,7 +187,7 @@ def main(args):
                     model_test_data = test_data.loc[(test_data['ENCODING'] == encoding) & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
 
             except ValueError:
-                print(f'Not enough data of the combination {encoding}, {implementation_type} to split into trainings and test data')
+                print(f'Not enough data of the combination {encoding}, {implementation_type} to split into training and test data')
                 break
 
             # if there is training data for this combination, train a model
@@ -197,7 +197,7 @@ def main(args):
                     model = train_model(model_train_data, type)
 
                     model_name = f'{type}_{encoding}_{implementation_type}_model'
-                    filename = f'{out}/models/split_{model_name}.sav'
+                    filename = os.path.join(out, 'models', f'split_{model_name}.sav')
                     joblib.dump(model, filename)
 
                     if not model_test_data.empty:

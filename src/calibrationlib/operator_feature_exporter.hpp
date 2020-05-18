@@ -34,11 +34,10 @@ class OperatorFeatureExporter {
                                                        {"SCAN_IMPLEMENTATION", DataType::String, false}}}};
 
  private:
-  const std::string& _path_to_dir;
+  const std::string _path_to_dir;
 
-  void _export_typed_operator(const std::shared_ptr<const AbstractOperator>& op,
-                              std::unordered_set<std::shared_ptr<const AbstractOperator>>& visited_operators);
-  void _export_table_scan(const std::shared_ptr<const AbstractOperator> op);
+  void _export_typed_operator(const std::shared_ptr<const AbstractOperator>& op);
+  void _export_table_scan(const std::shared_ptr<const AbstractOperator>& op);
 
   // TODO(Bouncner): use magic_enum.name when available
   const std::string _map_operator_type(const OperatorType op_type) {
