@@ -113,9 +113,10 @@ def parse_arguments(opt=None):
     # in case no test data is given, the training data will be split into training and test data
     parser.add_argument('--test', help='Path to test data in csv format. If absent, training data will be split',
                         metavar='TEST_PATH')
-    parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'}, action='append', nargs='+',
-                        help='Model type. Boost is the default')
-    parser.add_argument('--out', help='Output folder', metavar='OUT_PATH')
+    # We have achieved the best results with boost
+    parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'}, default=['boost'], action='append',
+                        nargs='+', help='Model type(s). Boost is the default')
+    parser.add_argument('--out', help='Output folder', metavar='OUT_PATH', default='costModelOutput')
 
     if (opt):
         return parser.parse_args(opt)
@@ -142,14 +143,9 @@ def import_data(args):
 
 
 def main(args):
-    out = 'costModelOutput'
     scores = {}
-
-    # We have achieved the best results with this model
-    model_types = ['boost']
-
-    if args.m:
-        model_types = args.m[0]
+    model_types = args.m if len(args.m) == 1 else args.m[-1]
+    out = args.out
 
     if args.test:
         train_data, test_data = import_data(args)
@@ -157,9 +153,6 @@ def main(args):
         train_data = import_train_data(args.train)
         train_data = train_data.dropna()
         train_data, test_data = train_test_split(train_data)
-
-    if args.out:
-        out = args.out
 
     if not os.path.exists(os.path.join(out, 'models')):
         os.makedirs(os.path.join(out, 'models'))
@@ -215,5 +208,5 @@ def main(args):
 
 
 if __name__ == '__main__':
-    args = parse_arguments()
-    main(args)
+    arguments = parse_arguments()
+    main(arguments)
