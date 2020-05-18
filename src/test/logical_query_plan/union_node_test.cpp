@@ -4,7 +4,9 @@
 
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 
 namespace opossum {
 
@@ -14,7 +16,6 @@ class UnionNodeTest : public BaseTest {
     _mock_node1 = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
-    _mock_node3 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}}, "t_v");
 
     _a = _mock_node1->get_column("a");
     _b = _mock_node1->get_column("b");
@@ -25,7 +26,7 @@ class UnionNodeTest : public BaseTest {
     _union_node->set_right_input(_mock_node1);
   }
 
-  std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
+  std::shared_ptr<MockNode> _mock_node1, _mock_node2;
   std::shared_ptr<UnionNode> _union_node;
   std::shared_ptr<LQPColumnExpression> _a;
   std::shared_ptr<LQPColumnExpression> _b;
@@ -96,6 +97,30 @@ TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
   mock_node1_changed->set_table_constraints(TableConstraintDefinitions{table_constraint_1});
   _union_node->set_right_input(mock_node1_changed);
   EXPECT_THROW(_union_node->constraints(), std::logic_error);
+TEST_F(UnionNodeTest, DiscardFunctionalDependencies) {
+  // Create StoredTableNode with a single FD
+  const auto table_name = "t_a";
+  Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+  const auto stored_table_node = StoredTableNode::make(table_name);
+  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 1);
+  // Create ValidateNode as it is required by UnionPositions
+  auto validate_node = ValidateNode::make(stored_table_node);
+  EXPECT_EQ(validate_node->functional_dependencies().size(), 1);
+
+  // Test UnionAll (discard FDs)
+  auto union_all_node = UnionNode::make(SetOperationMode::All);
+  union_all_node->set_left_input(stored_table_node);
+  union_all_node->set_right_input(stored_table_node);
+  EXPECT_EQ(union_all_node->functional_dependencies().size(), 0);
+
+  // Test UnionPositions (forward FDs)
+  auto union_positions_node = UnionNode::make(SetOperationMode::All);
+  union_positions_node->set_left_input(validate_node);
+  union_positions_node->set_right_input(validate_node);
+
+  Hyrise::get().reset();
 }
 
 }  // namespace opossum

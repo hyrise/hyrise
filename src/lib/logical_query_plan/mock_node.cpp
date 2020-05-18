@@ -22,6 +22,7 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
 
 std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
+
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     if (column_definitions[column_id].second == column_name) {
       return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
@@ -62,6 +63,12 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < _column_definitions.size(), "ColumnID out of range");
   return false;
 }
+
+void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+  _functional_dependencies = fds;
+}
+
+std::vector<FunctionalDependency> MockNode::functional_dependencies() const { return _functional_dependencies; }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
@@ -167,6 +174,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }
+
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
   return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&

@@ -37,6 +37,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   bool is_column_nullable(const ColumnID column_id) const override;
   const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const override;
 
+  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  std::vector<FunctionalDependency> functional_dependencies() const override;
+
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
@@ -68,5 +71,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   TableConstraintDefinitions _table_constraints;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
+  std::vector<FunctionalDependency> _functional_dependencies;
 };
 }  // namespace opossum

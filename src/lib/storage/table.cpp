@@ -326,6 +326,7 @@ std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes
 const TableConstraintDefinitions& Table::get_soft_unique_constraints() const { return _constraint_definitions; }
 
 void Table::add_soft_unique_constraint(const TableConstraintDefinition& table_constraint) {
+  Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
   for (const auto& column_id : table_constraint.columns) {
     Assert(column_id < column_count(), "ColumnID out of range");
     Assert(table_constraint.is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),

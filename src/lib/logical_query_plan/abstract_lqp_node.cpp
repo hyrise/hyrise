@@ -221,7 +221,7 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
 
 std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(),
-         "Can only forward input expressions if there is a left input and no right input");
+         "Can only forward input expressions iff there is a left input and no right input");
   return left_input()->column_expressions();
 }
 
@@ -239,63 +239,15 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_column_expression(
-    const ColumnID column_id) const {
-  for (auto expr : this->column_expressions()) {
-    const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
-    if (column_expr && column_expr->column_reference.original_column_id() == column_id) {
-      return column_expr;
-    }
-  }
-  return std::nullopt;
-}
-
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   // Default behaviour: Forward from input
   Assert(left_input() && !right_input(),
-         "Can forward nullability from input if there is a left input and no right input");
+         "Can forward nullability from input iff there is a left input and no right input");
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::constraints() const {
-  return std::make_shared<ExpressionsConstraintDefinitions>();
-}
-
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::forward_constraints() const {
-  Assert(left_input(), "Not possible to forward constraints from empty node.");
-  const auto input_constraints = left_input()->constraints();
-  const auto& expressions = column_expressions();
-  if constexpr (HYRISE_DEBUG) {
-    ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
-    for (const auto& constraint : *input_constraints) {
-      for (const auto& expr : constraint.column_expressions) {
-        Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses column expressions.");
-      }
-    }
-  }
-  return input_constraints;
-}
-
-bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
-  const auto lqp_constraints = constraints();
-  if (lqp_constraints->empty()) return false;
-
-  // Look for a constraint that is solely based on the given column expressions
-  for (const auto& constraint : *lqp_constraints) {
-    if (constraint.column_expressions.size() == column_expressions.size() &&
-        std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&](const auto column_expression) {
-          return constraint.column_expressions.contains(column_expression);
-        })) {
-      // Found match
-      return true;
-    }
-  }
-  // No match found
-  return false;
-}
-
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // Gather input FDs
+  // Gather input FDs from all input nodes
   auto fds_left = std::vector<FunctionalDependency>();
   auto fds_right = std::vector<FunctionalDependency>();
   if (left_input()) {
@@ -304,51 +256,49 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   if (right_input()) {
     fds_right = right_input()->functional_dependencies();
   }
-
-  auto fds_in = std::vector<FunctionalDependency>();
-  if (fds_right.empty()) {
-    fds_in = fds_left;
-  } else {
-    // Remove duplicate FDs that might result from e.g. self-joins
+#if HYRISE_DEBUG
+  if (!fds_right.empty()) {
     for (const auto& fd_right : fds_right) {
-      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(), [&fd_right](const auto& fd_left) {
-        return (fd_left.first.size() == fd_right.first.size() && fd_left.second.size() == fd_right.second.size() &&
-                fd_left.first == fd_right.first && fd_left.second == fd_right.second);
-      });
-      if (!duplicate) {
-        fds_in.push_back(fd_right);
-      }
+      bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
+                                   [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
+      DebugAssert(!duplicate,
+                  "Unexpected duplicate functional dependency found in " + this->description(DescriptionMode::Short));
     }
-    std::move(fds_left.begin(), fds_left.end(), std::back_inserter(fds_in));
+  }
+#endif
+
+  auto& fds_in = fds_left;
+  fds_in.insert(fds_in.end(), fds_right.cbegin(), fds_right.cend());
+
+  // Currently, we do not support FDs in conjunction with null values in their left column set.
+  // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
+  // for compliance and discard them, if necessary.
+  auto fds_out = std::vector<FunctionalDependency>();
+
+  // Collect non-nullable columns
+  auto column_expressions = this->column_expressions();
+  auto column_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+    if (!is_column_nullable(column_id)) {
+      column_expressions_non_nullable.insert(column_expressions.at(column_id));
+    }
   }
 
-  // Currently, we do not support FDs in conjunction with null values.
-  // Since previous operators like outer joins might have added null values, we have to check columns for nullability.
-  // FDs which are based on at least one nullable column do not get forwarded.
-  auto fds_out = std::vector<FunctionalDependency>();
-  const auto node_column_expressions_vec = this->column_expressions();
-  const auto node_column_expressions_set =
-      ExpressionUnorderedSet{node_column_expressions_vec.cbegin(), node_column_expressions_vec.cend()};
-
   for (const auto& fd : fds_in) {
-    // For convenience, create a new container with all expressions
-    auto fd_expressions = fd.first;
-    fd_expressions.insert(fd.second.begin(), fd.second.end());
-
-    if (std::any_of(fd_expressions.cbegin(), fd_expressions.cend(),
-                    [this, &node_column_expressions_set](const auto& expression) {
-                      // Check for nullability, if possible.
-                      return node_column_expressions_set.contains(expression) && expression->is_nullable_on_lqp(*this);
-                    })) {
+    // Check, whether left column set is subset of current node's non-nullable output expressions
+    if (std::any_of(fd.first.cbegin(), fd.first.cend(), [&column_expressions_non_nullable](const auto& expression) {
+          return !column_expressions_non_nullable.contains(expression);
+        }))
       continue;
-    } else {
-      // All FD's expressions that are part of this node's column_expressions are non-nullable.
-      fds_out.push_back(fd);
-    }
+
+    // We do not check the columns of the FD's right column set since they are allowed to be nullable.
+
+    // FD remains valid, so add it to the output vector
+    fds_out.push_back(fd);
   }
 
   return fds_out;
-}  // namespace opossum
+}
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;

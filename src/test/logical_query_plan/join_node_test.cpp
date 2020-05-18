@@ -136,8 +136,8 @@ TEST_F(JoinNodeTest, IsColumnNullableWithoutOuterJoin) {
   const auto lqp =
   JoinNode::make(JoinMode::Inner, equals_(add_(_t_a_a, null_()), _t_b_x),
     ProjectionNode::make(expression_vector(_t_a_a, _t_a_b, add_(_t_a_a, null_())),
-     _mock_node_a),
-    _mock_node_b);
+      _mock_node_a),
+        _mock_node_b);
   // clang-format on
 
   EXPECT_FALSE(lqp->is_column_nullable(ColumnID{0}));
@@ -207,80 +207,61 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
-TEST_F(JoinNodeTest, FunctionalDependenciesDuplicates) {
-  // In case of self-joins, the implementation has to ensure that FDs are not outputted twice.
-
-  // Create a table of 3 columns (a, b, c)
-  TableColumnDefinitions column_definitions{
-      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-  const auto table_name = "table";
-  Hyrise::get().storage_manager.add_table(table_name, table);
-
-  // Add unique constraints
-  table->add_soft_unique_constraint({{ColumnID{0}}});
-  table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
-
-  // Prepare Self-JoinNode
-  const auto stored_table_node = StoredTableNode::make(table_name);
-  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{0}));
-  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node, ColumnID{1}));
-  // clang-format off
-  const auto self_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_a),
-                                             stored_table_node,
-                                             stored_table_node);
-  // clang-format on
-
-  // Prerequisite
-  EXPECT_EQ(stored_table_node->functional_dependencies().size(), 2);  // a => (b,c) and (a,b) => c
-
-  // Actual test
-  EXPECT_EQ(self_join_node->functional_dependencies().size(), 2);
-}
-
 TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
-  // Create two tables of 2 columns each
-  TableColumnDefinitions column_definitions_a{{"a", DataType::Int, false}, {"b", DataType::Int, false}};
-  TableColumnDefinitions column_definitions_b{{"x", DataType::Int, false}, {"y", DataType::Int, false}};
-  const auto table_a = std::make_shared<Table>(column_definitions_a, TableType::Data);
-  const auto table_b = std::make_shared<Table>(column_definitions_b, TableType::Data);
-  const auto table_name_a = "table_a";
-  const auto table_name_b = "table_b";
-  Hyrise::get().storage_manager.add_table(table_name_a, table_a);
-  Hyrise::get().storage_manager.add_table(table_name_b, table_b);
+  // Create two MockNodes of 2 columns each
+  const auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+  const auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
 
-  // Add unique constraints
-  table_a->add_soft_unique_constraint({{ColumnID{0}}});
-  table_b->add_soft_unique_constraint({{ColumnID{0}}});
+  // Create and set FDs for both MockNodes
+  const auto a = mock_node_a->get_column("a");
+  const auto b = mock_node_a->get_column("b");
+  const auto fd_ab = FunctionalDependency{{a}, {b}};
+  mock_node_a->set_functional_dependencies({fd_ab});
+
+  const auto x = mock_node_b->get_column("x");
+  const auto y = mock_node_b->get_column("y");
+  const auto fd_xy = FunctionalDependency{{x}, {y}};
+  mock_node_b->set_functional_dependencies({fd_xy});
 
   // Prepare JoinNodes
-  const auto stored_table_node_a = StoredTableNode::make(table_name_a);
-  const auto stored_table_node_b = StoredTableNode::make(table_name_b);
-  const auto join_column_a = lqp_column_(LQPColumnReference(stored_table_node_a, ColumnID{0}));
-  const auto join_column_b = lqp_column_(LQPColumnReference(stored_table_node_b, ColumnID{0}));
+  const auto join_column_a = a;
+  const auto join_column_x = x;
   // clang-format off
-  const auto inner_join_node = JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
-  const auto left_join_node = JoinNode::make(JoinMode::Left, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
-  const auto right_join_node = JoinNode::make(JoinMode::Right, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
-  const auto full_outer_join_node = JoinNode::make(JoinMode::FullOuter, equals_(join_column_a, join_column_b),
-                                               stored_table_node_a,
-                                                 stored_table_node_b);
+  const auto inner_join_node =
+  JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_x),
+    mock_node_a,
+      mock_node_b);
+  const auto left_join_node =
+  JoinNode::make(JoinMode::Left, equals_(join_column_a, join_column_x),
+    mock_node_a,
+      mock_node_b);
+  const auto right_join_node =
+  JoinNode::make(JoinMode::Right, equals_(join_column_a, join_column_x),
+    mock_node_a,
+      mock_node_b);
+  const auto full_outer_join_node =
+  JoinNode::make(JoinMode::FullOuter, equals_(join_column_a, join_column_x),
+    mock_node_a,
+      mock_node_b);
   // clang-format on
 
   // Prerequisite
-  EXPECT_EQ(stored_table_node_a->functional_dependencies().size(), 1);  // a => b
-  EXPECT_EQ(stored_table_node_b->functional_dependencies().size(), 1);  // x => y
+  EXPECT_EQ(mock_node_a->functional_dependencies().size(), 1);
+  EXPECT_EQ(mock_node_a->functional_dependencies().at(0), fd_ab);
+  EXPECT_EQ(mock_node_b->functional_dependencies().size(), 1);
+  EXPECT_EQ(mock_node_b->functional_dependencies().at(0), fd_xy);
 
   // Actual tests
-  EXPECT_EQ(inner_join_node->functional_dependencies().size(), 2);
-  EXPECT_EQ(left_join_node->functional_dependencies().size(), 1);
-  EXPECT_EQ(right_join_node->functional_dependencies().size(), 1);
+  const auto inner_join_fds = inner_join_node->functional_dependencies();
+  EXPECT_EQ(inner_join_fds.size(), 2);
+  EXPECT_EQ(inner_join_fds.at(0), fd_ab);
+  EXPECT_EQ(inner_join_fds.at(1), fd_xy);
+  const auto left_join_fds = left_join_node->functional_dependencies();
+  EXPECT_EQ(left_join_fds.size(), 1);
+  EXPECT_EQ(left_join_fds.at(0), fd_ab);
+  const auto right_join_fds = right_join_node->functional_dependencies();
+  EXPECT_EQ(right_join_fds.size(), 1);
+  EXPECT_EQ(right_join_fds.at(0), fd_xy);
   EXPECT_EQ(full_outer_join_node->functional_dependencies().size(), 0);
 }
 

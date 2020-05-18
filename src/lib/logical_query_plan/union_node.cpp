@@ -24,8 +24,15 @@ std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions()
   return left_input()->column_expressions();
 }
 
+bool UnionNode::is_column_nullable(const ColumnID column_id) const {
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+
+  return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
+}
+
 const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints() const {
-  switch (union_mode) {
+  switch (set_operation_mode) {
+    case SetOperationMode::Unique:
     case UnionMode::Positions:
       // UnionPositions merges two reference tables with the same original table(s). Any duplicate RowIDs are
       // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
@@ -40,14 +47,23 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints()
       // nodes.
       return std::make_shared<ExpressionsConstraintDefinitions>();
   }
-
   Fail("Unhandled UnionMode");
 }
 
-bool UnionNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
-
-  return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
+std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Unique:
+    case SetOperationMode::All:
+      // No guarantees, since UnionAll can break any FD depending on the input.
+      return {};
+    case SetOperationMode::Positions:
+      // By definition, UnionPositions requires both input tables to have the same table origin and structure.
+      // Therefore, we can forward the FDs of either the left or right input node.
+      DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(),
+                  "Expected both input nodes to have the same FDs.");
+      return left_input()->functional_dependencies();
+  }
+  Fail("Unhandled UnionMode");
 }
 
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

@@ -19,13 +19,11 @@ class AliasNodeTest : public BaseTest {
  public:
   void SetUp() override {
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
-
     a = mock_node->get_column("a");
     b = mock_node->get_column("b");
 
     aliases = {"x", "y"};
     expressions = {b, a};
-
     alias_node = AliasNode::make(expressions, aliases, mock_node);
   }
 

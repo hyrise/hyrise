@@ -6,8 +6,6 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -53,12 +51,51 @@ struct LQPOutputRelation {
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
 /**
- * Models a functional dependency (FD) which consists out of two sets of column expressions (left and right set).
- * Concrete values for the left set of columns lead to concrete values for the right set of columns.
- * In other words, the left side unambigiously identifies the right side of values. (Left => Right)
- * Currently, column expressions are required to be non-nullable to be involved in FDs. As there are strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might change in the future.
+ * Models a functional dependency (FD), which consists out of two sets of column expressions (Left &
+ * Right).
+ * The left column set unambigiously identifies the right column set: {Left} => {Right}
+ *
+ * Example A:
+ * Think of a table with three columns: (Semester, CourseID, Lecturer)
+ * The primary key is defined across the first two columns, which leads to the following FD:
+ * {Semester, CourseID} => {Lecturer}
+ *
+ * Example B:
+ * Think of a table with four columns: (ISBN, Genre, Author, Author-Nationality)
+ * The primary key {ISBN} identifies all other columns. Therefore, we get the following FDs:
+ * {ISBN} => {Author}
+ * {ISBN} => {Genre}
+ * {ISBN} => {Author}
+ * {ISBN} => {Author-Nationality}
+ * Furthermore, knowing an author, we also know his nationality. Hence, we can specify another FD that applies:
+ * {Author} => {Author-Nationality}
+ *
+ *
+ * Currently, column expressions are required to be non-nullable to be involved in FDs. As there are
+ * strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might
+ * change in the future.
  */
-using FunctionalDependency = std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>;
+struct FunctionalDependency : std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet> {
+  FunctionalDependency(ExpressionUnorderedSet left_column_set, ExpressionUnorderedSet right_column_set) {
+    first = left_column_set;
+    second = right_column_set;
+  }
+
+  bool operator==(const FunctionalDependency& other) const {
+    // Quick check for cardinality
+    if (first.size() != other.first.size() || second.size() != other.second.size()) return false;
+
+    // Compare left column sets
+    for (const auto& column_expression : other.first) {
+      if (!first.contains(column_expression)) return false;
+    }
+    // Compare right column sets
+    for (const auto& column_expression : other.second) {
+      if (!second.contains(column_expression)) return false;
+    }
+    return true;
+  }
+};
 
 class LQPColumnExpression;
 
@@ -143,7 +180,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
    *         has a special treatment (it is represented as an LQPColumnExpression with an INVALID_COLUMN_ID), it might
-  *          be evaluable even if find_column_id returns nullopt.
+   *         be evaluable even if find_column_id returns nullopt.
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 

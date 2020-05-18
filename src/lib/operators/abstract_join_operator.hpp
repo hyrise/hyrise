@@ -29,7 +29,7 @@ struct JoinConfiguration {
  * Base class for predicated (i.e., non-cross) join operator implementations. Cross Joins are performed by the Product
  * operator.
  *
- * Find more information about joins in our Wiki: https://github.com/hyrise/hyrise/wiki/Operators_JoinSortMerge
+ * Find more information about joins in our Wiki: https://github.com/hyrise/hyrise/wiki/Hash-Join-Operator
  * We have decided against forwarding MVCC data in https://github.com/hyrise/hyrise/issues/409
  */
 class AbstractJoinOperator : public AbstractReadOnlyOperator {

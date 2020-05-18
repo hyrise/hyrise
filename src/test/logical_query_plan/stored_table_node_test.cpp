@@ -21,6 +21,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
+    Hyrise::reset();
+
     Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
     Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
 
@@ -207,79 +209,121 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
   // Constraint across all columns => No more columns available to create a functional dependency from
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(
-      TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id(), _c.original_column_id()}});
+  table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id, _c->original_column_id},
+                                    IsPrimaryKey::No);
 
-  EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 0);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
+  const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
+
   EXPECT_EQ(fds.size(), 1);
-  const auto fd = fds.at(0);
+  EXPECT_EQ(fds.at(0), fd_expected);
+}
 
-  // Check left
-  EXPECT_EQ(fd.first.size(), 1);
-  EXPECT_TRUE(fd.first.contains(lqp_column_(_a)));
+TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
 
-  // Check right
-  EXPECT_EQ(fd.second.size(), 2);
-  EXPECT_TRUE(fd.second.contains(lqp_column_(_b)));
-  EXPECT_TRUE(fd.second.contains(lqp_column_(_c)));
+  // Prune unique column "a", which would be part of the left column set in the resulting FD: {a} => {b, c}
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 0);
+}
+
+TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+
+  // Prune column "b", which would be part of the right column set in the resulting FD: {a} => {b, c}
+  _stored_table_node->set_pruned_column_ids({ColumnID{1}});
+
+  // Although b is not part of the output column expressions, we want to see an FD returned.
+  const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 1);
+  EXPECT_EQ(_stored_table_node->functional_dependencies().at(0), fd_expected);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
-  const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id()}});
-  table->add_soft_unique_constraint(TableConstraintDefinition{{_a.original_column_id(), _b.original_column_id()}});
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");  // int_int_float.tbl
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id}, IsPrimaryKey::No);
 
   const auto& fds = _stored_table_node->functional_dependencies();
+
+  const auto fd1_expected = FunctionalDependency{{_a}, {_b, _c}};
+  const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
+
   EXPECT_EQ(fds.size(), 2);
-  const auto fd1 = fds.at(0);
-  const auto fd2 = fds.at(1);
-
-  // Check left of fd1
-  EXPECT_EQ(fd1.first.size(), 1);
-  EXPECT_TRUE(fd1.first.contains(lqp_column_(_a)));
-
-  // Check right of fd1
-  EXPECT_EQ(fd1.second.size(), 2);
-  EXPECT_TRUE(fd1.second.contains(lqp_column_(_b)));
-  EXPECT_TRUE(fd1.second.contains(lqp_column_(_c)));
-
-  // Check left of fd2
-  EXPECT_EQ(fd2.first.size(), 2);
-  EXPECT_TRUE(fd2.first.contains(lqp_column_(_a)));
-  EXPECT_TRUE(fd2.first.contains(lqp_column_(_b)));
-
-  // Check right of fd2
-  EXPECT_EQ(fd2.second.size(), 1);
-  EXPECT_TRUE(fd2.second.contains(lqp_column_(_c)));
+  EXPECT_EQ(fds.at(0), fd1_expected);
+  EXPECT_EQ(fds.at(1), fd2_expected);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
-  // Create a tables of 3 columns (a, b, c) where the last column of which is nullable (c)
+  // Create four identical tables of 3 columns (a, b, c), where the second column of which is nullable (b)
   TableColumnDefinitions column_definitions{
-      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
-  const auto table_a = std::make_shared<Table>(column_definitions, TableType::Data);
-  const auto table_b = std::make_shared<Table>(column_definitions, TableType::Data);
-  Hyrise::get().storage_manager.add_table("t_a_nullable", table_a);
-  Hyrise::get().storage_manager.add_table("t_b_nullable", table_b);
+      {"a", DataType::Int, false}, {"b", DataType::Int, true}, {"c", DataType::Int, false}};
 
-  // Add unique constraints
-  table_a->add_soft_unique_constraint({{ColumnID{0}}});
-  table_a->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}});
-  table_b->add_soft_unique_constraint({{ColumnID{2}}});
+  // Test {a} => {b, c}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
 
-  const auto stored_table_node_a = StoredTableNode::make("t_a_nullable");
-  const auto stored_table_node_b = StoredTableNode::make("t_b_nullable");
-  const auto& fds_a = stored_table_node_a->functional_dependencies();
-  const auto& fds_b = stored_table_node_b->functional_dependencies();
-  EXPECT_EQ(fds_a.size(), 0);  // without nullability we should get 2 FDs: a => (b,c) and (a,b) => c
-  EXPECT_EQ(fds_b.size(), 0);  // without nullability we should get 1 FDs: c => (a,b)
+    Hyrise::get().storage_manager.add_table("table_a", table);
+    const auto stored_table_node = StoredTableNode::make("table_a");
+    const auto& a = stored_table_node->get_column("a");
+    const auto& b = stored_table_node->get_column("b");
+    const auto& c = stored_table_node->get_column("c");
+    const auto& fds = stored_table_node->functional_dependencies();
+
+    const auto fd_expected = FunctionalDependency{{a}, {b, c}};
+    EXPECT_EQ(fds.size(), 1);
+    EXPECT_EQ(fds.at(0), fd_expected);
+  }
+
+  // Test {a, b} => {c}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
+
+    Hyrise::get().storage_manager.add_table("table_b", table);
+    const auto& stored_table_node = StoredTableNode::make("table_b");
+
+    EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
+  }
+
+  // Test {a, c} => {b}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No);
+
+    Hyrise::get().storage_manager.add_table("table_c", table);
+    const auto& stored_table_node = StoredTableNode::make("table_c");
+    const auto& a = stored_table_node->get_column("a");
+    const auto& b = stored_table_node->get_column("b");
+    const auto& c = stored_table_node->get_column("c");
+    const auto& fds = stored_table_node->functional_dependencies();
+
+    const auto fd_expected = FunctionalDependency{{a, c}, {b}};
+    EXPECT_EQ(fds.size(), 1);
+    EXPECT_EQ(fds.at(0), fd_expected);
+  }
+
+  // Test {b} => {a, c}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{1}}, IsPrimaryKey::No);
+
+    Hyrise::get().storage_manager.add_table("table_d", table);
+    const auto& stored_table_node = StoredTableNode::make("table_d");
+
+    EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
+  }
 }
 
 }  // namespace opossum

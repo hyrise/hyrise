@@ -10,6 +10,7 @@
 
 namespace opossum {
 
+class LQPColumnExpression;
 class TableStatistics;
 
 /**
