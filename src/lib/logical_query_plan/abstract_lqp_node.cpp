@@ -261,8 +261,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     for (const auto& fd_right : fds_right) {
       bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
                                    [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
-      DebugAssert(!duplicate, "Unexpected duplicate functional dependency found in " +
-                                  this->description(DescriptionMode::Short));
+      DebugAssert(!duplicate,
+                  "Unexpected duplicate functional dependency found in " + this->description(DescriptionMode::Short));
     }
   }
 #endif

@@ -211,9 +211,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   // Create four identical tables of 3 columns (a, b, c), where the second column of which is nullable (b)
   TableColumnDefinitions column_definitions{
-      {"a", DataType::Int, false},
-      {"b", DataType::Int, true},
-      {"c", DataType::Int, false}};
+      {"a", DataType::Int, false}, {"b", DataType::Int, true}, {"c", DataType::Int, false}};
 
   // Test {a} => {b, c}
   {

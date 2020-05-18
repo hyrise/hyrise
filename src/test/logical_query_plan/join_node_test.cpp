@@ -198,10 +198,8 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
 
 TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // Create two MockNodes of 2 columns each
-  const auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
-      {DataType::Int, "a"}, {DataType::Int, "b"}});
-  const auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{
-      {DataType::Int, "x"}, {DataType::Int, "y"}});
+  const auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+  const auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
 
   // Create and set FDs for both MockNodes
   const auto a = mock_node_a->get_column("a");

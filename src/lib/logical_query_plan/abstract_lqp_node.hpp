@@ -77,22 +77,21 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
  */
 struct FunctionalDependency : std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet> {
   FunctionalDependency(ExpressionUnorderedSet left_column_set, ExpressionUnorderedSet right_column_set) {
-      first = left_column_set;
-      second = right_column_set;
+    first = left_column_set;
+    second = right_column_set;
   }
 
   bool operator==(const FunctionalDependency& other) const {
-
     // Quick check for cardinality
-    if(first.size() != other.first.size() || second.size() != other.second.size()) return false;
+    if (first.size() != other.first.size() || second.size() != other.second.size()) return false;
 
     // Compare left column sets
-    for(const auto& column_expression : other.first) {
-      if(!first.contains(column_expression)) return false;
+    for (const auto& column_expression : other.first) {
+      if (!first.contains(column_expression)) return false;
     }
     // Compare right column sets
-    for(const auto& column_expression : other.second) {
-      if(!second.contains(column_expression)) return false;
+    for (const auto& column_expression : other.second) {
+      if (!second.contains(column_expression)) return false;
     }
     return true;
   }

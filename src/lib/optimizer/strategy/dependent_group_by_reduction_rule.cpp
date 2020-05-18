@@ -30,7 +30,7 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const Exp
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list
   if (!std::all_of(fd.first.cbegin(), fd.first.cend(),
-                   [&group_by_columns](const std::shared_ptr<AbstractExpression> &constraint_column_expression) {
+                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& constraint_column_expression) {
                      return group_by_columns.contains(constraint_column_expression);
                    })) {
     return false;

@@ -9,8 +9,6 @@
 #include "utils/assert.hpp"
 #include "utils/column_ids_after_pruning.hpp"
 
-
-
 namespace opossum {
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
@@ -69,7 +67,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_express
     const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
     // Build `_expression` with respect to the `_pruned_column_ids`
-    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size()); // <- does this make sense?
+    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());  // <- does this make sense?
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
     auto output_column_id = ColumnID{0};
@@ -105,14 +103,13 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     //  a) unique (a guarantee already provided by the current unique constraint) and
     //  b) non-nullable
     //  c) a subset of the output columns
-    if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
-                    [this](const auto column_id) {
-                      bool is_pruned = std::find_if(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
-                                                    [column_id](const auto pruned_column_id) {
-                                                      return pruned_column_id == column_id;
-                                                    }) != _pruned_column_ids.cend();
-                      return is_pruned || this->is_column_nullable(column_id);
-                    })) {
+    if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(), [this](const auto column_id) {
+          bool is_pruned = std::find_if(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                                        [column_id](const auto pruned_column_id) {
+                                          return pruned_column_id == column_id;
+                                        }) != _pruned_column_ids.cend();
+          return is_pruned || this->is_column_nullable(column_id);
+        })) {
       continue;
     }
 
@@ -120,29 +117,27 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     auto right = ExpressionUnorderedSet{};
 
     // Create column expressions for both column sets
-    for(auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       // Because of column pruning, we create new column expressions. Some column expressions might not be part
       // of _column_expressions, but part of the FD's right column set.
       const auto column_expression = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 
       // Check, whether column expression belongs to the left or right column set of the FD
-      if(std::find_if(constraint.columns.cbegin(), constraint.columns.cend(),
-                       [column_id](const auto constraint_column_id){
-                         return constraint_column_id == column_id;
-                       }) == constraint.columns.cend()) {
+      if (std::find_if(constraint.columns.cbegin(), constraint.columns.cend(),
+                       [column_id](const auto constraint_column_id) { return constraint_column_id == column_id; }) ==
+          constraint.columns.cend()) {
         right.insert(column_expression);
       } else {
         left.insert(column_expression);
       }
     }
 
-    Assert(left.size() == constraint.columns.size(),
-           "Wrong cardinality of FD's left column set");
+    Assert(left.size() == constraint.columns.size(), "Wrong cardinality of FD's left column set");
     Assert(right.size() == table->column_count() - constraint.columns.size(),
            "Wrong cardinality of FD's right column set");
 
     // Create functional dependency
-    if(left.size() > 0 && right.size() > 0) {
+    if (left.size() > 0 && right.size() > 0) {
       fds.emplace_back(left, right);
     }
   }
