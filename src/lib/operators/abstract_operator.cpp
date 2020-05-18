@@ -70,8 +70,8 @@ void AbstractOperator::execute() {
   // Chunks from operators other than GetTable should be immutable
   if constexpr (HYRISE_DEBUG) {
     // We exclude the TableWrapper (heavily used in tests with arbitrary tables) and modifiying operators.
-    if (const auto ro_operator = std::dynamic_pointer_cast<const AbstractReadOnlyOperator>(_input_left) &&
-                                 _input_left->type() != OperatorType::TableWrapper) {
+    if (std::dynamic_pointer_cast<const AbstractReadOnlyOperator>(_input_left) &&
+        _input_left->type() != OperatorType::TableWrapper) {
       const auto check_input_table = [&](const std::shared_ptr<const Table>& input_table) {
         const auto chunk_count = input_table->chunk_count();
         for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
