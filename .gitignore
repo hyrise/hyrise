@@ -43,6 +43,7 @@ default.profdata
 default.profraw
 
 tpcds_cached_tables/
+costModelOutput/
 
 # Ignore python notebook saves
 *.ipynb_checkpoints
