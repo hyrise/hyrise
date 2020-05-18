@@ -9,6 +9,8 @@
 #include "utils/assert.hpp"
 #include "utils/column_ids_after_pruning.hpp"
 
+
+
 namespace opossum {
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
@@ -94,34 +96,50 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 
 std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
-  const auto& unique_constraints = Hyrise::get().storage_manager.get_table(table_name)->get_soft_unique_constraints();
-  const auto& column_expressions = this->column_expressions();
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& unique_constraints = table->get_soft_unique_constraints();
 
   for (const auto& constraint : unique_constraints) {
     // We build FDs from two column sets: LeftColumnSet => RightColumnSet
     // The left column set has to be
     //  a) unique (a guarantee already provided by the current unique constraint) and
     //  b) non-nullable
+    //  c) a subset of the output columns
     if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(),
-                    [this](const auto column_id) { return this->is_column_nullable(column_id); })) {
+                    [this](const auto column_id) {
+                      bool is_pruned = std::find_if(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                                                    [column_id](const auto pruned_column_id) {
+                                                      return pruned_column_id == column_id;
+                                                    }) != _pruned_column_ids.cend();
+                      return is_pruned || this->is_column_nullable(column_id);
+                    })) {
       continue;
     }
 
     auto left = ExpressionUnorderedSet{};
     auto right = ExpressionUnorderedSet{};
 
-    // Gather column expressions for constraint's column ids (FD's left column set)
-    for (auto constraint_column_id : constraint.columns) {
-      const auto lqp_column = column_expressions.at(constraint_column_id);
-      left.insert(lqp_column);
-    }
-    Assert(left.size() == constraint.columns.size(),
-           "Failed to collect all column expressions for constraint's column ids");
+    // Create column expressions for both column sets
+    for(auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      // Because of column pruning, we create new column expressions. Some column expressions might not be part
+      // of _column_expressions, but part of the FD's right column set.
+      const auto column_expression = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 
-    // Collect column expressions of the FD's right column set
-    std::copy_if(column_expressions.begin(), column_expressions.end(), std::inserter(right, right.begin()),
-                 [&left](const std::shared_ptr<AbstractExpression> &column_expr) { return !(left.contains(column_expr));
-                 });
+      // Check, whether column expression belongs to the left or right column set of the FD
+      if(std::find_if(constraint.columns.cbegin(), constraint.columns.cend(),
+                       [column_id](const auto constraint_column_id){
+                         return constraint_column_id == column_id;
+                       }) == constraint.columns.cend()) {
+        right.insert(column_expression);
+      } else {
+        left.insert(column_expression);
+      }
+    }
+
+    Assert(left.size() == constraint.columns.size(),
+           "Wrong cardinality of FD's left column set");
+    Assert(right.size() == table->column_count() - constraint.columns.size(),
+           "Wrong cardinality of FD's right column set");
 
     // Create functional dependency
     if(left.size() > 0 && right.size() > 0) {

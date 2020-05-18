@@ -170,6 +170,29 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   EXPECT_EQ(fds.at(0), fd_expected);
 }
 
+TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+
+  // Prune unique column "a", which would be part of the left column set in the resulting FD: {a} => {b, c}
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 0);
+}
+
+TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+
+  // Prune column "b", which would be part of the right column set in the resulting FD: {a} => {b, c}
+  _stored_table_node->set_pruned_column_ids({ColumnID{1}});
+
+  // Although b is not part of the output column expressions, we want to see an FD returned.
+  const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 1);
+  EXPECT_EQ(_stored_table_node->functional_dependencies().at(0), fd_expected);
+}
+
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");  // int_int_float.tbl
   table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
