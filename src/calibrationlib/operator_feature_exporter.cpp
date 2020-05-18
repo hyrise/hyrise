@@ -22,7 +22,7 @@ void OperatorFeatureExporter::export_to_csv(const std::shared_ptr<const Abstract
 }
 
 void OperatorFeatureExporter::flush() {
-  const auto path = _path_to_dir + "/" + "operators.csv";
+  const auto path = _path_to_dir + "/operators.csv";
   CsvWriter::write(*_output_table, path);
 }
 

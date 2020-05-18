@@ -152,7 +152,7 @@ def main(args):
     if args.test:
         train_data, test_data = import_data(args)
     else:
-        train_data = import_train_data(args.train[0])
+        train_data = import_train_data(args.train)
         train_data = train_data.dropna()
         train_data, test_data = train_test_split(train_data)
 
