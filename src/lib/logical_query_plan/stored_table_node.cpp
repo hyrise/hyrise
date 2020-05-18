@@ -124,9 +124,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
                  });
 
     // Create functional dependency
-    if (!right.empty() && std::all_of(right.cbegin(), right.cend(), [this](const auto& right_column_expr) {
-          return !right_column_expr->is_nullable_on_lqp(*this);
-        })) {
+    if(left.size() > 0 && right.size() > 0) {
       fds.emplace_back(left, right);
     }
   }

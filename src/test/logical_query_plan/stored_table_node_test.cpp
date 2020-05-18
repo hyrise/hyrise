@@ -20,6 +20,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
+    Hyrise::reset();
+
     Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
     Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
 
@@ -205,25 +207,67 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
-  // Create a tables of 3 columns (a, b, c) where the last column of which is nullable (c)
+  // Create four identical tables of 3 columns (a, b, c), where the second column of which is nullable (b)
   TableColumnDefinitions column_definitions{
-      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
-  const auto table_a = std::make_shared<Table>(column_definitions, TableType::Data);
-  const auto table_b = std::make_shared<Table>(column_definitions, TableType::Data);
-  Hyrise::get().storage_manager.add_table("t_a_nullable", table_a);
-  Hyrise::get().storage_manager.add_table("t_b_nullable", table_b);
+      {"a", DataType::Int, false},
+      {"b", DataType::Int, true},
+      {"c", DataType::Int, false}};
 
-  // Add unique constraints
-  table_a->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
-  table_a->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
-  table_b->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+  // Test {a} => {b, c}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
 
-  const auto stored_table_node_a = StoredTableNode::make("t_a_nullable");
-  const auto stored_table_node_b = StoredTableNode::make("t_b_nullable");
-  const auto& fds_a = stored_table_node_a->functional_dependencies();
-  const auto& fds_b = stored_table_node_b->functional_dependencies();
-  EXPECT_EQ(fds_a.size(), 0);  // without nullability we should get 2 FDs: {a} => {b, c} and {a, b} => c
-  EXPECT_EQ(fds_b.size(), 0);  // without nullability we should get 1 FDs: {c} => {a, b}
+    Hyrise::get().storage_manager.add_table("table_a", table);
+    const auto& stored_table_node = StoredTableNode::make("table_a");
+    const auto& a = stored_table_node->get_column("a");
+    const auto& b = stored_table_node->get_column("b");
+    const auto& c = stored_table_node->get_column("c");
+    const auto fd = FunctionalDependency{{a}, {b, c}};
+    const auto& fds = stored_table_node->functional_dependencies();
+
+    EXPECT_EQ(fds.size(), 1);
+    EXPECT_EQ(fds.at(0), fd);
+  }
+
+  // Test {a, b} => {c}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
+
+    Hyrise::get().storage_manager.add_table("table_b", table);
+    const auto& stored_table_node = StoredTableNode::make("table_b");
+
+    EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
+  }
+
+  // Test {a, c} => {b}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No);
+
+    Hyrise::get().storage_manager.add_table("table_c", table);
+    const auto& stored_table_node = StoredTableNode::make("table_c");
+    const auto& a = stored_table_node->get_column("a");
+    const auto& b = stored_table_node->get_column("b");
+    const auto& c = stored_table_node->get_column("c");
+    const auto fd = FunctionalDependency{{a, c}, {b}};
+    const auto& fds = stored_table_node->functional_dependencies();
+
+    EXPECT_EQ(fds.size(), 1);
+    EXPECT_EQ(fds.at(0), fd);
+  }
+
+  // Test {b} => {a, c}
+  {
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->add_soft_unique_constraint({ColumnID{1}}, IsPrimaryKey::No);
+
+    Hyrise::get().storage_manager.add_table("table_d", table);
+    const auto& stored_table_node = StoredTableNode::make("table_d");
+
+    EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
+  }
 }
 
 }  // namespace opossum
