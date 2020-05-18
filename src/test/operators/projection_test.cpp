@@ -11,6 +11,7 @@
 #include "operators/delete.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -189,6 +190,37 @@ TEST_F(OperatorsProjectionTest, ReusesDictionaryWhenForwarding) {
 
   const auto output_attribute_vector_decompressor = output_attribute_vector->create_base_decompressor();
   EXPECT_EQ(output_attribute_vector_decompressor->get(0), ValueID{1});
+}
+
+TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
+  // Verify that the sorted_by flag is not set when it's not present in left input.
+  const auto projection_a_unsorted = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a));
+  projection_a_unsorted->execute();
+
+  const auto& result_table_unsorted = projection_a_unsorted->get_output();
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_unsorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_unsorted->get_chunk(chunk_id)->sorted_by();
+    EXPECT_TRUE(sorted_by.empty());
+  }
+
+  // Verify that the sorted_by flag is set when it's present in left input.
+  // sorting on column a (ColumnID 0)
+  const auto sort =
+      std::make_shared<Sort>(table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}});
+  sort->execute();
+
+  const auto projection_b_a_sorted = std::make_shared<Projection>(sort, expression_vector(a_b, a_a));
+  projection_b_a_sorted->execute();
+
+  const auto& result_table_sorted = projection_b_a_sorted->get_output();
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto& sorted_by = result_table_sorted->get_chunk(chunk_id)->sorted_by();
+    ASSERT_FALSE(sorted_by.empty());
+    // Expect sort to be column a, now with ColumnID 1
+    const auto expected_sorted_by = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{1}}};
+    EXPECT_EQ(sorted_by, expected_sorted_by);
+  }
 }
 
 }  // namespace opossum

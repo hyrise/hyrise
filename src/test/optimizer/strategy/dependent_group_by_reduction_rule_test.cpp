@@ -215,14 +215,14 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
 TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   // clang-format off
   auto lqp =
-  SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
+  SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
     AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)), stored_table_node_a));  // NOLINT
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0)),
-    SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
+    SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)), stored_table_node_a)));  // NOLINT
   // clang-format on
 

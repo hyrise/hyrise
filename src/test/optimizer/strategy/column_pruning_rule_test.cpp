@@ -58,7 +58,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
     PredicateNode::make(greater_than_(5, c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
         node_a,
-        SortNode::make(expression_vector(w), std::vector<OrderByMode>{OrderByMode::Ascending},  // NOLINT
+        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},  // NOLINT
           node_b))));
 
   // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
@@ -75,7 +75,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
     PredicateNode::make(greater_than_(5, pruned_c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, pruned_a),
         pruned_node_a,
-        SortNode::make(expression_vector(w), std::vector<OrderByMode>{OrderByMode::Ascending},  // NOLINT
+        SortNode::make(expression_vector(w), std::vector<SortMode>{SortMode::Ascending},  // NOLINT
           node_b))));
   // clang-format on
 

@@ -277,17 +277,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
 
   auto pqp_expression_iter = pqp_expressions.begin();
-  auto order_by_mode_iter = sort_node->order_by_modes.begin();
+  auto sort_mode_iter = sort_node->sort_modes.begin();
 
   std::vector<SortColumnDefinition> column_definitions;
   column_definitions.reserve(pqp_expressions.size());
-  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++order_by_mode_iter) {
+  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++sort_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *order_by_mode_iter});
+    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *sort_mode_iter});
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 

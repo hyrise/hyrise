@@ -213,7 +213,7 @@ enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue
 // see union_positions.hpp for details.
 enum class SetOperationMode { Unique, All, Positions };
 
-enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
+enum class SortMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
 
@@ -238,6 +238,19 @@ enum class LogLevel { Debug, Info, Warning };
 // AnySegmentIterators that use virtual method calls.
 enum class EraseTypes { OnlyInDebugBuild, Always };
 
+// Defines in which order a certain column should be or is sorted.
+struct SortColumnDefinition final {
+  explicit SortColumnDefinition(ColumnID init_column, SortMode init_sort_mode = SortMode::Ascending)
+      : column(init_column), sort_mode(init_sort_mode) {}
+
+  ColumnID column;
+  SortMode sort_mode;
+};
+
+inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefinition& rhs) {
+  return lhs.column == rhs.column && lhs.sort_mode == rhs.sort_mode;
+}
+
 class Noncopyable {
  protected:
   Noncopyable() = default;
@@ -252,13 +265,13 @@ class Noncopyable {
 struct Null {};
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<OrderByMode, std::string> order_by_mode_to_string;
+extern const boost::bimap<SortMode, std::string> sort_mode_to_string;
 extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
 extern const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string;
 extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
-std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode);
+std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
 std::ostream& operator<<(std::ostream& stream, SetOperationMode set_operation_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
