@@ -67,7 +67,7 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
        * of (num_rows * 0.2f) * REFERENCED_TABLE_CHUNK_COUNT rows - i.e. twice as many rows as the referencing table
        * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
        */
-      auto pos_list = generate_pos_list(num_rows * 0.2f, num_rows_per_chunk);
+      auto pos_list = generate_pos_list(static_cast<float>(num_rows) * 0.2f, num_rows_per_chunk);
       segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, column_idx, pos_list));
     }
     table->append_chunk(segments);
@@ -117,8 +117,8 @@ BENCHMARK(BM_UnionPositions);
 void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
   auto num_table_rows = 500000;
 
-  auto pos_list_left = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
-  auto pos_list_right = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
+  auto pos_list_left = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
+  auto pos_list_right = generate_pos_list(static_cast<float>(num_table_rows) * 0.2f, num_table_rows);
 
   for (auto _ : state) {
     // Create copies, this would need to be done the UnionPositions Operator as well

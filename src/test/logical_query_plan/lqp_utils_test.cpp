@@ -31,7 +31,7 @@ class LQPUtilsTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, a_b, b_x, b_y;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_x, b_y;
 };
 
 TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
@@ -40,7 +40,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
   PredicateNode::make(greater_than_(a_a, 5),
     ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
       PredicateNode::make(less_than_(a_b, 4),
-        SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending}, node_a))));
+        SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::Ascending}, node_a))));
   // clang-format on
 
   const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
@@ -53,11 +53,11 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_B) {
   // clang-format off
   const auto lqp =
   PredicateNode::make(greater_than_(a_a, 4),
-    UnionNode::make(UnionMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(greater_than_(a_a, 5),
         PredicateNode::make(less_than_(a_a, 50),
           node_a)),
-      UnionNode::make(UnionMode::Positions,
+      UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(greater_than_(a_a, 450), node_a),
         PredicateNode::make(less_than_(a_a, 500), node_a))));
   // clang-format on
@@ -104,7 +104,7 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpressionBeginEndNode) {
 TEST_F(LQPUtilsTest, VisitLQP) {
   // clang-format off
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{
-    PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
+    PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(SetOperationMode::Positions),
     PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4)), node_a};
   // clang-format on
 
@@ -141,7 +141,7 @@ TEST_F(LQPUtilsTest, VisitLQPUpwards) {
   // clang-format off
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{node_a,
     PredicateNode::make(greater_than_(a_a, 4)), PredicateNode::make(less_than_(a_a, 4)),
-    UnionNode::make(UnionMode::Positions), PredicateNode::make(equals_(a_a, 4))};
+    UnionNode::make(SetOperationMode::Positions), PredicateNode::make(equals_(a_a, 4))};
   // clang-format on
 
   expected_nodes[4]->set_left_input(expected_nodes[3]);
@@ -188,7 +188,7 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   PredicateNode::make(greater_than_(a_a, 5),
     ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
       PredicateNode::make(less_than_(a_b, 4),
-        SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending},
+        SortNode::make(expression_vector(a_b), std::vector<SortMode>{SortMode::Ascending},
           node_a))));
   // clang-format on
 

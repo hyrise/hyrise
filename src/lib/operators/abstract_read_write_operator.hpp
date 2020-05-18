@@ -16,8 +16,8 @@ namespace opossum {
 enum class ReadWriteOperatorState {
   Pending,     // The operator has been instantiated.
   Executed,    // Execution succeeded.
-  Failed,      // Execution failed.
-  RolledBack,  // Changes have been rolled back.
+  Conflicted,  // The execution identified a conflict, which has not yet been resolved.
+  RolledBack,  // Changes have been rolled back, either to resolve a conflict or by the user's request.
   Committed    // Changes have been committed.
 };
 

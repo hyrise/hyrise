@@ -9,7 +9,6 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -38,13 +37,13 @@ class PredicateReorderingTest : public StrategyBaseTest {
          GenericHistogram<int32_t>::with_single_bin(50, 60, 100, 5),
          GenericHistogram<int32_t>::with_single_bin(110, 1100, 100, 2)});
 
-    a = LQPColumnReference{node, ColumnID{0}};
-    b = LQPColumnReference{node, ColumnID{1}};
-    c = LQPColumnReference{node, ColumnID{2}};
+    a = node->get_column("a");
+    b = node->get_column("b");
+    c = node->get_column("c");
   }
 
   std::shared_ptr<MockNode> node;
-  LQPColumnReference a, b, c;
+  std::shared_ptr<LQPColumnExpression> a, b, c;
   std::shared_ptr<PredicateReorderingRule> _rule;
 };
 
@@ -117,20 +116,20 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
+  auto predicate_node_0 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
+  auto predicate_node_1 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40));
   predicate_node_1->set_left_input(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 400));
+  auto predicate_node_2 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400));
   predicate_node_2->set_left_input(stored_table_node);
 
-  auto predicate_node_3 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
+  auto predicate_node_3 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20));
   predicate_node_3->set_left_input(predicate_node_2);
 
   auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
@@ -168,11 +167,11 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
                                                   {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 
   auto cross_node = JoinNode::make(JoinMode::Cross);
-  auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
-  auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
-  auto predicate_2 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 90));
-  auto predicate_3 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 50));
-  auto predicate_4 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 30));
+  auto predicate_0 = PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80));
+  auto predicate_1 = PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60));
+  auto predicate_2 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 90));
+  auto predicate_3 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 50));
+  auto predicate_4 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 30));
 
   predicate_1->set_left_input(table_0);
   predicate_0->set_left_input(predicate_1);
@@ -219,10 +218,10 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto table_node =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
                                        {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
-  auto union_node = UnionNode::make(UnionMode::Positions);
-  auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
-  auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
-  auto predicate_c_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 5));
+  auto union_node = UnionNode::make(SetOperationMode::Positions);
+  auto predicate_a_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90));
+  auto predicate_b_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 10));
+  auto predicate_c_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5));
 
   union_node->set_left_input(predicate_a_node);
   union_node->set_right_input(predicate_b_node);

@@ -43,14 +43,15 @@ class OperatorsUpdateTest : public BaseTest {
     where_scan->execute();
     updated_values_projection->execute();
 
-    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
     update->set_transaction_context(transaction_context);
     update->execute();
     transaction_context->commit();
 
     // Get validated table which should have the same row twice.
-    const auto post_update_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    const auto post_update_transaction_context =
+        Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     const auto post_update_get_table = std::make_shared<GetTable>(table_to_update_name);
     const auto validate = std::make_shared<Validate>(post_update_get_table);
     validate->set_transaction_context(post_update_transaction_context);

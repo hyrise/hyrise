@@ -74,7 +74,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that sort order, indexes, and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
-  Assert(first_chunk->ordered_by(), "Ordering information was lost");
+  Assert(!first_chunk->sorted_by().empty(), "Sorting information was lost");
   if (_config->indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
@@ -209,7 +209,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
 
       static std::uniform_int_distribution<> discount_dist{2, 9};
-      const auto discount = 0.01f * discount_dist(random_engine);
+      const auto discount = 0.01f * static_cast<float>(discount_dist(random_engine));
 
       std::uniform_int_distribution<> quantity_dist{24, 25};
       const auto quantity = quantity_dist(random_engine);

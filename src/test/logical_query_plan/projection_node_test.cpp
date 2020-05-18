@@ -40,7 +40,7 @@ class ProjectionNodeTest : public BaseTest {
   TableConstraintDefinition _table_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
-  LQPColumnReference _a, _b, _c;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
 TEST_F(ProjectionNodeTest, Description) {
@@ -65,9 +65,9 @@ TEST_F(ProjectionNodeTest, Copy) { EXPECT_EQ(*_projection_node->deep_copy(), *_p
 
 TEST_F(ProjectionNodeTest, NodeExpressions) {
   ASSERT_EQ(_projection_node->node_expressions.size(), 5u);
-  EXPECT_EQ(*_projection_node->node_expressions.at(0), *lqp_column_(_c));
-  EXPECT_EQ(*_projection_node->node_expressions.at(1), *lqp_column_(_a));
-  EXPECT_EQ(*_projection_node->node_expressions.at(2), *lqp_column_(_b));
+  EXPECT_EQ(*_projection_node->node_expressions.at(0), *_c);
+  EXPECT_EQ(*_projection_node->node_expressions.at(1), *_a);
+  EXPECT_EQ(*_projection_node->node_expressions.at(2), *_b);
   EXPECT_EQ(*_projection_node->node_expressions.at(3), *add_(_b, _c));
   EXPECT_EQ(*_projection_node->node_expressions.at(4), *add_(_a, _c));
 }

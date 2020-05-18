@@ -234,9 +234,18 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       }
     }
 
-    if (!pos_list_out->empty() > 0) {
+    if (!pos_list_out->empty()) {
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
+      // after the validate operator.
+      const auto chunk = std::make_shared<Chunk>(output_segments);
+      chunk->finalize();
+
+      const auto& sorted_by = chunk_in->sorted_by();
+      if (!sorted_by.empty()) {
+        chunk->set_sorted_by(sorted_by);
+      }
+      output_chunks.emplace_back(chunk);
     }
   }
 }

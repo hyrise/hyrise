@@ -30,8 +30,9 @@ class Pagination {
    * Prints a number of lines to fill the current terminal screen.
    *
    * @param first_line Line which should be started from, i.e. which will be the first line on the screen.
+   * @param first_column column which should be started from, i.e. which will be the first column on the screen.
    */
-  void _print_page(size_t first_line);
+  void _print_page(size_t first_line, size_t first_column);
 
   /*
    * Prints the help screen, which shows all available commands.
@@ -43,6 +44,8 @@ class Pagination {
   std::vector<std::string> _lines;
   size_t _size_x{0};
   size_t _size_y{0};
+  size_t _max_width{0};
+  size_t _step_size_x{5};
 };
 
 }  // namespace opossum

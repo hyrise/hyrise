@@ -35,8 +35,7 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::column_express
     _column_expressions.emplace(table->column_count());
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      (*_column_expressions)[column_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), column_id});
+      (*_column_expressions)[column_id] = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
     }
   }
 

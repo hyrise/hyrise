@@ -72,11 +72,11 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   std::shared_ptr<Table> table_a, table_b, table_c, table_d, table_e;
   std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_b, stored_table_node_c, stored_table_node_d,
       stored_table_node_e;
-  LQPColumnReference column_a_0, column_a_1, column_a_2;
-  LQPColumnReference column_b_0, column_b_1, column_b_2;
-  LQPColumnReference column_c_0, column_c_1, column_c_2;
-  LQPColumnReference column_d_0;
-  LQPColumnReference column_e_0, column_e_1, column_e_2;
+  std::shared_ptr<LQPColumnExpression> column_a_0, column_a_1, column_a_2;
+  std::shared_ptr<LQPColumnExpression> column_b_0, column_b_1, column_b_2;
+  std::shared_ptr<LQPColumnExpression> column_c_0, column_c_1, column_c_2;
+  std::shared_ptr<LQPColumnExpression> column_d_0;
+  std::shared_ptr<LQPColumnExpression> column_e_0, column_e_1, column_e_2;
 };
 
 // Test simple cases
@@ -235,14 +235,14 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
 TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   // clang-format off
   auto lqp =
-  SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
+  SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
     AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)), stored_table_node_a));  // NOLINT
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0)),
-    SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
+    SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)), stored_table_node_a)));  // NOLINT
   // clang-format on
 

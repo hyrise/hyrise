@@ -46,6 +46,11 @@ struct VizEdgeInfo {
   std::string arrowhead = "normal";
 };
 
+// Custom facet for creating a custom locale with thousands separator.
+struct SeparateThousandsFacet : std::numpunct<char> {
+  string_type do_grouping() const override { return "\3"; }  // groups of 3 digits
+};
+
 template <typename GraphBase>
 class AbstractVisualizer {
   //                                  Edge list    Vertex list   Directed graph

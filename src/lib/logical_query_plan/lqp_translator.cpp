@@ -17,6 +17,7 @@
 #include "delete_node.hpp"
 #include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
+#include "except_node.hpp"
 #include "export_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
@@ -29,6 +30,7 @@
 #include "hyrise.hpp"
 #include "import_node.hpp"
 #include "insert_node.hpp"
+#include "intersect_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
@@ -125,9 +127,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Union:              return _translate_union_node(node);
+    case LQPNodeType::Intersect:          return _translate_intersect_node(node);
+    case LQPNodeType::Except:             return _translate_except_node(node);
     case LQPNodeType::ChangeMetaTable:    return _translate_change_meta_table_node(node);
 
-      // Maintenance operators
+    // Maintenance operators
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
@@ -273,17 +277,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
 
   auto pqp_expression_iter = pqp_expressions.begin();
-  auto order_by_mode_iter = sort_node->order_by_modes.begin();
+  auto sort_mode_iter = sort_node->sort_modes.begin();
 
   std::vector<SortColumnDefinition> column_definitions;
   column_definitions.reserve(pqp_expressions.size());
-  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++order_by_mode_iter) {
+  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++sort_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *order_by_mode_iter});
+    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *sort_mode_iter});
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
@@ -423,13 +427,27 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   const auto input_operator_left = translate_node(node->left_input());
   const auto input_operator_right = translate_node(node->right_input());
 
-  switch (union_node->union_mode) {
-    case UnionMode::Positions:
-      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
-    case UnionMode::All:
+  switch (union_node->set_operation_mode) {
+    case SetOperationMode::Unique:
+      Fail("Currently, only the All and Positions modes are implemented for the union operation");
+    case SetOperationMode::All:
       return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
+    case SetOperationMode::Positions:
+      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
   }
-  Fail("Invalid enum value");
+  Fail("Invalid enum value.");
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  FailInput("Hyrise does not yet support set operations");
+}
+
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  FailInput("Hyrise does not yet support set operations");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(

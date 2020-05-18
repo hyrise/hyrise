@@ -62,7 +62,7 @@ class JoinGraphStatisticsCacheTest : public BaseTest {
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractLQPNode> validate_c;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_a, b_b, c_a;
   std::shared_ptr<TableStatistics> table_statistics_a_b;
   std::shared_ptr<BaseAttributeStatistics> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
   std::shared_ptr<JoinGraphStatisticsCache> cache;

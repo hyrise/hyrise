@@ -83,8 +83,6 @@ class LQPTranslatorTest : public BaseTest {
     int_float_node = StoredTableNode::make("table_int_float");
     int_float_a = int_float_node->get_column("a");
     int_float_b = int_float_node->get_column("b");
-    int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
-    int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
 
     int_string_node = StoredTableNode::make("table_int_string");
     int_string_a = int_string_node->get_column("a");
@@ -101,9 +99,8 @@ class LQPTranslatorTest : public BaseTest {
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
   std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
-  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a,
-      int_float5_d;
-  std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
+  std::shared_ptr<LQPColumnExpression> int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b,
+      int_float5_a, int_float5_d;
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
@@ -130,8 +127,8 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
    * LQP resembles:
    *   SELECT a + b FROM table_int_float;
    */
-  const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression,
-                                                                   int_float_b_expression);
+  const auto a_plus_b_lqp =
+      std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a, int_float_b);
   const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({a_plus_b_lqp});
   const auto projection_node = ProjectionNode::make(projection_expressions, int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(projection_node);
@@ -309,13 +306,13 @@ TEST_F(LQPTranslatorTest, Sort) {
    *   SELECT a, b FROM int_float ORDER BY a, a + b DESC, b ASC
    */
 
-  const auto order_by_modes =
-      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::AscendingNullsLast});
+  const auto sort_modes =
+      std::vector<SortMode>({SortMode::Ascending, SortMode::Descending, SortMode::AscendingNullsLast});
 
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), order_by_modes,
+    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), sort_modes,
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         int_float_node)));
 
@@ -332,13 +329,13 @@ TEST_F(LQPTranslatorTest, Sort) {
   ASSERT_TRUE(sort);
 
   EXPECT_EQ(sort->sort_definitions().at(0).column, ColumnID{1});
-  EXPECT_EQ(sort->sort_definitions().at(0).order_by_mode, OrderByMode::Ascending);
+  EXPECT_EQ(sort->sort_definitions().at(0).sort_mode, SortMode::Ascending);
 
   EXPECT_EQ(sort->sort_definitions().at(1).column, ColumnID{0});
-  EXPECT_EQ(sort->sort_definitions().at(1).order_by_mode, OrderByMode::Descending);
+  EXPECT_EQ(sort->sort_definitions().at(1).sort_mode, SortMode::Descending);
 
   EXPECT_EQ(sort->sort_definitions().at(2).column, ColumnID{2});
-  EXPECT_EQ(sort->sort_definitions().at(2).order_by_mode, OrderByMode::AscendingNullsLast);
+  EXPECT_EQ(sort->sort_definitions().at(2).sort_mode, SortMode::AscendingNullsLast);
 
   const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort->input_left());
   ASSERT_TRUE(projection_b);
@@ -448,9 +445,8 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
   {
-    auto pipeline_statement =
-        SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
-    const auto pqp = pipeline_statement.get_physical_plan();
+    auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline();
+    const auto pqp = pipeline_statement.get_physical_plans().at(0);
     lqp_node = pqp->lqp_node;
     EXPECT_FALSE(lqp_node.expired());
   }
@@ -738,7 +734,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   auto predicate_node_a = PredicateNode::make(equals_(int_float2_a, 3));
   auto predicate_node_b = PredicateNode::make(equals_(int_float2_a, 4));
   auto predicate_node_c = PredicateNode::make(equals_(int_float2_b, 5));
-  auto union_node = UnionNode::make(UnionMode::Positions);
+  auto union_node = UnionNode::make(SetOperationMode::Positions);
   const auto& lqp = union_node;
 
   union_node->set_left_input(predicate_node_a);

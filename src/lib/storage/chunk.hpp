@@ -141,12 +141,20 @@ class Chunk : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
-   * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
-   * the ColumnID of the segment by which it is sorted will be returned.
-   * This is currently only taken advantage of in the ColumnVsValueScan. See #1519 for more details.
+   * If a chunk is sorted in any way, the sort mode (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
+   * the ColumnIDs of the segments by which it is sorted will be returned.
+   *
+   * In a chunk, multiple segments may be sorted independently. For example, in a table storing orders, both the order
+   * id and date of incoming orders might have incrementing values. In this case, sorted_by has two entries (assuming
+   * this knowledge is available to the database). However, for cases where the data is first orderered by one column,
+   * then by another (e.g. ORDER_BY last_name, first_name), only the primary order is stored.
+   *
+   * Sort orders are currently exploited in several scan implementations (e.g., ColumnVsValue, ColumnIsNull,
+   * ColumnBetweenScan) and selected other operators (e.g., AggregateSort). See #1519 for more details.
    */
-  const std::optional<std::pair<ColumnID, OrderByMode>>& ordered_by() const;
-  void set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by);
+  const std::vector<SortColumnDefinition>& sorted_by() const;
+  void set_sorted_by(const SortColumnDefinition& sorted_by);
+  void set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by);
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
@@ -173,8 +181,8 @@ class Chunk : private Noncopyable {
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
   /**
-   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
-   * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable, and
+   * depending on skip_mvcc_check, the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
    */
   void finalize();
 
@@ -188,7 +196,7 @@ class Chunk : private Noncopyable {
   Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
-  std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
+  std::vector<SortColumnDefinition> _sorted_by;
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
   // Default value of zero means "not set"

@@ -44,7 +44,7 @@ TEST_F(CreateTableTest, NameAndDescription) {
 }
 
 TEST_F(CreateTableTest, Execute) {
-  const auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);
 
   create_table->execute();
@@ -59,7 +59,7 @@ TEST_F(CreateTableTest, Execute) {
 }
 
 TEST_F(CreateTableTest, TableAlreadyExists) {
-  const auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);
 
   create_table->execute();  // Table name "t" is taken now
@@ -68,8 +68,8 @@ TEST_F(CreateTableTest, TableAlreadyExists) {
   const auto create_different_table = std::make_shared<CreateTable>("t2", false, dummy_table_wrapper);
   const auto create_same_table = std::make_shared<CreateTable>("t", false, dummy_table_wrapper);
 
-  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context();
-  const auto context_3 = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto context_3 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_different_table->set_transaction_context(context_2);
   create_same_table->set_transaction_context(context_3);
 
@@ -77,11 +77,11 @@ TEST_F(CreateTableTest, TableAlreadyExists) {
   context_2->commit();
 
   EXPECT_THROW(create_same_table->execute(), std::logic_error);
-  context_3->rollback();
+  context_3->rollback(RollbackReason::Conflict);
 }
 
 TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
-  const auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto ct_if_not_exists_1 = std::make_shared<CreateTable>("t", true, dummy_table_wrapper);
   ct_if_not_exists_1->set_transaction_context(context);
 
@@ -95,7 +95,7 @@ TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
   EXPECT_EQ(table->row_count(), 0);
   EXPECT_EQ(table->column_definitions(), column_definitions);
 
-  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   const auto ct_if_not_exists_2 = std::make_shared<CreateTable>("t", true, dummy_table_wrapper);
   ct_if_not_exists_2->set_transaction_context(context_2);
 
@@ -106,7 +106,7 @@ TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
 TEST_F(CreateTableTest, CreateTableAsSelect) {
   const auto table = load_table("resources/test_data/tbl/10_ints.tbl");
   Hyrise::get().storage_manager.add_table("test", table);
-  const auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   const auto get_table = std::make_shared<GetTable>("test");
   get_table->set_transaction_context(context);
@@ -132,7 +132,7 @@ TEST_F(CreateTableTest, CreateTableAsSelect) {
 TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
   const auto table = load_table("resources/test_data/tbl/int_float.tbl");
   Hyrise::get().storage_manager.add_table("test", table);
-  const auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   const auto get_table = std::make_shared<GetTable>("test");
   get_table->set_transaction_context(context);
@@ -163,9 +163,9 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   const auto table = load_table("resources/test_data/tbl/10_ints.tbl");
   Hyrise::get().storage_manager.add_table("test", table);
 
-  const auto context_1 = Hyrise::get().transaction_manager.new_transaction_context();
-  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context();
-  const auto context_3 = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto context_1 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto context_2 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto context_3 = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   // Create table 1 with second context
   const auto get_table_1 = std::make_shared<GetTable>("test");
@@ -198,7 +198,7 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   const auto table_3 = Hyrise::get().storage_manager.get_table("test_3");
   EXPECT_EQ(table_3->row_count(), 0);
 
-  context_2->rollback();
+  context_2->rollback(RollbackReason::User);
 
   const auto get_table_3 = std::make_shared<GetTable>("test_2");
   get_table_3->set_transaction_context(context_3);

@@ -55,8 +55,11 @@ class TransactionManager : public Noncopyable {
 
   /**
    * Creates a new transaction context
+   * @param is_auto_commit declares whether the transaction is created (and will also commit) automatically. The
+   * alternative would be that it was created through a user command (BEGIN). This information is used by the
+   * SQLPipelineStatement to auto-commit the transaction - the transaction does not commit itself.
    */
-  std::shared_ptr<TransactionContext> new_transaction_context(const AutoCommit auto_commit = AutoCommit::No);
+  std::shared_ptr<TransactionContext> new_transaction_context(const AutoCommit auto_commit);
 
   /**
    * Returns the lowest snapshot-commit-id currently used by a transaction.

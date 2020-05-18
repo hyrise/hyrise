@@ -2,6 +2,7 @@
 
 #include <type_traits>
 
+#include "resolve_type.hpp"
 #include "storage/segment_iterables/base_segment_iterators.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -61,21 +62,21 @@ template <typename Derived>
 class SegmentIterable {
  public:
   /**
-   * @param f is a generic lambda accepting two iterators as parameters
+   * @param functor is a generic lambda accepting two iterators as arguments
    */
   template <typename Functor>
-  void with_iterators(const Functor& f) const {
-    _self()._on_with_iterators(f);
+  void with_iterators(const Functor& functor) const {
+    _self()._on_with_iterators(functor);
   }
 
   /**
-   * @param f is a generic lambda accepting a segment value (i.e. use const auto&)
+   * @param functor is a generic lambda accepting a SegmentPosition as an argument
    */
   template <typename Functor>
-  void for_each(const Functor& f) const {
-    with_iterators([&f](auto it, auto end) {
+  void for_each(const Functor& functor) const {
+    with_iterators([&functor](auto it, auto end) {
       for (; it != end; ++it) {
-        f(*it);
+        functor(*it);
       }
     });
   }
@@ -143,25 +144,42 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
  public:
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
-  template <typename Functor>
+  /**
+   * @tparam ErasePosListType controls whether AbstractPosLists are erased (i.e., resolved dynamically instead of
+   *                          statically), which reduces the compile time at the cost of virtual method calls during
+   *                          the run time - see the implementation of resolve_pos_list_type.
+   * @param  functor is a generic lambda accepting two iterators as arguments
+   */
+  template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
   void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     if (!position_filter) {
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
 
-      resolve_pos_list_type(position_filter,
-                            [&functor, this](auto& pos_list) { _self()._on_with_iterators(pos_list, functor); });
+      if constexpr (HYRISE_DEBUG || erase_pos_list_type == ErasePosListType::Always) {
+        _self()._on_with_iterators(position_filter, functor);
+      } else {
+        resolve_pos_list_type<erase_pos_list_type>(position_filter, [&functor, this](auto& resolved_position_filter) {
+          _self()._on_with_iterators(resolved_position_filter, functor);
+        });
+      }
     }
   }
 
   using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”
 
-  template <typename Functor>
+  /**
+   * @tparam ErasePosListType controls whether AbstractPosLists are erased (i.e., resolved dynamically instead of
+   *                          statically), which reduces the compile time at the cost of virtual method calls during
+   *                          the run time - see the implementation of resolve_pos_list_type.
+   * @param  functor is a generic lambda accepting a SegmentPosition as an argument
+   */
+  template <ErasePosListType erase_pos_list_type = ErasePosListType::OnlyInDebugBuild, typename Functor>
   void for_each(const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) const {
     DebugAssert(!position_filter || position_filter->references_single_chunk(),
                 "Expected PosList to reference single chunk");
-    with_iterators(position_filter, [&functor](auto it, auto end) {
+    with_iterators<erase_pos_list_type>(position_filter, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);
       }
