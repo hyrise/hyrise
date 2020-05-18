@@ -22,17 +22,17 @@ def preprocess_data(data):
     return ohe_data
 
 
-def train_model(train_data, type):
+def train_model(train_data, model_type):
     ohe_data = preprocess_data(train_data)
     y = np.ravel(ohe_data[['RUNTIME_NS']])
     X = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
-    if type == 'linear':
+    if model_type == 'linear':
         model = LinearRegression().fit(X, y)
-    elif type == 'ridge':
+    elif model_type == 'ridge':
         model = Ridge(alpha=10).fit(X, y)
-    elif type == 'lasso':
+    elif model_type == 'lasso':
         model = Lasso(alpha=10).fit(X, y)
-    elif type == 'boost':
+    elif model_type == 'boost':
         model = GradientBoostingRegressor(loss='huber').fit(X, y)
 
     return model
@@ -54,12 +54,12 @@ def generate_model_plot(model, test_data, method, encoding, scan, out):
     abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
 
     # Plot the best fit line over the actual values
-    plt.plot(abline_values, abline_values, c = 'r', linestyle="-")
-    plt.title(f"{encoding}_{scan}_{method}; Score: {model_scores['R2']}")
+    plt.plot(abline_values, abline_values, c = 'r', linestyle='-')
+    plt.title(f'{encoding}_{scan}_{method}; Score: {model_scores["R2"]}')
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
-    plt.xlabel("Real Time")
-    plt.ylabel("Predicted Time")
+    plt.xlabel('Real Time')
+    plt.ylabel('Predicted Time')
     output_path = os.path.join(out, 'plots', f'{method}_{encoding}_{scan}')
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
@@ -90,7 +90,7 @@ def calculate_error(test_X, y_true, y_pred, model):
 def log(scores, out):
     with open(os.path.join(out, 'log.txt'), 'w') as file:
         for entry in scores:
-            file.write(f"{entry}: {scores[entry]} \n")
+            file.write(f'{entry}: {scores[entry]} \n')
 
 
 # needed for prediction with one-hot-encoding in case training and test data don't have the same set of values in a
@@ -130,7 +130,7 @@ def import_data(args):
 
     # check whether training and test data have the same format
     if test_data.columns.all() != train_data.columns.all():
-        warnings.warn("Warning: Training and Test data do not have the same format. Unmatched columns will be ignored!")
+        warnings.warn('Warning: Training and Test data do not have the same format. Unmatched columns will be ignored!')
 
     inter = train_data.columns.intersection(test_data.columns)
     test_data = test_data[inter.tolist()]
@@ -140,7 +140,7 @@ def import_data(args):
 
 
 def main(args):
-    out = "costModelOutput"
+    out = 'costModelOutput'
     scores = {}
 
     if args.m:
@@ -167,7 +167,8 @@ def main(args):
 
     # one single model for everything
     for type in model_types:
-        gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
+        gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(),
+                                                  ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
         gmodel = train_model(gtrain_data, type)
         scores[f'{type}_general_model'] = generate_model_plot(gmodel, gtest_data, type, 'all', 'all',out)
         filename = os.path.join(out, 'models', f'{type}_general_model.sav')
@@ -179,12 +180,15 @@ def main(args):
             try:
                 # if there is no given test data set, split the given training data into test and training data
                 if not args.test:
-                        model_train_data, model_test_data = train_test_split(train_data.loc[(train_data['ENCODING'] == encoding) &
-                                                                                            (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
+                        model_train_data, model_test_data = train_test_split(
+                            train_data.loc[(train_data['ENCODING'] == encoding)
+                                           & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
 
                 else:
-                    model_train_data = train_data.loc[(train_data['ENCODING'] == encoding) & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)]
-                    model_test_data = test_data.loc[(test_data['ENCODING'] == encoding) & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
+                    model_train_data = train_data.loc[(train_data['ENCODING'] == encoding)
+                                                      & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)]
+                    model_test_data = test_data.loc[(test_data['ENCODING'] == encoding)
+                                                    & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
 
             except ValueError:
                 print(f'Not enough data of the combination {encoding}, {implementation_type} to split into training and test data')
@@ -193,7 +197,9 @@ def main(args):
             # if there is training data for this combination, train a model
             if not model_train_data.empty:
                 for type in model_types:
-                    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(), model_test_data.copy(), ['COMPRESSION_TYPE', 'SCAN_TYPE', 'DATA_TYPE'])
+                    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(),
+                                                                        model_test_data.copy(),
+                                                                        ['COMPRESSION_TYPE', 'SCAN_TYPE', 'DATA_TYPE'])
                     model = train_model(model_train_data, type)
 
                     model_name = f'{type}_{encoding}_{implementation_type}_model'

@@ -1,15 +1,14 @@
-#include "base_test.hpp"
-
-#include <operators/get_table.hpp>
 #include <regex>
-#include <synthetic_table_generator.hpp>
 #include <utility>
 
-#include "operators/table_scan/column_vs_column_table_scan_impl.hpp"
-#include "storage/table.hpp"
+#include "base_test.hpp"
 
 #include "calibration_lqp_generator.hpp"
 #include "calibration_table_generator.hpp"
+#include "operators/get_table.hpp"
+#include "operators/table_scan/column_vs_column_table_scan_impl.hpp"
+#include "storage/table.hpp"
+#include "synthetic_table_generator.hpp"
 
 namespace opossum {
 class CalibrationLQPGeneratorTest : public BaseTest {
