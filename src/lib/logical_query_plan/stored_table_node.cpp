@@ -137,9 +137,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
            "Wrong cardinality of FD's right column set");
 
     // Create functional dependency
-    if (left.size() > 0 && right.size() > 0) {
-      fds.emplace_back(left, right);
-    }
+    if (!left.empty() && !right.empty()) fds.emplace_back(left, right);
   }
 
   return fds;
