@@ -217,7 +217,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
 
       // Pruned chunks are always marked as immutable as they are (as of now) only consumed by read-only operators.
-      (*output_chunks_iter)->finalize();
+      // Test by Martin:
+      if (!stored_chunk->is_mutable()) {
+        (*output_chunks_iter)->finalize();
+      }
 
       if (output_chunk_sorted_by) {
         (*output_chunks_iter)->set_sorted_by(*output_chunk_sorted_by);
