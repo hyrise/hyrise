@@ -27,6 +27,9 @@ def check_exit_status(console):
 		sys.exit(console.signalstatus)
 
 def main():
+	# Disable Pagination
+	del os.environ['TERM']
+
 	console = initialize()
 	console.logfile = sys.stdout.buffer
 
