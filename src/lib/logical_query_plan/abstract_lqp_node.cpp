@@ -257,14 +257,12 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     fds_right = right_input()->functional_dependencies();
   }
 
-  if constexpr (HYRISE_DEBUG) {
-    if (!fds_right.empty()) {
-      for (const auto& fd_right : fds_right) {
-        const bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
-                                           [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
-        DebugAssert(!duplicate,
-                    "Unexpected duplicate functional dependency found in " + this->description(DescriptionMode::Short));
-      }
+  if (HYRISE_DEBUG && !fds_right.empty()) {
+    for (const auto& fd_right : fds_right) {
+      const bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
+                                         [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
+      Assert(!duplicate,
+             "Unexpected duplicate functional dependency found in " + this->description(DescriptionMode::Short));
     }
   }
 
