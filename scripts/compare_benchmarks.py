@@ -72,14 +72,30 @@ def calculate_and_format_p_value(old, new):
 
 def print_context_overview(old_config, new_config):
     ignore_difference_for = ['GIT-HASH', 'date']
+
+    old_context_keys = set(old_config['context'].keys())
+    new_context_keys = set(new_config['context'].keys())
+    common_context_keys = old_context_keys & new_context_keys
+
     table_lines = [["Parameter", sys.argv[1], sys.argv[2]]]
-    for (old_key, old_value), (new_key, new_value) in zip(old_config['context'].items(), new_config['context'].items()):
+    for key in sorted(common_context_keys):
+        old_value = old_config['context'][key]
+        new_value = new_config['context'][key]
         color = 'white'
         note = ' '
-        if old_value != new_value and old_key not in ignore_difference_for:
+        if old_value != new_value and key not in ignore_difference_for:
             color = 'red'
             note = '≠'
-        table_lines.append([colored(note + old_key, color), old_value, new_value])
+        table_lines.append([colored(note + key, color), old_value, new_value])
+
+    # print keys that are not present in both contexts
+    for key in sorted(old_context_keys - common_context_keys):
+        value = old_config['context'][key]
+        table_lines.append([colored('≠' + key, 'red'), value, 'undefined'])
+
+    for key in sorted(new_context_keys - common_context_keys):
+        value = new_config['context'][key]
+        table_lines.append([colored('≠' + key, 'red'), 'undefined', value])
 
     table = AsciiTable(table_lines)
     table.title = 'Configuration Overview'
