@@ -22,16 +22,14 @@ set(
     lib/concurrency/transaction_context_test.cpp
     lib/concurrency/transaction_manager_test.cpp
     lib/cost_estimation/abstract_cost_estimator_test.cpp
-    lib/entire_chunk_pos_list_test.cpp
+    lib/expression/evaluation/expression_result_test.cpp
+    lib/expression/evaluation/like_matcher_test.cpp
     lib/expression/expression_evaluator_to_pos_list_test.cpp
     lib/expression/expression_evaluator_to_values_test.cpp
-    lib/expression/expression_result_test.cpp
     lib/expression/expression_test.cpp
     lib/expression/expression_utils_test.cpp
-    lib/expression/like_matcher_test.cpp
     lib/expression/lqp_subquery_expression_test.cpp
     lib/expression/pqp_subquery_expression_test.cpp
-    lib/fixed_string_test.cpp
     lib/hyrise_test.cpp
     lib/import_export/binary/binary_parser_test.cpp
     lib/import_export/binary/binary_writer_test.cpp
@@ -83,10 +81,10 @@ set(
     lib/operators/import_test.cpp
     lib/operators/index_scan_test.cpp
     lib/operators/insert_test.cpp
-    lib/operators/join_hash_steps_test.cpp
+    lib/operators/join_hash/join_hash_steps_test.cpp
+    lib/operators/join_hash/join_hash_traits_test.cpp
+    lib/operators/join_hash/join_hash_types_test.cpp
     lib/operators/join_hash_test.cpp
-    lib/operators/join_hash_traits_test.cpp
-    lib/operators/join_hash_types_test.cpp
     lib/operators/join_index_test.cpp
     lib/operators/join_nested_loop_test.cpp
     lib/operators/join_sort_merge_test.cpp
@@ -116,11 +114,11 @@ set(
     lib/operators/update_test.cpp
     lib/operators/validate_test.cpp
     lib/operators/validate_visibility_test.cpp
-    lib/optimizer/dp_ccp_test.cpp
-    lib/optimizer/enumerate_ccp_test.cpp
-    lib/optimizer/greedy_operator_ordering_test.cpp
-    lib/optimizer/join_graph_builder_test.cpp
-    lib/optimizer/join_graph_test.cpp
+    lib/optimizer/join_ordering/dp_ccp_test.cpp
+    lib/optimizer/join_ordering/enumerate_ccp_test.cpp
+    lib/optimizer/join_ordering/greedy_operator_ordering_test.cpp
+    lib/optimizer/join_ordering/join_graph_builder_test.cpp
+    lib/optimizer/join_ordering/join_graph_test.cpp
     lib/optimizer/optimizer_test.cpp
     lib/optimizer/strategy/between_composition_rule_test.cpp
     lib/optimizer/strategy/chunk_pruning_rule_test.cpp
@@ -140,6 +138,7 @@ set(
     lib/optimizer/strategy/strategy_base_test.cpp
     lib/optimizer/strategy/strategy_base_test.hpp
     lib/optimizer/strategy/subquery_to_join_rule_test.cpp
+    lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
@@ -148,10 +147,10 @@ set(
     lib/server/result_serializer_test.cpp
     lib/server/transaction_handling_test.cpp
     lib/server/write_buffer_test.cpp
-    lib/sql/query_plan_cache_test.cpp
     lib/sql/sql_identifier_resolver_test.cpp
     lib/sql/sql_pipeline_statement_test.cpp
     lib/sql/sql_pipeline_test.cpp
+    lib/sql/sql_plan_cache_test.cpp
     lib/sql/sql_translator_test.cpp
     lib/sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     lib/sql/sqlite_testrunner/sqlite_wrapper_test.cpp
@@ -165,41 +164,42 @@ set(
     lib/statistics/statistics_objects/range_filter_test.cpp
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
     lib/statistics/table_statistics_test.cpp
-    lib/storage/adaptive_radix_tree_index_test.cpp
     lib/storage/any_segment_iterable_test.cpp
-    lib/storage/btree_index_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
-    lib/storage/composite_group_key_index_test.cpp
     lib/storage/compressed_vector_test.cpp
     lib/storage/constraints_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
     lib/storage/encoding_test.hpp
+    lib/storage/fixed_string_dictionary_segment/fixed_string_test.cpp
+    lib/storage/fixed_string_dictionary_segment/fixed_string_vector_test.cpp
     lib/storage/fixed_string_dictionary_segment_test.cpp
-    lib/storage/fixed_string_vector_test.cpp
-    lib/storage/group_key_index_test.cpp
+    lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index_test.cpp
+    lib/storage/index/b_tree/b_tree_index_test.cpp
+    lib/storage/index/group_key/composite_group_key_index_test.cpp
+    lib/storage/index/group_key/group_key_index_test.cpp
+    lib/storage/index/group_key/variable_length_key_base_test.cpp
+    lib/storage/index/group_key/variable_length_key_store_test.cpp
+    lib/storage/index/group_key/variable_length_key_test.cpp
+    lib/storage/index/multi_segment_index_test.cpp
+    lib/storage/index/single_segment_index_test.cpp
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
     lib/storage/materialize_test.cpp
-    lib/storage/multi_segment_index_test.cpp
+    lib/storage/pos_lists/entire_chunk_pos_list_test.cpp
     lib/storage/prepared_plan_test.cpp
     lib/storage/reference_segment_test.cpp
     lib/storage/segment_access_counter_test.cpp
     lib/storage/segment_accessor_test.cpp
     lib/storage/segment_iterators_test.cpp
-    lib/storage/simd_bp128_test.cpp
-    lib/storage/single_segment_index_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
-    lib/storage/variable_length_key_base_test.cpp
-    lib/storage/variable_length_key_store_test.cpp
-    lib/storage/variable_length_key_test.cpp
+    lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
-    lib/tasks/operator_task_test.cpp
     lib/utils/check_table_equal_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
     lib/utils/format_bytes_test.cpp
@@ -208,12 +208,12 @@ set(
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
     lib/utils/meta_table_manager_test.cpp
-    lib/utils/meta_tables/meta_log_test.cpp
+    lib/utils/meta_tables/meta_log_table_test.cpp
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
-    lib/utils/meta_tables/meta_plugins_test.cpp
-    lib/utils/meta_tables/meta_settings_test.cpp
-    lib/utils/meta_tables/meta_system_utilization_test.cpp
+    lib/utils/meta_tables/meta_plugins_table_test.cpp
+    lib/utils/meta_tables/meta_settings_table_test.cpp
+    lib/utils/meta_tables/meta_system_utilization_table_test.cpp
     lib/utils/meta_tables/meta_table_test.cpp
     lib/utils/mock_setting.cpp
     lib/utils/mock_setting.hpp
@@ -233,6 +233,7 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    benchmarklib/synthetic_table_generator_test.cpp
     benchmarklib/tpcc/tpcc_test.cpp
     benchmarklib/tpcds/tpcds_db_generator_test.cpp
     benchmarklib/tpch/tpch_db_generator_test.cpp
@@ -243,7 +244,6 @@ set (
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
     plugins/mvcc_delete_plugin_system_test.cpp
-    synthetic_table_generator_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
