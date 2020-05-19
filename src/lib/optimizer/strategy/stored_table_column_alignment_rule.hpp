@@ -7,7 +7,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 
 /*
- The PQP sub plan memoization (see LQPTranslator::_operator_by_lqp_node) for StoredTableNodes is sensitive to the node's
+ The PQP sub-plan memoization (see LQPTranslator::_operator_by_lqp_node) for StoredTableNodes is sensitive to the node's
  table name, set of pruned chunks and set of pruned columns. Consequently, for multiple nodes with the same table name,
  same pruned chunks and same pruned columns, only one GetTable operator is created and executed. In some queries, the
  ColumnPruningRule and ChunkPruningRule provide an LQP with multiple StoredTableNodes where the table names and sets of
@@ -19,7 +19,7 @@
  columns. While this means that some columns are left unpruned, it makes the job easier for the memoization in the
  LQPTranslator. In our experiments, this has led to significant performance improvements and negligible reductions.
 
- Example: LQP sub plan before executing the StoredTableColumnAlignmentRule
+ Example: LQP sub-plan before executing the StoredTableColumnAlignmentRule
 
                       +------------------------+
                       | Join (1)               |
