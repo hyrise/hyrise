@@ -1,6 +1,6 @@
 #include "base_test.hpp"
-
 #include "lib/utils/meta_tables/meta_mock_table.hpp"
+
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"

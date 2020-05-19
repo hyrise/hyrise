@@ -2,9 +2,9 @@
 #include <string>
 
 #include "base_test.hpp"
+#include "lib/utils/meta_tables/meta_mock_table.hpp"
 
 #include "hyrise.hpp"
-#include "lib/utils/meta_tables/meta_mock_table.hpp"
 #include "operators/change_meta_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
