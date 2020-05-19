@@ -603,7 +603,7 @@ int Console::_export_table(const std::string& args) {
   const std::string& tablename = arguments.at(0);
   const std::string& filepath = arguments.at(1);
 
-  auto& storage_manager = Hyrise::get().storage_manager;
+  const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
     out("Error: Table does not exist in StorageManager");
     return ReturnCode::Error;
@@ -635,13 +635,14 @@ int Console::_print_table(const std::string& args) {
 
   const std::string& tablename = arguments.at(0);
 
-  auto get_table = std::make_shared<GetTable>(tablename);
-  try {
-    get_table->execute();
-  } catch (const std::exception& exception) {
-    out("Error: Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
+  const auto& storage_manager = Hyrise::get().storage_manager;
+  if (!storage_manager.has_table(tablename)) {
+    out("Error: Table does not exist in StorageManager");
     return ReturnCode::Error;
   }
+
+  auto get_table = std::make_shared<GetTable>(tablename);
+  get_table->execute();
 
   out(get_table->get_output(), PrintFlags::Mvcc);
 
@@ -718,15 +719,10 @@ int Console::_visualize(const std::string& input) {
     case PlanType::UnoptLQP: {
       std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
-      try {
-        const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
-                                                        : _sql_pipeline->get_unoptimized_logical_plans();
-        for (const auto& lqp : lqps) {
-          lqp_roots.push_back(lqp);
-        }
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-        return ReturnCode::Error;
+      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                      : _sql_pipeline->get_unoptimized_logical_plans();
+      for (const auto& lqp : lqps) {
+        lqp_roots.push_back(lqp);
       }
 
       LQPVisualizer visualizer;
@@ -734,24 +730,16 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      try {
-        if (!no_execute) {
-          _sql_pipeline->get_result_table();
+      if (!no_execute) {
+        _sql_pipeline->get_result_table();
 
-          // Store the transaction context as potentially modified by the pipeline. It might be a new context if a
-          // transaction was started or nullptr if we are in auto-commit mode or the last transaction was finished.
-          _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
-        }
-
-        PQPVisualizer visualizer;
-        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
-      } catch (const std::exception& exception) {
-        out(std::string(exception.what()) + "\n");
-
+        // Store the transaction context as potentially modified by the pipeline. It might be a new context if a
+        // transaction was started or nullptr if we are in auto-commit mode or the last transaction was finished.
         _explicitly_created_transaction_context = _sql_pipeline->transaction_context();
-
-        return ReturnCode::Error;
       }
+
+      PQPVisualizer visualizer;
+      visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
     } break;
 
     case PlanType::Joins: {
