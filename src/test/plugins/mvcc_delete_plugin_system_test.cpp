@@ -6,6 +6,7 @@
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
@@ -16,10 +17,9 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 #include "storage/value_segment.hpp"
-#include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/plugin_test_utils.hpp"
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
