@@ -66,7 +66,7 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPN
   // column ids and (2) iterate over the nodes and set the aligned pruned column ids.
   for (const auto& group_representative : group_representatives) {
     std::optional<std::vector<ColumnID>> aligned_pruned_column_ids;
-    auto group_range = grouped_stored_table_nodes.equal_range(group_representative);
+    const auto& group_range = grouped_stored_table_nodes.equal_range(group_representative);
     for (auto group_iter = group_range.first; group_iter != group_range.second; ++group_iter) {
       const auto& stored_table_node = *group_iter;
       if (!aligned_pruned_column_ids) {
