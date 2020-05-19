@@ -139,6 +139,7 @@ set(
     optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/semi_join_reduction_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
+    optimizer/strategy/stored_table_column_alignment_rule_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
