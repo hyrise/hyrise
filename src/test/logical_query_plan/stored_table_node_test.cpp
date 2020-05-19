@@ -156,7 +156,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
   table->add_soft_unique_constraint({_a->original_column_id, _b->original_column_id, _c->original_column_id},
                                     IsPrimaryKey::No);
 
-  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 0);
+  EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
@@ -177,7 +177,19 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet) {
   // Prune unique column "a", which would be part of the left column set in the resulting FD: {a} => {b, c}
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 0);
+  EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
+}
+
+TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet2) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_unique_constraint({_b->original_column_id}, IsPrimaryKey::No);
+
+  // Prune unique column "a", which would be part of the left column set in the resulting FD: {a} => {b, c}
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  const auto fd_expected = FunctionalDependency{{_b}, {_c}};
+  EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 1);
+  EXPECT_EQ(_stored_table_node->functional_dependencies().at(0), fd_expected);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
@@ -187,8 +199,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
   // Prune column "b", which would be part of the right column set in the resulting FD: {a} => {b, c}
   _stored_table_node->set_pruned_column_ids({ColumnID{1}});
 
-  // Although b is not part of the output column expressions, we want to see an FD returned.
-  const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
+  const auto fd_expected = FunctionalDependency{{_a}, {_c}};
   EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 1);
   EXPECT_EQ(_stored_table_node->functional_dependencies().at(0), fd_expected);
 }

@@ -263,7 +263,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Check, that we reduce using the shortest (in terms of number of columns) constraints.
+// Check that we reduce using the shortest (in terms of number of columns) constraints.
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
   auto lqp =
@@ -279,7 +279,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Check, whether we can reduce the group-by list twice.
+// Check whether we can reduce the group-by list twice.
 TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   // Since this is a special FD-scenario that can not be generated from UniqueConstraints and StoredTableNodes at the
   // moment, we have to use a custom MockNode:

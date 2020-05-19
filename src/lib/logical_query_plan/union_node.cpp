@@ -28,8 +28,7 @@ std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::All:
-      // No guarantees, since UnionAll can break any FD depending on the input.
-      return {};
+      Fail("Handling of functional dependencies is not yet specified for UNION (ALL)");
     case SetOperationMode::Positions:
       // By definition, UnionPositions requires both input tables to have the same table origin and structure.
       // Therefore, we can forward the FDs of either the left or right input node.

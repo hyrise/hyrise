@@ -6,6 +6,7 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "functional_dependency.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -49,53 +50,6 @@ struct LQPOutputRelation {
 };
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
-
-/**
- * Models a functional dependency (FD), which consists out of two sets of column expressions (Left &
- * Right).
- * The left column set unambigiously identifies the right column set: {Left} => {Right}
- *
- * Example A:
- * Think of a table with three columns: (Semester, CourseID, Lecturer)
- * The primary key is defined across the first two columns, which leads to the following FD:
- * {Semester, CourseID} => {Lecturer}
- *
- * Example B:
- * Think of a table with four columns: (ISBN, Genre, Author, Author-Nationality)
- * The primary key {ISBN} identifies all other columns. Therefore, we get the following FDs:
- * {ISBN} => {Author}
- * {ISBN} => {Genre}
- * {ISBN} => {Author}
- * {ISBN} => {Author-Nationality}
- * Furthermore, knowing an author, we also know his nationality. Hence, we can specify another FD that applies:
- * {Author} => {Author-Nationality}
- *
- *
- * Currently, column expressions are required to be non-nullable to be involved in FDs. As there are
- * strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might
- * change in the future.
- */
-struct FunctionalDependency : std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet> {
-  FunctionalDependency(ExpressionUnorderedSet left_column_set, ExpressionUnorderedSet right_column_set) {
-    first = left_column_set;
-    second = right_column_set;
-  }
-
-  bool operator==(const FunctionalDependency& other) const {
-    // Quick check for cardinality
-    if (first.size() != other.first.size() || second.size() != other.second.size()) return false;
-
-    // Compare left column sets
-    for (const auto& column_expression : other.first) {
-      if (!first.contains(column_expression)) return false;
-    }
-    // Compare right column sets
-    for (const auto& column_expression : other.second) {
-      if (!second.contains(column_expression)) return false;
-    }
-    return true;
-  }
-};
 
 class LQPColumnExpression;
 
@@ -195,7 +149,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
-   * @return The functional dependencies valid for this node
+   * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
+   *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
    */
   [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
 

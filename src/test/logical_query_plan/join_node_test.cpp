@@ -126,7 +126,7 @@ TEST_F(JoinNodeTest, IsColumnNullableWithoutOuterJoin) {
   JoinNode::make(JoinMode::Inner, equals_(add_(_t_a_a, null_()), _t_b_x),
     ProjectionNode::make(expression_vector(_t_a_a, _t_a_b, add_(_t_a_a, null_())),
       _mock_node_a),
-        _mock_node_b);
+    _mock_node_b);
   // clang-format on
 
   EXPECT_FALSE(lqp->is_column_nullable(ColumnID{0}));
@@ -186,7 +186,7 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
     JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
-        _mock_node_b));
+      _mock_node_b));
   // clang-format on
 
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
@@ -215,23 +215,27 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   // Prepare JoinNodes
   const auto join_column_a = a;
   const auto join_column_x = x;
+
   // clang-format off
   const auto inner_join_node =
   JoinNode::make(JoinMode::Inner, equals_(join_column_a, join_column_x),
     mock_node_a,
-      mock_node_b);
+    mock_node_b);
+
   const auto left_join_node =
   JoinNode::make(JoinMode::Left, equals_(join_column_a, join_column_x),
     mock_node_a,
-      mock_node_b);
+    mock_node_b);
+
   const auto right_join_node =
   JoinNode::make(JoinMode::Right, equals_(join_column_a, join_column_x),
     mock_node_a,
-      mock_node_b);
+    mock_node_b);
+
   const auto full_outer_join_node =
   JoinNode::make(JoinMode::FullOuter, equals_(join_column_a, join_column_x),
     mock_node_a,
-      mock_node_b);
+    mock_node_b);
   // clang-format on
 
   // Prerequisite

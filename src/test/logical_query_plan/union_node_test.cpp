@@ -79,7 +79,7 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
-TEST_F(UnionNodeTest, DiscardFunctionalDependencies) {
+TEST_F(UnionNodeTest, FunctionalDependencies) {
   // Create StoredTableNode with a single FD
   const auto table_name = "t_a";
   Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
@@ -90,12 +90,6 @@ TEST_F(UnionNodeTest, DiscardFunctionalDependencies) {
   // Create ValidateNode as it is required by UnionPositions
   auto validate_node = ValidateNode::make(stored_table_node);
   EXPECT_EQ(validate_node->functional_dependencies().size(), 1);
-
-  // Test UnionAll (discard FDs)
-  auto union_all_node = UnionNode::make(SetOperationMode::All);
-  union_all_node->set_left_input(stored_table_node);
-  union_all_node->set_right_input(stored_table_node);
-  EXPECT_EQ(union_all_node->functional_dependencies().size(), 0);
 
   // Test UnionPositions (forward FDs)
   auto union_positions_node = UnionNode::make(SetOperationMode::All);

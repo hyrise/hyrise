@@ -29,7 +29,7 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const Exp
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list
-  if (!std::all_of(fd.first.cbegin(), fd.first.cend(),
+  if (!std::all_of(fd.determinants.cbegin(), fd.determinants.cend(),
                    [&group_by_columns](const std::shared_ptr<AbstractExpression>& constraint_column_expression) {
                      return group_by_columns.contains(constraint_column_expression);
                    })) {
@@ -39,7 +39,7 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const Exp
   // Every column that is functionally dependent gets moved from the group-by list to the aggregate list. For this
   // purpose it is wrapped in an ANY() expression.
   for (const auto& group_by_column : group_by_columns) {
-    if (fd.second.contains(group_by_column)) {
+    if (fd.dependents.contains(group_by_column)) {
       // Remove column from group-by list.
       // Further, decrement the aggregate's index which denotes the end of group-by expressions.
       const auto begin_idx_before = aggregate_node.aggregate_expressions_begin_idx;
@@ -98,15 +98,16 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     auto group_by_columns = fetch_group_by_columns();
 
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
-    std::sort(fds.begin(), fds.end(),
-              [](const auto& fd_left, const auto& fd_right) { return fd_left.first.size() < fd_right.first.size(); });
+    std::sort(fds.begin(), fds.end(), [](const auto& fd_left, const auto& fd_right) {
+      return fd_left.determinants.size() < fd_right.determinants.size();
+    });
 
     // --- Main: Reduction phase ---
     // Try to reduce the group-by list one constraint at a time, starting with the shortest constraint.
     auto group_by_list_changed = false;
     for (const auto& fd : fds) {
       // Early exit: The FD's left column set has to be a subset of the group-by columns
-      if (group_by_columns.size() < fd.first.size()) continue;
+      if (group_by_columns.size() < fd.determinants.size()) continue;
 
       bool success = remove_dependent_group_by_columns(fd, group_by_columns, aggregate_node);
       if (success) {

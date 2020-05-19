@@ -429,6 +429,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 
   switch (union_node->set_operation_mode) {
     case SetOperationMode::Unique:
+      Fail("Currently, only the All and Positions modes are implemented for the union operation");
     case SetOperationMode::All:
       return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
     case SetOperationMode::Positions:
