@@ -87,6 +87,7 @@ class Console : public Singleton<Console> {
    * Non-public constructor, since Console is a Singleton.
    */
   Console();
+  ~Console();
 
   friend class Singleton;
 
@@ -118,9 +119,6 @@ class Console : public Singleton<Console> {
   int _visualize(const std::string& input);
   int _change_runtime_setting(const std::string& input);
 
-  int _begin_transaction(const std::string& input);
-  int _rollback_transaction(const std::string& input);
-  int _commit_transaction(const std::string& input);
   int _print_transaction_info(const std::string& input);
   int _print_current_working_directory(const std::string& args);
 
