@@ -8,6 +8,7 @@ def main():
   # and we want to avoid duplication. First test single-threaded, then multi-threaded.
 
   return_error = False
+  output_filename = "'json_output_tpcc.txt'"
 
   arguments = {}
   arguments["--scale"] = "2"
@@ -29,9 +30,11 @@ def main():
   arguments["--consistency_checks"] = "true"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "10"
+  arguments["--output"] = output_filename
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCC", True)
 
+  benchmark.expect_exact(f"Writing benchmark results to {output_filename}")
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("10 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
@@ -50,6 +53,12 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  # Test that the output of the TPC-C benchmark does not cause crashes in the compare_benchmarks.py script.
+  benchmark_comparison = pexpect.spawn(f"scripts/compare_benchmarks.py {output_filename} {output_filename}", maxread=1000000, timeout=2, dimensions=(200, 64))
+  benchmark_comparison.expect_exact(["warmup_duration", "Latency (ms/iter)", "New-Order", "Geomean", "Sum"])
+  close_benchmark(benchmark_comparison)
+  check_exit_status(benchmark_comparison)
 
   if return_error:
     sys.exit(1)

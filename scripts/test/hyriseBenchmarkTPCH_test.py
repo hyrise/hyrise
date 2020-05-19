@@ -10,6 +10,7 @@ from hyriseBenchmarkCore import *
 def main():
 
   return_error = False
+  output_filename = "'json_output_tpch.txt'"
 
   arguments = {}
   arguments["--scale"] = ".01"
@@ -17,7 +18,7 @@ def main():
   arguments["--queries"] = "'1,13,19'"
   arguments["--time"] = "10"
   arguments["--runs"] = "-1"
-  arguments["--output"] = "'json_output.txt'"
+  arguments["--output"] = output_filename
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
@@ -28,7 +29,7 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
-  benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
+  benchmark.expect_exact(f"Writing benchmark results to {output_filename}")
   benchmark.expect_exact("Running in single-threaded mode")
   benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
@@ -64,6 +65,12 @@ def main():
   return_error = check_json(output["context"]["encoding"]["default"]["compression"], arguments["--compression"].replace("'", ''), "Compression doesn't match with JSON:", return_error)
   return_error = check_json(str(output["context"]["using_scheduler"]).lower(), arguments["--scheduler"], "Scheduler doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error)
+
+  # Test that the output of the TPC-H benchmark does not cause crashes in the compare_benchmarks.py script.
+  benchmark_comparison = pexpect.spawn(f"scripts/compare_benchmarks.py {output_filename} {output_filename}", maxread=1000000, timeout=2, dimensions=(200, 64))
+  benchmark_comparison.expect_exact(["warmup_duration", "Latency (ms/iter)", "TPC-H 13", "Geomean", "Sum"])
+  close_benchmark(benchmark_comparison)
+  check_exit_status(benchmark_comparison)
 
   arguments = {}
   arguments["--scale"] = ".01"
