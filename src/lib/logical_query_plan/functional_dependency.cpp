@@ -4,7 +4,7 @@ namespace opossum {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet init_determinants,
                                            ExpressionUnorderedSet init_dependents)
-    : determinants(init_determinants), dependents(init_dependents) {
+    : determinants(std::move(init_determinants)), dependents(std::move(init_dependents)) {
   DebugAssert(!determinants.empty() && !dependents.empty(), "FunctionalDependency cannot be empty");
 }
 
