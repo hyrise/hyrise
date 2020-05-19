@@ -43,32 +43,32 @@ using ColumnPruningAgnosticMultiSet =
 namespace opossum {
 
 void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  // stores exactly one representative for each StoredTableNode group. Members of the same StoredTableNode group
+  // Stores exactly one representative for each StoredTableNode group. Members of the same StoredTableNode group
   // have the same table name and pruned chunks.
   auto group_representatives = ColumnPruningAgnosticSet{};
 
-  // stores all StoredTableNodes grouped by key.
+  // Stores all StoredTableNodes grouped by key.
   auto grouped_stored_table_nodes = ColumnPruningAgnosticMultiSet{};
 
-  // iterate over the LQP and store all StoredTableNodes in multiple sets/groups: nodes of the same set/group have the
+  // Iterate over the LQP and store all StoredTableNodes in multiple sets/groups: nodes of the same set/group have the
   // same table name and the same pruned chunks.
   visit_lqp(root, [&](const auto& node) {
     if (node->type == LQPNodeType::StoredTable) {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
       DebugAssert(stored_table_node, "LQPNode with type 'StoredTable' could not be casted to a StoredTableNode.");
-      group_representatives.emplace(stored_table_node);
+      group_representatives.emplace(stored_table_node);  // No modification if representative is already present
       grouped_stored_table_nodes.emplace(stored_table_node);
     }
     return LQPVisitation::VisitInputs;
   });
 
-  // for each group of StoredTableNodes, (1) iterate over the nodes and calculate the set intersection of pruned
+  // For each group of StoredTableNodes, (1) iterate over the nodes and calculate the set intersection of pruned
   // column ids and (2) iterate over the nodes and set the aligned pruned column ids.
   for (const auto& group_representative : group_representatives) {
     std::optional<std::vector<ColumnID>> aligned_pruned_column_ids;
     auto group_range = grouped_stored_table_nodes.equal_range(group_representative);
-    for (auto iter = group_range.first; iter != group_range.second; ++iter) {
-      const auto& stored_table_node = *iter;
+    for (auto group_iter = group_range.first; group_iter != group_range.second; ++group_iter) {
+      const auto& stored_table_node = *group_iter;
       if (!aligned_pruned_column_ids) {
         aligned_pruned_column_ids = stored_table_node->pruned_column_ids();
       } else {
@@ -80,8 +80,8 @@ void StoredTableColumnAlignmentRule::apply_to(const std::shared_ptr<AbstractLQPN
         aligned_pruned_column_ids = std::move(updated_pruned_column_ids);
       }
     }
-    for (auto iter = group_range.first; iter != group_range.second; ++iter) {
-      (*iter)->set_pruned_column_ids(*aligned_pruned_column_ids);
+    for (auto group_iter = group_range.first; group_iter != group_range.second; ++group_iter) {
+      (*group_iter)->set_pruned_column_ids(*aligned_pruned_column_ids);
     }
   }
 }
