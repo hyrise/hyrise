@@ -605,7 +605,7 @@ int Console::_export_table(const std::string& args) {
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager");
+    out("Error: Table does not exist in StorageManager\n");
     return ReturnCode::Error;
   }
 
@@ -637,7 +637,7 @@ int Console::_print_table(const std::string& args) {
 
   const auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
-    out("Error: Table does not exist in StorageManager");
+    out("Error: Table does not exist in StorageManager\n");
     return ReturnCode::Error;
   }
 
