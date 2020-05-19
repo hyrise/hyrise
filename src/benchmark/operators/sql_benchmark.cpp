@@ -63,8 +63,8 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     pqp_cache->resize(16);
 
     for (auto _ : state) {
-      auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline_statement();
-      pipeline_statement.get_physical_plan();
+      auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline();
+      pipeline_statement.get_physical_plans();
     }
   }
 

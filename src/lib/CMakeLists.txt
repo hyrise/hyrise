@@ -317,6 +317,8 @@ set(
     optimizer/strategy/predicate_split_up_rule.hpp
     optimizer/strategy/semi_join_reduction_rule.cpp
     optimizer/strategy/semi_join_reduction_rule.hpp
+    optimizer/strategy/stored_table_column_alignment_rule.cpp
+    optimizer/strategy/stored_table_column_alignment_rule.hpp
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
@@ -595,6 +597,10 @@ set(
     utils/meta_tables/meta_segments_table.hpp
     utils/meta_tables/meta_settings_table.cpp
     utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_system_information_table.cpp
+    utils/meta_tables/meta_system_information_table.hpp
+    utils/meta_tables/meta_system_utilization_table.cpp
+    utils/meta_tables/meta_system_utilization_table.hpp
     utils/meta_tables/meta_tables_table.cpp
     utils/meta_tables/meta_tables_table.hpp
     utils/meta_tables/segment_meta_data.cpp
