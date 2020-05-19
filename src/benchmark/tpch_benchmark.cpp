@@ -58,6 +58,7 @@ int main(int argc, char* argv[]) {
   scale_factor = cli_parse_result["scale"].as<float>();
 
   config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
+  config->chunk_size = Chunk::MAX_SIZE;
 
   use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
 
