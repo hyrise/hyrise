@@ -301,7 +301,7 @@ TEST_F(TPCCTest, NewOrder) {
       const auto i_price = *table->get_value<float>("I_PRICE", 0);
 
       const auto expected_ol_amount = i_price * static_cast<float>(order_lines[line_idx].ol_quantity);
-      EXPECT_FLOAT_EQ(order_line_row[8], AllTypeVariant{expected_ol_amount});  // OL_AMOUNT
+      EXPECT_FLOAT_EQ(boost::get<float>(order_line_row[8]), expected_ol_amount);  // OL_AMOUNT
     }
 
     // verify OL_DIST_INFO
