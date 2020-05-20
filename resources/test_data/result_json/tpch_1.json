@@ -153,7 +153,10 @@
     "scale_factor": 1.0,
     "time_unit": "ns",
     "use_prepared_statements": false,
-    "using_scheduler": false,
+    "using_scheduler": true,
+    "utilized_cores_per_numa_node": [
+      16
+    ],
     "verify": false,
     "warmup_duration": 0
   },
