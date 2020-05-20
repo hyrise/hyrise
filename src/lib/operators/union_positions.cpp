@@ -78,7 +78,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     return early_result;
   }
 
-  const auto& left_input_table = *input_table_left();
+  const auto& input_left_table = *input_table_left();
 
   /**
    * For each input, create a ReferenceMatrix
@@ -89,7 +89,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * Init the virtual pos lists
    */
-  VirtualPosList virtual_pos_list_left(left_input_table.row_count(), 0u);
+  VirtualPosList virtual_pos_list_left(input_left_table.row_count(), 0u);
   std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0u);
   VirtualPosList virtual_pos_list_right(input_table_right()->row_count(), 0u);
   std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0u);
@@ -112,7 +112,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_left = virtual_pos_list_left.size();
   const auto num_rows_right = virtual_pos_list_right.size();
 
-  auto out_table = std::make_shared<Table>(left_input_table.column_definitions(), TableType::References);
+  auto out_table = std::make_shared<Table>(input_left_table.column_definitions(), TableType::References);
 
   std::vector<std::shared_ptr<RowIDPosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<RowIDPosList>(); });
@@ -131,7 +131,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto cluster_column_id_begin = _column_cluster_offsets[pos_lists_idx];
       const auto cluster_column_id_end = pos_lists_idx >= _column_cluster_offsets.size() - 1
-                                             ? left_input_table.column_count()
+                                             ? input_left_table.column_count()
                                              : _column_cluster_offsets[pos_lists_idx + 1];
       for (auto column_id = cluster_column_id_begin; column_id < cluster_column_id_end; ++column_id) {
         auto ref_segment = std::make_shared<ReferenceSegment>(

@@ -93,7 +93,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
-  DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
+  DebugAssert(!input_left() && !input_right(), "StoredTableNode must be a leaf");
 
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   auto pruned_indexes_statistics = table->indexes_statistics();

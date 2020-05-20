@@ -58,7 +58,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
 
   // Replace the IN predicate with the join node
   lqp_replace_node(node, join_node);
-  join_node->set_right_input(static_table_node);
+  join_node->set_input_right(static_table_node);
 }
 
 void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
@@ -76,7 +76,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
   auto unique_right_side_expressions =
       ExpressionUnorderedSet{right_side_expressions.begin(), right_side_expressions.end()};
   for (const auto& element : unique_right_side_expressions) {
-    auto predicate_node = PredicateNode::make(equals_(left_expression, element), node->left_input());
+    auto predicate_node = PredicateNode::make(equals_(left_expression, element), node->input_left());
     predicate_nodes.push_back(std::move(predicate_node));
   }
 

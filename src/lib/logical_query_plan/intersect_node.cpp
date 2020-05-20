@@ -19,13 +19,13 @@ std::string IntersectNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> IntersectNode::column_expressions() const {
-  return left_input()->column_expressions();
+  return input_left()->column_expressions();
 }
 
 bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+  Assert(input_left() && input_right(), "Need both inputs to determine nullability");
 
-  return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
+  return input_left()->is_column_nullable(column_id) || input_right()->is_column_nullable(column_id);
 }
 
 size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

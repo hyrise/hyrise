@@ -19,15 +19,15 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
-  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
+  Assert(expressions_equal(input_left()->column_expressions(), input_right()->column_expressions()),
          "Input Expressions must match");
-  return left_input()->column_expressions();
+  return input_left()->column_expressions();
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
+  Assert(input_left() && input_right(), "Need both inputs to determine nullability");
 
-  return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
+  return input_left()->is_column_nullable(column_id) || input_right()->is_column_nullable(column_id);
 }
 
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

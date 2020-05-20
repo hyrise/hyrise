@@ -25,8 +25,8 @@ std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::column_expressi
 
 bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
-  Assert(left_input(), "Need left input to determine nullability");
-  return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
+  Assert(input_left(), "Need left input to determine nullability");
+  return node_expressions[column_id]->is_nullable_on_lqp(*input_left());
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

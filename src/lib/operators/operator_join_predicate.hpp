@@ -14,13 +14,13 @@ class JoinNode;
 // Predicate representation for Join operators consists of one column of each input side and a join predicate.
 struct OperatorJoinPredicate {
   /**
-   * Try to build an OperatorJoinPredicate from an @param expression executed on @param left_input and
-   * @param right_input.
+   * Try to build an OperatorJoinPredicate from an @param expression executed on @param input_left and
+   * @param input_right.
    * @return std::nullopt if that fails (e.g. the expression is a more complex expression)
    */
   static std::optional<OperatorJoinPredicate> from_expression(const AbstractExpression& predicate,
-                                                              const AbstractLQPNode& left_input,
-                                                              const AbstractLQPNode& right_input);
+                                                              const AbstractLQPNode& input_left,
+                                                              const AbstractLQPNode& input_right);
   /**
    * Flip operands and PredicateCondition
    */

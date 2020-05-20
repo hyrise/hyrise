@@ -10,8 +10,8 @@
 namespace opossum {
 
 void AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const {  // NOLINT
-  if (node->left_input()) apply_to(node->left_input());
-  if (node->right_input()) apply_to(node->right_input());
+  if (node->input_left()) apply_to(node->input_left());
+  if (node->input_right()) apply_to(node->input_right());
 }
 
 }  // namespace opossum

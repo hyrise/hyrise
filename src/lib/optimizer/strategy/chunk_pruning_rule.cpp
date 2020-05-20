@@ -46,7 +46,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
       return;
     }
 
-    current_node = current_node->left_input();
+    current_node = current_node->input_left();
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {

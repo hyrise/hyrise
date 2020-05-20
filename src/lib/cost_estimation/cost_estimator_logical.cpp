@@ -17,27 +17,27 @@ std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() cons
 
 Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto output_row_count = cardinality_estimator->estimate_cardinality(node);
-  const auto left_input_row_count =
-      node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input()) : 0.0f;
-  const auto right_input_row_count =
-      node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input()) : 0.0f;
+  const auto input_left_row_count =
+      node->input_left() ? cardinality_estimator->estimate_cardinality(node->input_left()) : 0.0f;
+  const auto input_right_row_count =
+      node->input_right() ? cardinality_estimator->estimate_cardinality(node->input_right()) : 0.0f;
 
   switch (node->type) {
     case LQPNodeType::Join:
       // Covers predicated and unpredicated joins. For cross joins, output_row_count will be
-      // left_input_row_count * right_input_row_count
-      return left_input_row_count + right_input_row_count + output_row_count;
+      // input_left_row_count * input_right_row_count
+      return input_left_row_count + input_right_row_count + output_row_count;
 
     case LQPNodeType::Sort:
-      return left_input_row_count * std::log(left_input_row_count);
+      return input_left_row_count * std::log(input_left_row_count);
 
     case LQPNodeType::Union: {
       const auto union_node = std::static_pointer_cast<UnionNode>(node);
 
       switch (union_node->set_operation_mode) {
         case SetOperationMode::Positions:
-          return left_input_row_count * std::log(left_input_row_count) +
-                 right_input_row_count * std::log(right_input_row_count);
+          return input_left_row_count * std::log(input_left_row_count) +
+                 input_right_row_count * std::log(input_right_row_count);
         default:
           Fail("Invalid enum value");
       }
@@ -45,11 +45,11 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
 
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-      return left_input_row_count * _get_expression_cost_multiplier(predicate_node->predicate()) + output_row_count;
+      return input_left_row_count * _get_expression_cost_multiplier(predicate_node->predicate()) + output_row_count;
     }
 
     default:
-      return left_input_row_count + output_row_count;
+      return input_left_row_count + output_row_count;
   }
 }
 

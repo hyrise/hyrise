@@ -41,11 +41,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   const auto handle_barrier = [&]() {
     _insert_nodes(current_node, input_side, push_down_nodes);
 
-    if (input_node->left_input()) {
+    if (input_node->input_left()) {
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes, estimator);
     }
-    if (input_node->right_input()) {
+    if (input_node->input_right()) {
       auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
     }
@@ -65,7 +65,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     // As node might be the input to multiple nodes, remember those nodes before we untie node
     const auto output_relations = node->output_relations();
 
-    lqp_remove_node(node, AllowRightInput::Yes);
+    lqp_remove_node(node, AllowInputRight::Yes);
     _push_down_traversal(current_node, input_side, push_down_nodes, estimator);
 
     // Restore the output relationships
@@ -111,8 +111,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
           join_node->join_mode == JoinMode::AntiNullAsFalse) {
         for (const auto& push_down_node : push_down_nodes) {
-          const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->left_input());
-          const auto move_to_right = _is_evaluable_on_lqp(push_down_node, join_node->right_input());
+          const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->input_left());
+          const auto move_to_right = _is_evaluable_on_lqp(push_down_node, join_node->input_right());
 
           if (!move_to_left && !move_to_right) {
             const auto push_down_predicate_node = std::dynamic_pointer_cast<PredicateNode>(push_down_node);
@@ -175,9 +175,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     flatten_logical_expressions(expression_in_disjunction, LogicalOperator::And);
                 for (const auto& expression_in_conjunction : inner_conjunction) {
                   const auto evaluable_on_left_side =
-                      expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input());
+                      expression_evaluable_on_lqp(expression_in_conjunction, *join_node->input_left());
                   const auto evaluable_on_right_side =
-                      expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input());
+                      expression_evaluable_on_lqp(expression_in_conjunction, *join_node->input_right());
 
                   // We can only work with expressions that are specific to one side.
                   if (evaluable_on_left_side && !evaluable_on_right_side && !aborted_left_side) {
@@ -225,12 +225,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     // predicate_node was found to be beneficial. Add it to predicate_nodes so that _insert_nodes will
                     // insert it as low as possible in the left/right input of the join. As predicate_nodes might have
                     // more than one node, remove the input so that _insert_nodes can construct a proper LQP.
-                    predicate_node->set_left_input(nullptr);
+                    predicate_node->set_input_left(nullptr);
                     predicate_nodes.emplace_back(predicate_node);
                   };
 
-              add_disjunction_if_beneficial(left_disjunction, join_node->left_input(), left_push_down_nodes);
-              add_disjunction_if_beneficial(right_disjunction, join_node->right_input(), right_push_down_nodes);
+              add_disjunction_if_beneficial(left_disjunction, join_node->input_left(), left_push_down_nodes);
+              add_disjunction_if_beneficial(right_disjunction, join_node->input_right(), right_push_down_nodes);
 
               // End of the pre-join filter code
             }
@@ -264,7 +264,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       // We can push predicates below the aggregate if they do not depend on an aggregate expression
       auto aggregate_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       for (const auto& push_down_node : push_down_nodes) {
-        if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
+        if (_is_evaluable_on_lqp(push_down_node, input_node->input_left())) {
           aggregate_push_down_nodes.emplace_back(push_down_node);
         } else {
           _insert_nodes(current_node, input_side, {push_down_node});
@@ -406,7 +406,7 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
       const auto& join_node = static_cast<JoinNode&>(*node);
       for (const auto& join_predicate : join_node.join_predicates()) {
         for (const auto& argument : join_predicate->arguments) {
-          if (!lqp->find_column_id(*argument) && !join_node.right_input()->find_column_id(*argument)) {
+          if (!lqp->find_column_id(*argument) && !join_node.input_right()->find_column_id(*argument)) {
             return false;
           }
         }

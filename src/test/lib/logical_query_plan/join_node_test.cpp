@@ -27,8 +27,8 @@ class JoinNodeTest : public BaseTest {
     _t_b_y = _mock_node_b->get_column("y");
 
     _join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-    _join_node->set_left_input(_mock_node_a);
-    _join_node->set_right_input(_mock_node_b);
+    _join_node->set_input_left(_mock_node_a);
+    _join_node->set_input_right(_mock_node_b);
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);

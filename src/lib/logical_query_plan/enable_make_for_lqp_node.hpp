@@ -41,19 +41,19 @@ class EnableMakeForLQPNode {
           if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-2, Args...>, std::shared_ptr<AbstractLQPNode>>) {  // NOLINT - too long, but better than breaking
             // last two arguments are shared_ptr<AbstractLQPNode>
             auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
-            node->set_left_input(std::get<sizeof...(Args) - 2>(args_tuple));
-            node->set_right_input(std::get<sizeof...(Args) - 1>(args_tuple));
+            node->set_input_left(std::get<sizeof...(Args) - 2>(args_tuple));
+            node->set_input_right(std::get<sizeof...(Args) - 1>(args_tuple));
             return node;
           } else {
             // last argument is shared_ptr<AbstractLQPNode>
             auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args)-1>());
-            node->set_left_input(std::get<sizeof...(Args)-1>(args_tuple));
+            node->set_input_left(std::get<sizeof...(Args)-1>(args_tuple));
             return node;
           }
         } else {
           // last argument is shared_ptr<AbstractLQPNode>
           auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args)-1>());
-          node->set_left_input(std::get<sizeof...(Args)-1>(args_tuple));
+          node->set_input_left(std::get<sizeof...(Args)-1>(args_tuple));
           return node;
         }
       } else {

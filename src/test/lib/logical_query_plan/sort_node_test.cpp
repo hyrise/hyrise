@@ -39,7 +39,7 @@ TEST_F(SortNodeTest, Descriptions) {
 
   auto sort_c = SortNode::make(expression_vector(_a_d, _a_f, _a_i),
                                std::vector<SortMode>{SortMode::Descending, SortMode::Ascending, SortMode::Descending});
-  sort_c->set_left_input(_table_node);
+  sort_c->set_input_left(_table_node);
   EXPECT_EQ(sort_c->description(), "[Sort] d (Descending), f (Ascending), i (Descending)");
 }
 

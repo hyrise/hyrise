@@ -34,8 +34,8 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
 
   mapping[lhs] = rhs;
 
-  lqp_create_node_mapping_impl(mapping, lhs->left_input(), rhs->left_input());
-  lqp_create_node_mapping_impl(mapping, lhs->right_input(), rhs->right_input());
+  lqp_create_node_mapping_impl(mapping, lhs->input_left(), rhs->input_left());
+  lqp_create_node_mapping_impl(mapping, lhs->input_right(), rhs->input_right());
 }
 
 std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
@@ -43,10 +43,10 @@ std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<con
   if (!lhs && !rhs) return std::nullopt;
   if (!(lhs && rhs) || lhs->type != rhs->type) return LQPMismatch(lhs, rhs);
 
-  auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
+  auto mismatch_left = lqp_find_structure_mismatch(lhs->input_left(), rhs->input_left());
   if (mismatch_left) return mismatch_left;
 
-  return lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
+  return lqp_find_structure_mismatch(lhs->input_right(), rhs->input_right());
 }
 
 std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping,
@@ -55,10 +55,10 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
   if (!lhs && !rhs) return std::nullopt;
   if (!lhs->shallow_equals(*rhs, node_mapping)) return LQPMismatch(lhs, rhs);
 
-  auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
+  auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->input_left(), rhs->input_left());
   if (mismatch_left) return mismatch_left;
 
-  return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
+  return lqp_find_subplan_mismatch_impl(node_mapping, lhs->input_right(), rhs->input_right());
 }
 
 void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
@@ -112,7 +112,7 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node) {
   DebugAssert(replacement_node->outputs().empty(), "Node can't have outputs");
-  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(),
+  DebugAssert(!replacement_node->input_left() && !replacement_node->input_right(),
               "Replacement node can't have inputs");
 
   const auto outputs = original_node->outputs();
@@ -121,8 +121,8 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   /**
    * Tie the replacement_node with this nodes inputs
    */
-  replacement_node->set_left_input(original_node->left_input());
-  replacement_node->set_right_input(original_node->right_input());
+  replacement_node->set_input_left(original_node->input_left());
+  replacement_node->set_input_right(original_node->input_right());
 
   /**
    * Tie the replacement_node with this nodes outputs.
@@ -134,12 +134,12 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   /**
    * Untie this node from the LQP
    */
-  original_node->set_left_input(nullptr);
-  original_node->set_right_input(nullptr);
+  original_node->set_input_left(nullptr);
+  original_node->set_input_right(nullptr);
 }
 
-void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
-  Assert(allow_right_input == AllowRightInput::Yes || !node->right_input(),
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowInputRight allow_input_right) {
+  Assert(allow_input_right == AllowInputRight::Yes || !node->input_right(),
          "Caller did not explicitly confirm that right input should be ignored");
 
   /**
@@ -149,39 +149,39 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
   auto input_sides = node->get_input_sides();
 
   /**
-   * Hold left_input ptr in extra variable to keep the ref count up and untie it from this node.
-   * left_input might be nullptr
+   * Hold input_left ptr in extra variable to keep the ref count up and untie it from this node.
+   * input_left might be nullptr
    */
-  auto left_input = node->left_input();
-  node->set_left_input(nullptr);
+  auto input_left = node->input_left();
+  node->set_input_left(nullptr);
 
   /**
    * Tie this node's previous outputs with this nodes previous left input
-   * If left_input is nullptr, still call set_input so this node will get untied from the LQP.
+   * If input_left is nullptr, still call set_input so this node will get untied from the LQP.
    */
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], left_input);
+    outputs[output_idx]->set_input(input_sides[output_idx], input_left);
   }
 }
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
-  DebugAssert(!node->left_input() && (!node->right_input() || allow_right_input == AllowRightInput::Yes) &&
+                     const std::shared_ptr<AbstractLQPNode>& node, const AllowInputRight allow_input_right) {
+  DebugAssert(!node->input_left() && (!node->input_right() || allow_input_right == AllowInputRight::Yes) &&
                   node->output_count() == 0,
               "Expected node without inputs and outputs");
 
   const auto old_input = parent_node->input(input_side);
   parent_node->set_input(input_side, node);
-  node->set_left_input(old_input);
+  node->set_input_left(old_input);
 }
 
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   if (!lqp) return true;
   if (lqp->type == LQPNodeType::Validate) return true;
 
-  if (!lqp->left_input() && !lqp->right_input()) return false;
+  if (!lqp->input_left() && !lqp->input_right()) return false;
 
-  return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
+  return lqp_is_validated(lqp->input_left()) && lqp_is_validated(lqp->input_right());
 }
 
 std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp) {
@@ -196,7 +196,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
         modified_tables.insert(static_cast<UpdateNode&>(*node).table_name);
         break;
       case LQPNodeType::Delete: {
-        visit_lqp(node->left_input(), [&](const auto& sub_delete_node) {
+        visit_lqp(node->input_left(), [&](const auto& sub_delete_node) {
           if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_delete_node)) {
             modified_tables.insert(stored_table_node->table_name);
           } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(sub_delete_node)) {
@@ -259,9 +259,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
       const auto predicate = predicate_node->predicate();
       auto expression = subsequent_expression ? and_(predicate, *subsequent_expression) : predicate;
-      auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
-      if (left_input_expression) {
-        return left_input_expression;
+      auto input_left_expression = lqp_subplan_to_boolean_expression_impl(begin->input_left(), end, expression);
+      if (input_left_expression) {
+        return input_left_expression;
       } else {
         return expression;
       }
@@ -269,11 +269,11 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
 
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, std::nullopt);
-      const auto right_input_expression =
-          lqp_subplan_to_boolean_expression_impl(begin->right_input(), end, std::nullopt);
-      if (left_input_expression && right_input_expression) {
-        const auto or_expression = or_(left_input_expression, right_input_expression);
+      const auto input_left_expression = lqp_subplan_to_boolean_expression_impl(begin->input_left(), end, std::nullopt);
+      const auto input_right_expression =
+          lqp_subplan_to_boolean_expression_impl(begin->input_right(), end, std::nullopt);
+      if (input_left_expression && input_right_expression) {
+        const auto or_expression = or_(input_left_expression, input_right_expression);
         return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
       } else {
         return nullptr;
@@ -284,7 +284,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
     case LQPNodeType::Sort:
     case LQPNodeType::Validate:
     case LQPNodeType::Limit:
-      return lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, subsequent_expression);
+      return lqp_subplan_to_boolean_expression_impl(begin->input_left(), end, subsequent_expression);
 
     default:
       return nullptr;

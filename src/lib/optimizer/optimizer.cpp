@@ -82,8 +82,8 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
     });
   }
 
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->input_left(), visited_nodes);
+  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->input_right(), visited_nodes);
 }
 
 }  // namespace
@@ -180,8 +180,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQP
   }
 
   // Remove LogicalPlanRootNode
-  auto optimized_node = root_node->left_input();
-  root_node->set_left_input(nullptr);
+  auto optimized_node = root_node->input_left();
+  root_node->set_input_left(nullptr);
 
   return optimized_node;
 }
@@ -307,9 +307,9 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
     const auto local_root_node = LogicalPlanRootNode::make(lqp);
     _apply_rule(rule, local_root_node);
     for (const auto& subquery_expression : subquery_expressions) {
-      subquery_expression->lqp = local_root_node->left_input();
+      subquery_expression->lqp = local_root_node->input_left();
     }
-    local_root_node->set_left_input(nullptr);
+    local_root_node->set_input_left(nullptr);
   }
 }
 

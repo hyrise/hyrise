@@ -49,11 +49,11 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, predicate_expression);
         semi_join_reduction_node->comment = "Semi Reduction";
         lqp_insert_node(join_node, side_of_join, semi_join_reduction_node);
-        semi_join_reduction_node->set_right_input(reducer_node);
+        semi_join_reduction_node->set_input_right(reducer_node);
 
         const auto reduced_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
 
-        semi_join_reduction_node->set_right_input(nullptr);
+        semi_join_reduction_node->set_input_right(nullptr);
         lqp_remove_node(semi_join_reduction_node);
 
         // While semi join reductions might not be immediately beneficial if the original cardinality is low, remember
@@ -119,7 +119,7 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
           return;
         }
 
-        semi_join_reduction_node->set_right_input(reducer_node);
+        semi_join_reduction_node->set_input_right(reducer_node);
         semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
       };
 
@@ -144,7 +144,7 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
   });
 
   for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
-    lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
+    lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowInputRight::Yes);
   }
 }
 }  // namespace opossum

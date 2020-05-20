@@ -46,8 +46,8 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
     collect_lqps_from_expression(node_expression, lqps);
   }
 
-  if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
-  if (lqp.right_input()) collect_lqps_in_plan(*lqp.right_input(), lqps);
+  if (lqp.input_left()) collect_lqps_in_plan(*lqp.input_left(), lqps);
+  if (lqp.input_right()) collect_lqps_in_plan(*lqp.input_right(), lqps);
 }
 
 }  // namespace
@@ -89,20 +89,20 @@ size_t AbstractLQPNode::hash() const {
 
 size_t AbstractLQPNode::_on_shallow_hash() const { return 0; }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::input_left() const { return _inputs[0]; }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::right_input() const { return _inputs[1]; }
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::input_right() const { return _inputs[1]; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::input(LQPInputSide side) const {
   const auto input_index = static_cast<int>(side);
   return _inputs[input_index];
 }
 
-void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& left) {
+void AbstractLQPNode::set_input_left(const std::shared_ptr<AbstractLQPNode>& left) {
   set_input(LQPInputSide::Left, left);
 }
 
-void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
+void AbstractLQPNode::set_input_right(const std::shared_ptr<AbstractLQPNode>& right) {
   DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
                   type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
                   type == LQPNodeType::ChangeMetaTable,
@@ -222,9 +222,9 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::column_expressions() const {
-  Assert(left_input() && !right_input(),
+  Assert(input_left() && !input_right(),
          "Can only forward input expressions iff there is a left input and no right input");
-  return left_input()->column_expressions();
+  return input_left()->column_expressions();
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
@@ -243,9 +243,9 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   // Default behaviour: Forward from input
-  Assert(left_input() && !right_input(),
+  Assert(input_left() && !input_right(),
          "Can forward nullability from input iff there is a left input and no right input");
-  return left_input()->is_column_nullable(column_id);
+  return input_left()->is_column_nullable(column_id);
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
@@ -256,15 +256,15 @@ bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
 bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
-  std::shared_ptr<AbstractLQPNode> copied_left_input;
-  std::shared_ptr<AbstractLQPNode> copied_right_input;
+  std::shared_ptr<AbstractLQPNode> copied_input_left;
+  std::shared_ptr<AbstractLQPNode> copied_input_right;
 
-  if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
-  if (right_input()) copied_right_input = right_input()->_deep_copy_impl(node_mapping);
+  if (input_left()) copied_input_left = input_left()->_deep_copy_impl(node_mapping);
+  if (input_right()) copied_input_right = input_right()->_deep_copy_impl(node_mapping);
 
   auto copy = _shallow_copy(node_mapping);
-  copy->set_left_input(copied_left_input);
-  copy->set_right_input(copied_right_input);
+  copy->set_input_left(copied_input_left);
+  copy->set_input_right(copied_input_right);
 
   return copy;
 }
@@ -331,8 +331,8 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   const auto output_lqp_to_stream = [&](const auto& root) {
     const auto get_inputs_fn = [](const auto& node2) {
       std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
-      if (node2->left_input()) inputs.emplace_back(node2->left_input());
-      if (node2->right_input()) inputs.emplace_back(node2->right_input());
+      if (node2->input_left()) inputs.emplace_back(node2->input_left());
+      if (node2->input_right()) inputs.emplace_back(node2->input_right());
       return inputs;
     };
 

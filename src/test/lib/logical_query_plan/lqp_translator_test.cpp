@@ -462,7 +462,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
-  predicate_node->set_left_input(stored_table_node);
+  predicate_node->set_input_left(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -501,7 +501,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(between_inclusive_(stored_table_node->get_column("b"), 42, 1337));
-  predicate_node->set_left_input(stored_table_node);
+  predicate_node->set_input_left(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
@@ -538,9 +538,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
-  predicate_node->set_left_input(stored_table_node);
+  predicate_node->set_input_left(stored_table_node);
   auto predicate_node2 = PredicateNode::make(less_than_(stored_table_node->get_column("a"), 42));
-  predicate_node2->set_left_input(predicate_node);
+  predicate_node2->set_input_left(predicate_node);
 
   // The optimizer should not set this ScanType in this situation
   predicate_node2->scan_type = ScanType::IndexScan;
@@ -653,8 +653,8 @@ TEST_F(LQPTranslatorTest, JoinAndPredicates) {
   auto predicate_node_right = PredicateNode::make(greater_than_(int_float2_b, 30.0), int_float2_node);
 
   auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a));
-  join_node->set_left_input(predicate_node_left);
-  join_node->set_right_input(predicate_node_right);
+  join_node->set_input_left(predicate_node_left);
+  join_node->set_input_right(predicate_node_right);
 
   const auto op = LQPTranslator{}.translate_node(join_node);
 
@@ -691,7 +691,7 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   const auto stored_table_node = StoredTableNode::make("table_int_float");
 
   auto limit_node = LimitNode::make(value_(2));
-  limit_node->set_left_input(stored_table_node);
+  limit_node->set_input_left(stored_table_node);
 
   /**
    * Check PQP
@@ -733,11 +733,11 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   auto union_node = UnionNode::make(SetOperationMode::Positions);
   const auto& lqp = union_node;
 
-  union_node->set_left_input(predicate_node_a);
-  union_node->set_right_input(predicate_node_b);
-  predicate_node_a->set_left_input(predicate_node_c);
-  predicate_node_b->set_left_input(predicate_node_c);
-  predicate_node_c->set_left_input(int_float2_node);
+  union_node->set_input_left(predicate_node_a);
+  union_node->set_input_right(predicate_node_b);
+  predicate_node_a->set_input_left(predicate_node_c);
+  predicate_node_b->set_input_left(predicate_node_c);
+  predicate_node_c->set_input_left(int_float2_node);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 

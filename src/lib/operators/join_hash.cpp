@@ -129,12 +129,12 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
    * JoinMode::FullOuter    Not supported by JoinHash
    * JoinMode::Semi/Anti*   The left relation becomes the probe side, the right relation becomes the build side
    */
-  const auto build_hash_table_for_right_input =
+  const auto build_hash_table_for_input_right =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
       _mode == JoinMode::Semi ||
       (_mode == JoinMode::Inner && _input_left->get_output()->row_count() > _input_right->get_output()->row_count());
 
-  if (build_hash_table_for_right_input) {
+  if (build_hash_table_for_input_right) {
     // We don't have to swap the operation itself here, because we only support the commutative Equi Join.
     build_input_table = _input_right->get_output();
     probe_input_table = _input_left->get_output();
@@ -151,7 +151,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   // of the secondary join predicates.
   auto adjusted_secondary_predicates = _secondary_predicates;
 
-  if (build_hash_table_for_right_input) {
+  if (build_hash_table_for_input_right) {
     for (auto& predicate : adjusted_secondary_predicates) {
       predicate.flip();
     }
@@ -167,7 +167,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
     output_column_order = OutputColumnOrder::ProbeOnly;
-  } else if (build_hash_table_for_right_input) {
+  } else if (build_hash_table_for_input_right) {
     output_column_order = OutputColumnOrder::ProbeFirstBuildSecond;
   } else {
     output_column_order = OutputColumnOrder::BuildFirstProbeSecond;

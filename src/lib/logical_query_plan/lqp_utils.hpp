@@ -42,16 +42,16 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
 
 /**
  * Removes a node from the plan, using the output of its left input as input for its output nodes. Unless
- * allow_right_input is set, the node must not have a right input. If allow_right_input is set, the caller has to
+ * allow_input_right is set, the node must not have a right input. If allow_input_right is set, the caller has to
  * retie that right input of the node (or reinsert the node at a different position where the right input is valid).
  */
-enum class AllowRightInput { No, Yes };
+enum class AllowInputRight { No, Yes };
 void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
-                     const AllowRightInput allow_right_input = AllowRightInput::No);
+                     const AllowInputRight allow_input_right = AllowInputRight::No);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
                      const std::shared_ptr<AbstractLQPNode>& node,
-                     const AllowRightInput allow_right_input = AllowRightInput::No);
+                     const AllowInputRight allow_input_right = AllowInputRight::No);
 
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
@@ -122,8 +122,8 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
     if (!visited_nodes.emplace(node).second) continue;
 
     if (visitor(node) == LQPVisitation::VisitInputs) {
-      if (node->left_input()) node_queue.push(node->left_input());
-      if (node->right_input()) node_queue.push(node->right_input());
+      if (node->input_left()) node_queue.push(node->input_left());
+      if (node->input_right()) node_queue.push(node->input_right());
     }
   }
 }

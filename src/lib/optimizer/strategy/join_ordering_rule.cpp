@@ -25,14 +25,14 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
 
   const auto expected_column_order = root->column_expressions();
 
-  auto result_lqp = _perform_join_ordering_recursively(root->left_input());
+  auto result_lqp = _perform_join_ordering_recursively(root->input_left());
 
   // Join ordering might change the output column order, let's fix that
   if (!expressions_equal(expected_column_order, result_lqp->column_expressions())) {
     result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
 
-  root->set_left_input(result_lqp);
+  root->set_input_left(result_lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
@@ -83,8 +83,8 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
 }
 
 void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  if (lqp->left_input()) lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input()));
-  if (lqp->right_input()) lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input()));
+  if (lqp->input_left()) lqp->set_input_left(_perform_join_ordering_recursively(lqp->input_left()));
+  if (lqp->input_right()) lqp->set_input_right(_perform_join_ordering_recursively(lqp->input_right()));
 }
 
 }  // namespace opossum

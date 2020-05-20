@@ -110,9 +110,9 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
       ASSERT_TRUE(union_node);
       EXPECT_EQ(union_node->set_operation_mode, SetOperationMode::All);
 
-      verify_predicate_node(union_node->right_input());
+      verify_predicate_node(union_node->input_right());
 
-      current_node = union_node->left_input();
+      current_node = union_node->input_left();
     }
     // After checking four union nodes, the last node has predicates on both sides
     verify_predicate_node(current_node);
@@ -180,7 +180,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->input_right()).table, table);
   }
 
   {
@@ -199,7 +199,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->input_right()).table, table);
   }
 
   {
@@ -219,7 +219,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
         JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->input_right()).table, table);
   }
 
   // We do not test duplicate_element_in_expression, as the correctness of the join strategy does not depend on
@@ -247,7 +247,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->input_right()).table, table);
   }
 }
 
@@ -297,7 +297,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
-    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->input_right()).table, table);
 
     EXPECT_NEAR(cardinality_estimator.estimate_cardinality(result_lqp), 1000.f / 200 * 100, 10);
   }

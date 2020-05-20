@@ -21,8 +21,8 @@ class UnionNodeTest : public BaseTest {
     _c = _mock_node1->get_column("c");
 
     _union_node = UnionNode::make(SetOperationMode::Positions);
-    _union_node->set_left_input(_mock_node1);
-    _union_node->set_right_input(_mock_node1);
+    _union_node->set_input_left(_mock_node1);
+    _union_node->set_input_right(_mock_node1);
   }
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
@@ -42,20 +42,20 @@ TEST_F(UnionNodeTest, OutputColumnExpressions) {
 
 TEST_F(UnionNodeTest, HashingAndEqualityCheck) {
   auto same_union_node = UnionNode::make(SetOperationMode::Positions);
-  same_union_node->set_left_input(_mock_node1);
-  same_union_node->set_right_input(_mock_node1);
+  same_union_node->set_input_left(_mock_node1);
+  same_union_node->set_input_right(_mock_node1);
   auto different_union_node = UnionNode::make(SetOperationMode::All);
-  different_union_node->set_left_input(_mock_node1);
-  different_union_node->set_right_input(_mock_node1);
+  different_union_node->set_input_left(_mock_node1);
+  different_union_node->set_input_right(_mock_node1);
   auto different_union_node_1 = UnionNode::make(SetOperationMode::Positions);
-  different_union_node_1->set_left_input(_mock_node1);
-  different_union_node_1->set_right_input(_mock_node2);
+  different_union_node_1->set_input_left(_mock_node1);
+  different_union_node_1->set_input_right(_mock_node2);
   auto different_union_node_2 = UnionNode::make(SetOperationMode::Positions);
-  different_union_node_2->set_left_input(_mock_node2);
-  different_union_node_2->set_right_input(_mock_node1);
+  different_union_node_2->set_input_left(_mock_node2);
+  different_union_node_2->set_input_right(_mock_node1);
   auto different_union_node_3 = UnionNode::make(SetOperationMode::Positions);
-  different_union_node_3->set_left_input(_mock_node2);
-  different_union_node_3->set_right_input(_mock_node2);
+  different_union_node_3->set_input_left(_mock_node2);
+  different_union_node_3->set_input_right(_mock_node2);
 
   EXPECT_EQ(*_union_node, *same_union_node);
   EXPECT_NE(*_union_node, *different_union_node);

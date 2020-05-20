@@ -410,12 +410,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // Test all combinations of reference/data input tables. This tests mostly the composition of the output table
     for (const auto table_size : {0u, all_table_sizes.front()}) {
-      for (const auto& left_input_table_type : all_input_table_types) {
-        for (const auto& right_input_table_type : all_input_table_types) {
+      for (const auto& input_left_table_type : all_input_table_types) {
+        for (const auto& input_right_table_type : all_input_table_types) {
           auto join_test_configuration = default_configuration;
-          join_test_configuration.input_left.table_type = left_input_table_type;
+          join_test_configuration.input_left.table_type = input_left_table_type;
           join_test_configuration.input_left.table_size = table_size;
-          join_test_configuration.input_right.table_type = right_input_table_type;
+          join_test_configuration.input_right.table_type = input_right_table_type;
           join_test_configuration.input_right.table_size = table_size;
 
           add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));

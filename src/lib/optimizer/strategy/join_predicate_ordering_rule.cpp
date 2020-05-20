@@ -31,7 +31,7 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
     //  See http://www.vldb.org/journal/VLDBJ6/70060191.pdf for more infos on join selectivity.
     auto predicate_cardinalities = std::unordered_map<std::shared_ptr<AbstractExpression>, Cardinality>{};
     for (const auto& predicate : node->node_expressions) {
-      const auto single_predicate_join = JoinNode::make(join_mode, predicate, node->left_input(), node->right_input());
+      const auto single_predicate_join = JoinNode::make(join_mode, predicate, node->input_left(), node->input_right());
       predicate_cardinalities.emplace(predicate,
                                       caching_cardinality_estimator->estimate_cardinality(single_predicate_join));
     }

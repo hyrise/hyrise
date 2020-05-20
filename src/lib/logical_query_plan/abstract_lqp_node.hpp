@@ -65,16 +65,16 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @defgroup Access the outputs/inputs
    *
-   * The outputs are implicitly set and removed in set_left_input()/set_right_input()/set_input().
+   * The outputs are implicitly set and removed in set_input_left()/set_input_right()/set_input().
    *
-   * set_input() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value.
+   * set_input() is a shorthand for set_input_left() or set_input_right(), useful if the side is a runtime value.
    * @{
    */
-  std::shared_ptr<AbstractLQPNode> left_input() const;
-  std::shared_ptr<AbstractLQPNode> right_input() const;
+  std::shared_ptr<AbstractLQPNode> input_left() const;
+  std::shared_ptr<AbstractLQPNode> input_right() const;
   std::shared_ptr<AbstractLQPNode> input(LQPInputSide side) const;
-  void set_left_input(const std::shared_ptr<AbstractLQPNode>& left);
-  void set_right_input(const std::shared_ptr<AbstractLQPNode>& right);
+  void set_input_left(const std::shared_ptr<AbstractLQPNode>& left);
+  void set_input_right(const std::shared_ptr<AbstractLQPNode>& right);
   void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input);
 
   size_t input_count() const;
@@ -196,7 +196,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @{
-   * For internal usage in set_left_input(), set_right_input(), set_input(), remove_output()
+   * For internal usage in set_input_left(), set_input_right(), set_input(), remove_output()
    * Add or remove a output without manipulating this output's input ptr.
    */
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
