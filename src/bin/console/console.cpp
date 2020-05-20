@@ -718,10 +718,12 @@ int Console::_visualize(const std::string& input) {
     case PlanType::LQP:
     case PlanType::UnoptLQP: {
       std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-      lqp_roots.reserve(lqps.size());
 
       const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
                                                       : _sql_pipeline->get_unoptimized_logical_plans();
+
+      lqp_roots.reserve(lqps.size());
+
       for (const auto& lqp : lqps) {
         lqp_roots.push_back(lqp);
       }
