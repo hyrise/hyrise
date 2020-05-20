@@ -58,8 +58,13 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   }
 
   /**
-   * Join two plans using a set of predicates; try to bring them into an efficient order
+   * Join two plans using a set of predicates; try to bring them into an efficient order.
    *
+   * This is also done by the JoinPredicateOrderingRule, which is more general in that it also handles non-inner joins
+   * and, because of its position in the optimizer flow, optimizes subqueries that were flattened into joins. However,
+   * there are other rules between the JoinOrderingRule and the JoinPredicateOrderingRule. These depend on cardinality
+   * estimations, which currently only take the primary predicate into account (#1560). As such, we do some preliminary
+   * ordering here in order for the most selective predicate to be the primary predicate.
    *
    * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates") are executed as
    * table scans (column vs column) after the join.
