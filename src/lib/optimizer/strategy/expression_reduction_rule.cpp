@@ -209,11 +209,12 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   // Calculate lower and upper bound of the search pattern
   const auto lower_bound = pattern.substr(0, multi_char_wildcard_pos);
-  const auto current_character_value = static_cast<int>(lower_bound.back());
+  const auto current_character_value = lower_bound.back();
 
   // Find next value according to ASCII-table
   constexpr int MAX_ASCII_VALUE = 127;
   if (current_character_value >= MAX_ASCII_VALUE) {
+    // current_character_value + 1 would overflow; use regexp-based LIKE for this edge case
     return;
   }
 

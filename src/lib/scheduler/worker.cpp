@@ -59,7 +59,7 @@ void Worker::_work() {
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
     auto work_stealing_successful = false;
-    for (auto& queue : Hyrise::get().scheduler()->queues()) {
+    for (const auto& queue : Hyrise::get().scheduler()->queues()) {
       if (queue == _queue) {
         continue;
       }

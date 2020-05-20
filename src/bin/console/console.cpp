@@ -755,7 +755,7 @@ int Console::_visualize(const std::string& input) {
 
         for (const auto& sub_lqp : sub_lqps) {
           const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
-          for (auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
+          for (const auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
             join_graphs.emplace_back(sub_lqp_join_graph);
           }
         }
@@ -973,7 +973,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
   }
 
   while (it != commands.end()) {
-    auto& command = *it;
+    const auto& command = *it;
     ++it;
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)

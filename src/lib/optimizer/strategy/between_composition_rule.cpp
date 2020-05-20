@@ -171,7 +171,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   auto id_counter = size_t{0};
 
   // Filter predicates with a boundary to the boundaries vector
-  for (auto& predicate : predicates) {
+  for (const auto& predicate : predicates) {
     // A logical expression can contain multiple binary predicate expressions
     std::vector<std::shared_ptr<BinaryPredicateExpression>> expressions;
     const auto predicate_node = std::static_pointer_cast<PredicateNode>(predicate);
@@ -228,7 +228,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
             [](const auto& left, const auto& right) { return left[0]->id < right[0]->id; });
 
   for (const auto& boundaries : column_boundaries_sorted) {
-    for (auto& boundary : boundaries) {
+    for (const auto& boundary : boundaries) {
       if (!boundary->boundary_is_column_expression) {
         const auto boundary_border_expression = std::static_pointer_cast<ValueExpression>(boundary->border_expression);
         switch (boundary->type) {
@@ -300,7 +300,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
   // If no substitution was possible, all nodes referring to this column have to be inserted into the LQP again
   // later. Therefore we create a semantically equal predicate node.
   for (const auto& boundaries : column_boundaries_sorted) {
-    for (auto& boundary : boundaries) {
+    for (const auto& boundary : boundaries) {
       if (std::find(consumed_boundary_ids.begin(), consumed_boundary_ids.end(), boundary->id) ==
           consumed_boundary_ids.end()) {
         switch (boundary->type) {

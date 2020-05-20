@@ -23,7 +23,7 @@ const std::string& CreateTable::name() const {
 std::string CreateTable::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
 
-  const auto separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
+  const auto* const separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
 
   const auto column_definitions = input_table_left()->column_definitions();
 
