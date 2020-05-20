@@ -663,20 +663,6 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegmentsNullsLast) {
-  const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_nulls_last_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::AscendingNullsLast));
-  ChunkEncoder::encode_all_chunks(table, _encoding_type);
-
-  const auto table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-
-  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
-                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
-
-  scan_for_null_values(table_wrapper, tests);
-}
-
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
   const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", 4);
   table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
@@ -687,20 +673,6 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
                                                                                {PredicateCondition::IsNotNull, {3, 4}}};
-
-  scan_for_null_values(table_wrapper, tests);
-}
-
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegmentsNullsLast) {
-  const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_nulls_last_2.tbl", 4);
-  table->get_chunk(ChunkID{0})->set_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::DescendingNullsLast));
-  ChunkEncoder::encode_all_chunks(table, _encoding_type);
-
-  const auto table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-
-  const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {3, 4}},
-                                                                               {PredicateCondition::IsNotNull, {1, 2}}};
 
   scan_for_null_values(table_wrapper, tests);
 }

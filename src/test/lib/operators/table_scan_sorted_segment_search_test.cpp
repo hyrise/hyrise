@@ -34,8 +34,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     _search_value = test_data.search_value;
     _expected = test_data.expected;
 
-    const bool ascending = _sorted_by == SortMode::Ascending || _sorted_by == SortMode::AscendingNullsLast;
-    const bool nulls_first = _sorted_by == SortMode::Ascending || _sorted_by == SortMode::Descending;
+    const bool ascending = _sorted_by == SortMode::Ascending;
 
     if (!ascending) {
       std::reverse(_expected.begin(), _expected.end());
@@ -43,7 +42,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
 
     _segment = std::make_unique<ValueSegment<int32_t>>(_nullable);
 
-    if (_nullable && nulls_first) {
+    if (_nullable) {
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
       _segment->append(NULL_VALUE);
@@ -53,12 +52,6 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
     for (int32_t row = 0; row < table_size; ++row) {
       _segment->append(ascending ? row : table_size - row - 1);
       _segment->append(ascending ? row : table_size - row - 1);
-    }
-
-    if (_nullable && !nulls_first) {
-      _segment->append(NULL_VALUE);
-      _segment->append(NULL_VALUE);
-      _segment->append(NULL_VALUE);
     }
   }
 
@@ -117,8 +110,7 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {}},  // NOLINT
             TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {4, 4}}),  // NOLINT
 
-        ::testing::Values(SortMode::Ascending, SortMode::AscendingNullsLast, SortMode::Descending,
-                          SortMode::DescendingNullsLast),
+        ::testing::Values(SortMode::Ascending, SortMode::Descending),
         ::testing::Bool()),  // nullable
     table_scan_sorted_segment_search_test_formatter);
 // clang-format on

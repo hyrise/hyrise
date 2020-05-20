@@ -235,27 +235,16 @@ void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
       if (sorted_segment->size() < 2) break;
 
       segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
-        if (sorted_by_column.sort_mode == SortMode::Ascending) {
-          Assert(std::is_sorted(begin, end,
-                                [](const auto& left, const auto& right) {
-                                  // is_sorted evaluates the vector by calling the lambda with it+n and it (n being
-                                  // non-negative), which needs to evaluate to false.
-                                  if (right.is_null()) return false;  // handles right side is NULL and both are NULL
-                                  if (left.is_null()) return true;
-                                  return left.value() < right.value();
-                                }),
-                 "Setting an ascending sort order for a segment which is not sorted accordingly.");
-        } else if (sorted_by_column.sort_mode == SortMode::Descending) {
-          Assert(std::is_sorted(begin, end,
-                                [](const auto& left, const auto& right) {
-                                  if (right.is_null()) return false;
-                                  if (left.is_null()) return true;
-                                  return left.value() > right.value();
-                                }),
-                 "Setting a descending sort order for a segment which is not sorted accordingly.");
-        } else if (sorted_by_column.sort_mode == SortMode::DescendingNullsLast) {
-          // TODO(mrks): change to else{} with #2110
-        }
+        Assert(std::is_sorted(begin, end,
+                              [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
+                                // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
+                                // it+n and it (n being non-negative), which needs to evaluate to false.
+                                if (right.is_null()) return false;  // handles right side is NULL and both are NULL
+                                if (left.is_null()) return true;
+                                const auto ascending = sort_mode == SortMode::Ascending;
+                                return ascending ? left.value() < right.value() : left.value() > right.value();
+                              }),
+               "Setting a sort order for a segment which is not sorted accordingly.");
       });
     }
   }

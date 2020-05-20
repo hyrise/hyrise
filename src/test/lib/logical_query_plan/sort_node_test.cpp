@@ -37,11 +37,10 @@ TEST_F(SortNodeTest, Descriptions) {
   auto sort_b = SortNode::make(expression_vector(_a_i), std::vector<SortMode>{SortMode::Descending}, _table_node);
   EXPECT_EQ(sort_b->description(), "[Sort] i (Descending)");
 
-  auto sort_c = SortNode::make(
-      expression_vector(_a_d, _a_f, _a_i),
-      std::vector<SortMode>{SortMode::Descending, SortMode::AscendingNullsLast, SortMode::DescendingNullsLast});
+  auto sort_c = SortNode::make(expression_vector(_a_d, _a_f, _a_i),
+                               std::vector<SortMode>{SortMode::Descending, SortMode::Ascending, SortMode::Descending});
   sort_c->set_left_input(_table_node);
-  EXPECT_EQ(sort_c->description(), "[Sort] d (Descending), f (AscendingNullsLast), i (DescendingNullsLast)");
+  EXPECT_EQ(sort_c->description(), "[Sort] d (Descending), f (Ascending), i (Descending)");
 }
 
 TEST_F(SortNodeTest, HashingAndEqualityCheck) {
