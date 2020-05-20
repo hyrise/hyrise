@@ -582,7 +582,7 @@ int Console::_load_table(const std::string& args) {
     std::vector<ChunkID> immutable_chunks;
     for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
       if (!table->get_chunk(chunk_id)->is_mutable()) {
-        immutable_chunks.push_back(chunk_id);
+        immutable_chunks.emplace_back(chunk_id);
       }
     }
     ChunkEncoder::encode_chunks(table, immutable_chunks, encoding_type->second);
@@ -725,7 +725,7 @@ int Console::_visualize(const std::string& input) {
       lqp_roots.reserve(lqps.size());
 
       for (const auto& lqp : lqps) {
-        lqp_roots.push_back(lqp);
+        lqp_roots.emplace_back(lqp);
       }
 
       LQPVisualizer visualizer;
@@ -989,7 +989,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
 char* Console::_command_generator_default(const char* text, int state) {
   auto commands = std::vector<std::string>();
   for (auto const& command : Console::get()._commands) {
-    commands.push_back(command.first);
+    commands.emplace_back(command.first);
   }
   return _command_generator(text, state, commands);
 }
