@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import math
 import sys
 from terminaltables import AsciiTable
 from termcolor import colored
@@ -136,11 +137,14 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     if old['name'] != new['name']:
         name += ' -> ' + new['name']
 
-    total_runtime_old += old['avg_real_time_per_successful_iteration']
-    total_runtime_new += new['avg_real_time_per_successful_iteration']
+    old_avg_successful_iteration = old['avg_real_time_per_successful_iteration']
+    new_avg_successful_iteration = new['avg_real_time_per_successful_iteration']
 
-    if float(old['avg_real_time_per_successful_iteration']) > 0.0:
-        diff_latency = float(new['avg_real_time_per_successful_iteration']) / float(old['avg_real_time_per_successful_iteration'])
+    total_runtime_old += old_avg_successful_iteration if old_avg_successful_iteration else 0.0
+    total_runtime_new += new_avg_successful_iteration if new_avg_successful_iteration else 0.0
+
+    if old_avg_successful_iteration and new_avg_successful_iteration and float(new_avg_successful_iteration) > 0.0:
+        diff_latency = float(new_avg_successful_iteration) / float(old_avg_successful_iteration)
     else:
         diff_latency = float('nan')
 
@@ -163,29 +167,35 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 
     # Note, we use a width of 7/8 for printing to ensure that we can later savely replace the latency/throughput marker
     # and everything still fits nicely.
-    table_data.append([name, '', f'{(old["avg_real_time_per_successful_iteration"] / 1e6):>7.1f}',
-                      f'{(new["avg_real_time_per_successful_iteration"] / 1e6):>7.1f}', diff_latency_formatted + note, '',
-                      f'{old["items_per_second"]:>8.2f}', f'{new["items_per_second"]:>8.2f}',
-                      diff_throughput_formatted + note, p_value_formatted])
+    table_data.append([name, '',
+                       f'{(old_avg_successful_iteration / 1e6):>7.1f}' if old_avg_successful_iteration else float('nan'),
+                       f'{(new_avg_successful_iteration / 1e6):>7.1f}' if new_avg_successful_iteration else float('nan'),
+                       diff_latency_formatted + note if not math.isnan(diff_latency) else '', '',
+                       f'{old["items_per_second"]:>8.2f}', f'{new["items_per_second"]:>8.2f}',
+                       diff_throughput_formatted + note, p_value_formatted])
 
     if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
+        old_avg_unsuccessful_iteration = old['avg_real_time_per_unsuccessful_iteration']
+        new_avg_unsuccessful_iteration = new['avg_real_time_per_unsuccessful_iteration']
+
         old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
         new_unsuccessful_per_second = float(len(new['unsuccessful_runs'])) / (new['duration'] / 1e9)
 
-        if len(old['unsuccessful_runs']) > 0:
+        if len(old['unsuccessful_runs']) > 0 and len(new['unsuccessful_runs']) > 0:
             diff_throughput_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
-            diff_latency_unsuccessful = float(new['avg_real_time_per_unsuccessful_iteration']) / float(old['avg_real_time_per_unsuccessful_iteration'])
+            diff_latency_unsuccessful = float(new_avg_unsuccessful_iteration) / float(old_avg_unsuccessful_iteration)
         else:
             diff_throughput_unsuccessful = float('nan')
             diff_latency_unsuccessful = float('nan')
 
         unsuccessful_info = [
-            '   unsucc.:', '', f'{(old["avg_real_time_per_unsuccessful_iteration"] / 1e6):>7.1f}',
-            f'{(new["avg_real_time_per_unsuccessful_iteration"] / 1e6):>7.1f}',
-            format_diff(diff_latency_unsuccessful), '',
+            '   unsucc.:', '',
+            f'{(old_avg_unsuccessful_iteration / 1e6):>7.1f}' if old_avg_unsuccessful_iteration else float('nan'),
+            f'{(new_avg_unsuccessful_iteration / 1e6):>7.1f}' if new_avg_unsuccessful_iteration else float('nan'),
+            format_diff(diff_latency_unsuccessful) + ' ' if not math.isnan(diff_latency_unsuccessful) else ' ', '',
             f'{old_unsuccessful_per_second:>.2f}',
             f'{new_unsuccessful_per_second:>.2f}',
-            format_diff(diff_throughput_unsuccessful) + ' '
+            format_diff(diff_throughput_unsuccessful) + ' ' if not math.isnan(diff_throughput_unsuccessful) else ' '
         ]
 
         unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]

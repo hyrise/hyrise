@@ -1,0 +1,289 @@
+{
+  "benchmarks": [
+    {
+      "avg_real_time_per_successful_iteration": 1000000.0,
+      "avg_real_time_per_unsuccessful_iteration": 2000000.0,
+      "duration": 5000000,
+      "items_per_second": 1100.0,
+      "iterations": 10,
+      "name": "Delivery",
+      "successful_runs": [
+        {
+          "begin": 0,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 1000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 3000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 5000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 6000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 7000000,
+          "duration": 1000000,
+          "metrics": []
+        }
+      ],
+      "unsuccessful_runs": [
+        {
+          "begin": 0,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 2000000,
+          "metrics": []
+        }
+      ]
+    },
+    {
+      "avg_real_time_per_successful_iteration": null,
+      "avg_real_time_per_unsuccessful_iteration": 2000000.0,
+      "duration": 5000000,
+      "items_per_second": 600.0,
+      "iterations": 3,
+      "name": "New-Order",
+      "successful_runs": [],
+      "unsuccessful_runs": [
+        {
+          "begin": 0,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 2000000,
+          "metrics": []
+        }
+      ]
+    },
+    {
+      "avg_real_time_per_successful_iteration": 1000000.0,
+      "avg_real_time_per_unsuccessful_iteration": 2000000.0,
+      "duration": 5000000,
+      "items_per_second": 1100.0,
+      "iterations": 10,
+      "name": "Order-Status",
+      "successful_runs": [
+        {
+          "begin": 0,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 1000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 3000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 5000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 6000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 7000000,
+          "duration": 1000000,
+          "metrics": []
+        }
+      ],
+      "unsuccessful_runs": [
+        {
+          "begin": 0,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 2000000,
+          "metrics": []
+        }
+      ]
+    },
+    {
+      "avg_real_time_per_successful_iteration": 1000000.0,
+      "avg_real_time_per_unsuccessful_iteration": null,
+      "duration": 5000000,
+      "items_per_second": 1100.0,
+      "iterations": 7,
+      "name": "Payment",
+      "successful_runs": [
+        {
+          "begin": 0,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 1000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 3000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 5000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 6000000,
+          "duration": 1000000,
+          "metrics": []
+        },
+        {
+          "begin": 7000000,
+          "duration": 1000000,
+          "metrics": []
+        }
+      ],
+      "unsuccessful_runs": []      
+    },
+    {
+      "avg_real_time_per_successful_iteration": 2000000.0,
+      "avg_real_time_per_unsuccessful_iteration": null,
+      "duration": 5000000,
+      "items_per_second": 1000.0,
+      "iterations": 5,
+      "name": "Stock-Level",
+      "successful_runs": [
+        {
+          "begin": 0,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 1000000,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 2000000,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 3000000,
+          "duration": 2000000,
+          "metrics": []
+        },
+        {
+          "begin": 4000000,
+          "duration": 2000000,
+          "metrics": []
+        }
+      ],
+      "unsuccessful_runs": []
+    }
+  ],
+  "context": {
+    "GIT-HASH": "db654006e4b265495e1e719ae06500bd26463bcf",
+    "benchmark_mode": "Shuffled",
+    "build_type": "release",
+    "chunk_size": 65535,
+    "clients": 10,
+    "compiler": "clang 10.0.0",
+    "cores": 0,
+    "date": "2020-05-19 17:17:44",
+    "encoding": {
+      "default": {
+        "encoding": "Dictionary"
+      }
+    },
+    "indexes": false,
+    "max_duration": 60000000000,
+    "max_runs": -1,
+    "scale_factor": 1,
+    "time_unit": "ns",
+    "using_scheduler": true,
+    "utilized_cores_per_numa_node": [
+      16
+    ],
+    "verify": false,
+    "warmup_duration": 0
+  },
+  "summary": {
+    "table_size_in_bytes": 273214399,
+    "total_duration": 60094974222
+  },
+  "table_generation": {
+    "binary_caching_duration": 0,
+    "encoding_duration": 1047490736,
+    "generation_duration": 4975423592,
+    "index_duration": 0,
+    "sort_duration": 0,
+    "store_duration": 1560883668
+  }
+}
