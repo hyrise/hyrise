@@ -122,7 +122,7 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
     output_column_statistics[column_id] = cached_column_statistics;
   }
 
-  const auto result_table_statistics =
+  auto result_table_statistics =
       std::make_shared<TableStatistics>(std::move(output_column_statistics), cached_table_statistics->row_count);
 
   return result_table_statistics;

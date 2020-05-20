@@ -57,8 +57,11 @@ try {
           cmake = 'cmake -DCI_BUILD=ON'
           unity = '-DCMAKE_UNITY_BUILD=ON'
 
-          clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
-          clang10 = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
+          // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
+          // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
+          // DEPENDENCIES.md, clang_tidy_wrapper.sh, and the documentation (README, Wiki).
+          clang = '-DCMAKE_C_COMPILER=clang-10 -DCMAKE_CXX_COMPILER=clang++-10'
+          clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
           debug = '-DCMAKE_BUILD_TYPE=Debug'
@@ -80,7 +83,7 @@ try {
           mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
           mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
           mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
-          mkdir clang-10-debug && cd clang-10-debug &&                                                 ${cmake} ${debug}          ${clang10} ${unity} .. &\
+          mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
           wait"
         }
 
@@ -89,10 +92,10 @@ try {
             sh "cd clang-debug && make all -j \$(( \$(nproc) / 4))"
             sh "./clang-debug/hyriseTest clang-debug"
           }
-        }, clang10Debug: {
-          stage("clang-10-debug") {
-            sh "cd clang-10-debug && make all -j \$(( \$(nproc) / 4))"
-            sh "./clang-10-debug/hyriseTest clang-10-debug"
+        }, clang9Debug: {
+          stage("clang-9-debug") {
+            sh "cd clang-9-debug && make all -j \$(( \$(nproc) / 4))"
+            sh "./clang-9-debug/hyriseTest clang-9-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {

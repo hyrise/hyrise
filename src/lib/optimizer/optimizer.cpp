@@ -91,7 +91,7 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  const auto optimizer = std::make_shared<Optimizer>();
+  auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
@@ -180,7 +180,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQP
   }
 
   // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_input();
+  auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
   return optimized_node;
