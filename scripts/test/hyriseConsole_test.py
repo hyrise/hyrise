@@ -27,6 +27,10 @@ def check_exit_status(console):
 		sys.exit(console.signalstatus)
 
 def main():
+	# Disable Pagination
+	if 'TERM' in os.environ:
+		del os.environ['TERM']
+
 	console = initialize()
 	console.logfile = sys.stdout.buffer
 
@@ -38,9 +42,9 @@ def main():
 	elif sys.platform.startswith("darwin"):
 		lib_suffix = ".dylib"
 
-	# Test print command
+	# Test error handling of print command
 	console.sendline("print test")
-	console.expect("Exception thrown while loading table:")
+	console.expect("Table does not exist in StorageManager")
 
 	# Test load command
 	console.sendline("load resources/test_data/tbl/10_ints.tbl test")
