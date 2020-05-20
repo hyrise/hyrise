@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "base_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"
@@ -19,7 +20,6 @@
 #include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/plugin_test_utils.hpp"
 
 using namespace opossum;  // NOLINT
 

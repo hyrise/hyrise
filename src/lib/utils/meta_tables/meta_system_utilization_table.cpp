@@ -195,7 +195,7 @@ MetaSystemUtilizationTable::SystemMemoryUsage MetaSystemUtilizationTable::_get_s
   ret = host_statistics64(mach_host_self(), HOST_VM_INFO, reinterpret_cast<host_info64_t>(&vm_statistics), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get host_statistics64");
 
-  MetaSystemUtilizationTable::SystemMemoryUsage memory_usage;
+  auto memory_usage = MetaSystemUtilizationTable::SystemMemoryUsage{};
   memory_usage.free_memory = vm_statistics.free_count * page_size;
   memory_usage.available_memory = (vm_statistics.inactive_count + vm_statistics.free_count) * page_size;
 
@@ -235,7 +235,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 #endif
 
 #ifdef __APPLE__
-  struct task_basic_info info;
+  struct task_basic_info info {};
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get task_info");
