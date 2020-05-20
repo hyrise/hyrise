@@ -89,8 +89,8 @@ Segments get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, 
  * Alternatives are SQL-based queries, which either do not use the optimizer (no chunk pruning) or the complete
  * optimizer (we lose control over the predicate order), or creating PQPs (we would need to manually prune chunks).
  */
-std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_from_csv(const std::string workload_file) {
-  std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> output_queries;
+std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::string workload_file) {
+  std::vector<std::shared_ptr<AbstractLQPNode>> output_queries;
 
   const auto csv_lines = read_file(workload_file);
 
@@ -100,25 +100,33 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
   
   const auto& table = Hyrise::get().storage_manager.get_table(TABLE_NAME);
   const auto column_names = table->column_names();
+
+  // Create initial node 
   auto stored_table_node = StoredTableNode::make(TABLE_NAME);
   std::shared_ptr<AbstractLQPNode> previous_node = stored_table_node;
-  auto query_frequency = size_t{0};
+
+  // Get values from workload csv file
   for (const auto& csv_line : csv_lines) {
     const auto query_id = std::stol(csv_line[0]);
-    const auto predicate_str = csv_line[1];
-    const auto column_id = ColumnID{static_cast<uint16_t>(std::stoi(csv_line[2]))};
-    const auto predicate_selectivity = stof(csv_line[3]);
-    query_frequency = stoul(csv_line[5]);
-    const auto search_value_0 = stoi(csv_line[6]);
-    const auto search_value_1 = stoi(csv_line[7]);
+    const auto scan_id = std::stol(csv_line[1]);
+    const auto predicate_str = csv_line[2];
+    const auto column_id = ColumnID{static_cast<uint16_t>(std::stoi(csv_line[3]))};
+    const auto predicate_selectivity = stof(csv_line[4]);
+    const auto search_value_0 = stoi(csv_line[7]);
+    const auto search_value_1 = stoi(csv_line[8]);
+
+    std::cout << query_id << ":" << previous_query_id << " " << scan_id << std::endl;
 
     Assert(query_id >= previous_query_id,
            "Queries are expected to be sorted ascendingly by: query ID ascendingly.");
+    Assert(query_id == previous_query_id || scan_id == 0,
+           "Queries are expected to start with scan id 0");
     Assert(query_id != previous_query_id || predicate_selectivity >= previous_predicate_selectivity,
            "Queries are expected to be sorted ascendingly by: query ID ascendingly & selectivity descendingly.");
 
+    // If query id has changed store current node in output queries and create new initial node 
     if (query_id > 0 && query_id != previous_query_id) {
-      output_queries.emplace_back(current_node, query_frequency);
+      output_queries.emplace_back(current_node);
       stored_table_node = StoredTableNode::make(TABLE_NAME);
       previous_node = stored_table_node;
     }
@@ -135,7 +143,7 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
     previous_predicate_selectivity = predicate_selectivity;
     previous_node = current_node;
   }
-  output_queries.emplace_back(current_node, query_frequency);  // Store last query
+  output_queries.emplace_back(current_node);  // Store last query
 
   return output_queries;
 }
@@ -144,9 +152,7 @@ std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, size_t>> load_queries_fr
  * Takes a pair of an LQP-based query and the frequency, partially optimizes the query (only chunk and column pruning
  * for now), translates the query, and executes the query (single-threaded).
  */
-float partially_optimize_translate_and_execute_query(const std::pair<std::shared_ptr<AbstractLQPNode>, size_t>& workoad_item) {
-  const auto lqp_query = workoad_item.first;
-  //const auto frequency = workoad_item.second;
+float partially_optimize_translate_and_execute_query(const std::shared_ptr<AbstractLQPNode>& lqp_query) {
 
   // Run chunk and column pruning rules. Kept it quite simple for now. Take a look at Optimizer::optimize() in case
   // problems occur. The following code is taken from optimizer.cpp. In case the new root is confusing to you, take a
