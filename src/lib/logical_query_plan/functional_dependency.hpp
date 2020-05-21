@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * Models a functional dependency (FD), which consists out of two sets of column expression.
+ * Models a functional dependency (FD), which consists out of two sets of column expressions.
  * The left column set (determinants) unambigiously identifies the right column set (dependents):
  * {Left} => {Right}
  *
@@ -24,10 +24,8 @@ namespace opossum {
  * Furthermore, knowing an author, we also know his nationality. Hence, we can specify another FD that applies:
  * {Author} => {Author-Nationality}
  *
- *
- * Currently, column expressions are required to be non-nullable to be involved in FDs. As there are
- * strategies to combine both, null values and FDs (e.g. https://arxiv.org/abs/1404.4963), this might
- * change in the future.
+ * Currently, the determinant column expressions are required to be non-nullable to be involved in FDs.
+ * Combining null values and FDs is not trivial. For more reference, see https://arxiv.org/abs/1404.4963.
  */
 struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents);
