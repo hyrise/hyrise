@@ -180,7 +180,9 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
   return outputs;
 }
 
-void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
+// clang-tidy wants this to be const. Technically, it could be, but as this node will be modified via set_input, it is
+// syntactically incorrect.
+void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {  // NOLINT
   const auto input_side = get_input_side(output);
   // set_input() will untie the nodes
   output->set_input(input_side, nullptr);
@@ -314,7 +316,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
   if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
   if (right_input()) copied_right_input = right_input()->_deep_copy_impl(node_mapping);
 
-  const auto copy = _shallow_copy(node_mapping);
+  auto copy = _shallow_copy(node_mapping);
   copy->set_left_input(copied_left_input);
   copy->set_right_input(copied_right_input);
 

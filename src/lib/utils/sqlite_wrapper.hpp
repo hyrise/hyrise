@@ -30,7 +30,7 @@ class SQLiteWrapper final {
    * @param table      The table to load into sqlite
    * @param tablename  The desired table name
    */
-  void create_sqlite_table(const Table& table, const std::string& table_name);
+  void create_sqlite_table(const Table& table, const std::string& table_name) const;
 
   class Connection final {
    public:

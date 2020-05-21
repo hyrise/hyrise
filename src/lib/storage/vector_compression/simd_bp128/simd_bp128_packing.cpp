@@ -130,23 +130,23 @@ void unpack_128_zeros(uint32_t* out) {
 
 }  // namespace
 
-void SimdBp128Packing::write_meta_info(const uint8_t* in, uint128_t* out) {
-  const auto simd_in = reinterpret_cast<const simd_type*>(in);
-  auto simd_out = reinterpret_cast<simd_type*>(out);
+void SimdBp128Packing::write_meta_info(const uint8_t* const in, uint128_t* const out) {
+  const auto* const simd_in = reinterpret_cast<const simd_type*>(in);
+  auto* const simd_out = reinterpret_cast<simd_type*>(out);
 
   *simd_out = *simd_in;
 }
 
-void SimdBp128Packing::read_meta_info(const uint128_t* in, uint8_t* out) {
-  const auto simd_in = reinterpret_cast<const simd_type*>(in);
-  auto simd_out = reinterpret_cast<simd_type*>(out);
+void SimdBp128Packing::read_meta_info(const uint128_t* const in, uint8_t* const out) {
+  const auto* const simd_in = reinterpret_cast<const simd_type*>(in);
+  auto* const simd_out = reinterpret_cast<simd_type*>(out);
 
   *simd_out = *simd_in;
 }
 
 void SimdBp128Packing::pack_block(const uint32_t* in, uint128_t* out, const uint8_t bit_size) {
-  auto simd_in = reinterpret_cast<const simd_type*>(in);
-  auto simd_out = reinterpret_cast<simd_type*>(out);
+  const auto* simd_in = reinterpret_cast<const simd_type*>(in);
+  auto* simd_out = reinterpret_cast<simd_type*>(out);
 
   simd_type in_reg = {0, 0, 0, 0};
   simd_type out_reg = {0, 0, 0, 0};
@@ -297,8 +297,8 @@ void SimdBp128Packing::unpack_block(const uint128_t* in, uint32_t* out, const ui
     return;
   }
 
-  auto simd_in = reinterpret_cast<const simd_type*>(in);
-  auto simd_out = reinterpret_cast<simd_type*>(out);
+  const auto* simd_in = reinterpret_cast<const simd_type*>(in);
+  auto* simd_out = reinterpret_cast<simd_type*>(out);
 
   simd_type in_reg = *simd_in++;
   simd_type out_reg = {0, 0, 0, 0};

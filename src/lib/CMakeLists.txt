@@ -9,13 +9,8 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-    cache/abstract_cache_impl.hpp
-    cache/cache.hpp
+    cache/abstract_cache.hpp
     cache/gdfs_cache.hpp
-    cache/gds_cache.hpp
-    cache/lru_cache.hpp
-    cache/lru_k_cache.hpp
-    cache/random_cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -319,6 +314,8 @@ set(
     optimizer/strategy/predicate_split_up_rule.hpp
     optimizer/strategy/semi_join_reduction_rule.cpp
     optimizer/strategy/semi_join_reduction_rule.hpp
+    optimizer/strategy/stored_table_column_alignment_rule.cpp
+    optimizer/strategy/stored_table_column_alignment_rule.hpp
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp

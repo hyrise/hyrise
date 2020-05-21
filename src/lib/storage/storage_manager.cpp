@@ -53,7 +53,7 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
   const auto table_iter = _tables.find(name);
   Assert(table_iter != _tables.end(), "No such table named '" + name + "'");
 
-  const auto table = table_iter->second;
+  auto table = table_iter->second;
   Assert(table,
          "Nullptr found when accessing table named '" + name + "'. This can happen if a dropped table is accessed.");
 
@@ -145,7 +145,7 @@ std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::strin
   const auto iter = _prepared_plans.find(name);
   Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
 
-  const auto prepared_plan = iter->second;
+  auto prepared_plan = iter->second;
   Assert(prepared_plan, "Nullptr found when accessing prepared plan named '" + name +
                             "'. This can happen if a dropped prepared plan is accessed.");
 
@@ -179,7 +179,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
 
     auto job_task = std::make_shared<JobTask>([table_item, &path]() {
       const auto& name = table_item.first;
-      auto& table = table_item.second;
+      const auto& table = table_item.second;
 
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();

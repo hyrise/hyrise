@@ -52,7 +52,7 @@ const std::string& TableScan::name() const {
 }
 
 std::string TableScan::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
 
@@ -108,15 +108,15 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       Segments out_segments;
 
       /**
-       * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
-       * directly use the matches to construct the reference segments of the output. If it is a reference segment,
-       * we need to resolve the row IDs so that they reference the physical data segments (value, dictionary) instead,
-       * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
-       * between segments as much as possible. Position lists can be shared between two segments iff
-       * (a) they point to the same table and
-       * (b) the reference segments of the input table point to the same positions in the same order
-       *     (i.e. they share their position list).
+       * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can directly use
+       * the matches to construct the reference segments of the output. If it is a reference segment, we need to
+       * resolve the row IDs so that they reference the physical data segments (value, dictionary) instead, since we
+       * don’t allow multi-level referencing. To save time and space, we want to share position lists between segments
+       * as much as possible. Position lists can be shared between two segments iff (a) they point to the same table
+       * and (b) the reference segments of the input table point to the same positions in the same order (i.e. they
+       * share their position list).
        */
+      auto keep_chunk_sort_order = true;
       if (in_table->type() == TableType::References) {
         auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
@@ -137,6 +137,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             filtered_pos_list = std::make_shared<RowIDPosList>(matches_out->size());
             if (pos_list_in->references_single_chunk()) {
               filtered_pos_list->guarantee_single_chunk();
+            } else {
+              // When segments reference multiple chunks, we do not keep the sort order of the input chunk. The main
+              // reason is that several table scan implementations split the pos lists by chunks (see
+              // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment) and thus shuffle the data. While this
+              // does not affect all scan implementations, we chose the safe and defensive path for now.
+              keep_chunk_sort_order = false;
             }
 
             size_t offset = 0;
@@ -158,8 +164,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         }
       }
 
+      const auto chunk = std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator());
+      chunk->finalize();
+      if (keep_chunk_sort_order && !chunk_in->sorted_by().empty()) {
+        chunk->set_sorted_by(chunk_in->sorted_by());
+      }
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator()));
+      output_chunks.emplace_back(chunk);
     });
 
     jobs.push_back(job_task);
@@ -185,7 +196,7 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     return predicate;
   }
 
-  const auto new_predicate = predicate->deep_copy();
+  auto new_predicate = predicate->deep_copy();
   for (auto& argument : new_predicate->arguments) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
     if (!subquery || subquery->is_correlated()) continue;
@@ -209,6 +220,11 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.
+   *
+   * Many implementations require the comparison values to be of the same column type. If we were to cast the values
+   * to the column type, `int_column = 16.25` would turn into `int_column = 16`, which is obviously wrong. As such, we
+   * use lossless casts to guarantee safe type conversions. This was introduced by #1550.
+   *
    * Use the ExpressionEvaluator as a powerful, but slower fallback if no dedicated scanning implementation exists for
    * an expression.
    */
@@ -293,6 +309,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   }
 
   if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+    // The ColumnBetweenTableScanImpl expects both values to be of the same data type as the column that is being
+    // scanned. We retrieve the lower and upper bounds of the BetweenExpression, perform a
+    // lossless_predicate_variant_cast into the column's data type and reassemble the between condition.
+
     auto predicate_condition = between_expression->predicate_condition;
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
 
@@ -300,8 +320,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
     if (lower_bound_value) {
-      const auto adjusted_predicate_and_value =
-          lossless_predicate_variant_cast(lower_condition, *lower_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
+          lower_condition, *lower_bound_value, between_expression->value()->data_type());
       if (adjusted_predicate_and_value) {
         lower_condition = adjusted_predicate_and_value->first;
         lower_bound_value = adjusted_predicate_and_value->second;
@@ -312,8 +332,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
     if (upper_bound_value) {
-      const auto adjusted_predicate_and_value =
-          lossless_predicate_variant_cast(upper_condition, *upper_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
+          upper_condition, *upper_bound_value, between_expression->value()->data_type());
       if (adjusted_predicate_and_value) {
         upper_condition = adjusted_predicate_and_value->first;
         upper_bound_value = adjusted_predicate_and_value->second;
@@ -324,7 +344,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     predicate_condition = conditions_to_between(lower_condition, upper_condition);
 
-    // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
+    // Predicate pattern: <column of type T> BETWEEN <value of type T> AND <value of type T>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,

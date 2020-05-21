@@ -96,7 +96,15 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     }
 
     i += output_chunk_row_count;
-    output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+    auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
+    output_chunk->finalize();
+    // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit
+    // operator.
+    const auto& sorted_by = input_chunk->sorted_by();
+    if (!sorted_by.empty()) {
+      output_chunk->set_sorted_by(sorted_by);
+    }
+    output_chunks.emplace_back(output_chunk);
   }
 
   return std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));

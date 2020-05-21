@@ -26,9 +26,9 @@ std::string ValueExpression::description(const DescriptionMode mode) const {
   }
 
   if (value.type() == typeid(int64_t)) {
-    stream << "l";
+    stream << "L";
   } else if (value.type() == typeid(float)) {
-    stream << "f";
+    stream << "F";
   }
 
   return stream.str();

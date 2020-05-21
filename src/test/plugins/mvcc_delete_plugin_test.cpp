@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
-#include "../utils/plugin_test_utils.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"

@@ -166,7 +166,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
       break;
     case LQPNodeType::Sort: {
       const auto& sort_node = std::static_pointer_cast<SortNode>(node);
-      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->order_by_modes, left_input_adapted);
+      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->sort_modes, left_input_adapted);
       break;
     }
     case LQPNodeType::Validate:
