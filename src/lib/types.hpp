@@ -213,7 +213,9 @@ enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue
 // see union_positions.hpp for details.
 enum class SetOperationMode { Unique, All, Positions };
 
-enum class SortMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
+// According to the SQL standard, the position of NULLs is implementation-defined. In Hyrise, NULLs come before all
+// values, both for ascending and descending sorts. See sort.cpp for details.
+enum class SortMode { Ascending, Descending };
 
 enum class TableType { References, Data };
 

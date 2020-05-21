@@ -141,8 +141,8 @@ class Chunk : private Noncopyable {
   size_t memory_usage(const MemoryUsageCalculationMode mode) const;
 
   /**
-   * If a chunk is sorted in any way, the sort mode (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
-   * the ColumnIDs of the segments by which it is sorted will be returned.
+   * If a chunk is sorted in any way, the sort mode (Ascending/Descending) and the ColumnIDs of the segments by which
+   * it is sorted will be returned.
    *
    * In a chunk, multiple segments may be sorted independently. For example, in a table storing orders, both the order
    * id and date of incoming orders might have incrementing values. In this case, sorted_by has two entries (assuming

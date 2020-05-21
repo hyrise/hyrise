@@ -52,7 +52,7 @@ const std::string& TableScan::name() const {
 }
 
 std::string TableScan::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
 
@@ -196,7 +196,7 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     return predicate;
   }
 
-  const auto new_predicate = predicate->deep_copy();
+  auto new_predicate = predicate->deep_copy();
   for (auto& argument : new_predicate->arguments) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(argument);
     if (!subquery || subquery->is_correlated()) continue;
