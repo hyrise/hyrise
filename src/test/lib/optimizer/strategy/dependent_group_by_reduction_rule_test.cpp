@@ -121,17 +121,18 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   }
   {
     auto lqp =
-      AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0),
-                                                sum_(column_a_1), sum_(column_a_2)), stored_table_node_a);  // NOLINT
+    AggregateNode::make(expression_vector(column_a_0, column_a_1),
+                        expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)),
+      stored_table_node_a);  // NOLINT
 
     const auto actual_lqp = apply_rule(rule, lqp);
 
     const auto expected_lqp =
-      ProjectionNode::make(
-      expression_vector(column_a_0, column_a_1, sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)),
-        AggregateNode::make(expression_vector(column_a_0),
+    ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0), sum_(column_a_1),
+                                                                                                  sum_(column_a_2)),
+      AggregateNode::make(expression_vector(column_a_0),
                           expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)),
-         stored_table_node_a));  // NOLINT
+        stored_table_node_a));  // NOLINT
 
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -254,7 +255,9 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   // clang-format off
   auto lqp =
   AggregateNode::make(expression_vector(column_a_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0)),
-    JoinNode::make(JoinMode::FullOuter, equals_(column_a_0, column_b_0), stored_table_node_a, stored_table_node_b));
+    JoinNode::make(JoinMode::FullOuter, equals_(column_a_0, column_b_0),
+      stored_table_node_a,
+      stored_table_node_b));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
@@ -296,8 +299,8 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
 
   // clang-format off
   auto lqp =
-    AggregateNode::make(expression_vector(a, b, c, d), expression_vector(sum_(e)),
-      mock_node);
+  AggregateNode::make(expression_vector(a, b, c, d), expression_vector(sum_(e)),
+    mock_node);
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
