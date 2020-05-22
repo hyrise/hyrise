@@ -2,7 +2,8 @@
 
 set -e
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
+benchmarks='hyriseBenchmarkJoinOrder'
+#benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
 num_mt_clients=50
 
 if [ $# -ne 2 ]
@@ -72,9 +73,9 @@ do
     ( ${build_folder}/$benchmark -t 10 --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log" # TODO remove -t
   done
   cd "${build_folder}"
-done
 
-touch "benchmark_all_results/complete_${commit}"
+  touch "benchmark_all_results/complete_${commit}"
+done
 
 echo "Comparing ${start_commit} and ${end_commit}..."
 
@@ -92,14 +93,14 @@ echo "| Hostname | $(hostname) |"
 if [[ "$(uname)" == 'Darwin' ]]; then
   echo "| Model | $(defaults read ~/Library/Preferences/com.apple.SystemProfiler.plist 'CPU Names' | cut -sd '"' -f 4) |"
   echo "| CPU | $(sysctl -n machdep.cpu.brand_string) |"
-  echo "| Memory | $(system_profiler SPHardwareDataType | grep "  Memory:" | sed 's/Memory://') |"
+  echo "| Memory | $(system_profiler SPHardwareDataType | grep '  Memory:' | sed 's/Memory://') |"
 else
-  echo "| CPU | $(lscpu | grep "Model name" | sed 's/Model name: *//') |"
+  echo "| CPU | $(lscpu | grep 'Model name' | sed 's/Model name: *//') |"
   echo "| Memory | $(free --si -h | grep Mem | awk '{ print $4 "B" }') |"
   if [ -x /usr/bin/numactl ]; then
     for bind_type in nodebind membind
     do
-      echo "| numactl nodebind | $(numactl --show | grep --color=never $(bind_type)) |"
+      echo "| numactl nodebind | $(numactl --show | grep --color=never ${bind_type}) |"
     done
   else
     echo "| numactl | binary not found |"
