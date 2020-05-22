@@ -1,12 +1,10 @@
 #include "base_test.hpp"
 
-#include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -62,12 +60,12 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
   const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
   EXPECT_NE(*alias_node, *alias_node_other_expressions);
-  const auto alias_node_other_input_left = AliasNode::make(expressions, aliases, other_mock_node);
-  EXPECT_NE(*alias_node, *alias_node_other_input_left);
+  const auto alias_node_other_left_input = AliasNode::make(expressions, aliases, other_mock_node);
+  EXPECT_NE(*alias_node, *alias_node_other_left_input);
 
   EXPECT_NE(alias_node->hash(), alias_node_other_expressions->hash());
-  EXPECT_EQ(alias_node->hash(), alias_node_other_input_left->hash());
-  // alias_node == alias_node_other_input_left is false but the hash codes of these nodes are equal. The reason for this
+  EXPECT_EQ(alias_node->hash(), alias_node_other_left_input->hash());
+  // alias_node == alias_node_other_left_input is false but the hash codes of these nodes are equal. The reason for this
   // is in the LQPColumnExpressions: Semantically equal LQPColumnExpressions are not equal if they refere to different
   // original_nodes. This allows, e.g., for self-joins. The hash function does not take the actual pointer into account,
   // so the hashes of semantically equal LQPColumnExpressions are equal. The following lines show this fact in detail:

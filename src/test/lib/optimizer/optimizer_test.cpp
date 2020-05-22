@@ -63,7 +63,7 @@ TEST_F(OptimizerTest, AssertsValidOutputs) {
       node_a));
   // clang-format on
 
-  auto out_of_plan_node = LimitNode::make(value_(10), lqp->input_left());
+  auto out_of_plan_node = LimitNode::make(value_(10), lqp->left_input());
 
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
 }
@@ -112,7 +112,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
-      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(root->input_left());
+      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(root->left_input());
       if (!projection_node) return;
       projection_node->node_expressions[0] = out_of_plan_expression;
     }
@@ -195,7 +195,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     auto subquery_a_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(
         predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
     ASSERT_TRUE(subquery_a_a);
-    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->input_left());
+    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
     ASSERT_TRUE(projection_node);
     auto subquery_a_b =
         std::dynamic_pointer_cast<LQPSubqueryExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
@@ -244,12 +244,12 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     auto subquery_a_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(
         predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
     ASSERT_TRUE(subquery_a_a);
-    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(optimized_lqp->input_left());
+    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(optimized_lqp->left_input());
     ASSERT_TRUE(projection_node);
     auto subquery_a_b =
         std::dynamic_pointer_cast<LQPSubqueryExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
     ASSERT_TRUE(subquery_a_b);
-    auto predicate_node_b = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp->input_left()->input_left());
+    auto predicate_node_b = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp->left_input()->left_input());
     ASSERT_TRUE(predicate_node_b);
     auto subquery_b_a =
         std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_b->predicate()->arguments.at(1));

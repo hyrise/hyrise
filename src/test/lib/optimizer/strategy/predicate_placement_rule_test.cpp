@@ -79,50 +79,50 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
 
 TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
-  join_node->set_input_left(_table_a);
-  join_node->set_input_right(_table_b);
+  join_node->set_left_input(_table_a);
+  join_node->set_right_input(_table_b);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(greater_than_(_a_a, 10));
-  predicate_node_0->set_input_left(join_node);
+  predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
 
   EXPECT_EQ(reordered, join_node);
-  EXPECT_EQ(reordered->input_left(), predicate_node_0);
-  EXPECT_EQ(reordered->input_right(), _table_b);
-  EXPECT_EQ(reordered->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
+  EXPECT_EQ(reordered->right_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
-  join_node->set_input_left(_table_a);
-  join_node->set_input_right(_table_b);
+  join_node->set_left_input(_table_a);
+  join_node->set_right_input(_table_b);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
-  predicate_node_0->set_input_left(join_node);
+  predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
 
   EXPECT_EQ(reordered, join_node);
-  EXPECT_EQ(reordered->input_left(), predicate_node_0);
-  EXPECT_EQ(reordered->input_right(), _table_b);
-  EXPECT_EQ(reordered->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
+  EXPECT_EQ(reordered->right_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleBothSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_b, _b_a));
-  join_node->set_input_left(_table_a);
-  join_node->set_input_right(_table_b);
+  join_node->set_left_input(_table_a);
+  join_node->set_right_input(_table_b);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(greater_than_(_a_a, _b_b));
-  predicate_node_0->set_input_left(join_node);
+  predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
 
   EXPECT_EQ(reordered, predicate_node_0);
-  EXPECT_EQ(reordered->input_left(), join_node);
-  EXPECT_EQ(reordered->input_left()->input_right(), _table_b);
-  EXPECT_EQ(reordered->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), join_node);
+  EXPECT_EQ(reordered->left_input()->right_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
@@ -250,56 +250,56 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
   // We can push `a > 4` under the projection because it does not depend on the subquery.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, value_(4)));
-  predicate_node->set_input_left(_projection_pushdown_node);
+  predicate_node->set_left_input(_projection_pushdown_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(reordered, _projection_pushdown_node);
-  EXPECT_EQ(reordered->input_left(), predicate_node);
-  EXPECT_EQ(reordered->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
   // We can push `a > b` under the projection because it does not depend on the subquery.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
-  predicate_node->set_input_left(_projection_pushdown_node);
+  predicate_node->set_left_input(_projection_pushdown_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(reordered, _projection_pushdown_node);
-  EXPECT_EQ(reordered->input_left(), predicate_node);
-  EXPECT_EQ(reordered->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
   // We can't push `(SELECT ...) > a.b` under the projection because the projection is responsible for the SELECT.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_subquery_c, _a_b));
-  predicate_node->set_input_left(_projection_pushdown_node);
+  predicate_node->set_left_input(_projection_pushdown_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(reordered, predicate_node);
-  EXPECT_EQ(reordered->input_left(), _projection_pushdown_node);
-  EXPECT_EQ(reordered->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), _projection_pushdown_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   // Even if one predicate cannot be pushed down, others might be better off
 
   auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_subquery_c, _a_b));
-  predicate_node_1->set_input_left(_projection_pushdown_node);
+  predicate_node_1->set_left_input(_projection_pushdown_node);
 
   auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
-  predicate_node_2->set_input_left(predicate_node_1);
+  predicate_node_2->set_left_input(predicate_node_1);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
 
   EXPECT_EQ(reordered, predicate_node_1);
-  EXPECT_EQ(reordered->input_left(), _projection_pushdown_node);
-  EXPECT_EQ(reordered->input_left()->input_left(), predicate_node_2);
-  EXPECT_EQ(reordered->input_left()->input_left()->input_left(), _table_a);
+  EXPECT_EQ(reordered->left_input(), _projection_pushdown_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_2);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePlacementRuleTest, SemiPushDown) {

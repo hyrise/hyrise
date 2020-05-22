@@ -29,20 +29,22 @@ class StoredTableNode;
  * the list of aggregates via the ANY() function:
  * 		Aggregate: Grouping = [ c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment],
  * 				   Aggregates = [ sum(l_extendedprice * (1 - l_discount)) ]
- *
- *          >>>
- *
+ *		>>>
  * 		Aggregate: Grouping = [ c_custkey, c_acctbal, c_phone, n_name, c_address, c_comment],
  * 				   Aggregates = [ SUM(l_extendedprice * (1 - l_discount)), ANY(c_name) ]
 
  * ANY() selects "any" value from the list of values per group (since we group by the functional dependency's
  * determinant column(s) in this case the group is ensured to be of size one). This rule implements choke point 1.4 of
- * "TPC-H Analyzed: Hidden Messages and Lessons Learned from an Influential Benchmark" (Boncz et al.).
- * However, not all queries listed in the paper can be optimized yet, since Hyrise lacks foreign key support.
+ * "TPC-H Analyzed: Hidden Messages and Lessons Learned from an Influential Benchmark" (Boncz et al.). Due to the
+ * current lack of foreign key support, not all queries that are listed in the paper can be optimized.
+ *
+ * For this rule, we search the list of group-by columns for functional dependencies (as of now: primary key columns as
+ * well as unique columns, given by soft constraints). Since unique columns might include NULLs (similar to previously
+ * executed outer joins), we only consider non-nullable group-by columns.
  */
 class DependentGroupByReductionRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& root_lqp) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 };
 
 }  // namespace opossum

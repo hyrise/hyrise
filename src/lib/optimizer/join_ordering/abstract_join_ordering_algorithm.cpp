@@ -32,11 +32,11 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
-  predicate_nodes_and_cost.front().first->set_input_left(lqp);
+  predicate_nodes_and_cost.front().first->set_left_input(lqp);
 
   for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes_and_cost.size();
        ++predicate_node_idx) {
-    predicate_nodes_and_cost[predicate_node_idx].first->set_input_left(
+    predicate_nodes_and_cost[predicate_node_idx].first->set_left_input(
         predicate_nodes_and_cost[predicate_node_idx - 1].first);
   }
 

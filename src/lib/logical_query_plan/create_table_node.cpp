@@ -26,7 +26,7 @@ size_t CreateTableNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> CreateTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return CreateTableNode::make(table_name, if_not_exists, input_left());
+  return CreateTableNode::make(table_name, if_not_exists, left_input());
 }
 
 bool CreateTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {

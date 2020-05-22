@@ -625,8 +625,8 @@ TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format on
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 27.5f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()), 55.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()->input_left()), 100.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 55.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateMultiple) {
@@ -641,10 +641,10 @@ TEST_F(CardinalityEstimatorTest, PredicateMultiple) {
   // clang-format on
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 1.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()), 2.1623178f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()->input_left()), 4.7571f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()->input_left()->input_left()), 4.7571f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()->input_left()->input_left()->input_left()),
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 2.1623178f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 4.7571f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()), 4.7571f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()->left_input()->left_input()),
                   39.3542f);
 }
 
@@ -679,8 +679,8 @@ TEST_F(CardinalityEstimatorTest, PredicateMultipleWithCorrelatedParameter) {
   // clang-format on
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 45.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()), 90.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->input_left()->input_left()), 100.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 90.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithNull) {

@@ -48,7 +48,7 @@ class GroupKeyIndexTest;
  * x¹: Mark for the ending position.
  * x²: NULL positions are stored in `_null_positions` of the AbstractIndex
  *
- * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey
+ * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */
 class GroupKeyIndex : public AbstractIndex {
   friend class GroupKeyIndexTest;

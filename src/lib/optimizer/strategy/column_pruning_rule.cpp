@@ -97,7 +97,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
         }
       }
       if (has_count_star) {
-        for (const auto& input_expression : node->input_left()->column_expressions()) {
+        for (const auto& input_expression : node->left_input()->column_expressions()) {
           locally_required_expressions.emplace(input_expression);
         }
         break;
@@ -133,7 +133,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           continue;
         }
 
-        gather_expressions_not_computed_by_expression_evaluator(expression, node->input_left()->column_expressions(),
+        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->column_expressions(),
                                                                 locally_required_expressions);
       }
     } break;
@@ -171,12 +171,12 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Export:
     case LQPNodeType::Update:
     case LQPNodeType::ChangeMetaTable: {
-      const auto& input_left_expressions = node->input_left()->column_expressions();
-      locally_required_expressions.insert(input_left_expressions.begin(), input_left_expressions.end());
+      const auto& left_input_expressions = node->left_input()->column_expressions();
+      locally_required_expressions.insert(left_input_expressions.begin(), left_input_expressions.end());
 
-      if (node->input_right()) {
-        const auto& input_right_expressions = node->input_right()->column_expressions();
-        locally_required_expressions.insert(input_right_expressions.begin(), input_right_expressions.end());
+      if (node->right_input()) {
+        const auto& right_input_expressions = node->right_input()->column_expressions();
+        locally_required_expressions.insert(right_input_expressions.begin(), right_input_expressions.end());
       }
     } break;
   }
@@ -199,7 +199,7 @@ void recursively_gather_required_expressions(
 
   // Once all nodes that may require columns from this node (i.e., this node's outputs) have been visited, we can
   // recurse into this node's inputs.
-  for (const auto& input : {node->input_left(), node->input_right()}) {
+  for (const auto& input : {node->left_input(), node->right_input()}) {
     if (!input) continue;
 
     // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
@@ -231,16 +231,16 @@ void try_join_to_semi_rewrite(
   if (join_node->join_mode != JoinMode::Inner) return;
 
   // Check whether the left/right inputs are actually needed by following operators
-  auto input_left_is_used = false;
-  auto input_right_is_used = false;
+  auto left_input_is_used = false;
+  auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
     for (const auto& required_expression : required_expressions_by_node.at(output)) {
-      if (expression_evaluable_on_lqp(required_expression, *node->input_left())) input_left_is_used = true;
-      if (expression_evaluable_on_lqp(required_expression, *node->input_right())) input_right_is_used = true;
+      if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_is_used = true;
+      if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_is_used = true;
     }
   }
-  DebugAssert(input_left_is_used || input_right_is_used, "Did not expect a useless join");
-  if (input_left_is_used && input_right_is_used) return;
+  DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
+  if (left_input_is_used && right_input_is_used) return;
 
   // Check whether the join predicates operate on unique columns.
   auto join_is_unique_on_left_side = false;
@@ -280,14 +280,14 @@ void try_join_to_semi_rewrite(
   // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
   // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
   // join into a semi join.
-  if (!input_left_is_used && join_is_unique_on_left_side) {
+  if (!left_input_is_used && join_is_unique_on_left_side) {
     join_node->join_mode = JoinMode::Semi;
-    const auto temp = join_node->input_left();
-    join_node->set_input_left(join_node->input_right());
-    join_node->set_input_right(temp);
+    const auto temp = join_node->left_input();
+    join_node->set_left_input(join_node->right_input());
+    join_node->set_right_input(temp);
   }
 
-  if (!input_right_is_used && join_is_unique_on_right_side) {
+  if (!right_input_is_used && join_is_unique_on_right_side) {
     join_node->join_mode = JoinMode::Semi;
   }
 }

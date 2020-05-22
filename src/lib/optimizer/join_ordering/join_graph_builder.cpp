@@ -59,8 +59,8 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       }
 
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
-        _traverse(node->input_left());
-        _traverse(node->input_right());
+        _traverse(node->left_input());
+        _traverse(node->right_input());
       } else {
         _vertices.emplace_back(node);
       }
@@ -70,7 +70,7 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
       _predicates.emplace_back(predicate_node->predicate());
 
-      _traverse(node->input_left());
+      _traverse(node->left_input());
     } break;
 
     default: {
@@ -87,7 +87,7 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
 
       const auto left_predicate = predicate_node->predicate();
 
-      const auto base_node = predicate_node->input_left();
+      const auto base_node = predicate_node->left_input();
 
       if (base_node->output_count() > 1) {
         return {base_node, left_predicate};
@@ -100,8 +100,8 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
     } break;
 
     default:
-      Assert(node->input_left() && !node->input_right(), "");
-      return _parse_predicate(node->input_left());
+      Assert(node->left_input() && !node->right_input(), "");
+      return _parse_predicate(node->left_input());
   }
 }
 

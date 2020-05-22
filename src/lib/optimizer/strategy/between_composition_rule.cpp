@@ -160,7 +160,7 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
 **/
 void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) {
   // Store original input and output
-  auto input = predicates.back()->input_left();
+  auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
@@ -335,11 +335,11 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
 
   // Insert predicate nodes to LQP
   // Connect last predicate to chain input
-  predicate_nodes.back()->set_input_left(input);
+  predicate_nodes.back()->set_left_input(input);
 
   // Connect predicates
   for (size_t predicate_index = 0; predicate_index < predicate_nodes.size() - 1; predicate_index++) {
-    predicate_nodes[predicate_index]->set_input_left(predicate_nodes[predicate_index + 1]);
+    predicate_nodes[predicate_index]->set_left_input(predicate_nodes[predicate_index + 1]);
   }
 
   // Connect first predicates to chain output
@@ -362,14 +362,14 @@ void BetweenCompositionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
 
       predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
 
-      current_node = current_node->input_left();
+      current_node = current_node->left_input();
     }
 
     // A substitution is also possible with only 1 predicate_node, if it is a LogicalExpression with
     // the LogicalOperator::AND
     if (!predicate_nodes.empty()) {
       // A chain of predicates was found. Continue rule with last input
-      auto next_node = predicate_nodes.back()->input_left();
+      auto next_node = predicate_nodes.back()->left_input();
       _replace_predicates(predicate_nodes);
       apply_to(next_node);
       return;

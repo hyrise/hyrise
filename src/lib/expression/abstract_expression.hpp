@@ -155,9 +155,6 @@ struct ExpressionSharedPtrEqual final {
   }
 };
 
-// Note that operator== ignores the equality functions:
-// https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
-
 template <typename Value>
 using ExpressionUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractExpression>, Value, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;

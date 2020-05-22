@@ -73,17 +73,17 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[4] = JoinNode::make(JoinMode::Cross);
     _nodes[5] = JoinNode::make(JoinMode::Cross);
 
-    _nodes[5]->set_input_right(_nodes[7]);
-    _nodes[0]->set_input_right(_nodes[4]);
-    _nodes[4]->set_input_left(_nodes[5]);
-    _nodes[4]->set_input_right(_nodes[7]);
-    _nodes[5]->set_input_left(_nodes[6]);
-    _nodes[2]->set_input_left(_nodes[5]);
-    _nodes[1]->set_input_right(_nodes[3]);
-    _nodes[3]->set_input_left(_nodes[5]);
-    _nodes[3]->set_input_right(_nodes[7]);
-    _nodes[1]->set_input_left(_nodes[2]);
-    _nodes[0]->set_input_left(_nodes[1]);
+    _nodes[5]->set_right_input(_nodes[7]);
+    _nodes[0]->set_right_input(_nodes[4]);
+    _nodes[4]->set_left_input(_nodes[5]);
+    _nodes[4]->set_right_input(_nodes[7]);
+    _nodes[5]->set_left_input(_nodes[6]);
+    _nodes[2]->set_left_input(_nodes[5]);
+    _nodes[1]->set_right_input(_nodes[3]);
+    _nodes[3]->set_left_input(_nodes[5]);
+    _nodes[3]->set_right_input(_nodes[7]);
+    _nodes[1]->set_left_input(_nodes[2]);
+    _nodes[0]->set_left_input(_nodes[1]);
   }
 
   std::shared_ptr<Table> table_int_int;
@@ -119,80 +119,80 @@ TEST_F(LogicalQueryPlanTest, LQPColumnExpressionHash) {
 }
 
 TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
-  ASSERT_EQ(_mock_node_a->input_left(), nullptr);
-  ASSERT_EQ(_mock_node_a->input_right(), nullptr);
+  ASSERT_EQ(_mock_node_a->left_input(), nullptr);
+  ASSERT_EQ(_mock_node_a->right_input(), nullptr);
   ASSERT_TRUE(_mock_node_a->outputs().empty());
 
-  _predicate_node_a->set_input_left(_mock_node_a);
+  _predicate_node_a->set_left_input(_mock_node_a);
 
   ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
-  ASSERT_EQ(_predicate_node_a->input_left(), _mock_node_a);
-  ASSERT_EQ(_predicate_node_a->input_right(), nullptr);
+  ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
+  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 
-  _projection_node->set_input_left(_predicate_node_a);
+  _projection_node->set_left_input(_predicate_node_a);
 
   ASSERT_EQ(_predicate_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_projection_node});
-  ASSERT_EQ(_projection_node->input_left(), _predicate_node_a);
-  ASSERT_EQ(_projection_node->input_right(), nullptr);
+  ASSERT_EQ(_projection_node->left_input(), _predicate_node_a);
+  ASSERT_EQ(_projection_node->right_input(), nullptr);
   ASSERT_TRUE(_projection_node->outputs().empty());
 
   ASSERT_ANY_THROW(_projection_node->get_input_side(_mock_node_a));
 }
 
 TEST_F(LogicalQueryPlanTest, SimpleClearOutputs) {
-  _predicate_node_a->set_input_left(_mock_node_a);
+  _predicate_node_a->set_left_input(_mock_node_a);
 
   ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
-  ASSERT_EQ(_predicate_node_a->input_left(), _mock_node_a);
-  ASSERT_EQ(_predicate_node_a->input_right(), nullptr);
+  ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
+  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 
   _mock_node_a->clear_outputs();
 
   ASSERT_TRUE(_mock_node_a->outputs().empty());
-  ASSERT_EQ(_predicate_node_a->input_left(), nullptr);
-  ASSERT_EQ(_predicate_node_a->input_right(), nullptr);
+  ASSERT_EQ(_predicate_node_a->left_input(), nullptr);
+  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 }
 
 TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
-  ASSERT_EQ(_mock_node_a->input_left(), nullptr);
-  ASSERT_EQ(_mock_node_a->input_right(), nullptr);
+  ASSERT_EQ(_mock_node_a->left_input(), nullptr);
+  ASSERT_EQ(_mock_node_a->right_input(), nullptr);
   ASSERT_TRUE(_mock_node_a->outputs().empty());
 
-  _predicate_node_a->set_input_left(_mock_node_a);
+  _predicate_node_a->set_left_input(_mock_node_a);
 
   ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
-  ASSERT_EQ(_predicate_node_a->input_left(), _mock_node_a);
-  ASSERT_EQ(_predicate_node_a->input_right(), nullptr);
+  ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
+  ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 
-  _predicate_node_b->set_input_left(_predicate_node_a);
+  _predicate_node_b->set_left_input(_predicate_node_a);
 
   ASSERT_EQ(_predicate_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_b});
-  ASSERT_EQ(_predicate_node_b->input_left(), _predicate_node_a);
-  ASSERT_EQ(_predicate_node_b->input_right(), nullptr);
+  ASSERT_EQ(_predicate_node_b->left_input(), _predicate_node_a);
+  ASSERT_EQ(_predicate_node_b->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_b->outputs().empty());
 
-  _projection_node->set_input_left(_predicate_node_b);
+  _projection_node->set_left_input(_predicate_node_b);
 
   ASSERT_EQ(_predicate_node_b->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_projection_node});
-  ASSERT_EQ(_projection_node->input_left(), _predicate_node_b);
-  ASSERT_EQ(_projection_node->input_right(), nullptr);
+  ASSERT_EQ(_projection_node->left_input(), _predicate_node_b);
+  ASSERT_EQ(_projection_node->right_input(), nullptr);
   ASSERT_TRUE(_projection_node->outputs().empty());
 }
 
 TEST_F(LogicalQueryPlanTest, TwoInputsTest) {
-  ASSERT_EQ(_join_node->input_left(), nullptr);
-  ASSERT_EQ(_join_node->input_right(), nullptr);
+  ASSERT_EQ(_join_node->left_input(), nullptr);
+  ASSERT_EQ(_join_node->right_input(), nullptr);
   ASSERT_TRUE(_join_node->outputs().empty());
 
-  _join_node->set_input_left(_mock_node_a);
-  _join_node->set_input_right(_mock_node_b);
+  _join_node->set_left_input(_mock_node_a);
+  _join_node->set_right_input(_mock_node_b);
 
-  ASSERT_EQ(_join_node->input_left(), _mock_node_a);
-  ASSERT_EQ(_join_node->input_right(), _mock_node_b);
+  ASSERT_EQ(_join_node->left_input(), _mock_node_a);
+  ASSERT_EQ(_join_node->right_input(), _mock_node_b);
   ASSERT_TRUE(_join_node->outputs().empty());
 
   ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_join_node});
@@ -217,8 +217,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTree) {
   lqp_remove_node(_nodes[2]);
 
   EXPECT_TRUE(_nodes[2]->outputs().empty());
-  EXPECT_EQ(_nodes[2]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[2]->input_right(), nullptr);
+  EXPECT_EQ(_nodes[2]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[2]->right_input(), nullptr);
 
   // Make sure _node[1], _node[3] and _node[4] are the only outputs _nodes[5] has
   EXPECT_EQ(_nodes[5]->outputs().size(), 3u);
@@ -235,13 +235,13 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 
   EXPECT_TRUE(_nodes[6]->outputs().empty());
   EXPECT_TRUE(_nodes[7]->outputs().empty());
-  EXPECT_EQ(_nodes[6]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[6]->input_right(), nullptr);
-  EXPECT_EQ(_nodes[7]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[7]->input_right(), nullptr);
-  EXPECT_EQ(_nodes[5]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[3]->input_right(), nullptr);
-  EXPECT_EQ(_nodes[4]->input_right(), nullptr);
+  EXPECT_EQ(_nodes[6]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_input(), nullptr);
+  EXPECT_EQ(_nodes[7]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_input(), nullptr);
+  EXPECT_EQ(_nodes[5]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[3]->right_input(), nullptr);
+  EXPECT_EQ(_nodes[4]->right_input(), nullptr);
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
@@ -251,8 +251,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
 
   // Make sure _nodes[5] is untied from the LQP
   EXPECT_TRUE(_nodes[5]->outputs().empty());
-  EXPECT_EQ(_nodes[5]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[5]->input_right(), nullptr);
+  EXPECT_EQ(_nodes[5]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[5]->right_input(), nullptr);
 
   // Make sure new_node is the only output of _nodes[6]
   EXPECT_EQ(_nodes[6]->outputs().size(), 1u);
@@ -279,13 +279,13 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
 
   // Make sure _nodes[6] is untied from the LQP
   EXPECT_TRUE(_nodes[6]->outputs().empty());
-  EXPECT_EQ(_nodes[6]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[6]->input_right(), nullptr);
+  EXPECT_EQ(_nodes[6]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_input(), nullptr);
 
   // Make sure _nodes[7] is untied from the LQP
   EXPECT_TRUE(_nodes[7]->outputs().empty());
-  EXPECT_EQ(_nodes[7]->input_left(), nullptr);
-  EXPECT_EQ(_nodes[7]->input_right(), nullptr);
+  EXPECT_EQ(_nodes[7]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_input(), nullptr);
 
   ASSERT_LQP_TIE(_nodes[5], LQPInputSide::Left, new_node_a);
   ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Right, new_node_b);
@@ -298,7 +298,7 @@ TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
 
   const auto copied_lqp = lqp->deep_copy();
   const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
-  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->input_left());
+  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
 
   auto node_mapping = lqp_create_node_mapping(lqp, copied_lqp);
 
@@ -318,7 +318,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   EXPECT_LQP_EQ(copied_lqp, lqp);
 
   const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
-  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->input_left());
+  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
 
   // Nodes in copied LQP should have different pointers
   EXPECT_NE(projection_node, copied_projection_node);
@@ -414,7 +414,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {
 
   EXPECT_LQP_EQ(copied_lqp, lqp);
   const auto copied_projection_a = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
-  const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->input_left());
+  const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->left_input());
 
   const auto copied_subquery_a =
       std::dynamic_pointer_cast<LQPSubqueryExpression>(copied_lqp->column_expressions().at(1));

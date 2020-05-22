@@ -6,7 +6,6 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "functional_dependency.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -51,8 +50,6 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
-class LQPColumnExpression;
-
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
@@ -68,16 +65,16 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @defgroup Access the outputs/inputs
    *
-   * The outputs are implicitly set and removed in set_input_left()/set_input_right()/set_input().
+   * The outputs are implicitly set and removed in set_left_input()/set_right_input()/set_input().
    *
-   * set_input() is a shorthand for set_input_left() or set_input_right(), useful if the side is a runtime value.
+   * set_input() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value.
    * @{
    */
-  std::shared_ptr<AbstractLQPNode> input_left() const;
-  std::shared_ptr<AbstractLQPNode> input_right() const;
+  std::shared_ptr<AbstractLQPNode> left_input() const;
+  std::shared_ptr<AbstractLQPNode> right_input() const;
   std::shared_ptr<AbstractLQPNode> input(LQPInputSide side) const;
-  void set_input_left(const std::shared_ptr<AbstractLQPNode>& left);
-  void set_input_right(const std::shared_ptr<AbstractLQPNode>& right);
+  void set_left_input(const std::shared_ptr<AbstractLQPNode>& left);
+  void set_right_input(const std::shared_ptr<AbstractLQPNode>& right);
   void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input);
 
   size_t input_count() const;
@@ -134,7 +131,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
    *         has a special treatment (it is represented as an LQPColumnExpression with an INVALID_COLUMN_ID), it might
-   *         be evaluable even if find_column_id returns nullopt.
+  *          be evaluable even if find_column_id returns nullopt.
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 
@@ -147,12 +144,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return whether the output column at @param column_id is nullable
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;
-
-  /**
-   * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
-   *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
-   */
-  [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
    * Perform a deep equality check
@@ -205,7 +196,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * @{
-   * For internal usage in set_input_left(), set_input_right(), set_input(), remove_output()
+   * For internal usage in set_left_input(), set_right_input(), set_input(), remove_output()
    * Add or remove a output without manipulating this output's input ptr.
    */
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
@@ -231,8 +222,6 @@ struct LQPNodeSharedPtrEqual final {
   }
 };
 
-// Note that operator== ignores the equality function:
-// https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 template <typename Value>
 using LQPNodeUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;

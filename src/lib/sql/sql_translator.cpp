@@ -118,17 +118,17 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
  * Is the expression a predicate that our Join Operators can process directly?
  * That is, is it of the form <column> <predicate_condition> <column>?
  */
-bool is_trivial_join_predicate(const AbstractExpression& expression, const AbstractLQPNode& input_left,
-                               const AbstractLQPNode& input_right) {
+bool is_trivial_join_predicate(const AbstractExpression& expression, const AbstractLQPNode& left_input,
+                               const AbstractLQPNode& right_input) {
   if (expression.type != ExpressionType::Predicate) return false;
 
   const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
   if (!binary_predicate_expression) return false;
 
-  const auto left_in_left = input_left.find_column_id(*binary_predicate_expression->left_operand());
-  const auto right_in_right = input_right.find_column_id(*binary_predicate_expression->right_operand());
-  const auto right_in_left = input_left.find_column_id(*binary_predicate_expression->right_operand());
-  const auto left_in_right = input_right.find_column_id(*binary_predicate_expression->left_operand());
+  const auto left_in_left = left_input.find_column_id(*binary_predicate_expression->left_operand());
+  const auto right_in_right = right_input.find_column_id(*binary_predicate_expression->right_operand());
+  const auto right_in_left = left_input.find_column_id(*binary_predicate_expression->right_operand());
+  const auto left_in_right = right_input.find_column_id(*binary_predicate_expression->left_operand());
 
   return (left_in_left && right_in_right) || (right_in_left && left_in_right);
 }
@@ -769,8 +769,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   auto left_state = _translate_table_ref(*join.left);
   auto right_state = _translate_table_ref(*join.right);
 
-  auto input_left_lqp = left_state.lqp;
-  auto input_right_lqp = right_state.lqp;
+  auto left_input_lqp = left_state.lqp;
+  auto right_input_lqp = right_state.lqp;
 
   // left_state becomes the result state
   auto result_state = std::move(left_state);
@@ -792,9 +792,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   for (const auto& predicate : raw_join_predicate_cnf) {
-    if (expression_evaluable_on_lqp(predicate, *input_left_lqp)) {
+    if (expression_evaluable_on_lqp(predicate, *left_input_lqp)) {
       left_local_predicates.emplace_back(predicate);
-    } else if (expression_evaluable_on_lqp(predicate, *input_right_lqp)) {
+    } else if (expression_evaluable_on_lqp(predicate, *right_input_lqp)) {
       right_local_predicates.emplace_back(predicate);
     } else {
       // Accept any kind of predicate here and let the LQPTranslator fail on those that it doesn't support
@@ -814,12 +814,12 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
    */
   if (join_mode != JoinMode::Left && join_mode != JoinMode::FullOuter) {
     for (const auto& left_local_predicate : left_local_predicates) {
-      input_left_lqp = _translate_predicate_expression(left_local_predicate, input_left_lqp);
+      left_input_lqp = _translate_predicate_expression(left_local_predicate, left_input_lqp);
     }
   }
   if (join_mode != JoinMode::Right && join_mode != JoinMode::FullOuter) {
     for (const auto& right_local_predicate : right_local_predicates) {
-      input_right_lqp = _translate_predicate_expression(right_local_predicate, input_right_lqp);
+      right_input_lqp = _translate_predicate_expression(right_local_predicate, right_input_lqp);
     }
   }
 
@@ -829,11 +829,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   if (join_mode != JoinMode::Inner && join_predicates.size() > 1) {
-    lqp = JoinNode::make(join_mode, join_predicates, input_left_lqp, input_right_lqp);
+    lqp = JoinNode::make(join_mode, join_predicates, left_input_lqp, right_input_lqp);
   } else {
     const auto join_predicate_iter =
         std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
-          return is_trivial_join_predicate(*join_predicate, *input_left_lqp, *input_right_lqp);
+          return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
         });
 
     // Inner Joins with predicates like `5 + t0.a = 6+ t1.b` can be supported via Cross join + Scan. For all other join
@@ -842,9 +842,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
                 "Non column-to-column comparison in join predicate only supported for inner joins");
 
     if (join_predicate_iter == join_predicates.end()) {
-      lqp = JoinNode::make(JoinMode::Cross, input_left_lqp, input_right_lqp);
+      lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
     } else {
-      lqp = JoinNode::make(join_mode, *join_predicate_iter, input_left_lqp, input_right_lqp);
+      lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
       join_predicates.erase(join_predicate_iter);
     }
 
@@ -867,8 +867,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 
   const auto left_sql_identifier_resolver = left_state.sql_identifier_resolver;
   const auto right_sql_identifier_resolver = right_state.sql_identifier_resolver;
-  const auto input_left_lqp = left_state.lqp;
-  const auto input_right_lqp = right_state.lqp;
+  const auto left_input_lqp = left_state.lqp;
+  const auto right_input_lqp = right_state.lqp;
 
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto result_state = std::move(left_state);
@@ -907,10 +907,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 
   if (join_predicates.empty()) {
     // No matching columns? Then the NATURAL JOIN becomes a Cross Join
-    lqp = JoinNode::make(JoinMode::Cross, input_left_lqp, input_right_lqp);
+    lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
   } else {
     // Turn one of the Join Predicates into an actual join
-    lqp = JoinNode::make(JoinMode::Inner, join_predicates.front(), input_left_lqp, input_right_lqp);
+    lqp = JoinNode::make(JoinMode::Inner, join_predicates.front(), left_input_lqp, right_input_lqp);
   }
 
   // Add remaining join predicates as normal predicates
@@ -1146,15 +1146,15 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
 }
 
 void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
-  const auto& input_left_lqp = _current_lqp;
-  const auto left_column_expressions = input_left_lqp->column_expressions();
+  const auto& left_input_lqp = _current_lqp;
+  const auto left_column_expressions = left_input_lqp->column_expressions();
 
   // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
   // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.
   SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
                                       _with_descriptions, _meta_tables};
-  const auto input_right_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
-  const auto right_column_expressions = input_right_lqp->column_expressions();
+  const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
+  const auto right_column_expressions = right_input_lqp->column_expressions();
 
   AssertInput(left_column_expressions.size() == right_column_expressions.size(),
               "Mismatching number of input columns for set operation");
@@ -1178,13 +1178,13 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   // Create corresponding node depending on the SetType
   switch (set_operator.setType) {
     case hsql::kSetExcept:
-      lqp = ExceptNode::make(set_operation_mode, input_left_lqp, input_right_lqp);
+      lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
     case hsql::kSetIntersect:
-      lqp = IntersectNode::make(set_operation_mode, input_left_lqp, input_right_lqp);
+      lqp = IntersectNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
     case hsql::kSetUnion:
-      lqp = UnionNode::make(set_operation_mode, input_left_lqp, input_right_lqp);
+      lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
       break;
   }
 
@@ -1560,7 +1560,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               // Find any leaf node below COUNT(*)
               std::shared_ptr<AbstractLQPNode> leaf_node = nullptr;
               visit_lqp(_current_lqp, [&](const auto& node) {
-                if (!node->input_left() && !node->input_right()) {
+                if (!node->left_input() && !node->right_input()) {
                   leaf_node = node;
                   return LQPVisitation::DoNotVisitInputs;
                 }

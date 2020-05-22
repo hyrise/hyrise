@@ -39,7 +39,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // 1. We create a set of all right input rows as concatenated strings.
 
-  auto input_right_row_set = std::unordered_set<std::string>(input_table_right()->row_count());
+  auto right_input_row_set = std::unordered_set<std::string>(input_table_right()->row_count());
 
   // Iterating over all chunks and for each chunk over all segments
   const auto chunk_count_right = input_table_right()->chunk_count();
@@ -64,7 +64,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Remove duplicate rows by adding all rows to a unordered set
     std::transform(string_row_vector.cbegin(), string_row_vector.cend(),
-                   std::inserter(input_right_row_set, input_right_row_set.end()), [](auto& x) { return x.str(); });
+                   std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& x) { return x.str(); });
   }
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output
@@ -126,9 +126,9 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       }
       const auto row_string = row_string_buffer.str();
 
-      // we check if the recently created row_string is contained in the input_left_row_set
-      auto search = input_right_row_set.find(row_string);
-      if (search == input_right_row_set.end()) {
+      // we check if the recently created row_string is contained in the left_input_row_set
+      auto search = right_input_row_set.find(row_string);
+      if (search == right_input_row_set.end()) {
         for (const auto& pos_list_pair : out_pos_list_map) {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);

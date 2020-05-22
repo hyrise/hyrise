@@ -111,12 +111,12 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
  */
 void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const {
   Assert(union_node->set_operation_mode == SetOperationMode::Positions, "Cannot merge union_node into disjunction");
-  const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->input_left());
-  const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->input_right());
+  const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->left_input());
+  const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->right_input());
 
   // Step 1: Check if the diamond is simple
   if (!left_predicate_node || !right_predicate_node ||
-      left_predicate_node->input_left() != right_predicate_node->input_left() ||
+      left_predicate_node->left_input() != right_predicate_node->left_input() ||
       left_predicate_node->output_count() != 1 || right_predicate_node->output_count() != 1) {
     return;
   }
@@ -126,7 +126,7 @@ void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& un
   const auto merged_predicate_node = PredicateNode::make(merged_predicate);
   lqp_remove_node(left_predicate_node);
   lqp_remove_node(right_predicate_node);
-  union_node->set_input_right(nullptr);
+  union_node->set_right_input(nullptr);
   lqp_replace_node(union_node, merged_predicate_node);
 
   // Step 3: Try to merge other nodes
@@ -156,14 +156,14 @@ void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
   // Step 1: Collect other PredicateNodes in predicate chain
-  std::shared_ptr<AbstractLQPNode> current_node = predicate_node->input_left();
+  std::shared_ptr<AbstractLQPNode> current_node = predicate_node->left_input();
   while (current_node->type == LQPNodeType::Predicate) {
     // Once a node has multiple outputs, we're not talking about a predicate chain anymore.
     if (current_node->outputs().size() > 1) {
       break;
     }
     predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
-    current_node = current_node->input_left();
+    current_node = current_node->left_input();
   }
 
   if (predicate_nodes.empty()) {

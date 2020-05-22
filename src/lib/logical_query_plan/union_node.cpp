@@ -19,30 +19,15 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
-  Assert(expressions_equal(input_left()->column_expressions(), input_right()->column_expressions()),
+  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
          "Input Expressions must match");
-  return input_left()->column_expressions();
-}
-
-std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
-  switch (set_operation_mode) {
-    case SetOperationMode::Unique:
-    case SetOperationMode::All:
-      Fail("Handling of functional dependencies is not yet specified for UNION (ALL)");
-    case SetOperationMode::Positions:
-      // By definition, UnionPositions requires both input tables to have the same table origin and structure.
-      // Therefore, we can forward the FDs of either the left or right input node.
-      DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(),
-                  "Expected both input nodes to have the same FDs.");
-      return left_input()->functional_dependencies();
-  }
-  Fail("Unhandled UnionMode");
+  return left_input()->column_expressions();
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(input_left() && input_right(), "Need both inputs to determine nullability");
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 
-  return input_left()->is_column_nullable(column_id) || input_right()->is_column_nullable(column_id);
+  return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

@@ -89,15 +89,15 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
   }
 
   auto result = SubqueryToJoinRule::PredicatePullUpResult{};
-  auto input_left_adapted = node->input_left();
-  auto input_right_adapted = node->input_right();
+  auto left_input_adapted = node->left_input();
+  auto right_input_adapted = node->right_input();
   auto are_inputs_below_aggregate = is_below_aggregate || node->type == LQPNodeType::Aggregate;
 
   const auto& [should_recurse_left, should_recurse_right] = calculate_safe_recursion_sides(node);
   if (should_recurse_left) {
     const auto& [left_result, left_cached] = pull_up_correlated_predicates_recursive(
-        node->input_left(), parameter_mapping, result_cache, are_inputs_below_aggregate);
-    input_left_adapted = left_result.adapted_lqp;
+        node->left_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
+    left_input_adapted = left_result.adapted_lqp;
     result.required_column_expressions = left_result.required_column_expressions;
     // If the sub-LQP was already visited, its join predicates have already been considered somewhere else and will be
     // part of the final result.
@@ -108,8 +108,8 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
   }
   if (should_recurse_right) {
     const auto& [right_result, right_cached] = pull_up_correlated_predicates_recursive(
-        node->input_right(), parameter_mapping, result_cache, are_inputs_below_aggregate);
-    input_right_adapted = right_result.adapted_lqp;
+        node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
+    right_input_adapted = right_result.adapted_lqp;
     for (const auto& column_expression : right_result.required_column_expressions) {
       const auto find_it = std::find(result.required_column_expressions.cbegin(),
                                      result.required_column_expressions.cend(), column_expression);
@@ -130,10 +130,10 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
       const auto& [join_predicates, remaining_expression] =
           SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_mapping, is_below_aggregate);
       if (remaining_expression) {
-        result.adapted_lqp = PredicateNode::make(remaining_expression, input_left_adapted);
+        result.adapted_lqp = PredicateNode::make(remaining_expression, left_input_adapted);
       } else {
-        result.adapted_lqp = input_left_adapted;
-        DebugAssert(!node->input_right(), "Predicate nodes should not have right inputs");
+        result.adapted_lqp = left_input_adapted;
+        DebugAssert(!node->right_input(), "Predicate nodes should not have right inputs");
       }
       if (!join_predicates.empty()) {
         result.pulled_predicate_node_count++;
@@ -152,33 +152,33 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     case LQPNodeType::Aggregate:
       result.adapted_lqp = SubqueryToJoinRule::adapt_aggregate_node(std::static_pointer_cast<AggregateNode>(node),
                                                                     result.required_column_expressions);
-      result.adapted_lqp->set_input_left(input_left_adapted);
+      result.adapted_lqp->set_left_input(left_input_adapted);
       break;
     case LQPNodeType::Alias:
       result.adapted_lqp = SubqueryToJoinRule::adapt_alias_node(std::static_pointer_cast<AliasNode>(node),
                                                                 result.required_column_expressions);
-      result.adapted_lqp->set_input_left(input_left_adapted);
+      result.adapted_lqp->set_left_input(left_input_adapted);
       break;
     case LQPNodeType::Projection:
       result.adapted_lqp = SubqueryToJoinRule::adapt_projection_node(std::static_pointer_cast<ProjectionNode>(node),
                                                                      result.required_column_expressions);
-      result.adapted_lqp->set_input_left(input_left_adapted);
+      result.adapted_lqp->set_left_input(left_input_adapted);
       break;
     case LQPNodeType::Sort: {
       const auto& sort_node = std::static_pointer_cast<SortNode>(node);
-      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->sort_modes, input_left_adapted);
+      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->sort_modes, left_input_adapted);
       break;
     }
     case LQPNodeType::Validate:
-      result.adapted_lqp = ValidateNode::make(input_left_adapted);
+      result.adapted_lqp = ValidateNode::make(left_input_adapted);
       break;
     case LQPNodeType::Join: {
       const auto& join_node = std::static_pointer_cast<JoinNode>(node);
       if (join_node->join_mode == JoinMode::Cross) {
-        result.adapted_lqp = JoinNode::make(JoinMode::Cross, input_left_adapted, input_right_adapted);
+        result.adapted_lqp = JoinNode::make(JoinMode::Cross, left_input_adapted, right_input_adapted);
       } else {
         result.adapted_lqp =
-            JoinNode::make(join_node->join_mode, join_node->join_predicates(), input_left_adapted, input_right_adapted);
+            JoinNode::make(join_node->join_mode, join_node->join_predicates(), left_input_adapted, right_input_adapted);
       }
       break;
     }
@@ -321,7 +321,7 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
 
   // If the left operand is not a column, e.g. possible for `a + 5 = ...`, then we cannot join on it
   // TODO(anybody) Add the non-column expression as a column (i.e. via a Projection) if this ever comes up
-  if (result.join_predicate && !predicate_node.input_left()->find_column_id(*result.join_predicate->left_operand())) {
+  if (result.join_predicate && !predicate_node.left_input()->find_column_id(*result.join_predicate->left_operand())) {
     return std::nullopt;
   }
 
@@ -623,7 +623,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   const auto join_mode = predicate_node_info->join_mode;
   const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
-  join_node->set_input_right(pull_up_result.adapted_lqp);
+  join_node->set_right_input(pull_up_result.adapted_lqp);
 
   _apply_to_inputs(join_node);
 }

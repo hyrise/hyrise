@@ -21,8 +21,8 @@ class IntersectNodeTest : public BaseTest {
     _c = _mock_node1->get_column("c");
 
     _intersect_node = IntersectNode::make(SetOperationMode::Positions);
-    _intersect_node->set_input_left(_mock_node1);
-    _intersect_node->set_input_right(_mock_node1);
+    _intersect_node->set_left_input(_mock_node1);
+    _intersect_node->set_right_input(_mock_node1);
   }
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;

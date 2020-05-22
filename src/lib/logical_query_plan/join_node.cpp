@@ -47,7 +47,7 @@ std::string JoinNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() const {
-  Assert(input_left() && input_right(), "Both inputs need to be set to determine a JoinNode's output expressions");
+  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**
    * Update the JoinNode's output expressions every time they are requested. An overhead, but keeps the LQP code simple.
@@ -55,8 +55,8 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
    * of feeble code.
    */
 
-  const auto& left_expressions = input_left()->column_expressions();
-  const auto& right_expressions = input_right()->column_expressions();
+  const auto& left_expressions = left_input()->column_expressions();
+  const auto& right_expressions = right_input()->column_expressions();
 
   const auto output_both_inputs =
       join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
@@ -72,16 +72,16 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
-  Assert(input_left() && input_right(), "Need both inputs to determine nullability");
+  Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 
-  const auto input_left_column_count = input_left()->column_expressions().size();
-  const auto column_is_from_input_left = column_id < input_left_column_count;
+  const auto left_input_column_count = left_input()->column_expressions().size();
+  const auto column_is_from_left_input = column_id < left_input_column_count;
 
-  if (join_mode == JoinMode::Left && !column_is_from_input_left) {
+  if (join_mode == JoinMode::Left && !column_is_from_left_input) {
     return true;
   }
 
-  if (join_mode == JoinMode::Right && column_is_from_input_left) {
+  if (join_mode == JoinMode::Right && column_is_from_left_input) {
     return true;
   }
 
@@ -89,12 +89,12 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
     return true;
   }
 
-  if (column_is_from_input_left) {
-    return input_left()->is_column_nullable(column_id);
+  if (column_is_from_left_input) {
+    return left_input()->is_column_nullable(column_id);
   } else {
     ColumnID right_column_id =
-        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(input_left_column_count));
-    return input_right()->is_column_nullable(right_column_id);
+        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
+    return right_input()->is_column_nullable(right_column_id);
   }
 }
 

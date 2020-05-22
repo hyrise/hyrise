@@ -55,12 +55,12 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_join_node(
-      const JoinNode& join_node, const std::shared_ptr<TableStatistics>& input_left_table_statistics,
-      const std::shared_ptr<TableStatistics>& input_right_table_statistics);
+      const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+      const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
-      const UnionNode& union_node, const std::shared_ptr<TableStatistics>& input_left_table_statistics,
-      const std::shared_ptr<TableStatistics>& input_right_table_statistics);
+      const UnionNode& union_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+      const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_limit_node(
       const LimitNode& limit_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
@@ -93,16 +93,16 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
    */
   static std::shared_ptr<TableStatistics> estimate_inner_equi_join(const ColumnID left_column_id,
                                                                    const ColumnID right_column_id,
-                                                                   const TableStatistics& input_left_table_statistics,
-                                                                   const TableStatistics& input_right_table_statistics);
+                                                                   const TableStatistics& left_input_table_statistics,
+                                                                   const TableStatistics& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_semi_join(const ColumnID left_column_id,
                                                              const ColumnID right_column_id,
-                                                             const TableStatistics& input_left_table_statistics,
-                                                             const TableStatistics& input_right_table_statistics);
+                                                             const TableStatistics& left_input_table_statistics,
+                                                             const TableStatistics& right_input_table_statistics);
 
-  static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& input_left_table_statistics,
-                                                              const TableStatistics& input_right_table_statistics);
+  static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
+                                                              const TableStatistics& right_input_table_statistics);
   template <typename T>
   static std::shared_ptr<GenericHistogram<T>> estimate_inner_equi_join_with_histograms(
       const AbstractHistogram<T>& left_histogram, const AbstractHistogram<T>& right_histogram);

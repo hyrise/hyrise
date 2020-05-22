@@ -260,7 +260,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   // Take a copy of what the aggregate was originally supposed to do
   const auto original_aggregate_expressions = aggregate_node->column_expressions();
 
-  const auto& aggregate_input_node = aggregate_node->input_left();
+  const auto& aggregate_input_node = aggregate_node->left_input();
   auto replacements = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{};
 
   // Iterate over the AVGs, check if matching SUMs and COUNTs exist, and add a suitable replacement to `replacements`.

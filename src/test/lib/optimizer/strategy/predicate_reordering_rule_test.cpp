@@ -117,27 +117,27 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
   auto predicate_node_0 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20));
-  predicate_node_0->set_input_left(stored_table_node);
+  predicate_node_0->set_left_input(stored_table_node);
 
   auto predicate_node_1 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40));
-  predicate_node_1->set_input_left(predicate_node_0);
+  predicate_node_1->set_left_input(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
   auto predicate_node_2 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400));
-  predicate_node_2->set_input_left(stored_table_node);
+  predicate_node_2->set_left_input(stored_table_node);
 
   auto predicate_node_3 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20));
-  predicate_node_3->set_input_left(predicate_node_2);
+  predicate_node_3->set_left_input(predicate_node_2);
 
   auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
 
   EXPECT_EQ(reordered, predicate_node_1);
-  EXPECT_EQ(reordered->input_left(), predicate_node_0);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
   EXPECT_EQ(reordered_1, predicate_node_2);
-  EXPECT_EQ(reordered_1->input_left(), predicate_node_3);
+  EXPECT_EQ(reordered_1->left_input(), predicate_node_3);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
@@ -173,23 +173,23 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   auto predicate_3 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 50));
   auto predicate_4 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 30));
 
-  predicate_1->set_input_left(table_0);
-  predicate_0->set_input_left(predicate_1);
-  predicate_4->set_input_left(table_1);
-  predicate_3->set_input_left(predicate_4);
-  predicate_2->set_input_left(predicate_3);
-  cross_node->set_input_left(predicate_0);
-  cross_node->set_input_right(predicate_2);
+  predicate_1->set_left_input(table_0);
+  predicate_0->set_left_input(predicate_1);
+  predicate_4->set_left_input(table_1);
+  predicate_3->set_left_input(predicate_4);
+  predicate_2->set_left_input(predicate_3);
+  cross_node->set_left_input(predicate_0);
+  cross_node->set_right_input(predicate_2);
 
   const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
 
   EXPECT_EQ(reordered, cross_node);
-  EXPECT_EQ(reordered->input_left(), predicate_1);
-  EXPECT_EQ(reordered->input_left()->input_left(), predicate_0);
-  EXPECT_EQ(reordered->input_left()->input_left()->input_left(), table_0);
-  EXPECT_EQ(reordered->input_right(), predicate_4);
-  EXPECT_EQ(reordered->input_right()->input_left(), predicate_3);
-  EXPECT_EQ(reordered->input_right()->input_left()->input_left(), predicate_2);
+  EXPECT_EQ(reordered->left_input(), predicate_1);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_0);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), table_0);
+  EXPECT_EQ(reordered->right_input(), predicate_4);
+  EXPECT_EQ(reordered->right_input()->left_input(), predicate_3);
+  EXPECT_EQ(reordered->right_input()->left_input()->left_input(), predicate_2);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
@@ -223,20 +223,20 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto predicate_b_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 10));
   auto predicate_c_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5));
 
-  union_node->set_input_left(predicate_a_node);
-  union_node->set_input_right(predicate_b_node);
-  predicate_a_node->set_input_left(predicate_b_node);
-  predicate_b_node->set_input_left(predicate_c_node);
-  predicate_c_node->set_input_left(table_node);
+  union_node->set_left_input(predicate_a_node);
+  union_node->set_right_input(predicate_b_node);
+  predicate_a_node->set_left_input(predicate_b_node);
+  predicate_b_node->set_left_input(predicate_c_node);
+  predicate_c_node->set_left_input(table_node);
 
   const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
 
   EXPECT_EQ(reordered, union_node);
-  EXPECT_EQ(reordered->input_left(), predicate_a_node);
-  EXPECT_EQ(reordered->input_right(), predicate_c_node);
-  EXPECT_EQ(predicate_a_node->input_left(), predicate_c_node);
-  EXPECT_EQ(predicate_c_node->input_left(), predicate_b_node);
-  EXPECT_EQ(predicate_b_node->input_left(), table_node);
+  EXPECT_EQ(reordered->left_input(), predicate_a_node);
+  EXPECT_EQ(reordered->right_input(), predicate_c_node);
+  EXPECT_EQ(predicate_a_node->left_input(), predicate_c_node);
+  EXPECT_EQ(predicate_c_node->left_input(), predicate_b_node);
+  EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {

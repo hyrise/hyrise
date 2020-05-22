@@ -23,8 +23,8 @@ class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
     _stored_table_node_right->set_pruned_column_ids({ColumnID{0}});
 
     _union_node = UnionNode::make(SetOperationMode::All);
-    _union_node->set_input_left(_stored_table_node_left);
-    _union_node->set_input_right(_stored_table_node_right);
+    _union_node->set_left_input(_stored_table_node_left);
+    _union_node->set_right_input(_stored_table_node_right);
 
     _rule = std::make_shared<StoredTableColumnAlignmentRule>();
   }
@@ -45,7 +45,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksEqualColumns) {
 
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns) {
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
-  _union_node->set_input_right(_stored_table_node_right);
+  _union_node->set_right_input(_stored_table_node_right);
 
   apply_rule(_rule, _union_node);
 
@@ -58,7 +58,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableEqualChunksDifferentColumns
 TEST_F(StoredTableColumnAlignmentRuleTest, EqualTableDifferentChunksDifferentColumns) {
   _stored_table_node_right->set_pruned_chunk_ids({ChunkID{2}, ChunkID{3}});
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
-  _union_node->set_input_right(_stored_table_node_right);
+  _union_node->set_right_input(_stored_table_node_right);
 
   apply_rule(_rule, _union_node);
 
@@ -72,7 +72,7 @@ TEST_F(StoredTableColumnAlignmentRuleTest, DifferentTableEqualChunksDifferentCol
   _stored_table_node_right = StoredTableNode::make("t_b");
   _stored_table_node_right->set_pruned_chunk_ids({ChunkID{2}});
   _stored_table_node_right->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
-  _union_node->set_input_right(_stored_table_node_right);
+  _union_node->set_right_input(_stored_table_node_right);
 
   apply_rule(_rule, _union_node);
 

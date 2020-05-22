@@ -47,16 +47,16 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
   _add_vertex(node, node_label);
 
-  if (node->input_left()) {
-    auto input_left = node->input_left();
-    _build_subtree(input_left, visualized_nodes, visualized_sub_queries);
-    _build_dataflow(input_left, node, InputSide::Left);
+  if (node->left_input()) {
+    auto left_input = node->left_input();
+    _build_subtree(left_input, visualized_nodes, visualized_sub_queries);
+    _build_dataflow(left_input, node, InputSide::Left);
   }
 
-  if (node->input_right()) {
-    auto input_right = node->input_right();
-    _build_subtree(input_right, visualized_nodes, visualized_sub_queries);
-    _build_dataflow(input_right, node, InputSide::Right);
+  if (node->right_input()) {
+    auto right_input = node->right_input();
+    _build_subtree(right_input, visualized_nodes, visualized_sub_queries);
+    _build_dataflow(right_input, node, InputSide::Right);
   }
 
   // Visualize subqueries
@@ -93,16 +93,16 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     // statistics don't exist for this edge
   }
 
-  if (from->input_left()) {
+  if (from->left_input()) {
     try {
-      float input_count = _cardinality_estimator.estimate_cardinality(from->input_left());
+      float input_count = _cardinality_estimator.estimate_cardinality(from->left_input());
 
       // Include right side in cardinality estimation unless it is a semi/anti join
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(from);
-      if (from->input_right() &&
+      if (from->right_input() &&
           (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
                           join_node->join_mode != JoinMode::AntiNullAsFalse))) {
-        input_count *= _cardinality_estimator.estimate_cardinality(from->input_right());
+        input_count *= _cardinality_estimator.estimate_cardinality(from->right_input());
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {
