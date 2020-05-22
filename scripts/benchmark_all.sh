@@ -132,7 +132,7 @@ do
     echo "<details>"
     echo "<summary>"
     echo "Sum of average per-item runtime: TODO,"
-    echo "$output" | grep 'geometric mean' | sed 's/geometric mean//; s/[ |]//g; s/^/Geometric Mean: /'
+    echo "$output" | grep 'geometric mean' | sed 's/^+-//; s/geometric mean//; s/[ |]//g; s/^/Geometric Mean: /'
     echo "</summary>"
     echo "$output"
     echo "</details>"
