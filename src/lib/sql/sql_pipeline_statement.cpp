@@ -107,6 +107,12 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
+const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
+  // Make sure that the SQLTranslator was invoked
+  (void)get_unoptimized_logical_plan();
+  return _translation_info;
+}
+
 void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression> &expression,
                                             std::vector<std::shared_ptr<AbstractExpression>>& values,
                                             ParameterID &next_parameter_id) {
@@ -149,7 +155,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
     });
   }
 
-  return unoptimized_lqp
+  return unoptimized_lqp;
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {

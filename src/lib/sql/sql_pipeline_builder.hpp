@@ -50,6 +50,12 @@ class SQLPipelineBuilder final {
 
   SQLPipeline create_pipeline() const;
 
+  /**
+   * @param parsed_sql  for usage from SQLPipeline to pass along to SQLPipelineStatement, everyone else leaves this as
+   *                    nullptr
+   */
+  SQLPipelineStatement create_pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql = nullptr) const;
+
  private:
   const std::string _sql;
 

@@ -324,8 +324,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   auto not_validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline_statement();
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   auto cache_key = not_validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
@@ -628,9 +627,8 @@ TEST_F(SQLPipelineStatementTest, GetTimes) {
 }
 
 TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
-  statement->get_result_table();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
+  sql_pipeline.get_result_table();
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   auto cache_key = sql_pipeline.get_split_unoptimized_logical_plan(values);
