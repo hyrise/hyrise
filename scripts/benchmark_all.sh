@@ -60,7 +60,7 @@ do
   git submodule update --init
   echo "Building $commit..."
   $build clean
-  /usr/bin/time sh -c "( $build -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2> >(tee "benchmark_all_results/build_time_${commit}.txt")
+  /usr/bin/time -p sh -c "( $build -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" >/dev/null 2>"benchmark_all_results/build_time_${commit}.txt"
 
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root 
   for benchmark in $benchmarks
