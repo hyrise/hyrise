@@ -76,6 +76,7 @@ int main(int argc, char* argv[]) {
     const auto scale_factor = cli_parse_result["scale"].as<float>();
     std::cout << "- Scale factor is " << scale_factor << std::endl;
     for (auto query_id = 0u; query_id < 22; query_id++) {
+    //for (auto query_id = 17u; query_id < 18; query_id++) {
       if (plugin_loaded) Assert(Hyrise::get().storage_manager.has_table("lineitem"), "lineitem disappeared");
       const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{query_id}};
 
