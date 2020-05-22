@@ -4,7 +4,7 @@
 #include <string>
 
 #include "SQLParserResult.h"
-#include "cache/cache.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
@@ -55,8 +55,7 @@ class SQLPipelineStatement : public Noncopyable {
  public:
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                       const UseMvcc use_mvcc,
-                       const std::shared_ptr<Optimizer>& optimizer,
+                       const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                        const std::shared_ptr<Optimizer>& post_caching_optimizer,
                        const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                        const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache);

@@ -32,8 +32,7 @@
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           const UseMvcc use_mvcc,
-                                           const std::shared_ptr<Optimizer>& optimizer,
+                                           const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                                            const std::shared_ptr<Optimizer>& post_caching_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
@@ -169,14 +168,14 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
-    if (const auto cached_plan = *(lqp_cache->try_get(unoptimized_lqp))) {
-      const auto plan = cached_plan->lqp;
+    if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp)) {
+      const auto plan = cached_plan.value()->lqp;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
-        _optimized_logical_plan = cached_plan->instantiate(extracted_values);
+        _optimized_logical_plan = cached_plan.value()->instantiate(extracted_values);
         auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
         _metrics->query_plan_cache_hit = true;
         _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));

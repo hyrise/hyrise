@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "cache/cache.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/prepared_plan.hpp"
 
@@ -16,6 +16,7 @@ class LQPNodePointerHash {
  public:
   size_t operator()(const std::shared_ptr<AbstractLQPNode>& key) const { return key->hash(); }
 };
+
 class NodePointerDeepEquality {
  public:
   bool operator()(const std::shared_ptr<AbstractLQPNode>& key1, const std::shared_ptr<AbstractLQPNode>& key2) const {
@@ -23,7 +24,8 @@ class NodePointerDeepEquality {
   }
 };
 
-using SQLPhysicalPlanCache = Cache<std::shared_ptr<AbstractOperator>, std::string>;
-using SQLLogicalPlanCache =
-    Cache<std::shared_ptr<PreparedPlan>, std::shared_ptr<AbstractLQPNode>, LQPNodePointerHash, NodePointerDeepEquality>;
+using SQLPhysicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractOperator>>;
+using SQLLogicalPlanCache = GDFSCache<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<PreparedPlan>,
+                                      LQPNodePointerHash, NodePointerDeepEquality>;
+
 }  // namespace opossum

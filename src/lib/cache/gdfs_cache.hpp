@@ -1,19 +1,20 @@
 #pragma once
 
-#include <list>
-#include <unordered_map>
-#include <utility>
+#include <shared_mutex>
 
-#include "abstract_cache_impl.hpp"
+#include "abstract_cache.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-// Generic cache implementation using the GDFS policy.
-// Note: This implementation is not thread-safe.
+/**
+ * Generic cache implementation using the GDFS policy.
+ * To iterate over the cache in a thread-safe manner, use the copy provided by snapshot().
+ * Different cache implementations existed in the past, but were retired with PR 2129.
+ */
 template <typename Key, typename Value, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
-class GDFSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
+class GDFSCache : public AbstractCache<Key, Value, Hash, KeyEqual> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -29,40 +30,16 @@ class GDFSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
   };
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
+
   using CacheMap = typename std::unordered_map<Key, Handle, Hash, KeyEqual>;
+  using SnapshotEntry = typename AbstractCache<Key, Value, Hash, KeyEqual>::SnapshotEntry;
 
-  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
-
-  class Iterator : public AbstractIterator {
-   public:
-    using IteratorType = typename CacheMap::iterator;
-    explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
-
-   private:
-    friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
-
-    IteratorType _wrapped_iterator;
-    mutable KeyValuePair _tmp_return_value;
-
-    void increment() { ++_wrapped_iterator; }
-
-    bool equal(const AbstractIterator& other) const {
-      return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
-    }
-
-    const KeyValuePair& dereference() const {
-      const auto iter_value = *_wrapped_iterator;
-      _tmp_return_value = {iter_value.first, (*iter_value.second).value};
-      return _tmp_return_value;
-    }
-  };
-
-  explicit GDFSCache(size_t capacity) : AbstractCacheImpl<Key, Value, Hash, KeyEqual>(capacity), _inflation(0.0) {}
+  explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY)
+      : AbstractCache<Key, Value, Hash, KeyEqual>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+    if (this->_capacity == 0) return;
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -81,10 +58,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
     // If the cache is full, erase the item at the top of the heap
     // so that we can insert the new item.
     if (_queue.size() >= this->_capacity) {
-      auto top = _queue.top();
-      _inflation = top.priority;
-      _map.erase(top.key);
-      _queue.pop();
+      _evict();
     }
 
     // Insert new item in cache.
@@ -94,9 +68,11 @@ class GDFSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
     _map[key] = handle;
   }
 
-  Value& get(const Key& key) {
-    auto it = _map.find(key);
-    DebugAssert(it != _map.end(), "key not present");
+  std::optional<Value> try_get(const Key& query) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
+    auto it = _map.find(query);
+    if (it == _map.end()) return std::nullopt;
+
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
     entry.frequency++;
@@ -105,52 +81,56 @@ class GDFSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
     return entry.value;
   }
 
-  bool has(const Key& key) const { return _map.find(key) != _map.end(); }
+  bool has(const Key& key) const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _map.contains(key);
+  }
 
-  size_t size() const { return _map.size(); }
+  size_t size() const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    return _map.size();
+  }
 
   void clear() {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     _map.clear();
     _queue.clear();
   }
 
   void resize(size_t capacity) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     while (_queue.size() > capacity) {
       _evict();
     }
     this->_capacity = capacity;
   }
 
-  const boost::heap::fibonacci_heap<GDFSCacheEntry>& queue() const { return _queue; }
-
-  double inflation() const { return _inflation; }
-
-  double priority(const Key& key) const {
-    auto it = _map.find(key);
-    return (*it->second).priority;
-  }
-
-  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
-
-  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
-
-  size_t frequency(const Key& key) {
-    const auto it = _map.find(key);
-    if (it == _map.end()) {
-      return size_t{0};
+  std::unordered_map<Key, SnapshotEntry> snapshot() const {
+    std::shared_lock<std::shared_mutex> lock(_mutex);
+    std::unordered_map<Key, SnapshotEntry> map_copy(_map.size());
+    for (const auto& [key, entry] : _map) {
+      map_copy[key] = SnapshotEntry{(*entry).value, (*entry).frequency};
     }
-
-    Handle handle = it->second;
-    GDFSCacheEntry& entry = (*handle);
-    return entry.frequency;
+    return map_copy;
   }
 
  protected:
+  friend class CachePolicyTest;
+  friend class QueryPlanCacheTest;
+
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;
 
   // Map to point towards element in the list.
   CacheMap _map;
+
+  /**
+   * Locking this data structure is easier than using a concurrent data structure (e.g. TBB) as
+   * (1) both the queue and the map would have to be concurrent data structures,
+   * (2) their modifications would have to be synchronized, and
+   * (3) TBB's concurrent_unordered_map does not provide safe deletion and concurrent_hash_map is difficult to use.
+   */
+  mutable std::shared_mutex _mutex;
 
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;

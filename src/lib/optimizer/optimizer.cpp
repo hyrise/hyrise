@@ -21,6 +21,7 @@
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
 #include "strategy/semi_join_reduction_rule.hpp"
+#include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 
 /**
@@ -98,11 +99,17 @@ std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  // This is an optimization for the PQP sub-plan memoization which is sensitive to the a StoredTableNode's table name,
+  // set of pruned chunks and set of pruned columns. Since this rule depends on pruning information, it has to be
+  // executed after the ColumnPruningRule and ChunkPruningRule.
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+
   return optimizer;
 }
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  const auto optimizer = std::make_shared<Optimizer>();
+  auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
@@ -181,7 +188,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQP
   }
 
   // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_input();
+  auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
   return optimized_node;

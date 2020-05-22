@@ -84,9 +84,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
-                                                                     use_mvcc, optimizer, post_caching_optimizer,
-                                                                     pqp_cache, lqp_cache);
+    auto pipeline_statement =
+        std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc, optimizer,
+                                               post_caching_optimizer, pqp_cache, lqp_cache);
     _sql_pipeline_statements.emplace_back(std::move(pipeline_statement));
   }
 

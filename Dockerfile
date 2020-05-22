@@ -7,11 +7,12 @@ RUN apt-get update \
         autoconf \
         bash-completion \
         bc \
-        ccache \
         clang-9 \
         clang-10 \
         clang-format-9 \
+        clang-format-10 \
         clang-tidy-9 \
+        clang-tidy-10 \
         cmake \
         curl \
         g++-9 \
@@ -35,6 +36,7 @@ RUN apt-get update \
         postgresql-server-dev-all \
         python3 \
         python3-pexpect \
+        software-properties-common \
         sudo \
         systemtap \
         systemtap-sdt-dev \

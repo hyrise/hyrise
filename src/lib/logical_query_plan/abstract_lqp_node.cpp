@@ -180,7 +180,9 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
   return outputs;
 }
 
-void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
+// clang-tidy wants this to be const. Technically, it could be, but as this node will be modified via set_input, it is
+// syntactically incorrect.
+void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {  // NOLINT
   const auto input_side = get_input_side(output);
   // set_input() will untie the nodes
   output->set_input(input_side, nullptr);
@@ -246,6 +248,60 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
+std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
+  // Gather input FDs from all input nodes
+  auto fds_left = std::vector<FunctionalDependency>();
+  auto fds_right = std::vector<FunctionalDependency>();
+  if (left_input()) {
+    fds_left = left_input()->functional_dependencies();
+  }
+  if (right_input()) {
+    fds_right = right_input()->functional_dependencies();
+  }
+
+  if (HYRISE_DEBUG && !fds_right.empty()) {
+    for (const auto& fd_right : fds_right) {
+      const bool duplicate = std::any_of(fds_left.begin(), fds_left.end(),
+                                         [&fd_right](const auto& fd_left) { return (fd_left == fd_right); });
+      Assert(!duplicate,
+             "Unexpected duplicate functional dependency found in " + this->description(DescriptionMode::Short));
+    }
+  }
+
+  auto& fds_in = fds_left;
+  fds_in.insert(fds_in.end(), fds_right.cbegin(), fds_right.cend());
+
+  // Currently, we do not support FDs in conjunction with null values in their determinant set.
+  // Some LQP nodes, however, change column nullability (like for instance outer joins). Therefore, we check input FDs
+  // for compliance and discard them, if necessary.
+  auto fds_out = std::vector<FunctionalDependency>();
+
+  // Collect non-nullable columns
+  const auto expressions = column_expressions();
+  auto column_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    if (!is_column_nullable(column_id)) {
+      column_expressions_non_nullable.insert(expressions.at(column_id));
+    }
+  }
+
+  for (const auto& fd : fds_in) {
+    // Check whether the determinants are a subset of the current node's non-nullable output expressions
+    if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
+                    [&column_expressions_non_nullable](const auto& expression) {
+                      return !column_expressions_non_nullable.contains(expression);
+                    }))
+      continue;
+
+    // We do not check the columns of the FD's dependents set since they are allowed to be nullable.
+
+    // FD remains valid, so add it to the output vector
+    fds_out.push_back(fd);
+  }
+
+  return fds_out;
+}
+
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   if (this == &rhs) return true;
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
@@ -260,7 +316,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
   if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
   if (right_input()) copied_right_input = right_input()->_deep_copy_impl(node_mapping);
 
-  const auto copy = _shallow_copy(node_mapping);
+  auto copy = _shallow_copy(node_mapping);
   copy->set_left_input(copied_left_input);
   copy->set_right_input(copied_right_input);
 

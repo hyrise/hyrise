@@ -8,6 +8,8 @@
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
 #include "utils/meta_tables/meta_segments_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
+#include "utils/meta_tables/meta_system_information_table.hpp"
+#include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
 namespace opossum {
@@ -21,7 +23,9 @@ MetaTableManager::MetaTableManager() {
                                                                        std::make_shared<MetaSegmentsTable>(),
                                                                        std::make_shared<MetaSegmentsAccurateTable>(),
                                                                        std::make_shared<MetaPluginsTable>(),
-                                                                       std::make_shared<MetaSettingsTable>()};
+                                                                       std::make_shared<MetaSettingsTable>(),
+                                                                       std::make_shared<MetaSystemInformationTable>(),
+                                                                       std::make_shared<MetaSystemUtilizationTable>()};
 
   _table_names.reserve(_meta_tables.size());
   for (const auto& table : meta_tables) {

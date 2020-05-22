@@ -89,7 +89,10 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
   const auto optimizer = Optimizer::create_default_optimizer();
   lqp = optimizer->optimize(std::move(lqp));
 
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  const auto post_caching_optimizer = Optimizer::create_post_caching_optimizer();
+  lqp = post_caching_optimizer->optimize(std::move(lqp));
+
+  auto pqp = LQPTranslator{}.translate_node(lqp);
 
   return pqp;
 }
@@ -105,7 +108,7 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
                                                          SQLPipeline& sql_pipeline) {
   // handle custom user feedback (command complete messages) for transaction statements
   auto sql_statement = sql_pipeline.get_parsed_sql_statements().back();
-  auto& statements = sql_statement->getStatements();
+  const auto& statements = sql_statement->getStatements();
 
   DebugAssert(statements.size() == 1, "SQL statements were not properly split");
   if (statements[0]->isType(hsql::StatementType::kStmtTransaction)) {
