@@ -2,8 +2,7 @@
 
 set -e
 
-benchmarks='hyriseBenchmarkJoinOrder'
-#benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
+benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
 num_mt_clients=50
 
 if [ $# -ne 2 ]
@@ -57,7 +56,7 @@ do
     continue
   fi
 
-  git checkout $start_commit
+  git checkout $commit
   git submodule update --init
   echo "Building $commit..."
   $build clean
@@ -121,8 +120,7 @@ for benchmark in $benchmarks
 do
   for config in st mt
   do
-    output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}.json" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}.json" --github 2>/dev/null)
-
+    output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}_${config}.json" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}_${config}.json" --github 2>/dev/null)
     echo ""
     echo ""
     echo -n "**${benchmark} - "
