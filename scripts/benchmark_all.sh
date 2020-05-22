@@ -24,7 +24,7 @@ end_commit=$(git rev-parse $end_commit_reference | head -n 1)
 if [[ $(git status --untracked-files=no --porcelain) ]]
 then
   echo 'Cowardly refusing to execute on a dirty workspace'
-  exit 1
+#  exit 1
 fi
 
 output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
@@ -112,9 +112,9 @@ echo "**Build Time**"
 echo "| commit | build time |"
 echo "| -- | -- |"
 echo -n "| ${start_commit} |"
-awk '{printf $0 "|\n"}' "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt"
+cat "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
 echo -n "| ${end_commit} |"
-awk '{printf $0 "|\n"}' "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt"
+cat "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
 
 for benchmark in $benchmarks
 do
@@ -132,7 +132,7 @@ do
     echo "<details>"
     echo "<summary>"
     echo "Sum of average per-item runtime: TODO,"
-    echo "$output" | grep 'geometric mean' | sed 's/^+-//; s/geometric mean//; s/[ |]//g; s/^/Geometric Mean: /'
+    echo "$output" | grep 'geometric mean' | sed -E 's/^[+-]//' | sed 's/geometric mean//; s/[ |]//g; s/^/Geometric Mean: /'
     echo "</summary>"
     echo "$output"
     echo "</details>"
