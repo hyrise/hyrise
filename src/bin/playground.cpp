@@ -9,6 +9,7 @@
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
+#include "optimizer/strategy/index_scan_rule.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -30,10 +31,11 @@ using namespace opossum;  // NOLINT
 constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
-constexpr auto CHUNK_SIZE = size_t{1'000'000};
+//constexpr auto CHUNK_SIZE = size_t{1'000'000};
+constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
 constexpr auto ORDER_BY_MODE = OrderByMode::Ascending;
-constexpr auto EXECUTION_COUNT = 100;
+constexpr auto EXECUTION_COUNT = 1;
 
 //Chunk encodings copied from ping data micro benchmark 
 const auto CHUNK_ENCODINGS = std::vector{
@@ -82,6 +84,20 @@ Segments get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, 
   return segments;
 } 
 
+// returns a vector of indexed chunks for a given column
+std::vector<ChunkID> get_indexed_chunk_ids(const std::shared_ptr<const Table>& table, const ColumnID column_id){
+  std::vector<ChunkID> indexed_chunk_ids = {};
+  const auto chunk_count = table->chunk_count();
+  // Iterate over chunks to check if for the given column an index exists on a segment 
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& index = table->get_chunk(chunk_id)->get_index(SegmentIndexType::GroupKey, std::vector<ColumnID>{column_id});
+    if (index){
+      indexed_chunk_ids.emplace_back(chunk_id);
+    }
+  }
+  return indexed_chunk_ids;
+} 
+
 /**
  * This function takes a file path to a CSV file containing the workload and returns the queries in form of LQP-based
  * queries together with their frequency. The reason to use LQPs is that we can later selectively apply optimizer rules
@@ -115,8 +131,6 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
     const auto search_value_0 = stoi(csv_line[7]);
     const auto search_value_1 = stoi(csv_line[8]);
 
-    std::cout << query_id << ":" << previous_query_id << " " << scan_id << std::endl;
-
     Assert(query_id >= previous_query_id,
            "Queries are expected to be sorted ascendingly by: query ID ascendingly.");
     Assert(query_id == previous_query_id || scan_id == 0,
@@ -139,6 +153,14 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
       current_node = PredicateNode::make(less_than_equals_(lqp_column, search_value_0), previous_node);
     }
 
+    // Set scan type to index scan if the scan is the first scan of a query and at least one segment 
+    // of the scan column has an index 
+    // Partial index configurations are handeled by LQPTranslater line 215 -231
+    if (scan_id == 0 && !get_indexed_chunk_ids(table, column_id).empty()) {
+      auto index_node = std::dynamic_pointer_cast<PredicateNode>(current_node);
+      index_node->scan_type = ScanType::IndexScan;
+    }
+
     previous_query_id = query_id;
     previous_predicate_selectivity = predicate_selectivity;
     previous_node = current_node;
@@ -154,6 +176,9 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
  */
 float partially_optimize_translate_and_execute_query(const std::shared_ptr<AbstractLQPNode>& lqp_query) {
 
+  //std::cout << "LQP Query" << std::endl;
+  //std::cout << *lqp_query << std::endl;
+
   // Run chunk and column pruning rules. Kept it quite simple for now. Take a look at Optimizer::optimize() in case
   // problems occur. The following code is taken from optimizer.cpp. In case the new root is confusing to you, take a
   // look there.
@@ -165,16 +190,23 @@ float partially_optimize_translate_and_execute_query(const std::shared_ptr<Abstr
   const auto column_pruning_rule = ColumnPruningRule();
   column_pruning_rule.apply_to(root_node);
 
+  const auto index_scan_rule = IndexScanRule();
+  index_scan_rule.apply_to(root_node);
+
   // Remove LogicalPlanRootNode
   const auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
-  //std::cout << "Executing the following query " << EXECUTION_COUNT << " times (workload frequency " << frequency << "):\n" << *optimized_node << std::endl;
   std::vector<size_t> runtimes;
   for (auto count = size_t{0}; count < EXECUTION_COUNT; ++count) {
     Timer timer;
     const auto pqp = LQPTranslator{}.translate_node(optimized_node);
+
+    //std::cout << "PQP Query" << std::endl;
+    //std::cout << *pqp << std::endl;
+
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
+
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
     const auto runtime = static_cast<size_t>(timer.lap().count());
     runtimes.push_back(runtime);
