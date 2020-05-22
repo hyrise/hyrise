@@ -49,14 +49,4 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   return pipeline;
 }
 
-SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
-    std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
-  auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
-  auto post_caching_optimizer =
-      _post_caching_optimizer ? _post_caching_optimizer : Optimizer::create_post_caching_optimizer();
-
-  return {_sql,      std::move(parsed_sql),  _use_mvcc,  _transaction_context,
-          optimizer, post_caching_optimizer, _pqp_cache, _lqp_cache};
-}
-
 }  // namespace opossum
