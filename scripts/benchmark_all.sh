@@ -2,7 +2,7 @@
 
 set -e
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS' # TODO hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
+benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
 num_mt_clients=50
 
 if [ $# -ne 2 ]
@@ -27,13 +27,12 @@ then
   exit 1
 fi
 
-# TODO reenable
-# output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
-# if [ -z "$output" ]
-# then
-#   echo 'Current folder is not configured as a release build'
-#   exit 1
-# fi
+output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
+if [ -z "$output" ]
+then
+  echo 'Current folder is not configured as a release build'
+  exit 1
+fi
 
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
 if [ ! -z "$output" ]
@@ -76,10 +75,6 @@ do
 done
 
 touch "benchmark_all_results/complete_${commit}"
-
-# TODO add run with scheduler
-# TODO output build time
-# TODO incorporate sum/geomean
 
 echo "Comparing ${start_commit} and ${end_commit}..."
 
