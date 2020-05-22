@@ -14,8 +14,9 @@ namespace opossum {
 // When an item should be evicted the item with the largest backward k-distance is evicted.
 // This is the item whose k-th most recent access is the furthest in the past.
 // Note: This implementation is not thread-safe.
-template <size_t K, typename Key, typename Value>
-class LRUKCache : public AbstractCacheImpl<Key, Value> {
+template <size_t K, typename Key, typename Value, typename Hash = std::hash<Key>,
+          typename KeyEqual = std::equal_to<Key>>
+class LRUKCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
  public:
   // Entries within the LRU-K cache.
   // They keep a reference history of the K last accesses.
@@ -56,9 +57,9 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
 
   using Handle = typename boost::heap::fibonacci_heap<LRUKCacheEntry>::handle_type;
 
-  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::KeyValuePair;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::AbstractIterator;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
   class Iterator : public AbstractIterator {
    public:
@@ -67,7 +68,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
 
    private:
     friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+    friend class AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
     IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
@@ -85,7 +86,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  explicit LRUKCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _access_counter(0) {}
+  explicit LRUKCache(size_t capacity) : AbstractCacheImpl<Key, Value, Hash, KeyEqual>(capacity), _access_counter(0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     ++_access_counter;

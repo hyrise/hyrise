@@ -45,6 +45,11 @@ enum class ExpressionType {
  */
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
+  /**
+   * Set if expression was already replaced when caching to avoid double replacement
+   */
+  std::shared_ptr<AbstractExpression> replaced_by;
+
   explicit AbstractExpression(const ExpressionType init_type,
                               const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
   virtual ~AbstractExpression() = default;

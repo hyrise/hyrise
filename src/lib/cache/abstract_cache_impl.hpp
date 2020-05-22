@@ -7,7 +7,7 @@
 namespace opossum {
 
 // Generic template for a cache implementation.
-template <typename Key, typename Value>
+template <typename Key, typename Value, typename Hash, typename KeyEqual>
 class AbstractCacheImpl {
  public:
   using KeyValuePair = typename std::pair<Key, Value>;

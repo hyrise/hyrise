@@ -603,6 +603,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
       } else if (Hyrise::get().storage_manager.has_view(hsql_table_ref.name)) {
         const auto view = Hyrise::get().storage_manager.get_view(hsql_table_ref.name);
+        _cacheable = false;
         lqp = view->lqp;
 
         /**

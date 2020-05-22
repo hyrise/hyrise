@@ -286,59 +286,77 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
+  auto validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
+
+  std::vector<std::shared_ptr<AbstractExpression>> values;
+  auto cache_key = validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
+
   // Expect cache to be empty
-  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
+  EXPECT_FALSE(_lqp_cache->has(cache_key));
 
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
-
-  const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
+  const auto& validated_lqp = validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
   // Expect cache to contain validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
+  EXPECT_TRUE(_lqp_cache->has(cache_key));
+
+  const auto validated_cached_lqp = _lqp_cache->get_entry(cache_key)->instantiate(values);
+
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
 
-  // Evict validated version by requesting a not validated version
+  // Requesting a not validated version does not evict validated version
   auto not_validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
-  auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
-  const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline_statement();
+  auto not_validated_cache_key = not_validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
+
+  const auto& not_validated_lqp = not_validated_sql_pipeline.get_optimized_logical_plan();
+
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
-  // Expect cache to contain not validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto not_validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
-  EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
+  // Expect cache to contain both validated and not validated LQP
+  EXPECT_TRUE(_lqp_cache->has(cache_key));
+  const auto not_validated_cached_lqp_1 = _lqp_cache->get_entry(cache_key)->instantiate(values);
+  EXPECT_TRUE(lqp_is_validated(not_validated_cached_lqp_1));
+  const auto not_validated_cached_lqp_2 = _lqp_cache->get_entry(not_validated_cache_key)->instantiate(values);
+  EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp_2));
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
-  // Expect cache to be empty
-  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
-
   auto not_validated_sql_pipeline =
       SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
   auto& not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
 
-  const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
+  std::vector<std::shared_ptr<AbstractExpression>> values;
+  auto cache_key = not_validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
+
+  // Expect cache to be empty
+  EXPECT_FALSE(_lqp_cache->has(cache_key));
+
+  const auto& not_validated_lqp = not_validated_sql_pipeline.get_optimized_logical_plan();
+
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
   // Expect cache to contain not validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto not_validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
+  EXPECT_TRUE(_lqp_cache->has(cache_key));
+  const auto not_validated_cached_lqp = _lqp_cache->get_entry(cache_key)->instantiate(values);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
-  // Evict not validated version by requesting a validated version
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
-  auto& validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
-  const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
+  // Requesting a validated version does not evict not validated version
+  auto validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
+  auto validated_cache_key = validated_sql_pipeline.get_split_unoptimized_logical_plan(values);
+
+  const auto& validated_lqp = validated_sql_pipeline.get_optimized_logical_plan();
+
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
-  // Expect cache to contain not validated LQP
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
-  const auto validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
-  EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
+  // Expect cache to contain both validated and not validated LQP
+  EXPECT_TRUE(_lqp_cache->has(cache_key));
+  const auto validated_cached_lqp_1 = _lqp_cache->get_entry(cache_key)->instantiate(values);
+  EXPECT_FALSE(lqp_is_validated(validated_cached_lqp_1));
+  const auto validated_cached_lqp_2 = _lqp_cache->get_entry(validated_cache_key)->instantiate(values);
+  EXPECT_TRUE(lqp_is_validated(validated_cached_lqp_2));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
@@ -614,8 +632,11 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
   statement->get_result_table();
 
+  std::vector<std::shared_ptr<AbstractExpression>> values;
+  auto cache_key = sql_pipeline.get_split_unoptimized_logical_plan(values);
+
   EXPECT_EQ(_lqp_cache->size(), 1u);
-  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_lqp_cache->has(cache_key));
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
@@ -692,8 +713,6 @@ TEST_F(SQLPipelineStatementTest, MetaTableNoCaching) {
   statement->get_result_table();
 
   EXPECT_EQ(_lqp_cache->size(), 0u);
-  EXPECT_FALSE(_lqp_cache->has(meta_table_query));
-
   EXPECT_EQ(_pqp_cache->size(), 0u);
   EXPECT_FALSE(_pqp_cache->has(meta_table_query));
 }

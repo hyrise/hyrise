@@ -22,6 +22,7 @@ for benchmark_json in data['benchmarks']:
 
     sum_parse_duration = 0.0
     sum_sql_translation_duration = 0.0
+    sum_cache_duration = 0.0
     sum_optimization_duration = 0.0
     sum_lqp_translation_duration = 0.0
     sum_plan_execution_duration = 0.0
@@ -34,19 +35,21 @@ for benchmark_json in data['benchmarks']:
 
             for statement in metrics['statements']:
                 sum_sql_translation_duration += statement['sql_translation_duration']
+                sum_cache_duration += statement['cache_duration']
                 sum_optimization_duration += statement['optimization_duration']
                 sum_lqp_translation_duration += statement['lqp_translation_duration']
                 sum_plan_execution_duration += statement['plan_execution_duration']
 
     benchmark.append(sum_parse_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_sql_translation_duration / len(benchmark_json['successful_runs']))
+    benchmark.append(sum_cache_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_optimization_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_lqp_translation_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_plan_execution_duration / len(benchmark_json['successful_runs']))
 
     benchmarks.append(benchmark)
 
-df = pd.DataFrame(benchmarks, columns=['Benchmark', 'Parser', 'SQLTranslator', 'Optimizer', 'LQPTranslator', 'Execution'])
+df = pd.DataFrame(benchmarks, columns=['Benchmark', 'Parser', 'SQLTranslator', 'Cache', 'Optimizer', 'LQPTranslator', 'Execution'])
 
 # Normalize data from nanoseconds to percentage of total cost
 df.iloc[:,1:] = df.iloc[:,1:].apply(lambda x: x / x.sum(), axis=1)

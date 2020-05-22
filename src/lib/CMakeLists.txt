@@ -82,6 +82,8 @@ set(
     expression/pqp_column_expression.hpp
     expression/pqp_subquery_expression.cpp
     expression/pqp_subquery_expression.hpp
+    expression/typed_placeholder_expression.cpp
+    expression/typed_placeholder_expression.hpp
     expression/unary_minus_expression.cpp
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp

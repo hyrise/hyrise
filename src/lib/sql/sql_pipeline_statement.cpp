@@ -2,12 +2,15 @@
 
 #include <fstream>
 #include <iomanip>
+#include <numeric>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/typed_placeholder_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -29,7 +32,10 @@
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                                           const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+                                           const UseMvcc use_mvcc,
+                                           const std::shared_ptr<TransactionContext>& transaction_context,
+                                           const std::shared_ptr<Optimizer>& optimizer,
+                                           const std::shared_ptr<Optimizer>& post_caching_optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& init_pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& init_lqp_cache)
     : pqp_cache(init_pqp_cache),
@@ -37,6 +43,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _sql_string(sql),
       _use_mvcc(use_mvcc),
       _optimizer(optimizer),
+      _post_caching_optimizer(post_caching_optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
@@ -100,11 +107,49 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   return _unoptimized_logical_plan;
 }
 
-const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
-  // Make sure that the SQLTranslator was invoked
-  (void)get_unoptimized_logical_plan();
+void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression> &expression,
+                                            std::vector<std::shared_ptr<AbstractExpression>>& values,
+                                            ParameterID &next_parameter_id) {
+  if (expression->type == ExpressionType::Value) {
+    if (expression->replaced_by) {
+      const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
+      expression = expression->replaced_by;
+    } else {
+      const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
+      if (value_expression->data_type() != DataType::Null) {
+        Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
+        values.push_back(expression);
+        auto new_expression =
+            std::make_shared<TypedPlaceholderExpression>(next_parameter_id, expression->data_type());
+        expression->replaced_by = new_expression;
+        expression = new_expression;
+        next_parameter_id++;
+      }
+    }
+  }
+}
 
-  return _translation_info;
+const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimized_logical_plan(
+    std::vector<std::shared_ptr<AbstractExpression>>& values) {
+  auto& unoptimized_lqp = get_unoptimized_logical_plan();
+
+  ParameterID next_parameter_id(0);
+
+  if (_translation_info.cacheable) {
+    visit_lqp(unoptimized_lqp, [&values, &next_parameter_id](const auto& node) {
+      if (node) {
+        for (auto& root_expression : node->node_expressions) {
+          visit_expression(root_expression, [&values, &next_parameter_id](auto& expression) {
+            expression_parameter_extraction(expression, values, next_parameter_id);
+            return ExpressionVisitation::VisitArguments;
+          });
+        }
+      }
+      return LQPVisitation::VisitInputs;
+    });
+  }
+
+  return unoptimized_lqp
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
@@ -112,39 +157,68 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     return _optimized_logical_plan;
   }
 
+  const auto started_preoptimization_cache = std::chrono::high_resolution_clock::now();
+
+  std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
+  const auto unoptimized_lqp = get_split_unoptimized_logical_plan(extracted_values);
+
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
-    if (const auto cached_plan = lqp_cache->try_get(_sql_string)) {
-      const auto plan = *cached_plan;
+    if (const auto cached_plan = *(lqp_cache->try_get(unoptimized_lqp))) {
+      const auto plan = cached_plan->lqp;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
-        _optimized_logical_plan = plan->deep_copy();
+        _optimized_logical_plan = cached_plan->instantiate(extracted_values);
+        auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
+        _metrics->query_plan_cache_hit = true;
+        _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
+        const auto done_cache = std::chrono::high_resolution_clock::now();
+        _metrics->cache_duration =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
         return _optimized_logical_plan;
       }
     }
   }
-
-  auto unoptimized_lqp = get_unoptimized_logical_plan();
-
-  const auto started = std::chrono::high_resolution_clock::now();
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp));
+  auto temp_unoptimized_logical_plan = unoptimized_lqp->deep_copy();
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  const auto done_preoptimization_cache = std::chrono::high_resolution_clock::now();
+  const auto started_optimize = std::chrono::high_resolution_clock::now();
+
+  auto optimized_without_values = _optimizer->optimize(std::move(temp_unoptimized_logical_plan));
+
+  const auto done_optimize = std::chrono::high_resolution_clock::now();
+  _metrics->optimization_duration =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(done_optimize - started_optimize);
+
+  const auto started_postoptimization_cache = std::chrono::high_resolution_clock::now();
+
+  std::vector<ParameterID> all_parameter_ids(extracted_values.size());
+  std::iota(all_parameter_ids.begin(), all_parameter_ids.end(), 0);
+  auto prepared_plan = std::make_shared<PreparedPlan>(optimized_without_values, all_parameter_ids);
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache && _translation_info.cacheable) {
-    lqp_cache->set(_sql_string, _optimized_logical_plan);
+    lqp_cache->set(unoptimized_lqp, prepared_plan);
   }
+
+  _optimized_logical_plan = prepared_plan->instantiate(extracted_values);
+  auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
+
+  _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
+
+  const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
+  _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      done_preoptimization_cache - started_preoptimization_cache + done_postoptimization_cache -
+      started_postoptimization_cache);
 
   return _optimized_logical_plan;
 }
@@ -164,7 +238,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
-  if (pqp_cache) {
+  if (pqp_cache && _translation_info.cacheable) {
     if (const auto cached_physical_plan = pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
         Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
@@ -296,10 +370,10 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   if (!_result_table) _query_has_output = false;
 
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
-                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
-                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
-                reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE9(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
+                _metrics->cache_duration.count(), _metrics->optimization_duration.count(),
+                _metrics->lqp_translation_duration.count(), _metrics->plan_execution_duration.count(),
+                _metrics->query_plan_cache_hit, get_tasks().size(), reinterpret_cast<uintptr_t>(this));
 
   return {SQLPipelineStatus::Success, _result_table};
 }

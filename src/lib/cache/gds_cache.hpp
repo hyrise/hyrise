@@ -11,8 +11,8 @@ namespace opossum {
 
 // Generic cache implementation using the GDS policy.
 // Note: This implementation is not thread-safe.
-template <typename Key, typename Value>
-class GDSCache : public AbstractCacheImpl<Key, Value> {
+template <typename Key, typename Value, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+class GDSCache : public AbstractCacheImpl<Key, Value, Hash, KeyEqual> {
  public:
   // Entries within the GDS cache.
   struct GDSCacheEntry {
@@ -29,9 +29,9 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
 
   using Handle = typename boost::heap::fibonacci_heap<GDSCacheEntry>::handle_type;
 
-  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
-  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
-  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::KeyValuePair;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::AbstractIterator;
+  using typename AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
   class Iterator : public AbstractIterator {
    public:
@@ -40,7 +40,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
 
    private:
     friend class boost::iterator_core_access;
-    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+    friend class AbstractCacheImpl<Key, Value, Hash, KeyEqual>::ErasedIterator;
 
     IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
@@ -58,7 +58,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  explicit GDSCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDSCache(size_t capacity) : AbstractCacheImpl<Key, Value, Hash, KeyEqual>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);
