@@ -50,8 +50,8 @@ TEST_F(OperatorsJoinSortMergeTest, DeepCopy) {
 
   EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
-  EXPECT_NE(join_operator_copy->input_left(), nullptr);
-  EXPECT_NE(join_operator_copy->input_right(), nullptr);
+  EXPECT_NE(join_operator_copy->left_input(), nullptr);
+  EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }
 
 TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {

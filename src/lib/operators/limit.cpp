@@ -25,13 +25,13 @@ const std::string& Limit::name() const {
 std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
 std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Limit>(copied_input_left, _row_count_expression->deep_copy());
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Limit>(copied_left_input, _row_count_expression->deep_copy());
 }
 
 std::shared_ptr<const Table> Limit::_on_execute() {
-  const auto input_table = input_table_left();
+  const auto input_table = left_input_table();
 
   /**
    * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to

@@ -60,9 +60,9 @@ UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& le
     : AbstractReadOnlyOperator(OperatorType::UnionPositions, left, right) {}
 
 std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<UnionPositions>(copied_input_left, copied_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<UnionPositions>(copied_left_input, copied_right_input);
 }
 
 void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -78,20 +78,20 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     return early_result;
   }
 
-  const auto& left_input_table = *input_table_left();
+  const auto& left_input_table = *left_input_table();
 
   /**
    * For each input, create a ReferenceMatrix
    */
-  auto reference_matrix_left = _build_reference_matrix(input_table_left());
-  auto reference_matrix_right = _build_reference_matrix(input_table_right());
+  auto reference_matrix_left = _build_reference_matrix(left_input_table());
+  auto reference_matrix_right = _build_reference_matrix(right_input_table());
 
   /**
    * Init the virtual pos lists
    */
   VirtualPosList virtual_pos_list_left(left_input_table.row_count(), 0u);
   std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0u);
-  VirtualPosList virtual_pos_list_right(input_table_right()->row_count(), 0u);
+  VirtualPosList virtual_pos_list_right(right_input_table()->row_count(), 0u);
   std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0u);
 
   /**
@@ -199,7 +199,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 }
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
-  DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
+  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
               "Input tables don't have the same layout");
 
   // Later code relies on input tables containing columns. This is guaranteed by the AbstractOperator.
@@ -208,17 +208,17 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Later code relies on both tables having > 0 rows. If one doesn't, we can just return the other as the result of
    * the operator
    */
-  if (input_table_left()->row_count() == 0) {
-    return input_table_right();
+  if (left_input_table()->row_count() == 0) {
+    return right_input_table();
   }
-  if (input_table_right()->row_count() == 0) {
-    return input_table_left();
+  if (right_input_table()->row_count() == 0) {
+    return left_input_table();
   }
 
   /**
    * Both tables must contain only ReferenceSegments
    */
-  Assert(input_table_left()->type() == TableType::References && input_table_right()->type() == TableType::References,
+  Assert(left_input_table()->type() == TableType::References && right_input_table()->type() == TableType::References,
          "UnionPositions doesn't support non-reference tables yet");
 
   /**
@@ -239,8 +239,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       }
     }
   };
-  add(input_table_left());
-  add(input_table_right());
+  add(left_input_table());
+  add(right_input_table());
 
   std::sort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   const auto unique_end_iter = std::unique(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
@@ -250,7 +250,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
    * in the #if HYRISE_DEBUG block below)
    */
-  const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
+  const auto first_chunk_left = left_input_table()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
     const auto segment = first_chunk_left->get_segment(cluster_begin);
     const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
@@ -261,7 +261,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the column_ids referenced by each column (verification that this is the same for all chunks happens
    * in the #if HYRISE_DEBUG block below)
    */
-  for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < left_input_table()->column_count(); ++column_id) {
     const auto segment = first_chunk_left->get_segment(column_id);
     const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
     _referenced_column_ids.emplace_back(ref_segment->referenced_column_id());
@@ -305,8 +305,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       }
     }
   };
-  verify_column_clusters_in_all_chunks(input_table_left());
-  verify_column_clusters_in_all_chunks(input_table_right());
+  verify_column_clusters_in_all_chunks(left_input_table());
+  verify_column_clusters_in_all_chunks(right_input_table());
 #endif
 
   return nullptr;

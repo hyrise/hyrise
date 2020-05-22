@@ -88,9 +88,9 @@ const std::string& JoinNestedLoop::name() const {
 }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinNestedLoop>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                           _secondary_predicates);
 }
 
@@ -98,15 +98,15 @@ void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, Al
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
-                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+                   left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                   right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinNestedLoop doesn't support these parameters");
 
   PerformanceWarning("Nested Loop Join used");
 
-  auto left_table = input_table_left();
-  auto right_table = input_table_right();
+  auto left_table = left_input_table();
+  auto right_table = right_input_table();
 
   auto left_column_id = _primary_predicate.column_ids.first;
   auto right_column_id = _primary_predicate.column_ids.second;
