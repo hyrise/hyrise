@@ -26,7 +26,8 @@
 
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 
-#define SORT_WITHIN_CLUSTERS true
+#define MERGE_SMALL_CHUNKS true
+#define SMALL_CHUNK_TRESHOLD 10000
 
 namespace opossum {
 
@@ -160,7 +161,7 @@ const ClusterKey DisjointClustersAlgo::_clustering_key_for_chunk(const std::shar
        value = boost::lexical_cast<ColumnDataType>(variant_value);
       }
       indices.push_back(_get_cluster_index<ColumnDataType>(cluster_boundaries, value));
-    });      
+    });
   }
   return indices;
 }
@@ -285,7 +286,7 @@ void DisjointClustersAlgo::_perform_clustering() {
     // phase 1: partition each chunk into clusters
     const auto chunk_count_before_clustering = _table->chunk_count();
     std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
-    std::map<ClusterKey, std::shared_ptr<Chunk>> clusters;
+    std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>> clusters;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
       const auto initial_chunk = _table->get_chunk(chunk_id);
       if (initial_chunk) {
@@ -308,6 +309,38 @@ void DisjointClustersAlgo::_perform_clustering() {
         }
       }        
     }
+
+    // phase 1.5: merge small chunks into new chunks to reduce the number of chunks
+    if constexpr (MERGE_SMALL_CHUNKS) {
+      const ClusterKey MERGE_CLUSTER(clustering_column_ids.size(), std::numeric_limits<size_t>::max());
+
+      for (const auto& [cluster_key, cluster] : clusters) {
+        const auto& chunk = cluster.second;
+        if (chunk->size() <= SMALL_CHUNK_TRESHOLD) {
+          Assert(chunk->size() > 0, "there should not be an empty chunk");
+          const auto chunk_id = cluster.first;
+
+          // "cluster" it again
+          const auto initial_invalidated_rows = chunk->invalid_row_count();
+          const auto cluster_keys = std::vector<ClusterKey>(chunk->size(), MERGE_CLUSTER);
+          auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+          auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, chunk, cluster_keys, initial_invalidated_rows, clusters, chunk_ids_per_cluster);
+          clustering_partitioner->set_transaction_context(partition_transaction);
+          clustering_partitioner->execute();
+
+          if (clustering_partitioner->execute_failed()) {
+            std::cout << "Chunk " << chunk_id << " was supposed to be merged because its chunk size is less than " << SMALL_CHUNK_TRESHOLD << ", but was modified during the merge. Skipping it." << std::endl;
+            continue;
+          } else {
+            partition_transaction->commit();
+
+            // remove from the old cluster
+            chunk_ids_per_cluster[cluster_key].erase(chunk_id);
+          }
+        }
+      }
+    }
+
 
     // phase 2: sort within clusters
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {

@@ -12,7 +12,7 @@
 namespace opossum {
 
 
-ClusteringPartitioner::ClusteringPartitioner(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::shared_ptr<Chunk> chunk, const std::vector<ClusterKey>& cluster_keys, const size_t expected_invalid_row_count, std::map<ClusterKey, std::shared_ptr<Chunk>>& clusters, std::map<ClusterKey, std::set<ChunkID>>& chunk_ids_per_cluster)
+ClusteringPartitioner::ClusteringPartitioner(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::shared_ptr<Chunk> chunk, const std::vector<ClusterKey>& cluster_keys, const size_t expected_invalid_row_count, std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>>& clusters, std::map<ClusterKey, std::set<ChunkID>>& chunk_ids_per_cluster)
     : AbstractReadWriteOperator{OperatorType::ClusteringPartitioner, referencing_table_op}, _table{table}, _chunk{chunk}, _cluster_keys{cluster_keys}, _expected_invalid_row_count{expected_invalid_row_count}, _clusters{clusters}, _chunk_ids_per_cluster{chunk_ids_per_cluster}, _num_locks{0}, _transaction_id{0} {
       Assert(_chunk->size() == _cluster_keys.size(), "We need one cluster key for every row in the chunk.");
     }
@@ -66,7 +66,7 @@ void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
   const auto& last_chunk = _table->last_chunk();
   Assert(last_chunk, "failed to get last chunk");
   Assert(_table->chunk_count() == num_chunks_before_append + 1, "some additional chunk appeared");
-  _clusters[cluster_key] = last_chunk;
+  _clusters[cluster_key] = std::make_pair(num_chunks_before_append, last_chunk);
 
   if (_chunk_ids_per_cluster.find(cluster_key) == _chunk_ids_per_cluster.end()) {
     _chunk_ids_per_cluster[cluster_key] = {};
@@ -87,11 +87,11 @@ void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
       insertion_values.push_back((*segment)[chunk_offset]);
     }
 
-    if (_clusters.find(cluster_key) == _clusters.end() || _clusters[cluster_key]->size() == _table->target_chunk_size()) {
+    if (_clusters.find(cluster_key) == _clusters.end() || _clusters[cluster_key].second->size() == _table->target_chunk_size()) {
       _start_new_chunk(cluster_key);
     }
 
-    const auto& cluster_chunk = _clusters[cluster_key];
+    const auto& cluster_chunk = _clusters[cluster_key].second;
     const auto& new_mvcc_data = cluster_chunk->mvcc_data();
     const auto new_row_index = cluster_chunk->size();
 
