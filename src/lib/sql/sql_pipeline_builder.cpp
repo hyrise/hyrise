@@ -40,7 +40,8 @@ SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvc
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
-  auto post_caching_optimizer = _post_caching_optimizer ? _post_caching_optimizer : Optimizer::create_post_caching_optimizer();
+  auto post_caching_optimizer =
+      _post_caching_optimizer ? _post_caching_optimizer : Optimizer::create_post_caching_optimizer();
   auto pipeline =
       SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, post_caching_optimizer, _pqp_cache, _lqp_cache);
   DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_per_statement().size(), _sql.c_str(),
@@ -51,10 +52,11 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
 SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
     std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
-  auto post_caching_optimizer = _post_caching_optimizer ? _post_caching_optimizer : Optimizer::create_post_caching_optimizer();
+  auto post_caching_optimizer =
+      _post_caching_optimizer ? _post_caching_optimizer : Optimizer::create_post_caching_optimizer();
 
-  return {_sql,      std::move(parsed_sql), _use_mvcc,  _transaction_context,
-          optimizer, post_caching_optimizer,     _pqp_cache, _lqp_cache};
+  return {_sql,      std::move(parsed_sql),  _use_mvcc,  _transaction_context,
+          optimizer, post_caching_optimizer, _pqp_cache, _lqp_cache};
 }
 
 }  // namespace opossum

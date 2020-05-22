@@ -110,12 +110,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 const SQLTranslationInfo& SQLPipelineStatement::get_sql_translation_info() {
   // Make sure that the SQLTranslator was invoked
   (void)get_unoptimized_logical_plan();
+
   return _translation_info;
 }
 
-void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression> &expression,
-                                            std::vector<std::shared_ptr<AbstractExpression>>& values,
-                                            ParameterID &next_parameter_id) {
+void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<AbstractExpression>& expression,
+                                                           std::vector<std::shared_ptr<AbstractExpression>>& values,
+                                                           ParameterID& next_parameter_id) {
   if (expression->type == ExpressionType::Value) {
     if (expression->replaced_by) {
       const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression);
@@ -125,8 +126,7 @@ void SQLPipelineStatement::expression_parameter_extraction(std::shared_ptr<Abstr
       if (value_expression->data_type() != DataType::Null) {
         Assert(expression->arguments.empty(), "Cannot remove arguments of expression as none are present.");
         values.push_back(expression);
-        auto new_expression =
-            std::make_shared<TypedPlaceholderExpression>(next_parameter_id, expression->data_type());
+        auto new_expression = std::make_shared<TypedPlaceholderExpression>(next_parameter_id, expression->data_type());
         expression->replaced_by = new_expression;
         expression = new_expression;
         next_parameter_id++;
