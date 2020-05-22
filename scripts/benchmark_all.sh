@@ -109,7 +109,7 @@ else
   if [ -x /usr/bin/numactl ]; then
     for bind_type in nodebind membind
     do
-      echo "| numactl nodebind | $(numactl --show | grep --color=never ${bind_type}) |"
+      echo "| numactl | $(numactl --show | grep --color=never ${bind_type}) |"
     done
   else
     echo "| numactl | binary not found |"
