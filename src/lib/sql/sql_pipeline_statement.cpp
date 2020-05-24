@@ -374,10 +374,17 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   if (!_result_table) _query_has_output = false;
 
+  /* TODO(j-tr): currently there is no HYRISE_SUMMARY dtrace provider available for more than 8 arguments.
   DTRACE_PROBE9(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
                 _metrics->cache_duration.count(), _metrics->optimization_duration.count(),
                 _metrics->lqp_translation_duration.count(), _metrics->plan_execution_duration.count(),
                 _metrics->query_plan_cache_hit, get_tasks().size(), reinterpret_cast<uintptr_t>(this));
+  */
+
+  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
+                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
+                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
+                reinterpret_cast<uintptr_t>(this));
 
   return {SQLPipelineStatus::Success, _result_table};
 }
