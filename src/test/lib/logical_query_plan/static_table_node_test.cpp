@@ -4,7 +4,6 @@
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
-#include "utils/constraint_test_utils.hpp"
 
 namespace opossum {
 

@@ -7,7 +7,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/table_wrapper.hpp"
 #include "testing_assert.hpp"
-#include "utils/constraint_test_utils.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
