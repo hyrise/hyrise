@@ -145,11 +145,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
-   * @return A shared pointer to LQPColumnExpression of @param column_id or std::nullopt if it can't be found.
-   */
-  std::optional<const std::shared_ptr<LQPColumnExpression>> find_column_expression(const ColumnID column_id) const;
-
-  /**
    * @return whether the output column at @param column_id is nullable
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;
@@ -241,6 +236,7 @@ struct LQPNodeSharedPtrEqual final {
 // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 template <typename Value>
 using LQPNodeUnorderedMap =
+
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
 
 }  // namespace opossum
