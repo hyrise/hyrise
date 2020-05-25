@@ -302,7 +302,8 @@ TEST_F(StoredTableNodeTest, Constraints) {
   for (const auto& lqp_constraint : *lqp_constraints) {
     for (const auto& expr : lqp_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-      EXPECT_EQ(column_expr->original_node, _stored_table_node); // TODO Continue here: Here seems to be an error
+      EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
+      EXPECT_TRUE( column_expr->original_node.lock()== _stored_table_node);
     }
   }
 }
