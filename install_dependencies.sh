@@ -21,6 +21,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         brew --version 2>/dev/null || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
         echo "Installing dependencies (this may take a while)..."
+        pip3 install -r requirements.txt
         if brew update >/dev/null; then
             # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on MacOS after system upgrade
             # NOTE: The Mac CI server does not execute the install_dependencies.sh - formulas need to be installed manually.
@@ -51,6 +52,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     elif [[ "$unamestr" == 'Linux' ]]; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
+            sudo pip3 install -r requirements.txt
             if sudo apt-get update >/dev/null; then
                 sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
                 if [[ "$(lsb_release -sr)" < "20.04" ]]; then
