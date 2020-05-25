@@ -102,7 +102,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::constraints() 
         for (auto expr : this->column_expressions()) {
           const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
           Assert(column_expr, "Unexpected expression type in column_expression()");
-          if (column_expr->column_reference.original_column_id() == column_id) {
+          if (column_expr->original_column_id == column_id) {
             return column_expr;
           }
         }

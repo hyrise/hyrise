@@ -26,7 +26,7 @@ static void check_table_constraint_representation(
                 lqp_constraint.column_expressions.cbegin(), lqp_constraint.column_expressions.cend(),
                 [&](const std::shared_ptr<AbstractExpression>& expression) {
                   const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                  if (column_expression && column_expression->column_reference.original_column_id() == column_id) {
+                  if (column_expression && column_expression->original_column_id == column_id) {
                     return true;
                   } else {
                     return false;

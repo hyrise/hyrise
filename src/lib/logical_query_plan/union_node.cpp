@@ -48,14 +48,14 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
 const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
-    case UnionMode::Positions:
+    case SetOperationMode::Positions:
       // UnionPositions merges two reference tables with the same original table(s). Any duplicate RowIDs are
       // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
       Assert(*left_input()->constraints() == *right_input()->constraints(),
              "Input tables should have the same constraints.");
       return forward_constraints();
 
-    case UnionMode::All:
+    case SetOperationMode::All:
       // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.
       // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
       // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous

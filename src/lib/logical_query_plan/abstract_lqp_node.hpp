@@ -6,7 +6,9 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "functional_dependency.hpp"
+#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
