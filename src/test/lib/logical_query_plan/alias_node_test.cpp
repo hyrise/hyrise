@@ -58,7 +58,7 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   const auto other_mock_node =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "named");
   const auto expr_a = other_mock_node->get_column("a");
-  const auto expr_b = other_mock_node->get_column("b")
+  const auto expr_b = other_mock_node->get_column("b");
   const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
   const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
   EXPECT_NE(*alias_node, *alias_node_other_expressions);

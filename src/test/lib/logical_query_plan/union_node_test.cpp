@@ -84,7 +84,7 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
   const auto table_name = "t_a";
   Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({{_a->original_column_id}, IsPrimaryKey::No});
   const auto stored_table_node = StoredTableNode::make(table_name);
   EXPECT_EQ(stored_table_node->functional_dependencies().size(), 1);
   // Create ValidateNode as it is required by UnionPositions

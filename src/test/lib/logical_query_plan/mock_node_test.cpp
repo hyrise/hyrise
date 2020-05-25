@@ -101,7 +101,7 @@ TEST_F(MockNodeTest, Constraints) {
   for (const auto& lqp_constraint : *lqp_constraints_mock_node_a) {
     for (const auto& expr : lqp_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-      EXPECT_EQ(column_expr->column_reference.original_node(), _mock_node_a);
+      EXPECT_EQ(column_expr->original_node, _mock_node_a);
     }
   }
 }

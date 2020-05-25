@@ -111,15 +111,15 @@ TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
   const auto lqp_constraint_b = *agg_node_b->constraints()->cbegin();
   EXPECT_EQ(lqp_constraint_a.column_expressions.size(), 1);
   EXPECT_EQ(lqp_constraint_b.column_expressions.size(), 2);
-  EXPECT_TRUE((lqp_constraint_a.column_expressions.contains(lqp_column_(_a))));
-  EXPECT_TRUE((lqp_constraint_b.column_expressions.contains(lqp_column_(_a))));
-  EXPECT_TRUE((lqp_constraint_b.column_expressions.contains(lqp_column_(_b))));
+  EXPECT_TRUE((lqp_constraint_a.column_expressions.contains(_a)));
+  EXPECT_TRUE((lqp_constraint_b.column_expressions.contains(_a)));
+  EXPECT_TRUE((lqp_constraint_b.column_expressions.contains(_b)));
 }
 
 TEST_F(AggregateNodeTest, ConstraintsForwarding) {
   // Prepare Test
-  const auto table_constraint_1 = TableConstraintDefinition{{_b.original_column_id()}};
-  const auto table_constraint_2 = TableConstraintDefinition{{_c.original_column_id()}};
+  const auto table_constraint_1 = TableConstraintDefinition{{_b->original_column_id}};
+  const auto table_constraint_2 = TableConstraintDefinition{{_c->original_column_id}};
   _mock_node->set_table_constraints({table_constraint_1, table_constraint_2});
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
@@ -134,7 +134,7 @@ TEST_F(AggregateNodeTest, ConstraintsForwarding) {
 
 TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
   // Prepare Test
-  const auto table_constraint = TableConstraintDefinition{{_a.original_column_id()}};
+  const auto table_constraint = TableConstraintDefinition{{_a->original_column_id}};
   _mock_node->set_table_constraints({table_constraint});
   EXPECT_EQ(_mock_node->constraints()->size(), 1);
 
@@ -146,7 +146,7 @@ TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
   // We do not want AggregateNode to output two constraints that are equivalent.
   EXPECT_EQ(_aggregate_node->constraints()->size(), 1);
   const auto constraint = *_aggregate_node->constraints()->cbegin();
-  EXPECT_TRUE(constraint.column_expressions.contains(lqp_column_(_a)));
+  EXPECT_TRUE(constraint.column_expressions.contains(_a));
 }
 
 }  // namespace opossum

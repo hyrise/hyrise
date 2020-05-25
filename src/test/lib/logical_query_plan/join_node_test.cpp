@@ -37,10 +37,10 @@ class JoinNodeTest : public BaseTest {
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
     // Prepare constraint definitions
-    _unique_constraint_a = TableConstraintDefinition{{_t_a_a.original_column_id()}};
-    _unique_constraint_b_c = TableConstraintDefinition{{_t_a_b.original_column_id(), _t_a_c.original_column_id()}};
-    _unique_constraint_x = TableConstraintDefinition{{_t_b_x.original_column_id()}};
-    _unique_constraint_y = TableConstraintDefinition{{_t_b_y.original_column_id()}};
+    _unique_constraint_a = TableConstraintDefinition{{_t_a_a->original_column_id}};
+    _unique_constraint_b_c = TableConstraintDefinition{{_t_a_b->original_column_id, _t_a_c->original_column_id}};
+    _unique_constraint_x = TableConstraintDefinition{{_t_b_x->original_column_id}};
+    _unique_constraint_y = TableConstraintDefinition{{_t_b_y->original_column_id}};
   }
 
   std::shared_ptr<MockNode> _mock_node_a;

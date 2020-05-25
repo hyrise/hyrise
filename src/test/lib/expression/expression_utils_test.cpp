@@ -143,10 +143,10 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionsSubset) {
-  const auto expr_a = expression_vector(lqp_column_(a_a), lqp_column_(a_b));
-  const auto expr_b = expression_vector(lqp_column_(a_b), lqp_column_(a_a));
-  const auto expr_c = expression_vector(lqp_column_(a_a));
-  const auto expr_d = expression_vector(lqp_column_(a_a), lqp_column_(a_b), lqp_column_(a_c));
+  const auto expr_a = expression_vector(a_a, a_b);
+  const auto expr_b = expression_vector(a_b, a_a);
+  const auto expr_c = expression_vector(a_a);
+  const auto expr_d = expression_vector(a_a, a_b, a_c);
 
   // Compare vectors - equivalent, but different order
   EXPECT_TRUE(expressions_subset(expr_a, expr_b));
