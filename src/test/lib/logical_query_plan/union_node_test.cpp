@@ -99,26 +99,4 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
   Hyrise::get().reset();
 }
 
-TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
-  // Add two unique constraints to _mock_node1
-  // Primary Key: a, b
-  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}};
-  // Unique: c
-  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{2}}};
-  _mock_node1->set_table_constraints(TableConstraintDefinitions{table_constraint_1, table_constraint_2});
-  EXPECT_EQ(_mock_node1->constraints()->size(), 2);
-
-  // Test constraint forwarding
-  EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
-  EXPECT_EQ(*_union_node->constraints(), *_mock_node1->constraints());
-
-  // Negative test - input nodes with differing constraints should lead to failure
-  auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
-  mock_node1_changed->set_table_constraints(TableConstraintDefinitions{table_constraint_1});
-  _union_node->set_right_input(mock_node1_changed);
-  EXPECT_THROW(_union_node->constraints(), std::logic_error);
-
-  // TODO(Julian) Check whether something got lost while merging
-}
-
 }  // namespace opossum

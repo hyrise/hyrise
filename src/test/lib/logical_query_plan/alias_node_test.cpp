@@ -77,25 +77,4 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(b->hash(), expr_b->hash());
 }
 
-TEST_F(AliasNodeTest, ConstraintsEmpty) {
-  EXPECT_TRUE(mock_node->constraints()->empty());
-  EXPECT_TRUE(alias_node->constraints()->empty());
-}
-
-TEST_F(AliasNodeTest, ConstraintsForwarding) {
-  // Add constraints to MockNode
-  //  Primary Key: a, b
-  const auto table_constraint_1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}};
-  //  Unique: b
-  const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}};
-  const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
-  mock_node->set_table_constraints(table_constraints);
-
-  // Basic check
-  const auto lqp_constraints = alias_node->constraints();
-  EXPECT_EQ(lqp_constraints->size(), 2);
-  // In-depth check
-  check_table_constraint_representation(table_constraints, lqp_constraints);
-}
-
 }  // namespace opossum
