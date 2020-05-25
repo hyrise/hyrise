@@ -216,8 +216,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
 
   EXPECT_EQ(fds.size(), 2);
-  EXPECT_EQ(fds.at(0), fd1_expected);
-  EXPECT_EQ(fds.at(1), fd2_expected);
+  EXPECT_EQ(fds.at(0), fd2_expected);
+  EXPECT_EQ(fds.at(1), fd1_expected);
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
