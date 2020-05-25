@@ -259,43 +259,6 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::constraints() const {
-  return std::make_shared<ExpressionsConstraintDefinitions>();
-}
-
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::forward_constraints() const {
-  Assert(left_input(), "Not possible to forward constraints from empty node.");
-  const auto input_constraints = left_input()->constraints();
-  const auto& expressions = column_expressions();
-  if constexpr (HYRISE_DEBUG) {
-    ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
-    for (const auto& constraint : *input_constraints) {
-      for (const auto& expr : constraint.column_expressions) {
-        Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses column expressions.");
-      }
-    }
-  }
-  return input_constraints;
-}
-
-bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
-  const auto lqp_constraints = constraints();
-  if (lqp_constraints->empty()) return false;
-
-  // Look for a constraint that is solely based on the given column expressions
-  for (const auto& constraint : *lqp_constraints) {
-    if (constraint.column_expressions.size() == column_expressions.size() &&
-        std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&](const auto column_expression) {
-          return constraint.column_expressions.contains(column_expression);
-        })) {
-      // Found match
-      return true;
-    }
-  }
-  // No match found
-  return false;
-}
-
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
   // Gather input FDs from all input nodes
   auto fds_left = std::vector<FunctionalDependency>();

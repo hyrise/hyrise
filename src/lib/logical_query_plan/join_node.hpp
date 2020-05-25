@@ -29,7 +29,6 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
-  const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;

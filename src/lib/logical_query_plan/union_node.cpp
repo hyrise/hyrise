@@ -45,26 +45,6 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints() const {
-  switch (set_operation_mode) {
-    case SetOperationMode::Unique:
-    case SetOperationMode::Positions:
-      // UnionPositions merges two reference tables with the same original table(s). Any duplicate RowIDs are
-      // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
-      Assert(*left_input()->constraints() == *right_input()->constraints(),
-             "Input tables should have the same constraints.");
-      return forward_constraints();
-
-    case SetOperationMode::All:
-      // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.
-      // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
-      // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous
-      // nodes.
-      return std::make_shared<ExpressionsConstraintDefinitions>();
-  }
-  Fail("Unhandled UnionMode");
-}
-
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

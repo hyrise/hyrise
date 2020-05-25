@@ -35,7 +35,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const override;
 
   void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
   std::vector<FunctionalDependency> functional_dependencies() const override;
