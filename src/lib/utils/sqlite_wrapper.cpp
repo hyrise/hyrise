@@ -189,7 +189,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
       Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + "\n");
     }
 
-    while ((rc = sqlite3_step(sqlite_statement)) != SQLITE_DONE) {
+    while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {
     }
   }
 
@@ -234,7 +234,7 @@ void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql, const 
   }
 }
 
-void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& table_name) {
+void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& table_name) const {
   std::vector<std::string> column_types;
 
   for (const auto& column_definition : table.column_definitions()) {

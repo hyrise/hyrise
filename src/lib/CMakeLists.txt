@@ -126,6 +126,8 @@ set(
     logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
+    logical_query_plan/functional_dependency.cpp
+    logical_query_plan/functional_dependency.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -312,6 +314,8 @@ set(
     optimizer/strategy/predicate_split_up_rule.hpp
     optimizer/strategy/semi_join_reduction_rule.cpp
     optimizer/strategy/semi_join_reduction_rule.hpp
+    optimizer/strategy/stored_table_column_alignment_rule.cpp
+    optimizer/strategy/stored_table_column_alignment_rule.hpp
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp

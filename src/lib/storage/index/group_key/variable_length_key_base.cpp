@@ -29,7 +29,7 @@ VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* data, Compos
 
 VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
-  auto raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
+  const auto* const raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
   auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), _size);
   for (CompositeKeyLength i = 0; i < operation_width; ++i) {
     if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
@@ -120,7 +120,7 @@ bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 
 std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key) {
   os << std::hex << std::setfill('0');
-  auto raw_data = reinterpret_cast<uint8_t*>(key._data);
+  const auto* const raw_data = reinterpret_cast<uint8_t*>(key._data);
   if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
     for (CompositeKeyLength i = 1; i <= key._size; ++i) {
       os << std::setw(2) << +raw_data[key._size - i];

@@ -104,7 +104,7 @@ void PredicateReorderingRule::_reorder_predicates(
   }
 
   // Untie predicates from LQP, so we can freely retie them
-  for (auto& predicate : predicates) {
+  for (const auto& predicate : predicates) {
     lqp_remove_node(predicate, AllowRightInput::Yes);
   }
 
