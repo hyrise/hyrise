@@ -52,7 +52,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     elif [[ "$unamestr" == 'Linux' ]]; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
-            sudo pip3 install -r requirements.txt
             if sudo apt-get update >/dev/null; then
                 sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
                 if [[ "$(lsb_release -sr)" < "20.04" ]]; then
@@ -81,6 +80,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-9 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-9 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-9 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-9 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-9
+
+                # Install python modules
+                sudo pip3 install -r requirements.txt
             else
                 echo "Error during installation."
                 exit 1
