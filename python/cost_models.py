@@ -109,14 +109,15 @@ def add_dummy_types(train, test, cols):
 
 def parse_arguments(opt=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-train', help='Path to training data in csv format', metavar='TRAIN_PATH')
+    parser.add_argument('-train', help='Directory of training data', metavar='TRAIN_DIR')
     # in case no test data is given, the training data will be split into training and test data
-    parser.add_argument('--test', help='Path to test data in csv format. If absent, training data will be split',
-                        metavar='TEST_PATH')
+    parser.add_argument('--test', help='Directory of test data. If absent, training data will be split',
+                        metavar='TEST_DIR')
     # We have achieved the best results with boost
     parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'}, default=['boost'], action='append',
                         nargs='+', help='Model type(s). Boost is the default')
-    parser.add_argument('--out', help='Output folder', metavar='OUT_PATH', default='costModelOutput')
+    parser.add_argument('--out', default='costModelOutput', help='Output directory. Default is costModelOutput',
+                        metavar='OUT_DIR')
 
     if (opt):
         return parser.parse_args(opt)

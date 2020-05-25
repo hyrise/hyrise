@@ -105,14 +105,13 @@ void OperatorFeatureExporter::_add_join_details(const std::shared_ptr<const Abst
   _current_row[0] = pmr_string{"Join"};
   _current_row[8] = pmr_string{op->name()};
   const auto join = std::dynamic_pointer_cast<const AbstractJoinOperator>(op);
-  std::stringstream join_mode;
-  join_mode << join->mode();
-  _current_row[5] = pmr_string{join_mode.str()};
+  _current_row[5] = pmr_string{join_mode_to_string.left.at(join->mode())};
 }
 
 void OperatorFeatureExporter::_add_table_scan_details(const std::shared_ptr<const AbstractOperator>& op,
                                                       const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                                       const std::shared_ptr<const AbstractLQPNode>& original_node) {
+  DebugAssert(op->type() == OperatorType::TableScan, "Expected TableScan");
   _current_row[5] = original_node == lqp_node->left_input() ? pmr_string{"COLUMN_SCAN"} : pmr_string{"REFERENCE_SCAN"};
   const auto table_scan = std::dynamic_pointer_cast<const TableScan>(op);
   Assert(table_scan->_impl_description != "Unset", "Expected TableScan to be executed.");
