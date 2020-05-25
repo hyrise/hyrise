@@ -296,14 +296,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_left_operator = translate_node(node->left_input());
-  const auto input_right_operator = translate_node(node->right_input());
+  const auto left_input_operator = translate_node(node->left_input());
+  const auto right_input_operator = translate_node(node->right_input());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode == JoinMode::Cross) {
     PerformanceWarning("CROSS join used");
-    return std::make_shared<Product>(input_left_operator, input_right_operator);
+    return std::make_shared<Product>(left_input_operator, right_input_operator);
   }
 
   Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
@@ -340,7 +340,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
-      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+      join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
   });

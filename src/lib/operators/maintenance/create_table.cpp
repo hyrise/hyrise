@@ -25,7 +25,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
 
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
 
-  const auto column_definitions = input_table_left()->column_definitions();
+  const auto column_definitions = left_input_table()->column_definitions();
 
   stream << "CreateTable '" << table_name << "' (";
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
@@ -48,11 +48,11 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
 }
 
 const TableColumnDefinitions& CreateTable::column_definitions() const {
-  return input_table_left()->column_definitions();
+  return left_input_table()->column_definitions();
 }
 
 std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<TransactionContext> context) {
-  const auto column_definitions = _input_left->get_output()->column_definitions();
+  const auto column_definitions = _left_input->get_output()->column_definitions();
 
   // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
   if (!if_not_exists || !Hyrise::get().storage_manager.has_table(table_name)) {
@@ -61,7 +61,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     Hyrise::get().storage_manager.add_table(table_name, table);
 
     // Insert table data (if no data is present, insertion makes no difference)
-    _insert = std::make_shared<Insert>(table_name, _input_left);
+    _insert = std::make_shared<Insert>(table_name, _left_input);
     _insert->set_transaction_context(context);
     _insert->execute();
   }
@@ -69,9 +69,9 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
 }
 
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<CreateTable>(table_name, if_not_exists, copied_input_left);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<CreateTable>(table_name, if_not_exists, copied_left_input);
 }
 
 void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
