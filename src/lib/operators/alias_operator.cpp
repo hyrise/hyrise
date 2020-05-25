@@ -29,15 +29,15 @@ std::string AliasOperator::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<AliasOperator>(copied_input_left, _column_ids, _aliases);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<AliasOperator>(copied_left_input, _column_ids, _aliases);
 }
 
 void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
-  const auto& input_table = *input_table_left();
+  const auto& input_table = *left_input_table();
 
   /**
    * Generate the new TableColumnDefinitions, that is, setting the new names for the columns

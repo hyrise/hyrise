@@ -63,7 +63,7 @@ AbstractLQPNode::~AbstractLQPNode() {
          "There are outputs that should still reference this node. Thus this node shouldn't get deleted");
 
   // We're in the destructor, thus we must make sure we're not calling any virtual methods - so we're doing the removal
-  // directly instead of calling set_input_left/right(nullptr)
+  // directly instead of calling set_left_input/right_input(nullptr)
   if (_inputs[0]) _inputs[0]->_remove_output_pointer(*this);
   if (_inputs[1]) _inputs[1]->_remove_output_pointer(*this);
 }

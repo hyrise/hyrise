@@ -58,9 +58,9 @@ std::string JoinHash::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                     _secondary_predicates, _radix_bits);
 }
 
@@ -110,9 +110,9 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
-                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+                   left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                   right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash doesn't support these parameters");
 
   std::shared_ptr<const Table> build_input_table;
@@ -132,17 +132,17 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto build_hash_table_for_right_input =
       _mode == JoinMode::Left || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse ||
       _mode == JoinMode::Semi ||
-      (_mode == JoinMode::Inner && _input_left->get_output()->row_count() > _input_right->get_output()->row_count());
+      (_mode == JoinMode::Inner && _left_input->get_output()->row_count() > _right_input->get_output()->row_count());
 
   if (build_hash_table_for_right_input) {
     // We don't have to swap the operation itself here, because we only support the commutative Equi Join.
-    build_input_table = _input_right->get_output();
-    probe_input_table = _input_left->get_output();
+    build_input_table = _right_input->get_output();
+    probe_input_table = _left_input->get_output();
     build_column_id = _primary_predicate.column_ids.second;
     probe_column_id = _primary_predicate.column_ids.first;
   } else {
-    build_input_table = _input_left->get_output();
-    probe_input_table = _input_right->get_output();
+    build_input_table = _left_input->get_output();
+    probe_input_table = _right_input->get_output();
     build_column_id = _primary_predicate.column_ids.first;
     probe_column_id = _primary_predicate.column_ids.second;
   }
