@@ -32,7 +32,7 @@ class ConstraintsTest : public BaseTest {
       auto& sm = Hyrise::get().storage_manager;
       sm.add_table("table", table);
 
-      table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+      table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No});
     }
 
     {
@@ -44,7 +44,7 @@ class ConstraintsTest : public BaseTest {
       auto& sm = Hyrise::get().storage_manager;
       sm.add_table("table_nullable", table);
 
-      table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+      table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No});
     }
   }
 };
@@ -54,32 +54,61 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   auto table = sm.get_table("table");
   auto table_nullable = sm.get_table("table_nullable");
 
+  // TODO(Julian) Update test: Invalid because the constraint contains duplicated columns.
+  //  auto count_before = table->get_soft_unique_constraints().size();
+  //  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{1}, ColumnID{1}}, IsPrimaryKey::No});
+  //  EXPECT_EQ(table->get_soft_unique_constraints().size(), count_before + 1);
+
   // Invalid because the column id is out of range
-  EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{5}}, IsPrimaryKey::No), std::logic_error);
-
-  // Invalid because the constraint contains duplicated columns.
-  EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{1}, ColumnID{1}}, IsPrimaryKey::No), std::logic_error);
-
-  // Invalid because the column must be non nullable for a primary key.
-  EXPECT_THROW(table_nullable->add_soft_unique_constraint({ColumnID{1}}, IsPrimaryKey::Yes), std::logic_error);
-
-  // Invalid because there is still a nullable column.
-  EXPECT_THROW(table_nullable->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes),
+  EXPECT_THROW(table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{5}}, IsPrimaryKey::No}),
                std::logic_error);
 
-  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::Yes);
+  // Invalid because the column must be non nullable for a primary key.
+  EXPECT_THROW(table_nullable->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{1}}, IsPrimaryKey::Yes}),
+               std::logic_error);
+
+  // Invalid because there is still a nullable column.
+  EXPECT_THROW(table_nullable->add_soft_unique_constraint(
+                   TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes}),
+               std::logic_error);
+
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::Yes});
 
   // Invalid because another primary key already exists.
-  EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::Yes), std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::Yes}),
+               std::logic_error);
 
   // Invalid because a constraint on the same column already exists.
-  EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No), std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No}),
+               std::logic_error);
 
-  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No});
 
   // Invalid because a concatenated constraint on the same columns already exists.
-  EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No), std::logic_error);
-  EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes), std::logic_error);
+  EXPECT_THROW(
+      table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No}),
+      std::logic_error);
+  EXPECT_THROW(
+      table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes}),
+      std::logic_error);
+}
+
+TEST_F(ConstraintsTest, Equals) {
+  const auto constraint_a = TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No};
+  const auto constraint_a_pk = TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes};
+  const auto constraint_b = TableConstraintDefinition{{ColumnID{2}, ColumnID{3}}, IsPrimaryKey::No};
+  const auto constraint_c = TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No};
+
+  EXPECT_TRUE(constraint_a == constraint_a);
+
+  EXPECT_FALSE(constraint_a == constraint_a_pk);
+  EXPECT_FALSE(constraint_a_pk == constraint_a);
+
+  EXPECT_FALSE(constraint_a == constraint_b);
+  EXPECT_FALSE(constraint_b == constraint_a);
+
+  EXPECT_FALSE(constraint_c == constraint_a);
+  EXPECT_FALSE(constraint_a == constraint_c);
 }
 
 }  // namespace opossum

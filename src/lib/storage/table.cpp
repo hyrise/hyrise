@@ -323,38 +323,32 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints() const {
-  return _constraint_definitions;
-}
+const TableConstraintDefinitions& Table::get_soft_unique_constraints() const { return _constraint_definitions; }
 
-void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
+void Table::add_soft_unique_constraint(const TableConstraintDefinition& table_constraint) {
   Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
-  for (const auto& column_id : column_ids) {
+  for (const auto& column_id : table_constraint.columns) {
     Assert(column_id < column_count(), "ColumnID out of range");
-    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
+    Assert(table_constraint.is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
            "Column must be not nullable for primary key constraint");
   }
 
   {
     auto scoped_lock = acquire_append_mutex();
-    if (is_primary_key == IsPrimaryKey::Yes) {
+    if (table_constraint.is_primary_key == IsPrimaryKey::Yes) {
       Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
                           [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
                  _constraint_definitions.end(),
              "Another primary key already exists for this table.");
     }
 
-    auto sorted_columns_ids = column_ids;
-    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
-    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
-
     Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                        [&new_constraint](const auto& existing_constraint) {
-                          return new_constraint.columns == existing_constraint.columns;
+                        [&table_constraint](const auto& existing_constraint) {
+                          return table_constraint.columns == existing_constraint.columns;
                         }) == _constraint_definitions.end(),
            "Another constraint on the same columns already exists.");
 
-    _constraint_definitions.push_back(new_constraint);
+    _constraint_definitions.emplace(table_constraint);
   }
 }
 

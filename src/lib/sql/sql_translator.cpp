@@ -286,10 +286,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   if (need_alias_node) {
     std::vector<std::string> aliases;
     for (const auto& element : _inflated_select_list_elements) {
-      aliases.emplace_back(element.expression->as_column_name());
-
       if (!element.identifiers.empty()) {
-        aliases.back() = element.identifiers.back().column_name;
+        aliases.emplace_back(element.identifiers.back().column_name);
+      } else {
+        aliases.emplace_back(element.expression->as_column_name());
       }
     }
 

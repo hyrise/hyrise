@@ -15,6 +15,8 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
+  const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const override;
+
   std::shared_ptr<AbstractExpression> num_rows_expression() const;
 
  protected:

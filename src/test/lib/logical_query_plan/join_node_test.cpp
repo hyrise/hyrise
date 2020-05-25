@@ -9,6 +9,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "utils/constraint_test_utils.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -34,6 +35,12 @@ class JoinNodeTest : public BaseTest {
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+
+    // Prepare constraint definitions
+    _unique_constraint_a = TableConstraintDefinition{{_t_a_a->original_column_id}};
+    _unique_constraint_b_c = TableConstraintDefinition{{_t_a_b->original_column_id, _t_a_c->original_column_id}};
+    _unique_constraint_x = TableConstraintDefinition{{_t_b_x->original_column_id}};
+    _unique_constraint_y = TableConstraintDefinition{{_t_b_y->original_column_id}};
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -47,6 +54,10 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _t_a_c;
   std::shared_ptr<LQPColumnExpression> _t_b_x;
   std::shared_ptr<LQPColumnExpression> _t_b_y;
+  TableConstraintDefinition _unique_constraint_a;
+  TableConstraintDefinition _unique_constraint_b_c;
+  TableConstraintDefinition _unique_constraint_x;
+  TableConstraintDefinition _unique_constraint_y;
 };
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross"); }
@@ -61,11 +72,11 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) {
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_cross_join_node->column_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->column_expressions().at(0), *_t_a_a);
   EXPECT_EQ(*_cross_join_node->column_expressions().at(1), *_t_a_b);
   EXPECT_EQ(*_cross_join_node->column_expressions().at(2), *_t_a_c);
   EXPECT_EQ(*_cross_join_node->column_expressions().at(3), *_t_b_x);
   EXPECT_EQ(*_cross_join_node->column_expressions().at(4), *_t_b_y);
-  EXPECT_EQ(*_cross_join_node->column_expressions().at(0), *_t_a_a);
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
@@ -186,7 +197,7 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
     JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
-      _mock_node_b));
+        _mock_node_b));
   // clang-format on
 
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
@@ -259,6 +270,101 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   EXPECT_EQ(right_join_fds.at(0), fd_xy);
 
   EXPECT_EQ(full_outer_join_node->functional_dependencies().size(), 0);
+}
+
+TEST_F(JoinNodeTest, ConstraintsSemiAndAntiJoins) {
+  _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
+  _mock_node_b->set_table_constraints({_unique_constraint_x});
+
+  for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
+    // clang-format off
+    const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+                                          _mock_node_a,
+                                          _mock_node_b);
+    // clang-format on
+
+    EXPECT_TRUE(*join_node->constraints() == *_mock_node_a->constraints());
+  }
+}
+
+TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
+  // TODO(Julian) Test that...
+
+  // Prepare join nodes
+  for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+    // clang-format off
+    const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+                                          _mock_node_a,
+                                          _mock_node_b);
+    // clang-format on
+
+    // Case 1 - Join columns of both, LEFT and RIGHT tables are not unique
+    _mock_node_a->set_table_constraints({});
+    _mock_node_b->set_table_constraints({});
+    EXPECT_TRUE(join_node->constraints()->empty());
+
+    // Case 2 - Join column of LEFT table (a) is unique whereas join column of RIGHT table (y) is not
+    _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
+    _mock_node_b->set_table_constraints({_unique_constraint_x});
+
+    // Expect unique constraints of RIGHT table (x) to be forwarded
+    auto join_constraints = join_node->constraints();
+    EXPECT_EQ(join_constraints->size(), 1);
+    EXPECT_TRUE(*join_constraints == *_mock_node_b->constraints());
+
+    // Case 3 - Join column of LEFT table (a) is not(!) unique whereas join column of RIGHT table (y) is
+    _mock_node_a->set_table_constraints({_unique_constraint_b_c});
+    _mock_node_b->set_table_constraints({_unique_constraint_x, _unique_constraint_y});
+
+    // Expect unique constraints of LEFT table (b_c) to be forwarded
+    join_constraints = join_node->constraints();
+    EXPECT_EQ(join_constraints->size(), 1);
+    EXPECT_TRUE(*join_constraints == *_mock_node_a->constraints());
+
+    // Case 4 - Join column of both, LEFT (a) and RIGHT (y) table are unique
+    _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
+    _mock_node_b->set_table_constraints({_unique_constraint_x, _unique_constraint_y});
+
+    // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
+    join_constraints = join_node->constraints();
+    EXPECT_EQ(join_constraints->size(), 4);
+    check_table_constraint_representation(
+        {_unique_constraint_a, _unique_constraint_b_c, _unique_constraint_x, _unique_constraint_y}, join_constraints);
+  }
+}
+
+TEST_F(JoinNodeTest, ConstraintsNonEquiJoin) {
+  // Currently, we do not support constraint forwarding for Non-Equi- or Theta-Joins
+  _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
+  _mock_node_b->set_table_constraints({_unique_constraint_x, _unique_constraint_y});
+  // clang-format off
+  const auto theta_join_node = JoinNode::make(JoinMode::Inner, greater_than_(_t_a_a, _t_b_x),
+                                              _mock_node_a,
+                                              _mock_node_b);
+  // clang-format on
+
+  EXPECT_TRUE(theta_join_node->constraints()->empty());
+}
+
+TEST_F(JoinNodeTest, ConstraintsNonSemiNonAntiMultiPredicateJoin) {
+  // Except for Semi- and Anti-Joins, we currently do not support constraint forwarding for multi predicate joins.
+  _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
+  _mock_node_b->set_table_constraints({_unique_constraint_x, _unique_constraint_y});
+  // clang-format off
+  const auto join_node = JoinNode::make(JoinMode::Inner,
+                                        expression_vector(less_than_(_t_a_a, _t_b_x), greater_than_(_t_a_a, _t_b_y)),
+                                        _mock_node_a,
+                                        _mock_node_b);
+  // clang-format on
+
+  EXPECT_TRUE(join_node->constraints()->empty());
+}
+
+TEST_F(JoinNodeTest, ConstraintsCrossJoin) {
+  _mock_node_a->set_table_constraints({_unique_constraint_a, _unique_constraint_b_c});
+  _mock_node_b->set_table_constraints({_unique_constraint_x, _unique_constraint_y});
+
+  EXPECT_TRUE(_cross_join_node->constraints()->empty());
 }
 
 }  // namespace opossum

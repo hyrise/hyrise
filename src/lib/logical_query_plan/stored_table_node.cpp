@@ -93,6 +93,44 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
+const std::shared_ptr<ExpressionsConstraintDefinitions> StoredTableNode::constraints() const {
+  auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+
+  // Extract relevant constraints from table
+  const auto& table_constraints =
+      Hyrise::get().storage_manager.get_table(table_name).get()->get_soft_unique_constraints();
+
+  for (const TableConstraintDefinition& table_constraint : table_constraints) {
+    // Discard constraints which involve pruned column(s)
+    const auto discard_constraint = [&]() {
+      for (const auto& column_id : table_constraint.columns) {
+        //  Check whether constraint involves pruned column id(s).
+        if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
+          return true;
+        }
+      }
+      return false;
+    }();
+
+    if (!discard_constraint) {
+      // Search for column expressions representing the table_constraint's ColumnIDs
+      auto constraint_column_expressions = ExpressionUnorderedSet{};
+
+      for (const auto& column_id : table_constraint.columns) {
+        const auto column_expr_opt = find_column_expression(column_id);
+        Assert(column_expr_opt, "Did not find column expression in LQPNode");
+
+        constraint_column_expressions.insert(*column_expr_opt);
+      }
+
+      // Create ExpressionsConstraintDefinition
+      lqp_constraints->emplace(constraint_column_expressions);
+    }
+  }
+
+  return lqp_constraints;
+}
+
 std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);

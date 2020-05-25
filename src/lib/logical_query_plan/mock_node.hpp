@@ -7,6 +7,8 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
+#include "storage/constraints/expressions_constraint_definition.hpp"
+#include "storage/constraints/table_constraint_definition.hpp"
 
 namespace opossum {
 
@@ -24,7 +26,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {});
+  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {},
+                    const TableConstraintDefinitions& constraints = {});
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& column_name) const;
 
@@ -32,6 +35,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+  const std::shared_ptr<ExpressionsConstraintDefinitions> constraints() const override;
 
   void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
   std::vector<FunctionalDependency> functional_dependencies() const override;
@@ -50,6 +54,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
+  void set_table_constraints(const TableConstraintDefinitions& table_constraints);
+
   std::optional<std::string> name;
 
  protected:
@@ -62,6 +68,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
+  TableConstraintDefinitions _table_constraints;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
   std::vector<FunctionalDependency> _functional_dependencies;

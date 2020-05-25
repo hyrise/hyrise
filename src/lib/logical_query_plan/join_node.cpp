@@ -71,6 +71,59 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
   return column_expressions;
 }
 
+const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() const {
+  // Semi- and Anti-Joins act as mere filters for input_left().
+  // Therefore, existing constraints are forwarded as they remain valid.
+  if (join_mode == JoinMode::Semi | join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+    return forward_constraints();
+  }
+
+  auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+
+  // No guarantees for Cross Joins and multi predicate joins
+  const auto predicates = join_predicates();
+  if (predicates.empty() || predicates.size() > 1) return output_constraints;
+  // Also, no guarantees for Non-Equi/Theta-Joins
+  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
+  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) return output_constraints;
+
+  if (join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
+      join_mode == JoinMode::FullOuter) {
+    // TODO(Julian) Comment why Outer Joins do not need special handling (Null values do not break constraints)
+
+    // Check for uniqueness of join key columns
+    bool left_operand_unique = left_input()->has_unique_constraint({join_predicate->left_operand()});
+    bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
+    if (left_operand_unique && right_operand_unique) {
+      // Due to the one-to-one relationship, the constraints of both sides remain valid.
+      auto left_constraints = left_input()->constraints();
+      auto right_constraints = right_input()->constraints();
+
+      for (auto it = left_constraints->begin(); it != left_constraints->end();) {
+        output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
+      }
+      for (auto it = right_constraints->begin(); it != right_constraints->end();) {
+        output_constraints->emplace(std::move(right_constraints->extract(it++).value()));
+      }
+      return output_constraints;
+
+    } else if (left_operand_unique) {
+      // Uniqueness on the left prevents duplication of records on the right
+      return right_input()->constraints();
+
+    } else if (right_operand_unique) {
+      // Uniqueness on the right prevents duplication of records on the left
+      return left_input()->constraints();
+
+    } else {
+      // No constraints to return.
+      return output_constraints;
+    }
+  } else {
+    Fail("Unhandled JoinMode");
+  }
+}
+
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 

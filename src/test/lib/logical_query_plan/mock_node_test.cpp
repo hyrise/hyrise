@@ -7,6 +7,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
+#include "utils/constraint_test_utils.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -17,6 +18,7 @@ class MockNodeTest : public BaseTest {
   void SetUp() override {
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
         {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
+
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }
@@ -77,5 +79,34 @@ TEST_F(MockNodeTest, Copy) {
 }
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
+
+TEST_F(MockNodeTest, Constraints) {
+  // Add constraints to MockNode
+  // Primary Key: a, b
+  const auto table_constraint1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}};
+  // Unique: c
+  const auto table_constraint2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{2}}};
+  const auto table_constraints = TableConstraintDefinitions{table_constraint1, table_constraint2};
+  _mock_node_a->set_table_constraints(table_constraints);
+
+  // Basic checks
+  const auto lqp_constraints_mock_node_a = _mock_node_a->constraints();
+  EXPECT_EQ(lqp_constraints_mock_node_a->size(), 2);
+  EXPECT_TRUE(_mock_node_b->constraints()->empty());
+
+  // In-depth verification
+  check_table_constraint_representation(table_constraints, lqp_constraints_mock_node_a);
+
+  // Also check whether StoredTableNode is referenced correctly by column expressions
+  for (const auto& lqp_constraint : *lqp_constraints_mock_node_a) {
+    for (const auto& expr : lqp_constraint.column_expressions) {
+      const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
+      EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
+      EXPECT_TRUE( column_expr->original_node.lock()== _mock_node_a);
+    }
+  }
+}
+
+// TEST_F(MockNodeTest, ConstraintsPrunedColumns) {} // TODO(Julian)
 
 }  // namespace opossum

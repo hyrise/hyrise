@@ -11,8 +11,14 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
-    : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name,
+                   const TableConstraintDefinitions& constraints)
+    : AbstractLQPNode(LQPNodeType::Mock),
+      name(init_name),
+      _column_definitions(column_definitions),
+      _table_constraints(constraints) {
+  // Maybe TODO(Julian) Check the validity of given constraints
+}
 
 std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
@@ -76,6 +82,49 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _column_expressions.reset();
 }
 
+const std::shared_ptr<ExpressionsConstraintDefinitions> MockNode::constraints() const {
+  auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+
+  for (const TableConstraintDefinition& table_constraint : _table_constraints) {
+    // Discard constraints which involve pruned column(s)
+    const auto discard_constraint = [&]() {
+      for (const auto& column_id : table_constraint.columns) {
+        //  Check whether constraint involves pruned column id(s).
+        if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
+          return true;
+        }
+      }
+      return false;
+    }();
+
+    if (!discard_constraint) {
+      const auto get_column_expression = [this](ColumnID column_id) {
+        for (auto expr : this->column_expressions()) {
+          const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
+          Assert(column_expr, "Unexpected expression type in column_expression()");
+          if (column_expr->original_column_id == column_id) {
+            return column_expr;
+          }
+        }
+        return std::shared_ptr<LQPColumnExpression>(nullptr);
+      };
+
+      // Search for column expressions that represent the TableConstraintDefinitions's ColumnIDs
+      auto constraint_column_expressions = ExpressionUnorderedSet{};
+      for (const auto& column_id : table_constraint.columns) {
+        const auto column_expr = get_column_expression(column_id);
+        Assert(column_expr, "Did not find column expression for ColumnID in LQPNode");
+        constraint_column_expressions.emplace(column_expr);
+      }
+
+      // Create ExpressionsConstraintDefinition
+      lqp_constraints->emplace(constraint_column_expressions);
+    }
+  }
+
+  return lqp_constraints;
+}
+
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::string MockNode::description(const DescriptionMode mode) const {
@@ -101,6 +150,10 @@ const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const { ret
 
 void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
+}
+
+void MockNode::set_table_constraints(const TableConstraintDefinitions& table_constraints) {
+  _table_constraints = table_constraints;
 }
 
 size_t MockNode::_on_shallow_hash() const {

@@ -22,6 +22,14 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
                     [&](const auto& expression_a, const auto& expression_b) { return *expression_a == *expression_b; });
 }
 
+bool expressions_subset(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
+                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
+  return std::all_of(expressions_a.begin(), expressions_a.end(), [&](const auto& expression_a) {
+    return std::any_of(expressions_b.begin(), expressions_b.end(),
+                       [&](const auto& expression_b) { return *expression_a == *expression_b; });
+  });
+}
+
 bool expressions_equal_to_expressions_in_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right, const LQPNodeMapping& node_mapping) {

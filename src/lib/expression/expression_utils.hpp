@@ -18,9 +18,16 @@ class TransactionContext;
 
 /**
  * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
+ * Note that this function also pays respect to the order of elements.
  */
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
+
+/**
+ * Utility to check whether a vector of distinct Expressions is a subset of another vector of distinct Expressions
+ */
+bool expressions_subset(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
+                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
 
 /**
  * Utility to compare vectors of Expressions from different LQPs

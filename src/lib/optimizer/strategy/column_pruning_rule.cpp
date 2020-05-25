@@ -259,7 +259,7 @@ void try_join_to_semi_rewrite(
       for (const auto& table_constraint : table->get_soft_unique_constraints()) {
         // This currently does not handle multi-column constraints, but that should be easy to add once needed.
         if (table_constraint.columns.size() > 1) continue;
-        if (table_constraint.columns[0] == column->original_column_id) {
+        if (*table_constraint.columns.cbegin() == column->original_column_id) {
           return true;
         }
       }

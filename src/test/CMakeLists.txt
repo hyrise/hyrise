@@ -225,6 +225,7 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
+    utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp

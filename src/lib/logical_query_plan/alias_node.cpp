@@ -31,6 +31,8 @@ std::string AliasNode::description(const DescriptionMode mode) const {
 
 std::vector<std::shared_ptr<AbstractExpression>> AliasNode::column_expressions() const { return node_expressions; }
 
+const std::shared_ptr<ExpressionsConstraintDefinitions> AliasNode::constraints() const { return forward_constraints(); }
+
 size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {

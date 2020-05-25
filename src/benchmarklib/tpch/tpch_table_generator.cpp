@@ -331,32 +331,45 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_unique_constraint({customer_table->column_id_by_name("c_custkey")}, IsPrimaryKey::Yes);
+  customer_table->add_soft_unique_constraint(
+      TableConstraintDefinition{{customer_table->column_id_by_name("c_custkey")}, IsPrimaryKey::Yes});
 
   const auto& orders_table = table_info_by_name.at("orders").table;
-  orders_table->add_soft_unique_constraint({orders_table->column_id_by_name("o_orderkey")}, IsPrimaryKey::Yes);
+  const auto orders_pk_constraint =
+      TableConstraintDefinition{{orders_table->column_id_by_name("o_orderkey")}, IsPrimaryKey::Yes};
+  orders_table->add_soft_unique_constraint(orders_pk_constraint);
 
   const auto& lineitem_table = table_info_by_name.at("lineitem").table;
-  lineitem_table->add_soft_unique_constraint(
+  const auto lineitem_pk_constraint = TableConstraintDefinition{
       {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
-      IsPrimaryKey::Yes);
+      IsPrimaryKey::Yes};
+  lineitem_table->add_soft_unique_constraint(lineitem_pk_constraint);
 
   const auto& part_table = table_info_by_name.at("part").table;
-  part_table->add_soft_unique_constraint({part_table->column_id_by_name("p_partkey")}, IsPrimaryKey::Yes);
+  const auto part_table_pk_constraint =
+      TableConstraintDefinition{{part_table->column_id_by_name("p_partkey")}, IsPrimaryKey::Yes};
+  part_table->add_soft_unique_constraint(part_table_pk_constraint);
 
   const auto& partsupp_table = table_info_by_name.at("partsupp").table;
-  partsupp_table->add_soft_unique_constraint(
+  const auto partsupp_pk_constraint = TableConstraintDefinition{
       {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      IsPrimaryKey::Yes);
+      IsPrimaryKey::Yes};
+  partsupp_table->add_soft_unique_constraint(partsupp_pk_constraint);
 
   const auto& supplier_table = table_info_by_name.at("supplier").table;
-  supplier_table->add_soft_unique_constraint({supplier_table->column_id_by_name("s_suppkey")}, IsPrimaryKey::Yes);
+  const auto supplier_pk_constraint =
+      TableConstraintDefinition{{supplier_table->column_id_by_name("s_suppkey")}, IsPrimaryKey::Yes};
+  supplier_table->add_soft_unique_constraint(supplier_pk_constraint);
 
   const auto& nation_table = table_info_by_name.at("nation").table;
-  nation_table->add_soft_unique_constraint({nation_table->column_id_by_name("n_nationkey")}, IsPrimaryKey::Yes);
+  const auto nation_pk_constraint =
+      TableConstraintDefinition{{nation_table->column_id_by_name("n_nationkey")}, IsPrimaryKey::Yes};
+  nation_table->add_soft_unique_constraint(nation_pk_constraint);
 
   const auto& region_table = table_info_by_name.at("region").table;
-  region_table->add_soft_unique_constraint({region_table->column_id_by_name("r_regionkey")}, IsPrimaryKey::Yes);
+  const auto region_pk_constraint =
+      TableConstraintDefinition{{region_table->column_id_by_name("r_regionkey")}, IsPrimaryKey::Yes};
+  region_table->add_soft_unique_constraint(region_pk_constraint);
 }
 
 }  // namespace opossum
