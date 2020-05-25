@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 from hyriseBenchmarkCore import *
+from compareBenchmarkScriptTest import *
+
+COMPARE_BENCHMARKS_PATH = f'{sys.argv[1]}/../scripts/compare_benchmarks.py'
 
 # This test runs the binary hyriseBenchmarkTPCH with two different sets of arguments.
 # During the first run, the shell output is validated using pexpect.
@@ -10,7 +13,8 @@ from hyriseBenchmarkCore import *
 def main():
 
   return_error = False
-  output_filename = "'json_output_tpch.txt'"
+
+  output_filename = "'tpch_output.json'"
 
   arguments = {}
   arguments["--scale"] = ".01"
@@ -18,7 +22,6 @@ def main():
   arguments["--queries"] = "'1,13,19'"
   arguments["--time"] = "10"
   arguments["--runs"] = "-1"
-  arguments["--output"] = output_filename
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
@@ -26,6 +29,7 @@ def main():
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
   arguments["--dont_cache_binary_tables"] = "true"
+  arguments["--output"] = output_filename
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
@@ -66,8 +70,9 @@ def main():
   return_error = check_json(str(output["context"]["using_scheduler"]).lower(), arguments["--scheduler"], "Scheduler doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error)
 
-  # Test that the output of the TPC-H benchmark does not cause crashes in the compare_benchmarks.py script.
-  benchmark_comparison = pexpect.spawn(f"scripts/compare_benchmarks.py {output_filename} {output_filename}", maxread=1000000, timeout=2, dimensions=(200, 64))
+  # Test that the output of the TPC-H benchmark does not cause crashes in the compare_benchmarks.py script. Since this
+  # script expects the path to the TPC-H benchmark as sys.argv[1], we need to traverse up to the root of Hyrise.
+  benchmark_comparison = pexpect.spawn(f"{COMPARE_BENCHMARKS_PATH} {output_filename} {output_filename}", maxread=1000000, timeout=2, dimensions=(200, 64))
   benchmark_comparison.expect_exact(["warmup_duration", "Latency (ms/iter)", "TPC-H 13", "Geomean", "Sum"])
   close_benchmark(benchmark_comparison)
   check_exit_status(benchmark_comparison)
@@ -85,6 +90,7 @@ def main():
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
   arguments["--verify"] = "true"
+  arguments["--dont_cache_binary_tables"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
@@ -134,5 +140,33 @@ def main():
   if return_error:
     sys.exit(1)
 
+  output_filename_1 = 'tpch_output_1.json'
+  output_filename_2 = 'tpch_output_2.json'
+
+  arguments = {}
+  arguments["--scale"] = ".01"
+  arguments["--chunk_size"] = "10000"
+  arguments["--queries"] = "'2,6,15'"
+  arguments["--runs"] = "10"
+  arguments["--output"] = output_filename_1
+  arguments["--dont_cache_binary_tables"] = "true"
+
+  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark.expect_exact(f"Writing benchmark results to '{output_filename_1}'")
+
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
+  arguments["--output"] = output_filename_2
+  arguments["--scheduler"] = True
+  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark.expect_exact(f"Writing benchmark results to '{output_filename_2}'")
+
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
+  CompareBenchmarkScriptTest(COMPARE_BENCHMARKS_PATH, output_filename_1, output_filename_2).run()
+
+  
 if __name__ == '__main__':
   main()

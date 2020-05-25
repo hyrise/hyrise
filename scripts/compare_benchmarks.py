@@ -2,6 +2,7 @@
 
 import json
 import math
+import numpy as np
 import sys
 from terminaltables import AsciiTable
 from termcolor import colored
@@ -34,24 +35,8 @@ def geometric_mean(values):
 
     return product**(1 / float(len(values)))
 
-def get_iteration_durations(iterations):
-    # Sum up the parsing/optimization/execution/... durations of all statement of a query iteration
-    # to a single entry in the result list.
-
-    iteration_durations = []
-    for iteration in iterations:
-        iteration_duration = 0
-        iteration_duration += iteration
-
-        iteration_durations.append(iteration_duration)
-
-    return iteration_durations
-
-def calculate_and_format_p_value(old, new):
-    old_durations = [run["duration"] for run in old["successful_runs"]]
-    new_durations = [run["duration"] for run in new["successful_runs"]]
-
-    p_value = ttest_ind(array('d', old_durations), array('d', new_durations))[1]
+def calculate_and_format_p_value(old_durations, new_durations):
+    p_value = ttest_ind(old_durations, new_durations)[1]
     is_significant = p_value < p_value_significance_threshold
 
     notes = ""
@@ -103,7 +88,7 @@ def print_context_overview(old_config, new_config):
     print(table.table)
 
 
-if (not len(sys.argv) in [3, 4]):
+if not len(sys.argv) in [3, 4]:
     exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
 
 # Format the output as a diff (prepending - and +) so that Github shows colors
@@ -137,8 +122,14 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     if old['name'] != new['name']:
         name += ' -> ' + new['name']
 
-    old_avg_successful_iteration = old['avg_real_time_per_successful_iteration']
-    new_avg_successful_iteration = new['avg_real_time_per_successful_iteration']
+    old_successful_durations = np.array([run["duration"] for run in old["successful_runs"]], dtype='float64')
+    new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype='float64')
+    old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype='float64')
+    new_unsuccessful_durations = np.array([run["duration"] for run in new["unsuccessful_runs"]], dtype='float64')
+    old_successful_iterations = len(old_successful_durations) + len(old_unsuccessful_durations)
+    new_successful_iterations = len(new_successful_durations) + len(new_unsuccessful_durations)
+    old_avg_successful_iteration = np.mean(old_successful_durations)
+    new_avg_successful_iteration = np.mean(new_successful_durations)
 
     total_runtime_old += old_avg_successful_iteration if old_avg_successful_iteration else 0.0
     total_runtime_new += new_avg_successful_iteration if new_avg_successful_iteration else 0.0
@@ -156,10 +147,10 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 
     diff_throughput_formatted = color_diff(diff_throughput)
     diff_latency_formatted = color_diff(diff_latency, True)
-    p_value_formatted = calculate_and_format_p_value(old, new)
+    p_value_formatted = calculate_and_format_p_value(old_successful_durations, new_successful_durations)
 
     if (old_data['context']['max_runs'] > 0 or new_data['context']['max_runs'] > 0) and \
-       (old['iterations'] >= old_data['context']['max_runs'] or new['iterations'] >= new_data['context']['max_runs']):
+       (old_successful_iterations >= old_data['context']['max_runs'] or new_successful_iterations >= new_data['context']['max_runs']):
         note = colored('˄', 'yellow', attrs=['bold'])
         add_note_for_capped_runs = True
     else:
@@ -175,13 +166,19 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
                        diff_throughput_formatted + note, p_value_formatted])
 
     if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
-        old_avg_unsuccessful_iteration = old['avg_real_time_per_unsuccessful_iteration']
-        new_avg_unsuccessful_iteration = new['avg_real_time_per_unsuccessful_iteration']
+        old_iterations = len(old_unsuccessful_durations)
+        new_iterations = len(new_unsuccessful_durations)
+        old_avg_unsuccessful_iteration = sum(old_unsuccessful_durations) / old_iterations if old_iterations > 0 else 0.0
+        new_avg_unsuccessful_iteration = sum(new_unsuccessful_durations) / new_iterations if new_iterations > 0 else 0.0
 
-        old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
-        new_unsuccessful_per_second = float(len(new['unsuccessful_runs'])) / (new['duration'] / 1e9)
+        if old_data['context']['benchmark_mode'] == 'Ordered':
+            old_unsuccessful_per_second = float(old_iterations) / (old['duration'] / 1e9)
+            new_unsuccessful_per_second = float(new_iterations) / (new['duration'] / 1e9)
+        else:
+            old_unsuccessful_per_second = float(old_iterations) / (old_data['summary']['total_duration'] / 1e9)
+            new_unsuccessful_per_second = float(new_iterations) / (new_data['summary']['total_duration'] / 1e9)
 
-        if len(old['unsuccessful_runs']) > 0 and len(new['unsuccessful_runs']) > 0:
+        if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
             diff_throughput_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
             diff_latency_unsuccessful = float(new_avg_unsuccessful_iteration) / float(old_avg_unsuccessful_iteration)
         else:
