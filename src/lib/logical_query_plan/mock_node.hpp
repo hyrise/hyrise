@@ -7,7 +7,6 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "storage/constraints/expressions_constraint_definition.hpp"
 #include "storage/constraints/table_constraint_definition.hpp"
 
 namespace opossum {
