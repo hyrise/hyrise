@@ -6,7 +6,6 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "functional_dependency.hpp"
 #include "types.hpp"
 
@@ -236,7 +235,6 @@ struct LQPNodeSharedPtrEqual final {
 // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 template <typename Value>
 using LQPNodeUnorderedMap =
-
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
 
 }  // namespace opossum
