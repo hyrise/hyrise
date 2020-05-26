@@ -6,25 +6,35 @@
 
 namespace opossum {
 
-enum class IsPrimaryKey : bool { Yes = true, No = false };
+/**
+ * Currently, we support UNIQUE and PRIMARY_KEY constraints only.
+ * Additional types may be added in the future.
+ */
+enum class ConstraintType {PrimaryKey, Unique};
 
-// Defines a unique constraint on a set of column ids. Can optionally be a PRIMARY KEY, requiring the column(s) to be
-// non-NULL. For tables, constraints are currently NOT enforced.
+/**
+ * Container to define constraints for a given set of column ids.st
+ * Some logical checks, like for instance nullability-checks, are performed when constraints are added to actual
+ * tables.
+ */
+class TableConstraintDefinition final {
+ public:
+  TableConstraintDefinition() = delete;
 
-struct TableConstraintDefinition final {
-  TableConstraintDefinition() = default;
+  TableConstraintDefinition(std::unordered_set<ColumnID> init_columns, std::unordered_set<ConstraintType> init_types)
+      : columns(std::move(init_columns)), constraint_types(init_types) {
 
-  TableConstraintDefinition(std::unordered_set<ColumnID> column_ids,
-                            const IsPrimaryKey init_is_primary_key = IsPrimaryKey::No)
-      : columns(std::move(column_ids)), is_primary_key(init_is_primary_key) {}
+
+  }
 
   bool operator==(const TableConstraintDefinition& rhs) const {
-    return columns == rhs.columns && is_primary_key == rhs.is_primary_key;
+    return columns == rhs.columns && constraint_types == rhs.constraint_types;
   }
   bool operator!=(const TableConstraintDefinition& rhs) const { return !(rhs == *this); }
 
+ private:
   std::unordered_set<ColumnID> columns;
-  IsPrimaryKey is_primary_key;
+  std::unordered_set<ConstraintType> constraint_types;
 };
 
 using TableConstraintDefinitions = std::unordered_set<TableConstraintDefinition>;
