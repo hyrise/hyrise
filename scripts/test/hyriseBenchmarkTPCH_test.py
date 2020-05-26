@@ -3,11 +3,6 @@
 from hyriseBenchmarkCore import *
 from compareBenchmarkScriptTest import *
 
-# TODO(Martin): better initialize
-BUILD_DIR = sys.argv[1]
-
-COMPARE_BENCHMARKS_PATH = f'{BUILD_DIR}/../scripts/compare_benchmarks.py'
-
 # This test runs the binary hyriseBenchmarkTPCH with two different sets of arguments.
 # During the first run, the shell output is validated using pexpect.
 # After the first run, this test checks if an output file was created and if it matches the arguments.
@@ -15,9 +10,12 @@ COMPARE_BENCHMARKS_PATH = f'{BUILD_DIR}/../scripts/compare_benchmarks.py'
 # and the test checks if all queries were successfully verified with sqlite.
 def main():
 
+  build_dir = initialize()
   return_error = False
 
-  output_filename = f"{BUILD_DIR}/tpch_output.json"
+  compare_benchmarks_path = f'{build_dir}/../scripts/compare_benchmarks.py'
+
+  output_filename = f"{build_dir}/tpch_output.json"
 
   arguments = {}
   arguments["--scale"] = ".01"
@@ -34,7 +32,7 @@ def main():
   arguments["--dont_cache_binary_tables"] = "true"
   arguments["--output"] = output_filename
 
-  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect_exact(f"Writing benchmark results to '{output_filename}'")
   benchmark.expect_exact("Running in single-threaded mode")
@@ -75,7 +73,7 @@ def main():
 
   # Test that the output of the TPC-H benchmark does not cause crashes in the compare_benchmarks.py script. Since this
   # script expects the path to the TPC-H benchmark as sys.argv[1], we need to traverse up to the root of Hyrise.
-  benchmark_comparison = pexpect.spawn(f"{COMPARE_BENCHMARKS_PATH} {output_filename} {output_filename}", maxread=1000000, timeout=2, dimensions=(200, 64))
+  benchmark_comparison = pexpect.spawn(f"{compare_benchmarks_path} {output_filename} {output_filename}", maxread=1000000, timeout=2, dimensions=(200, 64))
   benchmark_comparison.expect_exact(["warmup_duration", "Latency (ms/iter)", "TPC-H 13", "Geomean", "Sum"])
   close_benchmark(benchmark_comparison)
   check_exit_status(benchmark_comparison)
@@ -95,7 +93,7 @@ def main():
   arguments["--verify"] = "true"
   arguments["--dont_cache_binary_tables"] = "true"
 
-  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
@@ -121,7 +119,7 @@ def main():
   arguments["--runs"] = "1"
   arguments["--visualize"] = "true"
 
-  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect_exact("Chunk size is 10000")
@@ -143,8 +141,8 @@ def main():
   if return_error:
     sys.exit(1)
 
-  output_filename_1 = f"{BUILD_DIR}/tpch_output_1.json"
-  output_filename_2 = f"{BUILD_DIR}/tpch_output_2.json"
+  output_filename_1 = f"{build_dir}/tpch_output_1.json"
+  output_filename_2 = f"{build_dir}/tpch_output_2.json"
 
   arguments = {}
   arguments["--scale"] = ".01"
@@ -154,7 +152,7 @@ def main():
   arguments["--output"] = output_filename_1
   arguments["--dont_cache_binary_tables"] = "true"
 
-  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
   benchmark.expect_exact(f"Writing benchmark results to '{output_filename_1}'")
 
   close_benchmark(benchmark)
@@ -162,13 +160,13 @@ def main():
 
   arguments["--output"] = output_filename_2
   arguments["--scheduler"] = True
-  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
   benchmark.expect_exact(f"Writing benchmark results to '{output_filename_2}'")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-  CompareBenchmarkScriptTest(COMPARE_BENCHMARKS_PATH, output_filename_1, output_filename_2).run()
+  CompareBenchmarkScriptTest(compare_benchmarks_path, output_filename_1, output_filename_2).run()
 
   
 if __name__ == '__main__':
