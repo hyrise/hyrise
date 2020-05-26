@@ -9,13 +9,11 @@ from compareBenchmarkScriptTest import *
 # During the second run, the shell output is validated using pexpect
 # and the test checks if all queries were successfully verified with sqlite.
 def main():
-
   build_dir = initialize()
-  return_error = False
-
   compare_benchmarks_path = f'{build_dir}/../scripts/compare_benchmarks.py'
-
   output_filename = f"{build_dir}/tpch_output.json"
+
+  return_error = False  
 
   arguments = {}
   arguments["--scale"] = ".01"

@@ -3,22 +3,14 @@
 from hyriseBenchmarkCore import *
 from compareBenchmarkScriptTest import *
 
-# TODO(Martin): better initialize
-build_dir = sys.argv[1]
-
-COMPARE_BENCHMARKS_PATH = f'{sys.argv[1]}/../scripts/compare_benchmarks.py'
-
 def main():
-
   build_dir = initialize()
-
   compare_benchmarks_path = f'{build_dir}/../scripts/compare_benchmarks.py'
+  output_filename_1 = f"{build_dir}/tpcc_output_1.json"
 
   # Not explicitly setting all parameters and not testing all lines of the output. Many are tested in the TPCH test
   # and we want to avoid duplication. First test single-threaded, then multi-threaded, followed by a third run for
   # compare_benchmark script tests.
-
-  output_filename_1 = f"{build_dir}/tpcc_output_1.json"
 
   arguments = {}
   arguments["--scale"] = "2"
