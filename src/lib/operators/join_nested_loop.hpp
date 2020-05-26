@@ -55,7 +55,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time to a fourth.
 
   static void __attribute__((noinline))
-  _join_two_untyped_segments(const BaseSegment& base_segment_left, const BaseSegment& base_segment_right,
+  _join_two_untyped_segments(const AbstractSegment& abstract_segment_left, const AbstractSegment& abstract_segment_right,
                              const ChunkID chunk_id_left, const ChunkID chunk_id_right, JoinParams& params);
 
   static void _write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,

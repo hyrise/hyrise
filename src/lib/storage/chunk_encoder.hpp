@@ -16,7 +16,7 @@ namespace opossum {
 
 class Chunk;
 class Table;
-class BaseSegment;
+class AbstractSegment;
 
 /**
  * @brief Interface for encoding chunks
@@ -28,7 +28,7 @@ class BaseSegment;
  */
 class ChunkEncoder {
  public:
-  static std::shared_ptr<BaseSegment> encode_segment(const std::shared_ptr<BaseSegment>& segment,
+  static std::shared_ptr<AbstractSegment> encode_segment(const std::shared_ptr<AbstractSegment>& segment,
                                                      const DataType data_type,
                                                      const SegmentEncodingSpec& encoding_spec);
 

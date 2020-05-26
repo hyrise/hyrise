@@ -63,7 +63,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                 "LZ4 block size can't be larger than the maximum value of a 32 bit signed int");
 
   template <typename T>
-  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
+  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
                                                  const PolymorphicAllocator<T>& allocator) {
     // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
@@ -129,7 +129,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                            values.size());
   }
 
-  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
+  std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
                                                  const PolymorphicAllocator<pmr_string>& allocator) {
     /**
      * First iterate over the values for two reasons.

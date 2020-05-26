@@ -50,8 +50,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       auto accessor_by_chunk_id =
           std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(unsorted_table->chunk_count());
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-        const auto& base_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
-        accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(base_segment);
+        const auto& abstract_segment = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
+        accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
       }
 
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
@@ -143,7 +143,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
       // Collect all input segments for the current column
       const auto input_chunk_count = unsorted_table->chunk_count();
-      auto input_segments = std::vector<std::shared_ptr<BaseSegment>>(input_chunk_count);
+      auto input_segments = std::vector<std::shared_ptr<AbstractSegment>>(input_chunk_count);
       for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
         input_segments[input_chunk_id] = unsorted_table->get_chunk(input_chunk_id)->get_segment(column_id);
       }
@@ -379,9 +379,9 @@ class Sort::SortImpl {
         const auto chunk = _table_in->get_chunk(chunk_id);
         Assert(chunk, "Did not expect deleted chunk here.");  // see https://github.com/hyrise/hyrise/issues/1686
 
-        auto base_segment = chunk->get_segment(_column_id);
+        auto abstract_segment = chunk->get_segment(_column_id);
 
-        segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+        segment_iterate<SortColumnType>(*abstract_segment, [&](const auto& position) {
           if (position.is_null()) {
             _null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
           } else {
@@ -398,8 +398,8 @@ class Sort::SortImpl {
     auto accessor_by_chunk_id =
         std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);
     for (auto input_chunk_id = ChunkID{0}; input_chunk_id < input_chunk_count; ++input_chunk_id) {
-      const auto& base_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
-      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(base_segment);
+      const auto& abstract_segment = _table_in->get_chunk(input_chunk_id)->get_segment(_column_id);
+      accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<SortColumnType>(abstract_segment);
     }
 
     for (auto row_id : pos_list) {

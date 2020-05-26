@@ -252,14 +252,14 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   return _build_output_table(std::move(chunks));
 }
 
-void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,
-                                                const BaseSegment& base_segment_right, const ChunkID chunk_id_left,
+void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_segment_left,
+                                                const AbstractSegment& abstract_segment_right, const ChunkID chunk_id_left,
                                                 const ChunkID chunk_id_right, JoinNestedLoop::JoinParams& params) {
   /**
    * This function dispatches `join_two_typed_segments()`.
    *
    * To reduce compile time, we erase the types of Segments and the PredicateCondition/comparator if
-   * `base_segment_left.data_type() != base_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
+   * `abstract_segment_left.data_type() != abstract_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
    * the "SLOW PATH".
    * If data types and segment types are the same, we take the "FAST PATH", where only the SegmentType of left segment
    * is erased and inlining optimization can be performed by the compiler for the inner loop.
@@ -271,14 +271,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
   /**
    * FAST PATH
    */
-  if (base_segment_left.data_type() == base_segment_right.data_type()) {
+  if (abstract_segment_left.data_type() == abstract_segment_right.data_type()) {
     auto fast_path_taken = false;
 
-    resolve_data_and_segment_type(base_segment_left, [&](const auto data_type_t, const auto& segment_left) {
+    resolve_data_and_segment_type(abstract_segment_left, [&](const auto data_type_t, const auto& segment_left) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       using LeftSegmentType = std::decay_t<decltype(segment_left)>;
 
-      if (const auto* segment_right = dynamic_cast<const LeftSegmentType*>(&base_segment_right)) {
+      if (const auto* segment_right = dynamic_cast<const LeftSegmentType*>(&abstract_segment_right)) {
         const auto iterable_left = create_any_segment_iterable<ColumnDataType>(segment_left);
         const auto iterable_right = create_iterable_from_segment<ColumnDataType>(*segment_right);
 
@@ -304,8 +304,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
    * SLOW PATH
    */
   // clang-format off
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
-    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
       using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
       using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 
@@ -333,7 +333,7 @@ void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_p
                                          const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    std::shared_ptr<BaseSegment> segment;
+    std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {

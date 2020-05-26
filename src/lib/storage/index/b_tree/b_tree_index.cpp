@@ -10,7 +10,7 @@ size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffse
   Fail("BTreeIndex::estimate_memory_consumption() is not implemented yet");
 }
 
-BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
+BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<BTreeIndex>()},
       // Empty segment list is illegal but range check needed for accessing the first segment
       _indexed_segment(segments_to_index.empty() ? nullptr : segments_to_index[0]) {
@@ -44,6 +44,6 @@ BTreeIndex::Iterator BTreeIndex::_cbegin() const { return _impl->cbegin(); }
 
 BTreeIndex::Iterator BTreeIndex::_cend() const { return _impl->cend(); }
 
-std::vector<std::shared_ptr<const BaseSegment>> BTreeIndex::_get_indexed_segments() const { return {_indexed_segment}; }
+std::vector<std::shared_ptr<const AbstractSegment>> BTreeIndex::_get_indexed_segments() const { return {_indexed_segment}; }
 
 }  // namespace opossum

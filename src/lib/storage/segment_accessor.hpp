@@ -18,16 +18,16 @@ namespace detail {
 template <typename T>
 class CreateSegmentAccessor {
  public:
-  static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const BaseSegment>& segment);
+  static std::unique_ptr<AbstractSegmentAccessor<T>> create(const std::shared_ptr<const AbstractSegment>& segment);
 };
 
 }  // namespace detail
 
 /**
- * Utility method to create a SegmentAccessor for a given BaseSegment.
+ * Utility method to create a SegmentAccessor for a given AbstractSegment.
  */
 template <typename T>
-std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const AbstractSegment>& segment) {
   return opossum::detail::CreateSegmentAccessor<T>::create(segment);
 }
 

@@ -112,9 +112,9 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   table->last_chunk()->finalize();
 }
 
-std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
+std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            DataType data_type, bool is_nullable) {
-  std::shared_ptr<BaseSegment> result;
+  std::shared_ptr<AbstractSegment> result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     result = _import_segment<ColumnDataType>(file, row_count, is_nullable);
@@ -124,7 +124,7 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
+std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            bool is_nullable) {
   const auto column_type = _read_value<EncodingType>(file);
 

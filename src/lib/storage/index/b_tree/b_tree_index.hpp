@@ -2,7 +2,7 @@
 
 #include "all_type_variant.hpp"
 #include "b_tree_index_impl.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
@@ -25,17 +25,17 @@ class BTreeIndex : public AbstractIndex {
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
   BTreeIndex() = delete;
-  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
+  explicit BTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  protected:
   Iterator _lower_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _upper_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _cbegin() const override;
   Iterator _cend() const override;
-  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
   size_t _memory_consumption() const override;
 
-  std::shared_ptr<const BaseSegment> _indexed_segment;
+  std::shared_ptr<const AbstractSegment> _indexed_segment;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 

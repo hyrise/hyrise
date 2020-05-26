@@ -109,17 +109,17 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
+  std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,
                                                      const DataType data_type) {
     auto segment_encoding_spec = GetParam();
-    return this->encode_segment(base_segment, data_type, segment_encoding_spec);
+    return this->encode_segment(abstract_segment, data_type, segment_encoding_spec);
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
+  std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,
                                                      const DataType data_type,
                                                      const SegmentEncodingSpec& segment_encoding_spec) {
-    return std::dynamic_pointer_cast<BaseEncodedSegment>(
-        ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec));
+    return std::dynamic_pointer_cast<AbstractEncodedSegment>(
+        ChunkEncoder::encode_segment(abstract_segment, data_type, segment_encoding_spec));
   }
 };
 
@@ -144,12 +144,12 @@ INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
   // Trying to iterate over the empty segments should not cause any errors or crashes.
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -163,11 +163,11 @@ TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
   auto value_segment = create_int_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -183,11 +183,11 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -216,13 +216,13 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsList) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
   auto position_filter = create_sequential_position_filter();
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -242,13 +242,13 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
 
 TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOffsetsList) {
   auto value_segment = create_int_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
   auto position_filter = create_random_access_position_filter();
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -268,13 +268,13 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 
 TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
   // Even if no actual reading happens here, iterators are created and we can test that they do not crash on empty
   // segments
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
@@ -295,9 +295,9 @@ TEST_F(EncodedSegmentTest, SeqIncreasingAccessValueSegmentCounters) {
 
 TEST_P(EncodedSegmentTest, SeqIncreasingAccessSegmentCounters) {
   auto value_segment = create_int_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto iterable = create_iterable_from_segment(encoded_segment);
     EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Sequential]);
     iterable.for_each([](const auto) {});
@@ -314,11 +314,11 @@ TEST_P(EncodedSegmentTest, IncreasingSegmentAccessCountersWithPosList) {
   value_segment_iterable.for_each(pos_filter, [](const auto) {});
   EXPECT_EQ(pos_filter->size(), value_segment->access_counter[SegmentAccessCounter::AccessType::Monotonic]);
 
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto base_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
+    auto abstract_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
     EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Monotonic]);
-    base_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
+    abstract_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
     EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter[SegmentAccessCounter::AccessType::Monotonic]);
   });
 }
@@ -332,11 +332,11 @@ TEST_P(EncodedSegmentTest, RandomSegmentAccessCountersWithPosList) {
   value_segment_iterable.for_each(pos_filter, [](const auto) {});
   EXPECT_EQ(pos_filter->size(), value_segment->access_counter[SegmentAccessCounter::AccessType::Random]);
 
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto base_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::Int);
+  resolve_encoded_segment_type<int32_t>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
+    auto abstract_encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
     EXPECT_EQ(0, encoded_segment.access_counter[SegmentAccessCounter::AccessType::Random]);
-    base_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
+    abstract_encoded_segment_iterable.for_each(pos_filter, [](const auto) {});
     EXPECT_EQ(pos_filter->size(), encoded_segment.access_counter[SegmentAccessCounter::AccessType::Random]);
   });
 }

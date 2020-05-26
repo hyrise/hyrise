@@ -8,7 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -18,13 +18,13 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segment, ChunkOffset source_begin_offset,
-                      const std::shared_ptr<BaseSegment>& target_base_segment, ChunkOffset target_begin_offset,
+void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment, ChunkOffset source_begin_offset,
+                      const std::shared_ptr<AbstractSegment>& target_abstract_segment, ChunkOffset target_begin_offset,
                       ChunkOffset length) {
-  DebugAssert(source_base_segment->size() >= source_begin_offset + length, "Source Segment out-of-bounds");
-  DebugAssert(target_base_segment->size() >= target_begin_offset + length, "Target Segment out-of-bounds");
+  DebugAssert(source_abstract_segment->size() >= source_begin_offset + length, "Source Segment out-of-bounds");
+  DebugAssert(target_abstract_segment->size() >= target_begin_offset + length, "Target Segment out-of-bounds");
 
-  const auto target_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(target_base_segment);
+  const auto target_value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(target_abstract_segment);
   Assert(target_value_segment, "Cannot insert into non-ValueSegments");
 
   auto& target_values = target_value_segment->values();
@@ -33,7 +33,7 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
    * If the source Segment is a ValueSegment, take a fast path to copy the data.
    * Otherwise, take a (potentially slower) fallback path.
    */
-  if (const auto source_value_segment = std::dynamic_pointer_cast<const ValueSegment<T>>(source_base_segment)) {
+  if (const auto source_value_segment = std::dynamic_pointer_cast<const ValueSegment<T>>(source_abstract_segment)) {
     std::copy_n(source_value_segment->values().begin() + source_begin_offset, length,
                 target_values.begin() + target_begin_offset);
 
@@ -48,7 +48,7 @@ void copy_value_range(const std::shared_ptr<const BaseSegment>& source_base_segm
       }
     }
   } else {
-    segment_with_iterators<T>(*source_base_segment, [&](const auto source_begin, const auto source_end) {
+    segment_with_iterators<T>(*source_abstract_segment, [&](const auto source_begin, const auto source_end) {
       auto source_iter = source_begin + source_begin_offset;
       auto target_iter = target_values.begin() + target_begin_offset;
 

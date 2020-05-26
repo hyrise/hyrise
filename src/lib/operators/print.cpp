@@ -11,8 +11,8 @@
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/performance_warning.hpp"
@@ -117,7 +117,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       _out << "|";
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-        // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
+        // well yes, we use AbstractSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
         auto column_width = widths[column_id];
         auto cell = _truncate_cell((*chunk->get_segment(column_id))[chunk_offset], column_width);
@@ -185,7 +185,7 @@ std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width
   return cell_string;
 }
 
-std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) {
+std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment) {
   std::string segment_type;
   segment_type.reserve(8);
   segment_type += "<";
@@ -194,7 +194,7 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) {
     segment_type += "ValueS";
   } else if (std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
     segment_type += "ReferS";
-  } else if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
+  } else if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
     switch (encoded_segment->encoding_type()) {
       case EncodingType::Unencoded: {
         Fail("An actual segment should never have this type");

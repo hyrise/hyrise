@@ -85,7 +85,7 @@ void resolve_data_type(DataType data_type, const Functor& functor) {
 }
 
 /**
- * Given a BaseSegment and its known column type, resolve the segment implementation and call the lambda
+ * Given a AbstractSegment and its known column type, resolve the segment implementation and call the lambda
  *
  * @param functor is a generic lambda or similar accepting a reference to a specialized segment (value, dictionary,
  * reference)
@@ -101,20 +101,20 @@ void resolve_data_type(DataType data_type, const Functor& functor) {
  *
  *   void process_segment(ReferenceSegment& segment);
  *
- *   resolve_segment_type<T>(base_segment, [&](auto& typed_segment) {
+ *   resolve_segment_type<T>(abstract_segment, [&](auto& typed_segment) {
  *     process_segment(typed_segment);
  *   });
  */
 template <typename In, typename Out>
 using ConstOutIfConstIn = std::conditional_t<std::is_const_v<In>, const Out, Out>;
 
-template <typename ColumnDataType, typename BaseSegmentType, typename Functor>
-// BaseSegmentType allows segment to be const and non-const
-std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType>>>
-/*void*/ resolve_segment_type(BaseSegmentType& segment, const Functor& functor) {
-  using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<ColumnDataType>>*;
-  using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
-  using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
+template <typename ColumnDataType, typename AbstractSegmentType, typename Functor>
+// AbstractSegmentType allows segment to be const and non-const
+std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>>
+/*void*/ resolve_segment_type(AbstractSegmentType& segment, const Functor& functor) {
+  using ValueSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ValueSegment<ColumnDataType>>*;
+  using ReferenceSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, ReferenceSegment>*;
+  using EncodedSegmentPtr = ConstOutIfConstIn<AbstractSegmentType, AbstractEncodedSegment>*;
 
   if (const auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     functor(*value_segment);
@@ -171,13 +171,13 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
  *   template <typename T>
  *   void process_segment(hana::basic_type<T> type, ReferenceSegment& segment);
  *
- *   resolve_data_and_segment_type(base_segment, [&](auto type, auto& typed_segment) {
+ *   resolve_data_and_segment_type(abstract_segment, [&](auto type, auto& typed_segment) {
  *     process_segment(type, typed_segment);
  *   });
  */
-template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows segment to be const and non-const
-std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType>>>
-/*void*/ resolve_data_and_segment_type(BaseSegmentType& segment, const Functor& functor) {
+template <typename Functor, typename AbstractSegmentType>  // AbstractSegmentType allows segment to be const and non-const
+std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>>
+/*void*/ resolve_data_and_segment_type(AbstractSegmentType& segment, const Functor& functor) {
   resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 

@@ -12,7 +12,7 @@ namespace opossum {
 
 class Table;
 class ReferenceSegment;
-class BaseSegment;
+class AbstractSegment;
 class BaseDictionarySegment;
 class AttributeVectorIterable;
 
@@ -38,7 +38,7 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
   // takes care of that. We take `matches` as an in/out parameter instead of returning it because scans on multiple
   // referenced segments of a single ReferenceSegment should result in only one PosList. Storing it as a member is
   // no option because it would break multithreading.
-  virtual void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+  virtual void _scan_non_reference_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                            const std::shared_ptr<const AbstractPosList>& position_filter) const = 0;
 
   const std::shared_ptr<const Table> _in_table;

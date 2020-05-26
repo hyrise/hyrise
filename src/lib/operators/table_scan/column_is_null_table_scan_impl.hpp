@@ -27,8 +27,8 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
   std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) const override;
 
  protected:
-  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
-  void _scan_generic_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+  void _scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
+  void _scan_generic_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                     const SortMode sorted_by) const;
 
   // Optimized scan on ValueSegments

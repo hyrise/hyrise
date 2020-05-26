@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 #include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
@@ -43,7 +43,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 
 bool Chunk::is_mutable() const { return _is_mutable; }
 
-void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
+void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
 }
 
@@ -69,7 +69,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
+std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
@@ -86,7 +86,7 @@ bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
-    const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+    const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractIndex>>();
   std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
@@ -118,7 +118,7 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector
 }
 
 std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                                const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+                                                const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
@@ -190,7 +190,7 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   return bytes;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
+std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
@@ -199,7 +199,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
               }()),
               "column ids not within range [0, column_count()).");
 
-  auto segments = std::vector<std::shared_ptr<const BaseSegment>>{};
+  auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());
   std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments),
                  [&](const auto& column_id) { return get_segment(column_id); });
