@@ -4,5 +4,5 @@ pandas>=1.0.3
 pexpect>=4.8
 PyDriller>=1.15
 scipy>=1.4
-termcolor>=1.1
+termcolor>=1.1.0
 terminaltables>=3.1
