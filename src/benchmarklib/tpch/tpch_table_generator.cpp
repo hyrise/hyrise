@@ -159,7 +159,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
                                 customer_count};
   TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
-  TableBuilder lineitem_builder{Chunk::MAX_SIZE, lineitem_column_types, lineitem_column_names,
+  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
                                 order_count * 4};
   TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,

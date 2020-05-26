@@ -102,16 +102,9 @@ void AbstractTableGenerator::generate_and_store() {
 
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
-      std::shared_ptr<Sort> sort = nullptr;
-      if (table_name == "lineitem") {
-        sort = std::make_shared<Sort>(
-            table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, order_by_mode}},
-            Chunk::MAX_SIZE, Sort::ForceMaterialization::Yes);  
-      } else {
-        sort = std::make_shared<Sort>(
+      auto sort = std::make_shared<Sort>(
           table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, order_by_mode}},
           _benchmark_config->chunk_size, Sort::ForceMaterialization::Yes);
-      }
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
 
@@ -259,6 +252,10 @@ void AbstractTableGenerator::generate_and_store() {
         }
 
         std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
+      }
+      if (table_name == "lineitem") {
+        table->last_chunk()->clear_indexes();
+        std::cout << "indexes for last chunk of table 'lineitem' cleared.\n";
       }
     }
     metrics.index_duration = timer.lap();

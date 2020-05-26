@@ -136,6 +136,10 @@ void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
   _indexes.erase(it);
 }
 
+void Chunk::clear_indexes() {
+  _indexes.clear();
+}
+
 bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 

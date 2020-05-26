@@ -120,6 +120,7 @@ class Chunk : private Noncopyable {
   }
 
   void remove_index(const std::shared_ptr<AbstractIndex>& index);
+  void clear_indexes();
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
