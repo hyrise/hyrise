@@ -3,7 +3,10 @@
 from hyriseBenchmarkCore import *
 from compareBenchmarkScriptTest import *
 
-COMPARE_BENCHMARKS_PATH = f'{sys.argv[1]}/../scripts/compare_benchmarks.py'
+# TODO(Martin): better initialize
+BUILD_DIR = sys.argv[1]
+
+COMPARE_BENCHMARKS_PATH = f'{BUILD_DIR}/../scripts/compare_benchmarks.py'
 
 # This test runs the binary hyriseBenchmarkTPCH with two different sets of arguments.
 # During the first run, the shell output is validated using pexpect.
@@ -14,7 +17,7 @@ def main():
 
   return_error = False
 
-  output_filename = "'tpch_output.json'"
+  output_filename = f"{BUILD_DIR}/tpch_output.json"
 
   arguments = {}
   arguments["--scale"] = ".01"
@@ -33,7 +36,7 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
-  benchmark.expect_exact(f"Writing benchmark results to {output_filename}")
+  benchmark.expect_exact(f"Writing benchmark results to '{output_filename}'")
   benchmark.expect_exact("Running in single-threaded mode")
   benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
@@ -140,8 +143,8 @@ def main():
   if return_error:
     sys.exit(1)
 
-  output_filename_1 = 'tpch_output_1.json'
-  output_filename_2 = 'tpch_output_2.json'
+  output_filename_1 = f"{BUILD_DIR}/tpch_output_1.json"
+  output_filename_2 = f"{BUILD_DIR}/tpch_output_2.json"
 
   arguments = {}
   arguments["--scale"] = ".01"
