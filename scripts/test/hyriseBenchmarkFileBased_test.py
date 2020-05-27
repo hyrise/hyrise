@@ -29,7 +29,7 @@ def main():
 
   benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
   benchmark.expect_exact("Running in single-threaded mode")
-  benchmark.expect_exact("1 simulated clients is scheduling items")
+  benchmark.expect_exact("1 simulated client is scheduling items")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Unencoded'")
   benchmark.expect_exact("Max runs per item is 100")
