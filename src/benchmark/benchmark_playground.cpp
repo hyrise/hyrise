@@ -131,7 +131,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, CompareLZ4s)(benchmark::State& state) {
   auto imp_table = BinaryParser::parse(filename);
 
   for (auto chunk = ChunkID{0}; chunk < ChunkID{2}; ++chunk) {
-    for (auto column = ColumnID{0}; column < ColumnID{2}; ++column) {
+    for (auto column = ColumnID{0}; column < ColumnID{4}; ++column) {
       std::cout << "Compare Chunk " << chunk << " Column " << column << std::endl<< std::endl;
       LZ4Compare::compare_segments(_table->get_chunk(chunk)->get_segment(column),
                                    imp_table->get_chunk(chunk)->get_segment(column));
@@ -139,7 +139,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, CompareLZ4s)(benchmark::State& state) {
   }
 
   for (auto chunk = ChunkID{0}; chunk < ChunkID{2}; ++chunk) {
-    for (auto column = ColumnID{0}; column < ColumnID{2}; ++column) {
+    for (auto column = ColumnID{0}; column < ColumnID{4}; ++column) {
       std::cout << "Decompress Chunk " << chunk << " Column " << column << std::endl<< std::endl;
       const auto segment = imp_table->get_chunk(chunk)->get_segment(column);
       resolve_data_and_segment_type(*segment, [&](const auto data_type_t, const auto& resolved_segment) {
