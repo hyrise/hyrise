@@ -91,9 +91,9 @@ const std::string& AggregateHash::name() const {
 }
 
 std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<AggregateHash>(copied_input_left, _aggregates, _groupby_column_ids);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<AggregateHash>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
 void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -184,7 +184,7 @@ void AggregateHash::_aggregate() {
   using AggregateKeysAllocator =
       boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
 
-  auto input_table = input_table_left();
+  auto input_table = left_input_table();
 
   for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
     DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
@@ -640,6 +640,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   }
   step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::Aggregate)] = timer.lap();
 
+  const auto& input_table = left_input_table();
+
   /**
    * Write group-by columns.
    *
@@ -802,7 +804,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 }
 
 void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
-  auto input_table = input_table_left();
+  auto input_table = left_input_table();
 
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
   for (const auto& column_id : _groupby_column_ids) {
@@ -889,7 +891,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(input_column_id);
+    aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, decltype(aggregate_type)>>(

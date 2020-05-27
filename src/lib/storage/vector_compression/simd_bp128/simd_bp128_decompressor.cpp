@@ -75,8 +75,8 @@ void SimdBp128Decompressor::_unpack_block(const size_t block_index) {
   // Absolute data offset within compressed vector
   const auto data_offset = _cached_meta_info_offset + relative_data_offset;
 
-  const auto compressed_data_in = _data->data() + data_offset;
-  auto decompressed_data_out = _cached_block->data();
+  const auto* const compressed_data_in = _data->data() + data_offset;
+  auto* const decompressed_data_out = _cached_block->data();
   const auto bit_size = _cached_meta_info[block_index];
 
   Packing::unpack_block(compressed_data_in, decompressed_data_out, bit_size);

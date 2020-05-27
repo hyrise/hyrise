@@ -82,14 +82,14 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
 
   _add_operator(op);
 
-  if (op->input_left()) {
-    auto left = op->input_left();
+  if (op->left_input()) {
+    auto left = op->left_input();
     _build_subtree(left, visualized_ops);
     _build_dataflow(left, op, InputSide::Left);
   }
 
-  if (op->input_right()) {
-    auto right = op->input_right();
+  if (op->right_input()) {
+    auto right = op->right_input();
     _build_subtree(right, visualized_ops);
     _build_dataflow(right, op, InputSide::Right);
   }
@@ -140,16 +140,24 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
                                     const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  const auto& performance_data = from->performance_data;
-  if (performance_data->executed && performance_data->has_output) {
+  const auto& performance_data = from->performance_data();
+  if (performance_data.executed && performance_data.has_output) {
     std::stringstream stream;
-    stream << std::to_string(performance_data->output_row_count) + " row(s)/";
-    stream << std::to_string(performance_data->output_chunk_count) + " chunk(s)";
+
+    // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
+    // be avoided whenever possible. Unfortunately, std::locale stores pointers to the facets and does internal
+    // reference counting. std::locale's destructor destructs the locale and the facets whose reference count becomes
+    // zero. This forces us to use a dynamically allocated raw pointer here.
+    const auto& separate_thousands_locale = std::locale(stream.getloc(), new SeparateThousandsFacet);
+    stream.imbue(separate_thousands_locale);
+
+    stream << performance_data.output_row_count << " row(s)/";
+    stream << performance_data.output_chunk_count << " chunk(s)";
     info.label = stream.str();
   }
 
-  info.pen_width = static_cast<double>(performance_data->output_row_count);
-  if (to->input_right() != nullptr) {
+  info.pen_width = static_cast<double>(performance_data.output_row_count);
+  if (to->right_input() != nullptr) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
@@ -160,16 +168,16 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   VizVertexInfo info = _default_vertex;
   auto label = op->description(DescriptionMode::MultiLine);
 
-  const auto& performance_data = op->performance_data;
-  if (performance_data->executed) {
-    auto total = performance_data->walltime;
+  const auto& performance_data = op->performance_data();
+  if (performance_data.executed) {
+    auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
     info.pen_width = static_cast<double>(total.count());
   } else {
     info.pen_width = 1.0;
   }
 
-  _duration_by_operator_name[op->name()] += performance_data->walltime;
+  _duration_by_operator_name[op->name()] += performance_data.walltime;
 
   info.label = label;
   _add_vertex(op, info);

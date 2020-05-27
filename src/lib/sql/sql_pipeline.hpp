@@ -49,6 +49,9 @@ class SQLPipeline : public Noncopyable {
   // Returns the unoptimized LQP root for each statement.
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
 
+  // Returns information obtained during SQL parsing.
+  const std::vector<std::reference_wrapper<const SQLTranslationInfo>>& get_sql_translation_infos();
+
   // Returns the optimized LQP root for each statement
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
@@ -94,6 +97,11 @@ class SQLPipeline : public Noncopyable {
   const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
  private:
+  friend class SQLPipelineStatementTest;
+
+  // Returns the individual SQLPipelineStatements. Only for testing purposes.
+  const std::vector<std::shared_ptr<SQLPipelineStatement>>& _get_sql_pipeline_statements() const;
+
   std::string _sql;
 
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
@@ -107,6 +115,7 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::string> _sql_strings;
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
+  std::vector<std::reference_wrapper<const SQLTranslationInfo>> _sql_translation_infos;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
   std::vector<std::shared_ptr<AbstractOperator>> _physical_plans;
   std::vector<std::vector<std::shared_ptr<AbstractTask>>> _tasks;

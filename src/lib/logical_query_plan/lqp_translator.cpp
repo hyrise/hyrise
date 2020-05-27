@@ -277,17 +277,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   const auto& pqp_expressions = _translate_expressions(sort_node->node_expressions, node->left_input());
 
   auto pqp_expression_iter = pqp_expressions.begin();
-  auto order_by_mode_iter = sort_node->order_by_modes.begin();
+  auto sort_mode_iter = sort_node->sort_modes.begin();
 
   std::vector<SortColumnDefinition> column_definitions;
   column_definitions.reserve(pqp_expressions.size());
-  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++order_by_mode_iter) {
+  for (; pqp_expression_iter != pqp_expressions.end(); ++pqp_expression_iter, ++sort_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *order_by_mode_iter});
+    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *sort_mode_iter});
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
@@ -296,14 +296,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_left_operator = translate_node(node->left_input());
-  const auto input_right_operator = translate_node(node->right_input());
+  const auto left_input_operator = translate_node(node->left_input());
+  const auto right_input_operator = translate_node(node->right_input());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode == JoinMode::Cross) {
     PerformanceWarning("CROSS join used");
-    return std::make_shared<Product>(input_left_operator, input_right_operator);
+    return std::make_shared<Product>(left_input_operator, right_input_operator);
   }
 
   Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
@@ -340,7 +340,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
-      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+      join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
   });

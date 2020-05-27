@@ -141,8 +141,8 @@ AbstractIndex::Iterator ARTNode16::_delegate_to_child(
     const std::function<Iterator(std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>&
         function) const {
   auto partial_key = key[depth];
-  auto partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), partial_key);
-  auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
+  const auto* const partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), partial_key);
+  const auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
 
   if (*partial_key_iterator == partial_key) {
     return function(partial_key_pos, ++depth);  // case0
@@ -182,8 +182,8 @@ AbstractIndex::Iterator ARTNode16::begin() const { return _children[0]->begin();
  */
 
 AbstractIndex::Iterator ARTNode16::end() const {
-  auto partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), INVALID_INDEX);
-  auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
+  const auto* const partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), INVALID_INDEX);
+  const auto partial_key_pos = std::distance(_partial_keys.begin(), partial_key_iterator);
   if (!_children[partial_key_pos]) {
     // there does not exist a child with partial_key 255u, we take the partial_key in front of it
     return _children[partial_key_pos - 1]->end();

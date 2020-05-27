@@ -5,7 +5,6 @@
 
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "lqp_column_reference.hpp"
 #include "storage/index/index_statistics.hpp"
 
 namespace opossum {
@@ -22,7 +21,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
  public:
   explicit StoredTableNode(const std::string& init_table_name);
 
-  LQPColumnReference get_column(const std::string& name) const;
+  std::shared_ptr<LQPColumnExpression> get_column(const std::string& name) const;
 
   /**
    * @defgroup ColumnIDs and ChunkIDs to be pruned from the stored Table.
@@ -42,6 +41,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+  std::vector<FunctionalDependency> functional_dependencies() const override;
 
   const std::string table_name;
 

@@ -22,25 +22,25 @@ std::shared_ptr<const Table> Product::_on_execute() {
   TableColumnDefinitions column_definitions;
 
   // add columns from left table to output
-  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    column_definitions.emplace_back(input_table_left()->column_definitions()[column_id]);
+  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+    column_definitions.emplace_back(left_input_table()->column_definitions()[column_id]);
   }
 
   // add columns from right table to output
-  for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); ++column_id) {
-    column_definitions.emplace_back(input_table_right()->column_definitions()[column_id]);
+  for (ColumnID column_id{0}; column_id < right_input_table()->column_count(); ++column_id) {
+    column_definitions.emplace_back(right_input_table()->column_definitions()[column_id]);
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References);
-  auto chunk_count_left_table = input_table_left()->chunk_count();
-  auto chunk_count_right_table = input_table_right()->chunk_count();
+  auto chunk_count_left_table = left_input_table()->chunk_count();
+  auto chunk_count_right_table = right_input_table()->chunk_count();
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
-    const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
+    const auto chunk_left = left_input_table()->get_chunk(chunk_id_left);
     Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
-      const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
+      const auto chunk_right = right_input_table()->get_chunk(chunk_id_right);
       Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
@@ -52,8 +52,8 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
 void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, ChunkID chunk_id_left,
                                          ChunkID chunk_id_right) {
-  const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
-  const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
+  const auto chunk_left = left_input_table()->get_chunk(chunk_id_left);
+  const auto chunk_right = right_input_table()->get_chunk(chunk_id_right);
 
   // we use an approach here in which we do not have nested loops for left and right but create both sides separately
   // When the result looks like this:
@@ -75,7 +75,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
     // reusing the same code for left and right side - using a reference_wrapper is ugly, but better than code
     // duplication
-    auto table = is_left_side ? input_table_left() : input_table_right();
+    auto table = is_left_side ? left_input_table() : right_input_table();
 
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
       std::shared_ptr<const Table> referenced_table;
@@ -88,7 +88,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
         referenced_segment = reference_segment_in->referenced_column_id();
         pos_list_in = reference_segment_in->pos_list();
       } else {
-        referenced_table = is_left_side ? input_table_left() : input_table_right();
+        referenced_table = is_left_side ? left_input_table() : right_input_table();
         referenced_segment = column_id;
       }
 
@@ -120,9 +120,9 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 }
 
 std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Product>(copied_input_left, copied_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Product>(copied_left_input, copied_right_input);
 }
 
 void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

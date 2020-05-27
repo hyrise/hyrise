@@ -7,10 +7,10 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
+class LQPColumnExpression;
 class TableStatistics;
 
 /**
@@ -26,12 +26,15 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {});
 
-  LQPColumnReference get_column(const std::string& column_name) const;
+  std::shared_ptr<LQPColumnExpression> get_column(const std::string& column_name) const;
 
   const ColumnDefinitions& column_definitions() const;
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+
+  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  std::vector<FunctionalDependency> functional_dependencies() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
@@ -61,5 +64,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
+  std::vector<FunctionalDependency> _functional_dependencies;
 };
 }  // namespace opossum

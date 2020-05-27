@@ -37,17 +37,29 @@ std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetw
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
-  if (ordered_by && ordered_by->first == _column_id) {
-    _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
-    ++chunk_scans_sorted;
-  } else {
-    // Select optimized or generic scanning implementation based on segment type
-    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
-      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
-    } else {
-      _scan_generic_segment(segment, chunk_id, matches, position_filter);
+  const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
+
+  // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
+  // pre-filtered dictionary segments with string data. In this case, the optimized _scan_dictionary_segment() path if
+  // faster than the sorted search. Without this workaround, TPC-H Q6 would lose up to 30%. When the iterator issues of
+  // #1531 are resolved, the current workaround should be revisited.
+  const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
+  if (!chunk_sorted_by.empty() &&
+      !(dictionary_segment && position_filter && _in_table->column_data_type(_column_id) == DataType::String)) {
+    for (const auto& sorted_by : chunk_sorted_by) {
+      if (sorted_by.column == _column_id) {
+        _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+        ++chunk_scans_sorted;
+        return;
+      }
     }
+  }
+
+  // Select optimized or generic scanning implementation based on segment type
+  if (dictionary_segment) {
+    _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+  } else {
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
   }
 }
 
@@ -144,7 +156,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
 void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
-                                                      const OrderByMode order_by_mode) const {
+                                                      const SortMode sort_mode) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -155,7 +167,7 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
       segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
         const auto typed_left_value = boost::get<ColumnDataType>(left_value);
         const auto typed_right_value = boost::get<ColumnDataType>(right_value);
-        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, _column_is_nullable,
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, sort_mode, _column_is_nullable,
                                                          predicate_condition, typed_left_value, typed_right_value);
 
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {

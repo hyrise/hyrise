@@ -14,11 +14,13 @@ namespace opossum {
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
     : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
 
-LQPColumnReference MockNode::get_column(const std::string& column_name) const {
+std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
 
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
-    if (column_definitions[column_id].second == column_name) return LQPColumnReference{shared_from_this(), column_id};
+    if (column_definitions[column_id].second == column_name) {
+      return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
+    }
   }
 
   Fail("Couldn't find column named '"s + column_name + "' in MockNode");
@@ -43,7 +45,7 @@ std::vector<std::shared_ptr<AbstractExpression>> MockNode::column_expressions() 
       }
 
       (*_column_expressions)[output_column_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), stored_column_id});
+          std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
       ++output_column_id;
     }
   }
@@ -55,6 +57,12 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < _column_definitions.size(), "ColumnID out of range");
   return false;
 }
+
+void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+  _functional_dependencies = fds;
+}
+
+std::vector<FunctionalDependency> MockNode::functional_dependencies() const { return _functional_dependencies; }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),

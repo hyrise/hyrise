@@ -176,7 +176,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
                                       const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;
@@ -235,7 +235,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data,
                                                const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;

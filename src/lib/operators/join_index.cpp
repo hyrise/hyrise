@@ -44,16 +44,7 @@ bool JoinIndex::supports(const JoinConfiguration config) {
       return false;  // non-inner index joins on reference tables are not supported
     }
 
-    if (config.secondary_predicates) {
-      return false;  // multi predicate index joins are not supported
-    }
-
-    const auto is_semi_or_anti_join = config.join_mode == JoinMode::Semi ||
-                                      config.join_mode == JoinMode::AntiNullAsFalse ||
-                                      config.join_mode == JoinMode::AntiNullAsTrue;
-    // if a Semi or Anti* join is executed, the left side is outputted by definition. Choosing the index join when
-    // indexes are not available for the right table would not be beneficial.
-    return !(is_semi_or_anti_join && config.index_side == IndexSide::Left);
+    return !config.secondary_predicates;  // multi predicate index joins are not supported
   }
 }
 
@@ -76,8 +67,8 @@ const std::string& JoinIndex::name() const {
 }
 
 std::string JoinIndex::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  const auto index_side_str = _index_side == IndexSide::Left ? "Left" : "Right";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const index_side_str = _index_side == IndexSide::Left ? "Left" : "Right";
 
   std::ostringstream stream(AbstractJoinOperator::description(description_mode), std::ios_base::ate);
   stream << separator << "Index side: " << index_side_str;
@@ -86,26 +77,26 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates, _index_side);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
   Assert(
       supports({_mode, _primary_predicate.predicate_condition,
-                input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type(), _index_side}),
+                left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type(), _index_side}),
       "JoinIndex doesn't support these parameters");
 
   if (_index_side == IndexSide::Left) {
-    _probe_input_table = input_table_right();
-    _index_input_table = input_table_left();
+    _probe_input_table = right_input_table();
+    _index_input_table = left_input_table();
   } else {
-    _probe_input_table = input_table_left();
-    _index_input_table = input_table_right();
+    _probe_input_table = left_input_table();
+    _index_input_table = right_input_table();
   }
 
   _index_matches.resize(_index_input_table->chunk_count());
@@ -444,14 +435,8 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  if (is_semi_or_anti_join) {
-    Assert(_index_side == IndexSide::Right,
-           "For Semi or Anti* joins, the left side is the probe side, so the index needs to be on the right.");
-  }
-
   // Remember the matches for non-inner joins
-  if (is_semi_or_anti_join || (_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
-      (_mode == JoinMode::Right && _index_side == IndexSide::Left) ||
+  if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
   }
@@ -522,15 +507,30 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   // We use `_probe_matches` to determine whether a tuple from the probe side found a match.
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
-    const auto chunk_count = _probe_input_table->chunk_count();
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk = _probe_input_table->get_chunk(chunk_id);
-      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+    if (_index_side == IndexSide::Right) {
+      const auto chunk_count = _probe_input_table->chunk_count();
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = _probe_input_table->get_chunk(chunk_id);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-      const auto chunk_size = chunk->size();
-      for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
-          _probe_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+        const auto chunk_size = chunk->size();
+        for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+          if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
+            _probe_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+          }
+        }
+      }
+    } else {  // INDEX SIDE LEFT
+      const auto chunk_count = _index_input_table->chunk_count();
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = _index_input_table->get_chunk(chunk_id);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+        const auto chunk_size = chunk->size();
+        for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+          if (_index_matches[chunk_id][chunk_offset] ^ invert) {
+            _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+          }
         }
       }
     }

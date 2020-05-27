@@ -40,7 +40,7 @@ const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predic
 
 std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
   const auto column_name = [&](const auto from_left, const auto column_id) {
-    const auto& input_table = from_left ? _input_left->get_output() : _input_right->get_output();
+    const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
     if (input_table) {
       // Input table is still available, use name from there
       return input_table->column_name(column_id);
@@ -56,7 +56,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     return "Column #"s + std::to_string(column_id);
   };
 
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
   stream << name() << separator << "(" << _mode << " Join where "
@@ -79,8 +79,8 @@ void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<Parameter
 
 std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
                                                                  const TableType table_type) const {
-  const auto left_in_table = _input_left->get_output();
-  const auto right_in_table = _input_right->get_output();
+  const auto left_in_table = _left_input->get_output();
+  const auto right_in_table = _right_input->get_output();
 
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);

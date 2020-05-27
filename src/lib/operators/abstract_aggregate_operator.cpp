@@ -55,7 +55,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
  * Invalid aggregates are e.g. MAX(*) or AVG(<string column>).
  */
 void AbstractAggregateOperator::_validate_aggregates() const {
-  const auto input_table = input_table_left();
+  const auto input_table = left_input_table();
   for (const auto& aggregate : _aggregates) {
     const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->argument());
     DebugAssert(pqp_column,
