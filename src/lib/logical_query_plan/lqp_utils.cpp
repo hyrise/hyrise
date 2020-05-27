@@ -32,8 +32,6 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
   const auto mapping_iter = mapping.find(lhs);
   if (mapping_iter != mapping.end()) return;
 
-  std::cout << "lhs: " << lhs << ", " << *lhs << "\n";
-  std::cout << "rhs: " << rhs << ", " << *rhs << "\n";
   mapping[lhs] = rhs;
 
   lqp_create_node_mapping_impl(mapping, lhs->left_input(), rhs->left_input());

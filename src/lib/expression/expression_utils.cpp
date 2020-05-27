@@ -108,12 +108,12 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
 
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping) {
-  for (auto& it: node_mapping) {
-    const auto& key = it.first;
-    const auto& value = it.second;
-    std::cout << "key: " << key << ", " << *key << "\n";
-    std::cout << "value: " << value << ", " << *value << "\n";
-  }
+  // for (auto& it: node_mapping) {
+  //   const auto& key = it.first;
+  //   const auto& value = it.second;
+  //   std::cout << "key: " << key << ", " << *key << "\n";
+  //   std::cout << "value: " << value << ", " << *value << "\n";
+  // }
   const auto node = lqp_column_expression.original_node.lock();
   Assert(node, "LQPColumnExpression is expired");
   const auto node_mapping_iter = node_mapping.find(node);
