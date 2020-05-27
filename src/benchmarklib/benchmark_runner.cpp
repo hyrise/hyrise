@@ -345,8 +345,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         {"name", name},
         {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
         {"successful_runs", runs_to_json(result.successful_runs)},
-        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
-        {"iterations", result.successful_runs.size()}};
+        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
@@ -354,17 +353,14 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
-    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+        static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
+    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
-    // want to touch this and potentially break the comparability across commits.
+    // want to touch this and potentially break the comparability across commits. Note that items_per_second only
+    // includes succesfull iterations.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item = !result.successful_runs.empty()
-                                   ? reported_item_duration_ns / static_cast<float>(result.successful_runs.size())
-                                   : std::nanf("");
-    benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }

@@ -8,6 +8,7 @@ from hyriseBenchmarkCore import *
 # During the second run, the shell output is validated using pexpect
 # and the test checks if all queries were successfully verified with sqlite.
 def main():
+  build_dir = initialize()
 
   return_error = False
 
@@ -24,7 +25,7 @@ def main():
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
-  benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
   benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
   benchmark.expect_exact("Running in single-threaded mode")
@@ -80,7 +81,7 @@ def main():
   arguments["--chunk_size"] = "100000"
   arguments["--verify"] = "true"
 
-  benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
+  benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkJoinOrder", True)
 
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("4 simulated clients are scheduling items in parallel")

@@ -21,6 +21,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         brew --version 2>/dev/null || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
         echo "Installing dependencies (this may take a while)..."
+        pip3 install -r requirements.txt
         if brew update >/dev/null; then
             # check, for each program (aka. formula) individually with brew, whether it is already installed due to brew issues on MacOS after system upgrade
             # NOTE: The Mac CI server does not execute the install_dependencies.sh - formulas need to be installed manually.
@@ -63,7 +64,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 # packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pexpect systemtap systemtap-sdt-dev valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
@@ -79,6 +80,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9
                 sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-9 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-9 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-9 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-9 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-9
+
+                # Install python modules
+                sudo pip3 install --no-cache-dir -r requirements.txt
             else
                 echo "Error during installation."
                 exit 1
