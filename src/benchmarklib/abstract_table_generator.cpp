@@ -240,12 +240,12 @@ void AbstractTableGenerator::generate_and_store() {
         const auto column_name = table->column_name(column_id);
         const auto column_data_type = table->column_data_type(column_id);
         resolve_data_type(column_data_type, [&](const auto data_type_t) {
-          using DataType = typename decltype(data_type_t)::type;
+          using ColumnDataType = typename decltype(data_type_t)::type;
           for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
             auto out = std::ofstream(table_name + "." + column_name + "." + std::to_string(chunk_id) + ".dict");
 
             const auto chunk = table->get_chunk(chunk_id);
-            const auto& dictionary_segment = dynamic_cast<const DictionarySegment<DataType>&>(*chunk->get_segment(column_id));
+            const auto& dictionary_segment = dynamic_cast<const DictionarySegment<ColumnDataType>&>(*chunk->get_segment(column_id));
             const auto& dictionary = dictionary_segment.dictionary();
 
             for (auto dictionary_entry : *dictionary) {
