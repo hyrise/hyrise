@@ -146,7 +146,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   template <typename PosListIteratorType>
   class NonNullPointAccessIterator
       : public AbstractPointAccessSegmentIterator<NonNullPointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
-                                              PosListIteratorType> {
+                                                  PosListIteratorType> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -156,8 +156,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it, PosListIteratorType position_filter_begin,
                                         PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)} {}
 
    private:
@@ -175,7 +175,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename PosListIteratorType>
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
-                                                                    SegmentPosition<T>, PosListIteratorType> {
+                                                                        SegmentPosition<T>, PosListIteratorType> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -186,8 +186,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
                                  PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
           _null_values_begin_it{std::move(null_values_begin_it)} {}
 

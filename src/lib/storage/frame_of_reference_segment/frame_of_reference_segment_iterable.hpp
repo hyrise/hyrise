@@ -108,7 +108,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   template <typename OffsetValueDecompressor, typename PosListIteratorType>
   class PointAccessIterator
       : public AbstractPointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
-                                              SegmentPosition<T>, PosListIteratorType> {
+                                                  SegmentPosition<T>, PosListIteratorType> {
    public:
     using ValueType = T;
     using IterableType = FrameOfReferenceSegmentIterable<T>;
@@ -117,8 +117,8 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
                         OffsetValueDecompressor offset_value_decompressor, PosListIteratorType position_filter_begin,
                         PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressor, PosListIteratorType>,
-                                         SegmentPosition<T>, PosListIteratorType>{std::move(position_filter_begin),
-                                                                                  std::move(position_filter_it)},
+                                             SegmentPosition<T>, PosListIteratorType>{std::move(position_filter_begin),
+                                                                                      std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decompressor{std::move(offset_value_decompressor)} {}

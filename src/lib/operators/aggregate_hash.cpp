@@ -572,24 +572,24 @@ void AggregateHash::_aggregate() {
 
           switch (aggregate->aggregate_function) {
             case AggregateFunction::Min:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Min, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Max:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Max, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Sum:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Sum, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Avg:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Count:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                         *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
@@ -600,8 +600,8 @@ void AggregateHash::_aggregate() {
                   chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Any:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *abstract_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
           }
         });
 

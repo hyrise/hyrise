@@ -26,8 +26,8 @@ namespace opossum {
  * an AnySegmentIterable) or that another encoding is applied (via the segment encoding utils).
  */
 std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_ptr<AbstractSegment>& segment,
-                                                          const DataType data_type,
-                                                          const SegmentEncodingSpec& encoding_spec) {
+                                                              const DataType data_type,
+                                                              const SegmentEncodingSpec& encoding_spec) {
   Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
 
   std::shared_ptr<AbstractSegment> result;

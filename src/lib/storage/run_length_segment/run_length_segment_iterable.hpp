@@ -206,7 +206,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    */
   template <typename PosListIteratorType>
   class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
-                                                                    SegmentPosition<T>, PosListIteratorType> {
+                                                                        SegmentPosition<T>, PosListIteratorType> {
    public:
     using ValueType = T;
     using IterableType = RunLengthSegmentIterable<T>;
@@ -217,8 +217,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                  const PosListIteratorType position_filter_begin,
                                  PosListIteratorType&& position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},

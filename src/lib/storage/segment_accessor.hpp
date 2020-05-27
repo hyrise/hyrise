@@ -27,7 +27,8 @@ class CreateSegmentAccessor {
  * Utility method to create a SegmentAccessor for a given AbstractSegment.
  */
 template <typename T>
-std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const AbstractSegment>& segment) {
+std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(
+    const std::shared_ptr<const AbstractSegment>& segment) {
   return opossum::detail::CreateSegmentAccessor<T>::create(segment);
 }
 

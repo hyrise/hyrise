@@ -23,7 +23,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
 
   template <typename T>
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
-                                                 const PolymorphicAllocator<T>& allocator) {
+                                                     const PolymorphicAllocator<T>& allocator) {
     static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
     // Ceiling of integer division

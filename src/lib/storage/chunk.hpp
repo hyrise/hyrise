@@ -187,7 +187,8 @@ class Chunk : private Noncopyable {
   void finalize();
 
  private:
-  std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
+      const std::vector<ColumnID>& column_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;

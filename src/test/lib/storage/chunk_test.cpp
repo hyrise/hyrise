@@ -135,17 +135,17 @@ TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
 
   EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
             index_int);
-  EXPECT_EQ(
-      chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
-      index_int_str);
+  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_int}),
+            index_int_str);
   EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
                              std::vector<std::shared_ptr<const AbstractSegment>>{ds_int, ds_str}),
             index_int_str);
   EXPECT_EQ(chunk->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
             index_str);
-  EXPECT_EQ(
-      chunk->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
-      nullptr);
+  EXPECT_EQ(chunk->get_index(SegmentIndexType::CompositeGroupKey,
+                             std::vector<std::shared_ptr<const AbstractSegment>>{ds_str}),
+            nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {

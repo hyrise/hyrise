@@ -64,7 +64,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
 
   template <typename T>
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
-                                                 const PolymorphicAllocator<T>& allocator) {
+                                                     const PolymorphicAllocator<T>& allocator) {
     // TODO(anyone): when value segments switch to using pmr_vectors, the data can be copied directly instead of
     // copying it element by element
     auto values = pmr_vector<T>{allocator};
@@ -130,7 +130,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 
   std::shared_ptr<AbstractEncodedSegment> _on_encode(const AnySegmentIterable<pmr_string> segment_iterable,
-                                                 const PolymorphicAllocator<pmr_string>& allocator) {
+                                                     const PolymorphicAllocator<pmr_string>& allocator) {
     /**
      * First iterate over the values for two reasons.
      * 1) If all the strings are empty LZ4 will try to compress an empty vector which will cause a segmentation fault.

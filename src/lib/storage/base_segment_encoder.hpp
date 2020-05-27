@@ -39,7 +39,7 @@ class BaseSegmentEncoder {
    * @return encoded segment if data type is supported else throws exception
    */
   virtual std::shared_ptr<AbstractEncodedSegment> encode(const std::shared_ptr<const AbstractSegment>& segment,
-                                                     DataType data_type) = 0;
+                                                         DataType data_type) = 0;
 
   virtual std::unique_ptr<BaseSegmentEncoder> create_new() const = 0;
 
@@ -74,7 +74,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
   // Resolves the data type and calls the appropriate instantiation of encode().
   std::shared_ptr<AbstractEncodedSegment> encode(const std::shared_ptr<const AbstractSegment>& segment,
-                                             DataType data_type) final {
+                                                 DataType data_type) final {
     auto encoded_segment = std::shared_ptr<AbstractEncodedSegment>{};
     resolve_data_type(data_type, [&](auto data_type_c) {
       const auto data_type_supported = this->supports(data_type_c);
@@ -132,7 +132,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
    */
   template <typename ColumnDataType>
   std::shared_ptr<AbstractEncodedSegment> encode(const std::shared_ptr<const AbstractSegment>& abstract_segment,
-                                             hana::basic_type<ColumnDataType> data_type_c) {
+                                                 hana::basic_type<ColumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*abstract_segment);
 

@@ -253,8 +253,9 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_segment_left,
-                                                const AbstractSegment& abstract_segment_right, const ChunkID chunk_id_left,
-                                                const ChunkID chunk_id_right, JoinNestedLoop::JoinParams& params) {
+                                                const AbstractSegment& abstract_segment_right,
+                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
+                                                JoinNestedLoop::JoinParams& params) {
   /**
    * This function dispatches `join_two_typed_segments()`.
    *

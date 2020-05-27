@@ -21,7 +21,8 @@ size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count
   Fail("AdaptiveRadixTreeIndex::estimate_memory_consumption() is not implemented yet");
 }
 
-AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
+AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(
+    const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
                            ? nullptr              // but range check needed for accessing the first segment

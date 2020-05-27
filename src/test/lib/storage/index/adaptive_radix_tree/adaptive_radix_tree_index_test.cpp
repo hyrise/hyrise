@@ -22,7 +22,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     // we want to custom-build the index, but we have to create an index with a non-empty segment.
     // Therefore we build an index and reset the root.
     dict_segment1 = create_dict_segment_by_type<pmr_string>(DataType::String, {"test"});
-    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment1}));
+    index1 =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
     /* root   childx    childxx  childxxx  leaf->chunk offsets
@@ -52,7 +53,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     std::uniform_int_distribution<int32_t> uni_integer(0, std::numeric_limits<int32_t>::max());
 
     auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
-    auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
+    auto index =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
     std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
 

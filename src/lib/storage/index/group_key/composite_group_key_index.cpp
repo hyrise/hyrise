@@ -24,7 +24,8 @@ size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count
   return ((row_count + distinct_count) * sizeof(ChunkOffset) + distinct_count * value_bytes);
 }
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(
+    const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
 

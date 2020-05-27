@@ -110,14 +110,14 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,
-                                                     const DataType data_type) {
+                                                         const DataType data_type) {
     auto segment_encoding_spec = GetParam();
     return this->encode_segment(abstract_segment, data_type, segment_encoding_spec);
   }
 
   std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,
-                                                     const DataType data_type,
-                                                     const SegmentEncodingSpec& segment_encoding_spec) {
+                                                         const DataType data_type,
+                                                         const SegmentEncodingSpec& segment_encoding_spec) {
     return std::dynamic_pointer_cast<AbstractEncodedSegment>(
         ChunkEncoder::encode_segment(abstract_segment, data_type, segment_encoding_spec));
   }

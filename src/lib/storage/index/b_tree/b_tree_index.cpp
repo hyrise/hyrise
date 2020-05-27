@@ -44,6 +44,8 @@ BTreeIndex::Iterator BTreeIndex::_cbegin() const { return _impl->cbegin(); }
 
 BTreeIndex::Iterator BTreeIndex::_cend() const { return _impl->cend(); }
 
-std::vector<std::shared_ptr<const AbstractSegment>> BTreeIndex::_get_indexed_segments() const { return {_indexed_segment}; }
+std::vector<std::shared_ptr<const AbstractSegment>> BTreeIndex::_get_indexed_segments() const {
+  return {_indexed_segment};
+}
 
 }  // namespace opossum

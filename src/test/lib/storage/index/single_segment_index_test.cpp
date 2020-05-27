@@ -70,10 +70,10 @@ class SingleSegmentIndexTest : public BaseTest {
     dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
     // Int indexes
-    index_int_no_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_no_nulls}));
-    index_int_no_nulls_2 =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_no_nulls}));
+    index_int_no_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_no_nulls}));
+    index_int_no_nulls_2 = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_no_nulls}));
     index_int_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_nulls}));
     index_int_mixed =
@@ -81,8 +81,8 @@ class SingleSegmentIndexTest : public BaseTest {
     index_int_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_empty}));
     // Long indexes
-    index_long_no_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_long_no_nulls}));
+    index_long_no_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_long_no_nulls}));
     index_long_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_long_nulls}));
     index_long_mixed =
@@ -90,8 +90,8 @@ class SingleSegmentIndexTest : public BaseTest {
     index_long_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_long_empty}));
     // Float indexes
-    index_float_no_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_float_no_nulls}));
+    index_float_no_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_float_no_nulls}));
     index_float_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_float_nulls}));
     index_float_mixed =
@@ -99,23 +99,23 @@ class SingleSegmentIndexTest : public BaseTest {
     index_float_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_float_empty}));
     // Double indexes
-    index_double_no_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_no_nulls}));
-    index_double_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_nulls}));
-    index_double_mixed =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_mixed}));
-    index_double_empty =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_empty}));
+    index_double_no_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_no_nulls}));
+    index_double_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_nulls}));
+    index_double_mixed = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_mixed}));
+    index_double_empty = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_double_empty}));
     // String indexes
-    index_string_no_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_no_nulls}));
-    index_string_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_nulls}));
-    index_string_mixed =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_mixed}));
-    index_string_empty =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_empty}));
+    index_string_no_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_no_nulls}));
+    index_string_nulls = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_nulls}));
+    index_string_mixed = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_mixed}));
+    index_string_empty = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_empty}));
   }
 
   template <class Iterator>

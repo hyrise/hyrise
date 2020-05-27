@@ -175,7 +175,8 @@ void resolve_pos_list_type(const std::shared_ptr<const AbstractPosList>& untyped
  *     process_segment(type, typed_segment);
  *   });
  */
-template <typename Functor, typename AbstractSegmentType>  // AbstractSegmentType allows segment to be const and non-const
+template <typename Functor,
+          typename AbstractSegmentType>  // AbstractSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same_v<AbstractSegment, std::remove_const_t<AbstractSegmentType>>>
 /*void*/ resolve_data_and_segment_type(AbstractSegmentType& segment, const Functor& functor) {
   resolve_data_type(segment.data_type(), [&](auto type) {

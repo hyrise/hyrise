@@ -99,12 +99,13 @@ template <typename T = ResolveDataTypeTag, EraseTypes erase_iterator_types = Era
           typename Functor>
 void segment_iterate_filtered(const AbstractSegment& abstract_segment,
                               const std::shared_ptr<const AbstractPosList>& position_filter, const Functor& functor) {
-  segment_with_iterators_filtered<T, erase_iterator_types>(abstract_segment, position_filter, [&](auto it, const auto end) {
-    while (it != end) {
-      functor(*it);
-      ++it;
-    }
-  });
+  segment_with_iterators_filtered<T, erase_iterator_types>(abstract_segment, position_filter,
+                                                           [&](auto it, const auto end) {
+                                                             while (it != end) {
+                                                               functor(*it);
+                                                               ++it;
+                                                             }
+                                                           });
 }
 
 // Variant without AbstractPosList

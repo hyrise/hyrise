@@ -59,7 +59,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
  private:
   template <typename ZsIteratorType, typename DictionaryIteratorType>
-  class Iterator : public AbstractSegmentIterator<Iterator<ZsIteratorType, DictionaryIteratorType>, SegmentPosition<T>> {
+  class Iterator
+      : public AbstractSegmentIterator<Iterator<ZsIteratorType, DictionaryIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;

@@ -18,9 +18,9 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment, ChunkOffset source_begin_offset,
-                      const std::shared_ptr<AbstractSegment>& target_abstract_segment, ChunkOffset target_begin_offset,
-                      ChunkOffset length) {
+void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,
+                      ChunkOffset source_begin_offset, const std::shared_ptr<AbstractSegment>& target_abstract_segment,
+                      ChunkOffset target_begin_offset, ChunkOffset length) {
   DebugAssert(source_abstract_segment->size() >= source_begin_offset + length, "Source Segment out-of-bounds");
   DebugAssert(target_abstract_segment->size() >= target_begin_offset + length, "Target Segment out-of-bounds");
 

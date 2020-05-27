@@ -64,7 +64,7 @@ template <typename Derived, typename Value, typename PosListIteratorType>
 class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derived, Value> {
  public:
   explicit AbstractPointAccessSegmentIterator(PosListIteratorType position_filter_begin,
-                                          PosListIteratorType position_filter_it)
+                                              PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:

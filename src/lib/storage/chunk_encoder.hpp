@@ -29,8 +29,8 @@ class AbstractSegment;
 class ChunkEncoder {
  public:
   static std::shared_ptr<AbstractSegment> encode_segment(const std::shared_ptr<AbstractSegment>& segment,
-                                                     const DataType data_type,
-                                                     const SegmentEncodingSpec& encoding_spec);
+                                                         const DataType data_type,
+                                                         const SegmentEncodingSpec& encoding_spec);
 
   /**
    * @brief Encodes a chunk

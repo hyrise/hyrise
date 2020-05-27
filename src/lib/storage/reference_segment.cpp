@@ -45,7 +45,8 @@ ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_col
 
 ChunkOffset ReferenceSegment::size() const { return static_cast<ChunkOffset>(_pos_list->size()); }
 
-std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
   // ReferenceSegments are considered as intermediate data structures and are
   // therefore not subject to NUMA-aware chunk migrations.
   Fail("Cannot migrate a ReferenceSegment");
