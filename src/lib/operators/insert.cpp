@@ -87,7 +87,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
     // This is not really a strong limitation, we just did not want the compile time of all type combinations.
     // If you really want this, it should be only a couple of lines to implement.
-    Assert(input_table_left()->column_data_type(column_id) == _target_table->column_data_type(column_id),
+    Assert(left_input_table()->column_data_type(column_id) == _target_table->column_data_type(column_id),
            "Cannot handle inserts into column of different type");
   }
 
@@ -100,7 +100,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   {
     const auto append_lock = _target_table->acquire_append_mutex();
 
-    auto remaining_rows = input_table_left()->row_count();
+    auto remaining_rows = left_input_table()->row_count();
 
     if (_target_table->chunk_count() == 0) {
       _target_table->append_mutable_chunk();
@@ -184,7 +184,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
 
     while (target_chunk_range_remaining_rows > 0) {
-      const auto source_chunk = input_table_left()->get_chunk(source_row_id.chunk_id);
+      const auto source_chunk = left_input_table()->get_chunk(source_row_id.chunk_id);
       const auto source_chunk_remaining_rows = source_chunk->size() - source_row_id.chunk_offset;
       const auto num_rows_current_iteration = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
 
@@ -274,9 +274,9 @@ void Insert::_on_rollback_records() {
 }
 
 std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Insert>(_target_table_name, copied_input_left);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Insert>(_target_table_name, copied_left_input);
 }
 
 void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

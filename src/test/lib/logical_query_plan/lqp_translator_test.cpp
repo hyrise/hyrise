@@ -151,7 +151,7 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   ASSERT_TRUE(b_pqp);
   EXPECT_EQ(b_pqp->column_id, ColumnID{1});
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -174,7 +174,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(*table_scan_op->predicate(), *greater_than_(5, b));
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -197,7 +197,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeLike) {
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(*table_scan_op->predicate(), *like_(b, "hello%"));
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_string");
 }
@@ -220,7 +220,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(*table_scan_op->predicate(), *is_not_null_(b));
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -245,7 +245,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
   ASSERT_TRUE(between_scan_op);
   EXPECT_EQ(*between_scan_op->predicate(), *between_inclusive_(5, a, b));
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -278,8 +278,8 @@ TEST_F(LQPTranslatorTest, SubqueryExpressionCorrelated) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   ASSERT_EQ(pqp->type(), OperatorType::Projection);
-  ASSERT_TRUE(pqp->input_left());
-  ASSERT_EQ(pqp->input_left()->type(), OperatorType::GetTable);
+  ASSERT_TRUE(pqp->left_input());
+  ASSERT_EQ(pqp->left_input()->type(), OperatorType::GetTable);
 
   const auto projection = std::static_pointer_cast<const Projection>(pqp);
   ASSERT_EQ(projection->expressions.size(), 2u);
@@ -324,7 +324,7 @@ TEST_F(LQPTranslatorTest, Sort) {
   const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp);
   ASSERT_TRUE(projection_a);
 
-  const auto sort = std::dynamic_pointer_cast<const Sort>(pqp->input_left());
+  const auto sort = std::dynamic_pointer_cast<const Sort>(pqp->left_input());
   ASSERT_TRUE(sort);
 
   EXPECT_EQ(sort->sort_definitions().at(0).column, ColumnID{1});
@@ -333,10 +333,10 @@ TEST_F(LQPTranslatorTest, Sort) {
   EXPECT_EQ(sort->sort_definitions().at(1).column, ColumnID{0});
   EXPECT_EQ(sort->sort_definitions().at(1).sort_mode, SortMode::Descending);
 
-  const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort->input_left());
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort->left_input());
   ASSERT_TRUE(projection_b);
 
-  const auto get_table = std::dynamic_pointer_cast<const GetTable>(projection_b->input_left());
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(projection_b->left_input());
   ASSERT_TRUE(get_table);
 }
 
@@ -359,7 +359,7 @@ TEST_F(LQPTranslatorTest, LimitLiteral) {
   ASSERT_TRUE(value_expression);
   ASSERT_EQ(value_expression->value, AllTypeVariant(static_cast<int64_t>(1337)));
 
-  const auto get_table = std::dynamic_pointer_cast<const GetTable>(limit->input_left());
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(limit->left_input());
   ASSERT_TRUE(get_table);
   EXPECT_EQ(get_table->table_name(), "table_int_float");
 }
@@ -412,25 +412,25 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
     EXPECT_EQ(recovered_node, aggregate_node);
   }
   {
-    const auto lqp_node = op->input_left()->lqp_node;
+    const auto lqp_node = op->left_input()->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
     EXPECT_EQ(recovered_node, join_node);
   }
   {
-    const auto lqp_node_left = op->input_left()->input_left()->lqp_node;
+    const auto lqp_node_left = op->left_input()->left_input()->lqp_node;
     const auto recovered_node_left = std::dynamic_pointer_cast<const ValidateNode>(lqp_node_left);
     EXPECT_EQ(recovered_node_left, validate_node);
-    const auto lqp_node_right = op->input_left()->input_right()->lqp_node;
+    const auto lqp_node_right = op->left_input()->right_input()->lqp_node;
     const auto recovered_node_right = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node_right);
     EXPECT_EQ(recovered_node_right, int_float2_node);
   }
   {
-    const auto lqp_node = op->input_left()->input_left()->input_left()->lqp_node;
+    const auto lqp_node = op->left_input()->left_input()->left_input()->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
     EXPECT_EQ(recovered_node, predicate_node);
   }
   {
-    const auto lqp_node = op->input_left()->input_left()->input_left()->input_left()->lqp_node;
+    const auto lqp_node = op->left_input()->left_input()->left_input()->left_input()->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node);
     EXPECT_EQ(recovered_node, int_float_node);
   }
@@ -472,11 +472,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
   ASSERT_TRUE(union_op);
 
-  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
   EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
 
-  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   const auto b = PQPColumnExpression::from_table(*table, "b");
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
@@ -511,13 +511,13 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
   ASSERT_TRUE(union_op);
 
-  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
   EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
-  EXPECT_EQ(index_scan_op->input_left()->type(), OperatorType::GetTable);
+  EXPECT_EQ(index_scan_op->left_input()->type(), OperatorType::GetTable);
 
   const auto b = PQPColumnExpression::from_table(*table, "b");
-  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(b, 42, 1337));
@@ -667,19 +667,19 @@ TEST_F(LQPTranslatorTest, JoinAndPredicates) {
   const auto join_op = std::dynamic_pointer_cast<const JoinHash>(op);
   ASSERT_TRUE(join_op);
 
-  const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->input_left());
+  const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->left_input());
   ASSERT_TRUE(predicate_op_left);
   ASSERT_EQ(*predicate_op_left->predicate(), *equals_(a, 42));
 
-  const auto predicate_op_right = std::dynamic_pointer_cast<const TableScan>(join_op->input_right());
+  const auto predicate_op_right = std::dynamic_pointer_cast<const TableScan>(join_op->right_input());
   ASSERT_TRUE(predicate_op_right);
   ASSERT_EQ(*predicate_op_right->predicate(), *greater_than_(b, 30.0));
 
-  const auto get_table_op_left = std::dynamic_pointer_cast<const GetTable>(predicate_op_left->input_left());
+  const auto get_table_op_left = std::dynamic_pointer_cast<const GetTable>(predicate_op_left->left_input());
   ASSERT_TRUE(get_table_op_left);
   EXPECT_EQ(get_table_op_left->table_name(), "table_int_float");
 
-  const auto get_table_op_right = std::dynamic_pointer_cast<const GetTable>(predicate_op_right->input_left());
+  const auto get_table_op_right = std::dynamic_pointer_cast<const GetTable>(predicate_op_right->left_input());
   ASSERT_TRUE(get_table_op_right);
   EXPECT_EQ(get_table_op_right->table_name(), "table_int_float2");
 }
@@ -742,12 +742,12 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   ASSERT_NE(pqp, nullptr);
-  ASSERT_NE(pqp->input_left(), nullptr);
-  ASSERT_NE(pqp->input_right(), nullptr);
-  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
-  ASSERT_NE(pqp->input_right()->input_left(), nullptr);
-  EXPECT_EQ(pqp->input_left()->input_left(), pqp->input_right()->input_left());
-  EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
+  ASSERT_NE(pqp->left_input(), nullptr);
+  ASSERT_NE(pqp->right_input(), nullptr);
+  ASSERT_NE(pqp->left_input()->left_input(), nullptr);
+  ASSERT_NE(pqp->right_input()->left_input(), nullptr);
+  EXPECT_EQ(pqp->left_input()->left_input(), pqp->right_input()->left_input());
+  EXPECT_EQ(pqp->left_input()->left_input()->left_input(), pqp->right_input()->left_input()->left_input());
 }
 
 TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
@@ -808,25 +808,25 @@ TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
   const auto projection = std::dynamic_pointer_cast<const Projection>(pqp);
   ASSERT_NE(projection, nullptr);
 
-  const auto product = std::dynamic_pointer_cast<const Product>(projection->input_left());
+  const auto product = std::dynamic_pointer_cast<const Product>(projection->left_input());
   ASSERT_NE(product, nullptr);
 
-  const auto table_scan_b_1 = std::dynamic_pointer_cast<const TableScan>(product->input_left());
-  const auto table_scan_b_2 = std::dynamic_pointer_cast<const TableScan>(product->input_right());
+  const auto table_scan_b_1 = std::dynamic_pointer_cast<const TableScan>(product->left_input());
+  const auto table_scan_b_2 = std::dynamic_pointer_cast<const TableScan>(product->right_input());
   ASSERT_NE(table_scan_b_1, nullptr);
   ASSERT_NE(table_scan_b_2, nullptr);
   ASSERT_NE(table_scan_b_1, table_scan_b_2);
 
-  const auto table_scan_a_1 = std::dynamic_pointer_cast<const TableScan>(table_scan_b_1->input_left());
-  const auto table_scan_a_2 = std::dynamic_pointer_cast<const TableScan>(table_scan_b_2->input_left());
+  const auto table_scan_a_1 = std::dynamic_pointer_cast<const TableScan>(table_scan_b_1->left_input());
+  const auto table_scan_a_2 = std::dynamic_pointer_cast<const TableScan>(table_scan_b_2->left_input());
   ASSERT_NE(table_scan_a_1, nullptr);
   ASSERT_NE(table_scan_a_2, nullptr);
   ASSERT_EQ(table_scan_a_1, table_scan_a_2);
 
-  const auto get_table = std::dynamic_pointer_cast<const GetTable>(table_scan_a_1->input_left());
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(table_scan_a_1->left_input());
   ASSERT_NE(get_table, nullptr);
 
-  ASSERT_EQ(get_table->input_left(), nullptr);
+  ASSERT_EQ(get_table->left_input(), nullptr);
 }
 
 TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
@@ -844,12 +844,12 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   ASSERT_NE(pqp, nullptr);
-  ASSERT_NE(pqp->input_left(), nullptr);
-  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
+  ASSERT_NE(pqp->left_input(), nullptr);
+  ASSERT_NE(pqp->left_input()->left_input(), nullptr);
 
   const auto table_scan = std::dynamic_pointer_cast<const TableScan>(pqp);
-  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp->input_left());
-  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->input_left()->input_left());
+  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp->left_input());
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->left_input()->left_input());
 
   ASSERT_NE(table_scan, nullptr);
   ASSERT_NE(projection_a, nullptr);
@@ -885,10 +885,10 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   ASSERT_NE(pqp, nullptr);
-  ASSERT_NE(pqp->input_left(), nullptr);
+  ASSERT_NE(pqp->left_input(), nullptr);
 
   const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp);
-  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->input_left());
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->left_input());
 
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
@@ -916,7 +916,7 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   EXPECT_EQ(create_table->table_name, "t");
 
   // CreateTable input must be executed to enable access to column definitions
-  create_table->mutable_input_left()->execute();
+  create_table->mutable_left_input()->execute();
   EXPECT_EQ(create_table->column_definitions(), column_definitions);
 }
 
@@ -943,7 +943,7 @@ TEST_F(LQPTranslatorTest, DropTable) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   EXPECT_EQ(pqp->type(), OperatorType::DropTable);
-  EXPECT_EQ(pqp->input_left(), nullptr);
+  EXPECT_EQ(pqp->left_input(), nullptr);
 
   const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
   EXPECT_EQ(drop_table->table_name, "t");
@@ -956,7 +956,7 @@ TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   EXPECT_EQ(pqp->type(), OperatorType::CreatePreparedPlan);
-  EXPECT_EQ(pqp->input_left(), nullptr);
+  EXPECT_EQ(pqp->left_input(), nullptr);
 
   const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
   EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
@@ -973,7 +973,7 @@ TEST_F(LQPTranslatorTest, Export) {
   const auto exporter = std::dynamic_pointer_cast<Export>(pqp);
 
   EXPECT_EQ(exporter->type(), OperatorType::Export);
-  EXPECT_EQ(exporter->input_left()->type(), OperatorType::Validate);
+  EXPECT_EQ(exporter->left_input()->type(), OperatorType::Validate);
 }
 
 TEST_F(LQPTranslatorTest, Import) {
@@ -983,7 +983,7 @@ TEST_F(LQPTranslatorTest, Import) {
   const auto importer = std::dynamic_pointer_cast<Import>(pqp);
 
   EXPECT_EQ(importer->type(), OperatorType::Import);
-  EXPECT_EQ(importer->input_left(), nullptr);
+  EXPECT_EQ(importer->left_input(), nullptr);
 }
 
 TEST_F(LQPTranslatorTest, ChangeMetaTable) {
@@ -998,8 +998,8 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
   const auto change_meta_table = std::dynamic_pointer_cast<ChangeMetaTable>(pqp);
 
   EXPECT_EQ(change_meta_table->type(), OperatorType::ChangeMetaTable);
-  EXPECT_EQ(change_meta_table->input_left()->type(), OperatorType::TableWrapper);
-  EXPECT_EQ(change_meta_table->input_right()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->left_input()->type(), OperatorType::TableWrapper);
+  EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
 }
 
 }  // namespace opossum

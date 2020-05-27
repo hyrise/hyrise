@@ -63,7 +63,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepEquals) {
   EXPECT_NE(*subquery_table, *subquery_different_parameter);
 
   // different PQP:
-  const auto pqp_without_limit = pqp_single_value_one_parameter->mutable_input_left();
+  const auto pqp_without_limit = pqp_single_value_one_parameter->mutable_left_input();
   const auto subquery_different_lqp =
       std::make_shared<PQPSubqueryExpression>(pqp_without_limit, DataType::Int, false, parameters_a);
   EXPECT_NE(*subquery_table, *subquery_different_lqp);

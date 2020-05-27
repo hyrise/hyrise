@@ -42,9 +42,9 @@ const std::string& Print::name() const {
 }
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Print>(copied_input_left, _out);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Print>(copied_left_input, _out);
 }
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -62,26 +62,26 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, PrintFlags 
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, input_table_left());
+  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, left_input_table());
 
   // print column headers
   _out << "=== Columns" << std::endl;
-  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_name(column_id) << std::setw(0);
+  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+    _out << "|" << std::setw(widths[column_id]) << left_input_table()->column_name(column_id) << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_data_type(column_id) << std::setw(0);
+  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+    _out << "|" << std::setw(widths[column_id]) << left_input_table()->column_data_type(column_id) << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
     _out << "||_BEGIN|_END  |_TID  ";
   }
   _out << "|" << std::endl;
-  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto nullable = input_table_left()->column_is_nullable(column_id);
+  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+    const auto nullable = left_input_table()->column_is_nullable(column_id);
     _out << "|" << std::setw(widths[column_id]) << (nullable ? "null" : "not null") << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
@@ -90,9 +90,9 @@ std::shared_ptr<const Table> Print::_on_execute() {
   _out << "|" << std::endl;
 
   // print each chunk
-  const auto chunk_count = input_table_left()->chunk_count();
+  const auto chunk_count = left_input_table()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = input_table_left()->get_chunk(chunk_id);
+    const auto chunk = left_input_table()->get_chunk(chunk_id);
     if (!chunk) continue;
 
     if (!has_print_ignore_chunk_boundaries_flag(_flags)) {
@@ -144,7 +144,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
   }
 
-  return input_table_left();
+  return left_input_table();
 }
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
@@ -159,9 +159,9 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
-  const auto chunk_count = input_table_left()->chunk_count();
+  const auto chunk_count = left_input_table()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = input_table_left()->get_chunk(chunk_id);
+    const auto chunk = left_input_table()->get_chunk(chunk_id);
     if (!chunk) continue;
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
