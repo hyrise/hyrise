@@ -93,6 +93,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -112,6 +113,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -126,6 +128,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleBothSideJoinPushdownTest) {
   const auto expected_lqp = input_lqp->deep_copy();
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
   EXPECT_LQP_EQ(input_lqp, expected_lqp);
 }
 
@@ -265,14 +268,15 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  
-  // TODO(Marcel) when a node mapping is created in `lqp_find_subplan_mismatch`, the nodes of the sub-query are not
-  // mapped currently. Consequently, `expression_adapt_to_different_lqp` cannot find the StoredTableNode of the
-  // sub-query in the node mapping --> assertion fails: Couldn't find referenced node x in NodeMapping.
+
+  // TODO(Marcel) If a node mapping is created in `lqp_find_subplan_mismatch` which is called in `EXPECT_LQP_EQ`, the
+  // nodes of sub-queries are not mapped. Consequently, `expression_adapt_to_different_lqp` cannot find the
+  // StoredTableNode of the sub-query in the node mapping. Therefore, an assertion fails: "Couldn't find referenced
+  // node x in NodeMapping."
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) { // TODO
+TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
   // We can push `a > b` under the projection because it does not depend on the sub-query.
   // clang-format off
   const auto input_lqp =
@@ -291,7 +295,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjecti
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) { // TODO
+TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
   // We can't push `(SELECT ...) > a.b` under the projection because the projection is responsible for the SELECT.
   // clang-format off
   const auto input_lqp =
@@ -306,7 +310,7 @@ TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTe
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) { // TODO
+TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   // Even if one predicate cannot be pushed down, others might be better off
   // clang-format off
   const auto input_lqp =
@@ -314,13 +318,8 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
     PredicateNode::make(greater_than_(_subquery_c, _a_b),
       ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
         _table_a)));
-
-  const auto expected_lqp =
-  PredicateNode::make(greater_than_(_subquery_c, _a_b),
-    ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
-      PredicateNode::make(greater_than_(_a_a, _a_b),
-        _table_a)));
   // clang-format on
+  const auto expected_lqp = input_lqp->deep_copy();
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   // TODO(Marcel) see TODO in `AllowedValuePredicatePushdownThroughProjectionTest`
@@ -532,14 +531,8 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
       JoinNode::make(JoinMode::Cross,
       _table_a,
       _table_b)));
-
-  const auto expected_lqp =
-  PredicateNode::make(greater_than_(5, 3),
-    JoinNode::make(JoinMode::Cross,
-      PredicateNode::make(equals_(_a_a, 3),
-        _table_a),
-      _table_b));
   // clang-format on
+  const auto expected_lqp = input_lqp->deep_copy();
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -556,13 +549,8 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnLeftSide) {
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _table_d,
       _table_e));
-
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), equals_(_d_b, 2)),
-    JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
-      PredicateNode::make(or_(equals_(_d_b, 1), equals_(_d_b, 2)),
-        _table_d),
-      _table_e));
   // clang-format on
+  const auto expected_lqp = input_lqp->deep_copy();
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -578,14 +566,8 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _table_d,
       _table_e));
-
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
-    JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
-      PredicateNode::make(or_(equals_(_d_b, 1), equals_(_d_b, 2)),
-        _table_d),
-      PredicateNode::make(or_(equals_(_e_a, 10), equals_(_e_a, 1)),
-        _table_e)));
   // clang-format on
+  const auto expected_lqp = input_lqp->deep_copy();
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -623,8 +605,12 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfNonInner) {
     JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
       _table_d,
       _table_e));
+
+  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
+    JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
+      _table_d,
+      _table_e));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -640,8 +626,12 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
     JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
       _table_d,
       _table_e));
+
+  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(placeholder_(ParameterID{0}), 2)), and_(equals_(_e_a, 10), equals_(placeholder_(ParameterID{1}), 1))),  // NOLINT
+    JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
+      _table_d,
+      _table_e));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 

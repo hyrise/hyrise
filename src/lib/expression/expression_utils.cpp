@@ -118,7 +118,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
   Assert(node, "LQPColumnExpression is expired");
   const auto node_mapping_iter = node_mapping.find(node);
   std::stringstream ss;
-  ss << node;  
+  ss << node;
   Assert(node_mapping_iter != node_mapping.end(),
          "Couldn't find referenced node (" + node->description() + "(" + ss.str() + ")) in NodeMapping");
 
