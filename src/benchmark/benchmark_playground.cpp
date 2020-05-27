@@ -71,12 +71,21 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     std::remove(filename.c_str());
   }
 
+  void decompress(const BaseSegment& segment) {
+    std::cout << "not implemented" << std::endl;
+  }
+
+  template <typename T>
+  void decompress(const LZ4Segment<T>& segment) {
+    segment.decompress();
+  }
+
  protected:
   std::shared_ptr<Table> _table;
 
   const std::string filename = "blubb.bin";
 
-  const ChunkOffset chunk_size = ChunkOffset{1000};
+  const ChunkOffset chunk_size = ChunkOffset{2000};
 };
 
 /**
@@ -128,6 +137,17 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, CompareLZ4s)(benchmark::State& state) {
                                    imp_table->get_chunk(chunk)->get_segment(column));
     }
   }
+
+  for (auto chunk = ChunkID{0}; chunk < ChunkID{2}; ++chunk) {
+    for (auto column = ColumnID{0}; column < ColumnID{2}; ++column) {
+      std::cout << "Decompress Chunk " << chunk << " Column " << column << std::endl<< std::endl;
+      const auto segment = imp_table->get_chunk(chunk)->get_segment(column);
+      resolve_data_and_segment_type(*segment, [&](const auto data_type_t, const auto& resolved_segment) {
+        decompress(resolved_segment);
+      });
+    }
+  }
+
 }
 
 }  // namespace opossum
