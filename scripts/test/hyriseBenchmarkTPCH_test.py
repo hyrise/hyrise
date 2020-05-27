@@ -30,7 +30,7 @@ def main():
 
   benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
   benchmark.expect_exact("Running in single-threaded mode")
-  benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
+  benchmark.expect_exact("1 simulated client is scheduling items")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Dictionary'")
   benchmark.expect_exact("Max duration per item is 10 seconds")
