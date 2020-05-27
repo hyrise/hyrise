@@ -114,30 +114,30 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   auto stored_table_node = StoredTableNode::make("table_a");
 
-  // Setup first LQP
-  // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20));
-  predicate_node_0->set_left_input(stored_table_node);
+  // clang-format off
+  const auto first_input_lqp =
+  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40),
+    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+      stored_table_node));
 
-  auto predicate_node_1 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40));
-  predicate_node_1->set_left_input(predicate_node_0);
+  const auto second_input_lqp =
+  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
+      stored_table_node));
 
-  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
+  const auto first_expected_optimized_lqp = first_input_lqp->deep_copy();
 
-  // Setup second LQP
-  // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400));
-  predicate_node_2->set_left_input(stored_table_node);
+  const auto second_expected_optimized_lqp =
+  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
+    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+      stored_table_node));
+  // clang-format on
 
-  auto predicate_node_3 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20));
-  predicate_node_3->set_left_input(predicate_node_2);
+  const auto first_reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, first_input_lqp);
+  const auto second_reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, second_input_lqp);
 
-  auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
-
-  EXPECT_EQ(reordered, predicate_node_1);
-  EXPECT_EQ(reordered->left_input(), predicate_node_0);
-  EXPECT_EQ(reordered_1, predicate_node_2);
-  EXPECT_EQ(reordered_1->left_input(), predicate_node_3);
+  EXPECT_LQP_EQ(first_reordered_input_lqp, first_expected_optimized_lqp);
+  EXPECT_LQP_EQ(second_reordered_input_lqp, second_expected_optimized_lqp);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
@@ -149,11 +149,11 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
      *
      *             _______Cross________
      *            /                    \
-     *  Predicate_0(a > 80)     Predicate_2(a > 90)
+     *  Predicate(a > 80)     Predicate(a > 90)
      *           |                     |
-     *  Predicate_1(a > 60)     Predicate_3(a > 50)
+     *  Predicate(a > 60)     Predicate(a > 50)
      *           |                     |
-     *        Table_0           Predicate_4(a > 30)
+     *        Table_0           Predicate(a > 30)
      *                                 |
      *                               Table_1
      */
@@ -166,30 +166,30 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   auto table_1 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
                                                   {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 
-  auto cross_node = JoinNode::make(JoinMode::Cross);
-  auto predicate_0 = PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80));
-  auto predicate_1 = PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60));
-  auto predicate_2 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 90));
-  auto predicate_3 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 50));
-  auto predicate_4 = PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 30));
+  // clang-format off
+  const auto input_lqp =
+  JoinNode::make(JoinMode::Cross,
+    PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80),
+      PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60),
+        table_0)),
+    PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 90),
+      PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 50),
+        PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 30),
+          table_1))));
 
-  predicate_1->set_left_input(table_0);
-  predicate_0->set_left_input(predicate_1);
-  predicate_4->set_left_input(table_1);
-  predicate_3->set_left_input(predicate_4);
-  predicate_2->set_left_input(predicate_3);
-  cross_node->set_left_input(predicate_0);
-  cross_node->set_right_input(predicate_2);
+  const auto expected_optimized_lqp =
+  JoinNode::make(JoinMode::Cross,
+    PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60),
+      PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80),
+        table_0)),
+    PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 30),
+      PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 50),
+        PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 90),
+          table_1))));
+  // clang-format on
 
-  const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
-
-  EXPECT_EQ(reordered, cross_node);
-  EXPECT_EQ(reordered->left_input(), predicate_1);
-  EXPECT_EQ(reordered->left_input()->left_input(), predicate_0);
-  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), table_0);
-  EXPECT_EQ(reordered->right_input(), predicate_4);
-  EXPECT_EQ(reordered->right_input()->left_input(), predicate_3);
-  EXPECT_EQ(reordered->right_input()->left_input()->left_input(), predicate_2);
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
@@ -197,15 +197,15 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      * If a PredicateNode has multiple outputs, it should only be considered for reordering with lower predicates.
      */
   /**
-     *      _____Union___
-     *    /             /
-     * Predicate_a     /
-     *    \           /
-     *     Predicate_b
-     *         |
-     *     Predicate_c
-     *         |
-     *       Table
+     *        ____Union___
+     *       /            \
+     * Predicate(a > 90)  |
+     *       \            /
+     *      Predicate(a > 10)
+     *             |
+     *      Predicate(a > 5)
+     *             |
+     *           Table
      *
      * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, Predicate_a cannot
      * be reordered since it does not belong to the predicate chain (Predicate_b and Predicate_c). However, Predicate_b
@@ -218,25 +218,33 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto table_node =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
                                        {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
-  auto union_node = UnionNode::make(SetOperationMode::Positions);
-  auto predicate_a_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90));
-  auto predicate_b_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 10));
-  auto predicate_c_node = PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5));
 
-  union_node->set_left_input(predicate_a_node);
-  union_node->set_right_input(predicate_b_node);
-  predicate_a_node->set_left_input(predicate_b_node);
-  predicate_b_node->set_left_input(predicate_c_node);
-  predicate_c_node->set_left_input(table_node);
+  // clang-format off
+  const auto sub_lqp =
+  PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 10),
+    PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5),
+      table_node));
 
-  const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
+  const auto input_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90),
+      sub_lqp),
+    sub_lqp);
 
-  EXPECT_EQ(reordered, union_node);
-  EXPECT_EQ(reordered->left_input(), predicate_a_node);
-  EXPECT_EQ(reordered->right_input(), predicate_c_node);
-  EXPECT_EQ(predicate_a_node->left_input(), predicate_c_node);
-  EXPECT_EQ(predicate_c_node->left_input(), predicate_b_node);
-  EXPECT_EQ(predicate_b_node->left_input(), table_node);
+  const auto expected_optimized_sub_lqp =
+  PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5),
+    PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 10),
+      table_node));
+
+  const auto expected_optimized_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90),
+      expected_optimized_sub_lqp),
+    expected_optimized_sub_lqp);
+  // clang-format on
+
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
