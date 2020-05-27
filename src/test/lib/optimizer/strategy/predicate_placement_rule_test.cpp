@@ -623,10 +623,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfNonInner) {
       _table_d,
       _table_e));
 
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
-    JoinNode::make(JoinMode::Left, equals_(_d_a, _e_a),
-      _table_d,
-      _table_e));
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -644,10 +641,7 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
       _table_d,
       _table_e));
 
-  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), equals_(placeholder_(ParameterID{0}), 2)), and_(equals_(_e_a, 10), equals_(placeholder_(ParameterID{1}), 1))),  // NOLINT
-    JoinNode::make(JoinMode::Inner, equals_(_d_a, _e_a),
-      _table_d,
-      _table_e));
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
