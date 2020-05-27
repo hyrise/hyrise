@@ -170,6 +170,7 @@ class LZ4Segment : public BaseEncodedSegment {
   /**@}*/
 
  private:
+  friend class LZ4Compare;
   const pmr_vector<pmr_vector<char>> _lz4_blocks;
   const std::optional<pmr_vector<bool>> _null_values;
   const pmr_vector<char> _dictionary;

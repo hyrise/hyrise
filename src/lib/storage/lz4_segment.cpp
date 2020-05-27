@@ -235,7 +235,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data,
                                                const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  const auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks.at(block_index);
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;
@@ -263,8 +263,14 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
   }
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
+  std::stringstream blub;
+  //blub << std::endl << "decompress block " << block_index << " write offset " << write_offset << "is_empty " << is_empty << " cbs " << compressed_block_size
+  //<< " dbs " << decompressed_block_size << std::endl << "dr " << decompressed_result << " dds " << decompressed_data.size() <<  std::endl;
+  blub << std::endl
+       << "bi " << block_index << " blocks " << _lz4_blocks.size() << " bs " << _block_size << " lbs "
+       << _last_block_size << " dr " << decompressed_result << std::endl;
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
-              "Decompressed LZ4 block has different size than the initial source data.");
+              "Decompressed LZ4 block has different size than the initial source data." + blub.str());
 }
 
 template <typename T>

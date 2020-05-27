@@ -470,6 +470,7 @@ set(
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
+    storage/lz4_segment/lz4_compare.hpp
     storage/lz4_segment/lz4_encoder.hpp
     storage/lz4_segment/lz4_segment_iterable.hpp
     storage/lz4_segment.cpp

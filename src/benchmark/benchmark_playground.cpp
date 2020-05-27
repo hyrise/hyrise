@@ -3,6 +3,13 @@
 #include "benchmark/benchmark.h"
 #include "micro_benchmark_basic_fixture.hpp"
 
+#include "import_export/binary/binary_parser.hpp"
+#include "import_export/binary/binary_writer.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/lz4_segment.hpp"
+#include "storage/lz4_segment/lz4_compare.hpp"
+#include "storage/table.hpp"
+
 namespace opossum {
 
 /**
@@ -38,24 +45,41 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
 
     _clear_cache();
 
-    // Fill the vector with 1M values in the pattern 0, 1, 2, 3, 0, 1, 2, 3, ...
-    // The "TableScan" will scan for one value (2), so it will select 25%.
-    _vec.resize(1'000'000);
-    std::generate(_vec.begin(), _vec.end(), []() {
-      static ValueT v = 0;
-      v = (v + 1) % 4;
-      return v;
-    });
+    const auto column_definitions = TableColumnDefinitions{{"a", DataType::String, true},
+                                                           {"b", DataType::String, false},
+                                                           {"c", DataType::Int, true},
+                                                           {"d", DataType::Int, false}};
+    _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+
+    for (auto i = ChunkOffset{0}; i < chunk_size; ++i) {
+      const AllTypeVariant str_null = i % 2 == 0 ? NULL_VALUE : pmr_string{"blubb" + std::to_string(i)};
+      const AllTypeVariant int_null = i % 2 == 0 ? NULL_VALUE : int32_t(i);
+      _table->append({str_null, pmr_string{"blubb" + std::to_string(i)}, int_null, int32_t(i)});
+    }
+
+    for (auto i = ChunkOffset{0}; i < chunk_size / 2; ++i) {
+      const AllTypeVariant str_null = i % 2 == 0 ? NULL_VALUE : pmr_string{"blubb" + std::to_string(i)};
+      const AllTypeVariant int_null = i % 2 == 0 ? NULL_VALUE : int32_t(i);
+      _table->append({str_null, pmr_string{"blubb" + std::to_string(i)}, int_null, int32_t(i)});
+    }
+
+    _table->last_chunk()->finalize();
+    ChunkEncoder::encode_all_chunks(_table, SegmentEncodingSpec{EncodingType::LZ4});
   }
-  void TearDown(::benchmark::State& state) override { MicroBenchmarkBasicFixture::TearDown(state); }
+  void TearDown(::benchmark::State& state) override {
+    MicroBenchmarkBasicFixture::TearDown(state);
+    std::remove(filename.c_str());
+  }
 
  protected:
-  std::vector<ValueT> _vec;
+  std::shared_ptr<Table> _table;
+
+  const std::string filename = "blubb.bin";
+
+  const ChunkOffset chunk_size = ChunkOffset{1000};
 };
 
 /**
- * Reference implementation, growing the vector on demand
- */
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
@@ -72,9 +96,6 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
   }
 }
 
-/**
- * Alternative implementation, pre-allocating the vector
- */
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
@@ -89,6 +110,22 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
         result.push_back(i);
         benchmark::ClobberMemory();  // Force that record to be written to memory
       }
+    }
+  }
+}
+
+*/
+
+BENCHMARK_F(BenchmarkPlaygroundFixture, CompareLZ4s)(benchmark::State& state) {
+  BinaryWriter::write(*_table, filename);
+
+  auto imp_table = BinaryParser::parse(filename);
+
+  for (auto chunk = ChunkID{0}; chunk < ChunkID{2}; ++chunk) {
+    for (auto column = ColumnID{0}; column < ColumnID{2}; ++column) {
+      std::cout << "Compare Chunk " << chunk << " Column " << column << std::endl<< std::endl;
+      LZ4Compare::compare_segments(_table->get_chunk(chunk)->get_segment(column),
+                                   imp_table->get_chunk(chunk)->get_segment(column));
     }
   }
 }
