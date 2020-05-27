@@ -56,7 +56,11 @@ std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(
   auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, alloc);
   auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, alloc);
 
-  return std::make_shared<RunLengthSegment<T>>(new_values, new_null_values, new_end_positions);
+  auto copy = std::make_shared<RunLengthSegment<T>>(new_values, new_null_values, new_end_positions);
+
+  copy->access_counter = access_counter;
+
+  return copy;
 }
 
 template <typename T>

@@ -57,27 +57,24 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::column_expressions() const {
   // We do not return node_expressions directly here, because we do not want to expose ANY() to the following LQP
   // nodes. This way, we execute ANY() as intended, but do not have to traverse the LQP upwards and adapt nodes
   // that reference the ANY'd column.
-  _column_expressions.resize(node_expressions.size());
-  std::copy(node_expressions.begin(), node_expressions.end(), _column_expressions.begin());
+  auto column_expressions = node_expressions;
 
-  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < _column_expressions.size();
+  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < column_expressions.size();
        ++expression_idx) {
-    auto& column_expression = _column_expressions[expression_idx];
+    auto& column_expression = column_expressions[expression_idx];
     DebugAssert(column_expression->type == ExpressionType::Aggregate,
                 "Unexpected non-aggregate in list of aggregates.");
-    if (column_expression->type == ExpressionType::Aggregate) {
-      const auto& aggregate_expression = static_cast<AggregateExpression&>(*column_expression);
-      if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
-        column_expression = column_expression->arguments[0];
-      }
+    const auto& aggregate_expression = static_cast<AggregateExpression&>(*column_expression);
+    if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
+      column_expression = column_expression->arguments[0];
     }
   }
 
-  return _column_expressions;
+  return column_expressions;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {

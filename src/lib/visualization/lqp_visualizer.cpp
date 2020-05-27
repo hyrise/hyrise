@@ -82,8 +82,8 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
                                     const std::shared_ptr<AbstractLQPNode>& to, const InputSide side) {
-  float row_count;
-  double pen_width;
+  float row_count = NAN;
+  double pen_width = 1.0;
   auto row_percentage = 100.0f;
 
   try {
@@ -91,8 +91,6 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
-    row_count = NAN;
-    pen_width = 1.0;
   }
 
   if (from->left_input()) {
@@ -113,6 +111,14 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   }
 
   std::ostringstream label_stream;
+
+  // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
+  // be avoided whenever possible. Unfortunately, std::locale stores pointers to the facets and does internal
+  // reference counting. std::locale's destructor destructs the locale and the facets whose reference count becomes
+  // zero. This forces us to use a dynamically allocated raw pointer here.
+  const auto& separate_thousands_locale = std::locale(label_stream.getloc(), new SeparateThousandsFacet);
+  label_stream.imbue(separate_thousands_locale);
+
   if (!isnan(row_count)) {
     label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
                  << "% estd.";

@@ -57,22 +57,10 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     std::swap(left_lqp, right_lqp);
   }
 
-  /**
-   * Join two plans using a set of predicates; try to bring them into an efficient order
-   *
-   *
-   * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates") are executed as
-   * table scans (column vs column) after the join.
-   * The primary predicate needs to be a simple "<column> <operator> <column>" predicate, otherwise the join operators
-   * won't be able to execute it.
-   *
-   * The optimality-ensuring way to order the predicates would be to find the cheapest of the predicates.size()!
-   * orders of them.
-   * For now, we just execute the scan operations in the order of increasing cost that they would have when executed
-   * directly on top of `lqp`, with the cheapest predicate becoming the primary predicate.
-   */
-
-  // Sort the predicates by increasing cost
+  // Sort the predicates by increasing cost. The optimality-ensuring way to order the predicates would be to find the
+  // cheapest of the predicates.size()! orders of them. For now, we just execute the scan operations in the order of
+  // increasing cost that they would have when executed directly on top of `lqp`, with the cheapest predicate becoming
+  // the primary predicate.
   auto join_predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
   join_predicates_and_cost.reserve(join_predicates.size());
   for (const auto& join_predicate : join_predicates) {

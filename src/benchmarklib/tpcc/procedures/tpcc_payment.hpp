@@ -25,7 +25,7 @@ class TPCCPayment : public AbstractTPCCProcedure {
   int32_t h_date;  // Current datetime
 
   // Values calculated WHILE the procedure is executed, exposed for facilitating the tests:
-  int32_t c_id{-1};
+  int32_t c_id{-1};  // Customer ID, initialized with invalid value
 };
 
 }  // namespace opossum

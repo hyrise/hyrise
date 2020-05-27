@@ -10,9 +10,14 @@ namespace opossum {
  * Get the number of bytes that are allocated on the heap for the given string.
  */
 template <typename T>
-size_t string_heap_size(const T& string) {
-  // Get the default pre-allocated capacity of SSO strings.
-  const auto sso_string_capacity = T{}.capacity();
+#ifdef __clang__
+__attribute__((optnone))  // Fixes issues with memcheck. As we are only accessing constant values, shouldn't cost much
+#endif
+size_t
+string_heap_size(const T& string) {
+  // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so
+  // we use a really short one here.
+  const auto sso_string_capacity = T{"."}.capacity();
 
   if (string.capacity() > sso_string_capacity) {
     // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
@@ -21,9 +26,8 @@ size_t string_heap_size(const T& string) {
     return string.capacity() + 1;
   }
 
-  // valgrind is drunk. This could be `return 0`, but valgrind doesn't like it.
-  DebugAssert(string.capacity() - sso_string_capacity == 0, "SSO does not meet expectations");
-  return string.capacity() - sso_string_capacity;
+  DebugAssert(string.capacity() == sso_string_capacity, "SSO does not meet expectations");
+  return 0;
 }
 
 /**
@@ -49,7 +53,7 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   constexpr auto min_rows = size_t{10};
 
   const auto samples_to_draw =
-      std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * string_vector.size())));
+      std::max(min_rows, static_cast<size_t>(std::ceil(sampling_factor * static_cast<float>(string_vector.size()))));
 
   if (mode == MemoryUsageCalculationMode::Full || samples_to_draw >= string_vector.size()) {
     // Run the (expensive) calculation of aggregating the whole vector's string sizes when full estimation is desired
@@ -65,7 +69,10 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   // Since we want an ordered position list (this potentially increases the performance when accessing the segment), we
   // can directly use std::set to generate distinct sample positions. std::set is slightly faster than
   // std::unordered_set + sorting for small sample sizes.
-  std::default_random_engine generator{std::random_device{}()};
+  // We use a static seed of 17 to avoid variable segment sizes of the same segment. In case multiple randomized
+  // samples are wanted (e.g., to obtain more accurate results), MemoryUsageCalculationMode should be extended
+  // with to have a "random seed" and a "static seed" sample mode.
+  std::default_random_engine generator{17};
   std::uniform_int_distribution<size_t> distribution(0ul, samples_to_draw);
   std::set<size_t> sample_set;
   while (sample_set.size() < samples_to_draw) {
@@ -81,10 +88,10 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
     elements_size += string_heap_size(string_vector[sample_position]);
   }
 
-  const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / string_vector.size();
-  return base_size +
-         static_cast<size_t>(std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)) +
-                             (string_vector.capacity() - string_vector.size()) * sizeof(StringType));
+  const auto actual_sampling_factor = static_cast<float>(samples_to_draw) / static_cast<float>(string_vector.size());
+  return base_size + static_cast<size_t>(
+                         std::ceil(static_cast<float>(elements_size) / static_cast<float>(actual_sampling_factor)) +
+                         static_cast<float>((string_vector.capacity() - string_vector.size()) * sizeof(StringType)));
 }
 
 }  // namespace opossum

@@ -10,6 +10,7 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -17,38 +18,12 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-SegmentEncodingSpec get_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
-
-SegmentEncodingSpec get_segment_encoding_spec(const ReferenceSegment&) {
-  Fail("Did not expect a ReferenceSegment in base table");
-}
-
-SegmentEncodingSpec get_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
-  if (base_encoded_segment.compressed_vector_type()) {
-    switch (*base_encoded_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize1ByteAligned:
-      case CompressedVectorType::FixedSize2ByteAligned:
-      case CompressedVectorType::FixedSize4ByteAligned:
-        return {base_encoded_segment.encoding_type(), VectorCompressionType::FixedSizeByteAligned};
-      case CompressedVectorType::SimdBp128:
-        return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
-    }
-
-    Fail("Invalid enum value");
-  } else {
-    return {base_encoded_segment.encoding_type()};
-  }
-}
-
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
 
   for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
-    const auto& base_segment = *chunk.get_segment(column_id);
-
-    resolve_data_and_segment_type(base_segment, [&](const auto /* data_type_t */, const auto& segment) {
-      chunk_encoding_spec[column_id] = get_segment_encoding_spec(segment);
-    });
+    const auto& base_segment = chunk.get_segment(column_id);
+    chunk_encoding_spec[column_id] = get_segment_encoding_spec(base_segment);
   }
 
   return chunk_encoding_spec;

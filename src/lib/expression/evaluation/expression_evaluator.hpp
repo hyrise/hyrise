@@ -67,7 +67,7 @@ class ExpressionEvaluator final {
                       const std::shared_ptr<const UncorrelatedSubqueryResults>& uncorrelated_subquery_results = {});
 
   std::shared_ptr<BaseValueSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
-  PosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
+  RowIDPosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);

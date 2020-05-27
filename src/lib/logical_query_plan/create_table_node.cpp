@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-CreateTableNode::CreateTableNode(const std::string& table_name, const bool if_not_exists)
-    : BaseNonQueryNode(LQPNodeType::CreateTable), table_name(table_name), if_not_exists(if_not_exists) {}
+CreateTableNode::CreateTableNode(const std::string& init_table_name, const bool init_if_not_exists)
+    : BaseNonQueryNode(LQPNodeType::CreateTable), table_name(init_table_name), if_not_exists(init_if_not_exists) {}
 
 std::string CreateTableNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;

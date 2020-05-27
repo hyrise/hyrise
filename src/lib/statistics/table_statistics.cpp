@@ -50,8 +50,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
             // property
             const auto null_value_ratio =
-                table.row_count() == 0 ? 0.0f
-                                       : 1.0f - (static_cast<float>(histogram->total_count()) / table.row_count());
+                table.row_count() == 0
+                    ? 0.0f
+                    : 1.0f - (static_cast<float>(histogram->total_count()) / static_cast<float>(table.row_count()));
             output_column_statistics->set_statistics_object(
                 std::make_shared<NullValueRatioStatistics>(null_value_ratio));
           } else {
@@ -73,9 +74,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
 }
 
-TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics,
-                                 const Cardinality row_count)
-    : column_statistics(std::move(column_statistics)), row_count(row_count) {}
+TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& init_column_statistics,
+                                 const Cardinality init_row_count)
+    : column_statistics(std::move(init_column_statistics)), row_count(init_row_count) {}
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");

@@ -9,7 +9,8 @@ namespace opossum {
 // maintenance operator for the "CREATE TABLE" sql statement
 class CreateTable : public AbstractReadWriteOperator {
  public:
-  CreateTable(const std::string& table_name, bool if_not_exists, const std::shared_ptr<const AbstractOperator>& in);
+  CreateTable(const std::string& init_table_name, bool init_if_not_exists,
+              const std::shared_ptr<const AbstractOperator>& input_operator);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
@@ -22,8 +23,8 @@ class CreateTable : public AbstractReadWriteOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 

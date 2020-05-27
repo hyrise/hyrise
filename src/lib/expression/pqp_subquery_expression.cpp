@@ -8,16 +8,17 @@
 
 namespace opossum {
 
-PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                             const bool nullable,
-                                             const std::vector<std::pair<ParameterID, ColumnID>>& parameters)
+PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
+                                             const DataType data_type, const bool nullable,
+                                             const std::vector<std::pair<ParameterID, ColumnID>>& init_parameters)
     : AbstractExpression(ExpressionType::PQPSubquery, {}),
-      pqp(pqp),
-      parameters(parameters),
+      pqp(init_pqp),
+      parameters(init_parameters),
       _data_type_info(std::in_place, data_type, nullable) {}
 
-PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters)
-    : AbstractExpression(ExpressionType::PQPSubquery, {}), pqp(pqp), parameters(parameters) {}
+PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
+                                             const Parameters& init_parameters)
+    : AbstractExpression(ExpressionType::PQPSubquery, {}), pqp(init_pqp), parameters(init_parameters) {}
 
 std::shared_ptr<AbstractExpression> PQPSubqueryExpression::deep_copy() const {
   if (_data_type_info) {
@@ -64,7 +65,7 @@ bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) c
   Fail("Nullability 'on lqp' should never be queried from a PQPSelect");
 }
 
-PQPSubqueryExpression::DataTypeInfo::DataTypeInfo(const DataType data_type, const bool nullable)
-    : data_type(data_type), nullable(nullable) {}
+PQPSubqueryExpression::DataTypeInfo::DataTypeInfo(const DataType init_data_type, const bool init_nullable)
+    : data_type(init_data_type), nullable(init_nullable) {}
 
 }  // namespace opossum

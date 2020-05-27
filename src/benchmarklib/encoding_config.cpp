@@ -6,15 +6,15 @@ namespace opossum {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec)
-    : EncodingConfig{default_encoding_spec, {}, {}} {}
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& init_default_encoding_spec)
+    : EncodingConfig{init_default_encoding_spec, {}, {}} {}
 
-EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec,
-                               DataTypeEncodingMapping type_encoding_mapping,
-                               TableSegmentEncodingMapping encoding_mapping)
-    : default_encoding_spec{default_encoding_spec},
-      type_encoding_mapping{std::move(type_encoding_mapping)},
-      custom_encoding_mapping{std::move(encoding_mapping)} {}
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& init_default_encoding_spec,
+                               DataTypeEncodingMapping init_type_encoding_mapping,
+                               TableSegmentEncodingMapping init_encoding_mapping)
+    : default_encoding_spec{init_default_encoding_spec},
+      type_encoding_mapping{std::move(init_type_encoding_mapping)},
+      custom_encoding_mapping{std::move(init_encoding_mapping)} {}
 
 EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}; }
 

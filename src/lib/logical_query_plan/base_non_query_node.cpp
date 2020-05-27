@@ -4,9 +4,7 @@
 
 namespace opossum {
 
-const std::vector<std::shared_ptr<AbstractExpression>>& BaseNonQueryNode::column_expressions() const {
-  return _column_expressions_dummy;
-}
+std::vector<std::shared_ptr<AbstractExpression>> BaseNonQueryNode::column_expressions() const { return {}; }
 
 bool BaseNonQueryNode::is_column_nullable(const ColumnID column_id) const {
   // The majority of non-query nodes output no column (CreateTable, DropTable, ...)

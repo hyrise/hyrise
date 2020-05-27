@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-const std::string TestPlugin::description() const { return "This is the Hyrise TestPlugin"; }
+std::string TestPlugin::description() const { return "This is the Hyrise TestPlugin"; }
 
 void TestPlugin::start() {
   TableColumnDefinitions column_definitions;

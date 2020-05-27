@@ -9,8 +9,9 @@
 
 namespace opossum {
 
-AbstractCostEstimator::AbstractCostEstimator(const std::shared_ptr<AbstractCardinalityEstimator>& cardinality_estimator)
-    : cardinality_estimator(cardinality_estimator) {}
+AbstractCostEstimator::AbstractCostEstimator(
+    const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
+    : cardinality_estimator(init_cardinality_estimator) {}
 
 Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Sum up the costs of all operators in the plan, while making sure to cost each operator exactly once, even in the

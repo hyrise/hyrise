@@ -17,6 +17,7 @@ We limit the use of abbreviations to very few cases. Unless an abbreviation is l
 | cid          | Commit-ID (used for MVCC)                                                |
 | dict_segment | Dictionary Segment                                                       |
 | expr         | *Expression*, but only ok if used for an *expression* as described below |
+| FD           | Functional Dependency, see abstract_lqp_node.hpp                         |
 | impl         | Implementation, mainly used for the [Pimpl] Pattern                      |
 | *_it         | Iterator (in variable names)                                             |
 | LQP          | *Logical Query Plan*                                                     |

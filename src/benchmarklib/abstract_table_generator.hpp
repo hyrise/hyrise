@@ -14,7 +14,7 @@ class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
   BenchmarkTableInfo() = default;
-  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& init_table);
 
   std::shared_ptr<Table> table;
 
@@ -68,7 +68,7 @@ class AbstractTableGenerator {
   using IndexesByTable = std::map<std::string, std::vector<std::vector<std::string>>>;
   virtual IndexesByTable _indexes_by_table() const;
 
-  // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
+  // Optionally, the benchmark may define tables (left side) that are sorted (aka. clustered) by one of their columns
   // (right side).
   using SortOrderByTable = std::map<std::string, std::string>;
   virtual SortOrderByTable _sort_order_by_table() const;

@@ -31,8 +31,8 @@ struct JoinGraphEdge final {
  public:
   // Doesn't check that the predicates actually only reference the vertex_set, since it has no knowledge of
   // LQPNode -> vertex index mapping. Thus, the caller has to ensure validity.
-  explicit JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
-                         const std::vector<std::shared_ptr<AbstractExpression>>& predicates = {});
+  explicit JoinGraphEdge(const JoinGraphVertexSet& init_vertex_set,
+                         const std::vector<std::shared_ptr<AbstractExpression>>& init_predicates = {});
 
   JoinGraphVertexSet vertex_set;
   std::vector<std::shared_ptr<AbstractExpression>> predicates;

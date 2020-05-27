@@ -6,7 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/index/segment_index_type.hpp"
-#include "storage/pos_list.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -34,13 +34,13 @@ class IndexScan : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() final;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _validate_input();
   std::shared_ptr<AbstractTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
-  PosList _scan_chunk(const ChunkID chunk_id);
+  RowIDPosList _scan_chunk(const ChunkID chunk_id);
 
  private:
   const SegmentIndexType _index_type;

@@ -13,6 +13,7 @@
 #include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -99,7 +100,8 @@ void Chunk::finalize() {
   Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
   _is_mutable = false;
 
-  if (has_mvcc_data()) {
+  // Only perform the max_begin_cid check if it hasn't already been set.
+  if (has_mvcc_data() && !_mvcc_data->max_begin_cid) {
     const auto chunk_size = size();
     Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
     _mvcc_data->max_begin_cid = CommitID{0};
@@ -218,9 +220,40 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
-const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
+const std::vector<SortColumnDefinition>& Chunk::sorted_by() const { return _sorted_by; }
 
-void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
+void Chunk::set_sorted_by(const SortColumnDefinition& sorted_by) {
+  set_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
+}
+
+void Chunk::set_sorted_by(const std::vector<SortColumnDefinition>& sorted_by) {
+  Assert(!is_mutable(), "Cannot set sorted_by on mutable chunks.");
+  // Currently, we assume that set_sorted_by is called only once at most. As such, there should be no existing sorting
+  // and the new sorting should contain at least one column. Feel free to remove this assertion if necessary.
+  Assert(!sorted_by.empty() && _sorted_by.empty(), "Sorting information cannot be empty or reset.");
+
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& sorted_by_column : sorted_by) {
+      const auto& sorted_segment = get_segment(sorted_by_column.column);
+      if (sorted_segment->size() < 2) break;
+
+      segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+        Assert(std::is_sorted(begin, end,
+                              [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
+                                // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
+                                // it+n and it (n being non-negative), which needs to evaluate to false.
+                                if (right.is_null()) return false;  // handles right side is NULL and both are NULL
+                                if (left.is_null()) return true;
+                                const auto ascending = sort_mode == SortMode::Ascending;
+                                return ascending ? left.value() < right.value() : left.value() > right.value();
+                              }),
+               "Setting a sort order for a segment which is not sorted accordingly.");
+      });
+    }
+  }
+
+  _sorted_by = sorted_by;
+}
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
   if (_cleanup_commit_id == 0) {

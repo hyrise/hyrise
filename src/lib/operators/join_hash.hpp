@@ -12,12 +12,11 @@ namespace opossum {
 /**
  * This operator joins two tables using one column of each table.
  * The output is a new table with referenced columns for all columns of the two inputs and filtered pos_lists.
- * If you want to filter by multiple criteria, you can chain this operator.
  *
  * As with most operators, we do not guarantee a stable operation with regards to positions -
  * i.e., your sorting order might be disturbed.
  *
- * Find more information in our Wiki: https://github.com/hyrise/hyrise/wiki/Radix-Partitioned-and-Hash-Based-Join
+ * Find more information in our Wiki: https://github.com/hyrise/hyrise/wiki/Hash-Join-Operator
  */
 class JoinHash : public AbstractJoinOperator {
  public:
@@ -37,8 +36,8 @@ class JoinHash : public AbstractJoinOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_cleanup() override;
 

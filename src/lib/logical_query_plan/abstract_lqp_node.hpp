@@ -6,6 +6,7 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "functional_dependency.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -13,6 +14,7 @@ namespace opossum {
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  ChangeMetaTable,
   CreateTable,
   CreatePreparedPlan,
   CreateView,
@@ -20,9 +22,11 @@ enum class LQPNodeType {
   DropView,
   DropTable,
   DummyTable,
+  Except,
   Export,
   Import,
   Insert,
+  Intersect,
   Join,
   Limit,
   Predicate,
@@ -47,10 +51,12 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
+class LQPColumnExpression;
+
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
-                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
+                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -123,12 +129,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The Expressions defining each column that this node outputs
    */
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
+  virtual std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
-   *         has a special treatment (it is represented as an LQPColumnReference with an INVALID_COLUMN_ID), it might
-  *          be evaluable even if find_column_id returns nullopt.
+   *         has a special treatment (it is represented as an LQPColumnExpression with an INVALID_COLUMN_ID), it might
+   *         be evaluable even if find_column_id returns nullopt.
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 
@@ -141,6 +147,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return whether the output column at @param column_id is nullable
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;
+
+  /**
+   * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
+   *         By default, functional dependencies from both sides are forwarded. Nodes may override this behavior.
+   */
+  [[nodiscard]] virtual std::vector<FunctionalDependency> functional_dependencies() const;
 
   /**
    * Perform a deep equality check
@@ -161,7 +173,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * expression for each column.
    *
    * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the
-   * expressions (e.g. column names in the AliasNode, OrderByModes in the SortNode) gets adjusted accordingly.
+   * expressions (e.g. column names in the AliasNode, SortModes in the SortNode) gets adjusted accordingly.
    */
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
@@ -219,6 +231,8 @@ struct LQPNodeSharedPtrEqual final {
   }
 };
 
+// Note that operator== ignores the equality function:
+// https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 template <typename Value>
 using LQPNodeUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;

@@ -9,13 +9,8 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-    cache/abstract_cache_impl.hpp
-    cache/cache.hpp
+    cache/abstract_cache.hpp
     cache/gdfs_cache.hpp
-    cache/gds_cache.hpp
-    cache/lru_cache.hpp
-    cache/lru_k_cache.hpp
-    cache/random_cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -110,6 +105,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/change_meta_table_node.cpp
+    logical_query_plan/change_meta_table_node.hpp
     logical_query_plan/create_prepared_plan_node.cpp
     logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/create_table_node.cpp
@@ -125,20 +122,24 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/except_node.cpp
+    logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
+    logical_query_plan/functional_dependency.cpp
+    logical_query_plan/functional_dependency.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
+    logical_query_plan/intersect_node.cpp
+    logical_query_plan/intersect_node.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
     logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
-    logical_query_plan/lqp_column_reference.cpp
-    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
@@ -162,8 +163,6 @@ set(
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
     memory/boost_default_memory_resource.cpp
-    memory/numa_memory_resource.cpp
-    memory/numa_memory_resource.hpp
     lossless_cast.cpp
     lossless_cast.hpp
     null_value.hpp
@@ -184,6 +183,8 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
+    operators/change_meta_table.cpp
+    operators/change_meta_table.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -313,6 +314,8 @@ set(
     optimizer/strategy/predicate_split_up_rule.hpp
     optimizer/strategy/semi_join_reduction_rule.cpp
     optimizer/strategy/semi_join_reduction_rule.hpp
+    optimizer/strategy/stored_table_column_alignment_rule.cpp
+    optimizer/strategy/stored_table_column_alignment_rule.hpp
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
@@ -474,7 +477,12 @@ set(
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp
-    storage/pos_list.hpp
+    storage/pos_lists/abstract_pos_list.hpp
+    storage/pos_lists/abstract_pos_list.cpp
+    storage/pos_lists/entire_chunk_pos_list.hpp
+    storage/pos_lists/entire_chunk_pos_list.cpp
+    storage/pos_lists/row_id_pos_list.hpp
+    storage/pos_lists/row_id_pos_list.cpp
     storage/prepared_plan.cpp
     storage/prepared_plan.hpp
     storage/reference_segment.cpp
@@ -487,6 +495,8 @@ set(
     storage/run_length_segment/run_length_segment_iterable.hpp
     storage/segment_accessor.cpp
     storage/segment_accessor.hpp
+    storage/segment_access_counter.cpp
+    storage/segment_access_counter.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
     storage/segment_iterables/any_segment_iterable.cpp
@@ -559,11 +569,39 @@ set(
     utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/log_manager.cpp
+    utils/log_manager.hpp
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
+    utils/meta_tables/abstract_meta_table.cpp
+    utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_chunk_sort_orders_table.cpp
+    utils/meta_tables/meta_chunk_sort_orders_table.hpp
+    utils/meta_tables/meta_chunks_table.cpp
+    utils/meta_tables/meta_chunks_table.hpp
+    utils/meta_tables/meta_columns_table.cpp
+    utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_log_table.cpp
+    utils/meta_tables/meta_log_table.hpp
+    utils/meta_tables/meta_plugins_table.cpp
+    utils/meta_tables/meta_plugins_table.hpp
+    utils/meta_tables/meta_segments_accurate_table.cpp
+    utils/meta_tables/meta_segments_accurate_table.hpp
+    utils/meta_tables/meta_segments_table.cpp
+    utils/meta_tables/meta_segments_table.hpp
+    utils/meta_tables/meta_settings_table.cpp
+    utils/meta_tables/meta_settings_table.hpp
+    utils/meta_tables/meta_system_information_table.cpp
+    utils/meta_tables/meta_system_information_table.hpp
+    utils/meta_tables/meta_system_utilization_table.cpp
+    utils/meta_tables/meta_system_utilization_table.hpp
+    utils/meta_tables/meta_tables_table.cpp
+    utils/meta_tables/meta_tables_table.hpp
+    utils/meta_tables/segment_meta_data.cpp
+    utils/meta_tables/segment_meta_data.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -571,6 +609,10 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
+    utils/settings/abstract_setting.cpp
+    utils/settings/abstract_setting.hpp
+    utils/settings_manager.cpp
+    utils/settings_manager.hpp
     utils/singleton.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp
@@ -615,7 +657,7 @@ if (NOT APPLE)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
-    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
 
 set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
@@ -660,9 +702,15 @@ set_source_files_properties(
     SKIP_PRECOMPILE_HEADERS TRUE
 )
 
-# Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
-# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
+target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
+
+if(NOT "${ENABLE_THREAD_SANITIZATION}")
+    # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
+    # -rdynamic tells the linker to export the library's symbols so that plugins can use them. Do not use it for
+    # thread sanitization as tsan on Mac works better with its own allocator.
+    target_link_libraries(hyrise_impl INTERFACE custom_jemalloc -rdynamic)
+endif()
+
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 

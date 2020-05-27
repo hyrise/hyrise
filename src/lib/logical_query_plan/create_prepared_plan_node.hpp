@@ -11,7 +11,7 @@ class PreparedPlan;
  */
 class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNode>, public BaseNonQueryNode {
  public:
-  CreatePreparedPlanNode(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
+  CreatePreparedPlanNode(const std::string& init_name, const std::shared_ptr<PreparedPlan>& init_prepared_plan);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

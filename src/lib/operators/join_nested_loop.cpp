@@ -88,9 +88,9 @@ const std::string& JoinNestedLoop::name() const {
 }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinNestedLoop>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                           _secondary_predicates);
 }
 
@@ -98,15 +98,15 @@ void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, Al
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
-                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+                   left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                   right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinNestedLoop doesn't support these parameters");
 
   PerformanceWarning("Nested Loop Join used");
 
-  auto left_table = input_table_left();
-  auto right_table = input_table_right();
+  auto left_table = left_input_table();
+  auto right_table = right_input_table();
 
   auto left_column_id = _primary_predicate.column_ids.first;
   auto right_column_id = _primary_predicate.column_ids.second;
@@ -126,8 +126,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   }
 
   // Track pairs of matching RowIDs
-  const auto pos_list_left = std::make_shared<PosList>();
-  const auto pos_list_right = std::make_shared<PosList>();
+  const auto pos_list_left = std::make_shared<RowIDPosList>();
+  const auto pos_list_right = std::make_shared<RowIDPosList>();
 
   const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
   const auto is_semi_or_anti_join =
@@ -245,7 +245,11 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  return _build_output_table({std::make_shared<Chunk>(std::move(segments))});
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{};
+  if (segments.at(0)->size() > 0) {
+    chunks.emplace_back(std::make_shared<Chunk>(std::move(segments)));
+  }
+  return _build_output_table(std::move(chunks));
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,
@@ -326,14 +330,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
 }
 
 void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
-                                         const std::shared_ptr<PosList>& pos_list) {
+                                         const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseSegment> segment;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
-        auto new_pos_list = std::make_shared<PosList>();
+        auto new_pos_list = std::make_shared<RowIDPosList>();
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto& row : *pos_list) {

@@ -53,7 +53,6 @@
 namespace opossum {
 
 class AbstractOperator;
-class LQPColumnReference;
 
 /**
  * expression_"functional", since it supplies a functional-programming like interface to build nested expressions
@@ -61,14 +60,13 @@ class LQPColumnReference;
 namespace expression_functional {
 
 /**
- * @defgroup Turn expression-like things (Values, LQPColumnReferences, Expressions themselves) into expressions
+ * @defgroup Turn expression-like things (Values, Expressions themselves) into expressions
  *
  * Mostly used internally in this file
  *
  * @{
  */
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression);
-std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& column_reference);
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 /** @} */
 
@@ -221,7 +219,8 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
 }
 
 std::shared_ptr<PlaceholderExpression> placeholder_(const ParameterID parameter_id);
-std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference);
+std::shared_ptr<LQPColumnExpression> lqp_column_(const std::shared_ptr<const AbstractLQPNode>& original_node,
+                                                 const ColumnID original_column_id);
 std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
                                                  const bool nullable, const std::string& column_name);
 

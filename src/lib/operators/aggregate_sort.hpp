@@ -83,8 +83,8 @@ class AggregateSort : public AbstractAggregateOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
@@ -114,6 +114,16 @@ class AggregateSort : public AbstractAggregateOperator {
                                       [[maybe_unused]] const uint64_t value_count,
                                       [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;
+
+ private:
+  /**
+   * Sort the whole input table by sorting each chunk individually. Should only be used if caller can guarantee that
+   * each value in the group by columns does only occur in exactly one chunk (i.e., table is value-clustered).
+   */
+  static std::shared_ptr<Table> _sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
+                                                       const std::vector<ColumnID>& groupby_column_ids);
+
+  static Segments _get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id);
 };
 
 }  // namespace opossum

@@ -7,7 +7,7 @@ namespace opossum {
 // maintenance operator for the "DROP TABLE" sql statement
 class DropTable : public AbstractReadOnlyOperator {
  public:
-  DropTable(const std::string& table_name, bool if_exists);
+  DropTable(const std::string& init_table_name, bool init_if_exists);
 
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
@@ -19,8 +19,8 @@ class DropTable : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };

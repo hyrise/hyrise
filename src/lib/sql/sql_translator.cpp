@@ -34,6 +34,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -41,9 +42,11 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/except_node.hpp"
 #include "logical_query_plan/export_node.hpp"
 #include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/intersect_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -52,6 +55,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
@@ -94,9 +98,9 @@ const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_f
     {hsql::kDatetimeMinute, DatetimeComponent::Minute}, {hsql::kDatetimeSecond, DatetimeComponent::Second},
 };
 
-const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending},
-    {hsql::kOrderDesc, OrderByMode::Descending},
+const std::unordered_map<hsql::OrderType, SortMode> order_type_to_sort_mode = {
+    {hsql::kOrderAsc, SortMode::Ascending},
+    {hsql::kOrderDesc, SortMode::Descending},
 };
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
@@ -134,21 +138,12 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}) {}
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{},
+                    std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>()) {}
 
-std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
-  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
-  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
+SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParserResult& result) {
+  _cacheable = true;
 
-  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
-    parameter_ids[value_placeholder_id] = parameter_id;
-  }
-
-  return parameter_ids;
-}
-
-std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_result(
-    const hsql::SQLParserResult& result) {
   std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
@@ -157,17 +152,31 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_re
     result_nodes.push_back(result_node);
   }
 
-  return result_nodes;
+  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
+
+  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
+    parameter_ids[value_placeholder_id] = parameter_id;
+  }
+
+  return {result_nodes, {_cacheable, parameter_ids}};
 }
 
-SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
-                             const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                             const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions)
+SQLTranslator::SQLTranslator(
+    const UseMvcc use_mvcc, const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
+    const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+    const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions,
+    const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator),
-      _with_descriptions(with_descriptions) {}
+      _with_descriptions(with_descriptions),
+      _meta_tables(meta_tables) {}
+
+SQLTranslator::SQLTranslator(
+    const UseMvcc use_mvcc, const std::shared_ptr<std::unordered_map<std::string, std::shared_ptr<Table>>>& meta_tables)
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}, meta_tables) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
@@ -193,10 +202,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
     case hsql::kStmtExport:
       return _translate_export(static_cast<const hsql::ExportStatement&>(statement));
-
-    default:
-      FailInput("SQL statement type not supported");
+    case hsql::kStmtTransaction:
+      // The transaction statements are handled directly in the SQLPipelineStatement,
+      //  but the translation is still called, so we return a dummy node here.
+      return DummyTableNode::make();
+    case hsql::kStmtAlter:
+    case hsql::kStmtError:
+    case hsql::kStmtRename:
+      FailInput("Statement type not supported");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
@@ -208,13 +223,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 5. GROUP BY clause
   // 6. HAVING clause
   // 7. SELECT clause (incl. DISTINCT)
-  // 8. UNION clause
-  // 9. ORDER BY clause
-  // 10. LIMIT clause
+  // 8. ORDER BY clause
+  // 9. LIMIT clause
+  // 10. UNION/INTERSECT/EXCEPT clause
+  // 11. UNION/INTERSECT/EXCEPT ORDER BY clause
+  // 12. UNION/INTERSECT/EXCEPT LIMIT clause
 
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
-  AssertInput(!select.unionSelect, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
   // Translate WITH clause
   if (select.withDescriptions) {
@@ -280,16 +296,29 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _current_lqp = AliasNode::make(_unwrap_elements(_inflated_select_list_elements), aliases, _current_lqp);
   }
 
+  if (select.setOperations) {
+    for (const auto* const set_operator : *select.setOperations) {
+      // Currently, only the SQL translation of intersect and except is implemented.
+      AssertInput(set_operator->setType != hsql::kSetUnion, "Union Operations are currently not supported");
+      _translate_set_operation(*set_operator);
+
+      // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
+      if (set_operator->resultOrder) _translate_order_by(*set_operator->resultOrder);
+      if (set_operator->resultLimit) _translate_limit(*set_operator->resultLimit);
+    }
+  }
+
   return _current_lqp;
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
-  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions};
+  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto lqp = with_translator._translate_select_statement(*desc.select);
 
   // Save mappings: ColumnID -> ColumnName
   std::unordered_map<ColumnID, std::string> column_names;
-  for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+  const auto column_expressions = lqp->column_expressions();
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
     for (const auto& identifier : with_translator._inflated_select_list_elements[column_id].identifiers) {
       column_names.insert_or_assign(column_id, identifier.column_name);
     }
@@ -297,7 +326,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 
   // Store resolved WithDescription / temporary view
   const auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
-  //   A WITH description masks a preceding WITH description if their aliases are identical
+  // A WITH description masks a preceding WITH description if their aliases are identical
   AssertInput(_with_descriptions.count(desc.alias) == 0, "Invalid redeclaration of WITH alias.");
   _with_descriptions.emplace(desc.alias, lqp_view);
 }
@@ -305,16 +334,28 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
                                                                        const UseMvcc use_mvcc) {
   // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
-  return SQLTranslator{use_mvcc}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierResolver>());
+  return SQLTranslator{use_mvcc, _meta_tables}._translate_hsql_expr(hsql_expr,
+                                                                    std::make_shared<SQLIdentifierResolver>());
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
-  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
-  AssertInput(Hyrise::get().storage_manager.has_table(table_name),
-              std::string{"Did not find a table with name "} + table_name);
 
-  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  std::shared_ptr<Table> target_table;
+  if (is_meta_table) {
+    auto sql_identifier_resolver =
+        _sql_identifier_resolver ? _sql_identifier_resolver : std::make_shared<SQLIdentifierResolver>();
+    _translate_meta_table(table_name, sql_identifier_resolver);
+    AssertInput(Hyrise::get().meta_table_manager.can_insert_into(table_name), "Cannot insert into " + table_name);
+    target_table = _meta_tables->at(_trim_meta_table_name(table_name));
+  } else {
+    AssertInput(Hyrise::get().storage_manager.has_table(table_name),
+                std::string{"Did not find a table with name "} + table_name);
+    target_table = Hyrise::get().storage_manager.get_table(table_name);
+  }
+
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto insert_data_projection_required = false;
@@ -406,25 +447,41 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   AssertInput(insert_data_node->column_expressions().size() == static_cast<size_t>(target_table->column_count()),
               "INSERT: Column count mismatch");
 
+  if (is_meta_table) {
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Insert, DummyTableNode::make(), insert_data_node);
+  }
+
   /**
    * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
    */
-
   return InsertNode::make(table_name, insert_data_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
-  const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
-  auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
+  const auto table_name = std::string{delete_statement.tableName};
 
-  AssertInput(!MetaTableManager::is_meta_table_name(delete_statement.tableName), "Cannot modify meta tables");
-  Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
+  const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  std::shared_ptr<AbstractLQPNode> data_to_delete_node;
+
+  if (is_meta_table) {
+    data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
+    AssertInput(Hyrise::get().meta_table_manager.can_delete_from(table_name), "Cannot delete from " + table_name);
+  } else {
+    data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
+    Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
+  }
 
   if (delete_statement.expr) {
     const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);
     data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
   }
 
+  if (is_meta_table) {
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Delete, data_to_delete_node,
+                                     DummyTableNode::make());
+  }
   return DeleteNode::make(data_to_delete_node);
 }
 
@@ -432,9 +489,20 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
 
   const auto table_name = std::string{update.table->name};
-  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
 
   auto translation_state = _translate_table_ref(*update.table);
+
+  const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
+
+  std::shared_ptr<Table> target_table;
+  if (is_meta_table) {
+    AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
+    target_table = _meta_tables->at(_trim_meta_table_name(table_name));
+  } else {
+    AssertInput(Hyrise::get().storage_manager.has_table(table_name),
+                std::string{"Did not find a table with name "} + table_name);
+    target_table = Hyrise::get().storage_manager.get_table(table_name);
+  }
 
   // The LQP that selects the fields to update
   auto selection_lqp = translation_state.lqp;
@@ -444,7 +512,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   // The update operator wants ReferenceSegments on its left side. Also, we should make sure that we do not update
   // invalid rows.
-  Assert(lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
+  Assert(is_meta_table || lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
 
   if (update.where) {
     const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
@@ -461,7 +529,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   }
 
   // Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
-  const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
@@ -474,6 +541,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   // LQP that computes the updated values
   const auto updated_values_lqp = ProjectionNode::make(update_expressions, selection_lqp);
 
+  if (is_meta_table) {
+    return ChangeMetaTableNode::make(table_name, MetaTableChangeType::Update, selection_lqp, updated_values_lqp);
+  }
   return UpdateNode::make(table_name, selection_lqp, updated_values_lqp);
 }
 
@@ -492,10 +562,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
 
     case hsql::kTableCrossProduct:
       return _translate_cross_product(*hsql_table_ref.list);
-
-    default:
-      Fail("Unexpected SQLParser TableRef in FROM");
   }
+  Fail("Invalid enum value");
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsql::TableRef& hsql_table_ref) {
@@ -516,8 +584,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         lqp = lqp_view->lqp;
 
         // Add all named columns to the IdentifierContext
-        for (auto column_id = ColumnID{0}; column_id < lqp_view->lqp->column_expressions().size(); ++column_id) {
-          const auto column_expression = lqp_view->lqp->column_expressions()[column_id];
+        const auto column_expressions = lqp_view->lqp->column_expressions();
+        for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+          const auto column_expression = column_expressions[column_id];
 
           const auto column_name_iter = lqp_view->column_names.find(column_id);
           if (column_name_iter != lqp_view->column_names.end()) {
@@ -529,6 +598,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       } else if (Hyrise::get().storage_manager.has_table(hsql_table_ref.name)) {
         lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
 
+      } else if (MetaTableManager::is_meta_table_name(hsql_table_ref.name)) {
+        lqp = _translate_meta_table(hsql_table_ref.name, sql_identifier_resolver);
+
       } else if (Hyrise::get().storage_manager.has_view(hsql_table_ref.name)) {
         const auto view = Hyrise::get().storage_manager.get_view(hsql_table_ref.name);
         lqp = view->lqp;
@@ -536,8 +608,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         /**
          * Add all named columns from the view to the IdentifierContext
          */
-        for (auto column_id = ColumnID{0}; column_id < view->lqp->column_expressions().size(); ++column_id) {
-          const auto column_expression = view->lqp->column_expressions()[column_id];
+        const auto column_expressions = view->lqp->column_expressions();
+        for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+          const auto column_expression = column_expressions[column_id];
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
@@ -564,18 +637,20 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       table_name = hsql_table_ref.alias->name;
 
       SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
-                                        _with_descriptions};
+                                        _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
       std::vector<std::vector<SQLIdentifier>> identifiers;
       for (const auto& element : subquery_translator._inflated_select_list_elements) {
         identifiers.emplace_back(element.identifiers);
       }
-      Assert(identifiers.size() == lqp->column_expressions().size(),
+
+      const auto column_expressions = lqp->column_expressions();
+      Assert(identifiers.size() == column_expressions.size(),
              "There have to be as many identifier lists as column expressions");
-      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size();
+      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < column_expressions.size();
            ++select_list_element_idx) {
-        const auto& subquery_expression = lqp->column_expressions()[select_list_element_idx];
+        const auto subquery_expression = column_expressions[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -591,8 +666,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       table_name = hsql_table_ref.alias->name;
     } break;
 
-    default:
-      Fail("_translate_table_origin() is only for Tables, Views and Sub Selects.");
+    case hsql::kTableJoin:
+    case hsql::kTableCrossProduct:
+      // These should not make it this far.
+      Fail("Unexpected table reference type");
   }
 
   // Rename columns as in "SELECT * FROM t AS x (y,z)"
@@ -638,20 +715,52 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
   AssertInput(Hyrise::get().storage_manager.has_table(name), std::string{"Did not find a table with name "} + name);
 
   const auto stored_table_node = StoredTableNode::make(name);
-  const auto validated_stored_table_node = _validate_if_active(stored_table_node);
+  auto validated_stored_table_node = _validate_if_active(stored_table_node);
 
   const auto table = Hyrise::get().storage_manager.get_table(name);
 
   // Publish the columns of the table in the SQLIdentifierResolver
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     const auto& column_definition = table->column_definitions()[column_id];
-    const auto column_reference = LQPColumnReference{stored_table_node, column_id};
-    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    const auto column_expression = std::make_shared<LQPColumnExpression>(stored_table_node, column_id);
     sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
 
   return validated_stored_table_node;
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
+    const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
+  AssertInput(Hyrise::get().meta_table_manager.has_table(name), std::string{"Did not find a table with name "} + name);
+
+  // MetaTables are non-cacheable because they might contain information about the general system state
+  // that can change at any time
+  _cacheable = false;
+
+  const auto meta_table_name = _trim_meta_table_name(name);
+
+  // Meta tables are integrated in the LQP as static table nodes in order to avoid regeneration at every
+  // access in the pipeline afterwards.
+  std::shared_ptr<Table> meta_table;
+  if (_meta_tables->contains(meta_table_name)) {
+    meta_table = _meta_tables->at(meta_table_name);
+  } else {
+    meta_table = Hyrise::get().meta_table_manager.generate_table(meta_table_name);
+    (*_meta_tables)[meta_table_name] = meta_table;
+  }
+
+  const auto static_table_node = StaticTableNode::make(meta_table);
+
+  // Publish the columns of the table in the SQLIdentifierResolver
+  for (auto column_id = ColumnID{0}; column_id < meta_table->column_count(); ++column_id) {
+    const auto& column_definition = meta_table->column_definitions()[column_id];
+    const auto column_expression = std::make_shared<LQPColumnExpression>(static_table_node, column_id);
+    sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
+    sql_identifier_resolver->set_table_name(column_expression, name);
+  }
+
+  return static_table_node;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition& join) {
@@ -891,8 +1000,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       for (const auto& argument : aggregate_expression->arguments) {
         if (pre_aggregate_expression_set.emplace(argument).second) {
           // Handle COUNT(*)
-          const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
-          if (!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
+          const auto* const column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
+          if (!column_expression || column_expression->original_column_id != INVALID_COLUMN_ID) {
             pre_aggregate_expressions.emplace_back(argument);
           }
         }
@@ -1036,6 +1145,52 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   }
 }
 
+void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_operator) {
+  const auto& left_input_lqp = _current_lqp;
+  const auto left_column_expressions = left_input_lqp->column_expressions();
+
+  // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
+  // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.
+  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
+                                      _with_descriptions, _meta_tables};
+  const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
+  const auto right_column_expressions = right_input_lqp->column_expressions();
+
+  AssertInput(left_column_expressions.size() == right_column_expressions.size(),
+              "Mismatching number of input columns for set operation");
+
+  // Check to see if both input LQPs use the same data type for each column
+  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_column_expressions.size();
+       ++column_expression_idx) {
+    const auto& left_expression = left_column_expressions[column_expression_idx];
+    const auto& right_expression = right_column_expressions[column_expression_idx];
+
+    AssertInput(left_expression->data_type() == right_expression->data_type(),
+                "Mismatching input data types for left and right side of set operation");
+  }
+
+  auto lqp = std::shared_ptr<AbstractLQPNode>();
+
+  // Choose the set operation mode. SQL only knows UNION and UNION ALL; the Positions mode is only used for internal
+  // LQP optimizations and should not be needed in the SQLTranslator.
+  auto set_operation_mode = set_operator.isAll ? SetOperationMode::All : SetOperationMode::Unique;
+
+  // Create corresponding node depending on the SetType
+  switch (set_operator.setType) {
+    case hsql::kSetExcept:
+      lqp = ExceptNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
+      break;
+    case hsql::kSetIntersect:
+      lqp = IntersectNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
+      break;
+    case hsql::kSetUnion:
+      lqp = UnionNode::make(set_operation_mode, left_input_lqp, right_input_lqp);
+      break;
+  }
+
+  _current_lqp = lqp;
+}
+
 void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*>& order_list) {
   if (order_list.empty()) return;
 
@@ -1043,20 +1198,21 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   const auto input_lqp = _current_lqp;
 
   std::vector<std::shared_ptr<AbstractExpression>> expressions(order_list.size());
-  std::vector<OrderByMode> order_by_modes(order_list.size());
+  std::vector<SortMode> sort_modes(order_list.size());
   for (auto expression_idx = size_t{0}; expression_idx < order_list.size(); ++expression_idx) {
     const auto& order_description = order_list[expression_idx];
     expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
-    order_by_modes[expression_idx] = order_type_to_order_by_mode.at(order_description->type);
+    sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
   }
 
   _current_lqp = _add_expressions_if_unavailable(_current_lqp, expressions);
 
-  _current_lqp = SortNode::make(expressions, order_by_modes, _current_lqp);
+  _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
-  if (input_lqp->column_expressions().size() != _current_lqp->column_expressions().size()) {
-    _current_lqp = ProjectionNode::make(input_lqp->column_expressions(), _current_lqp);
+  const auto input_column_expressions = input_lqp->column_expressions();
+  if (input_column_expressions.size() != _current_lqp->column_expressions().size()) {
+    _current_lqp = ProjectionNode::make(input_column_expressions, _current_lqp);
   }
 }
 
@@ -1069,18 +1225,20 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
-    case hsql::ShowType::kShowTables:
-      return StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
+    case hsql::ShowType::kShowTables: {
+      const auto tables_meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+      return StaticTableNode::make(tables_meta_table);
+    }
     case hsql::ShowType::kShowColumns: {
-      const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
-      const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
+      const auto columns_meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
+      const auto static_table_node = StaticTableNode::make(columns_meta_table);
+      const auto table_name_column = lqp_column_(static_table_node, ColumnID{0});
       const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
                                                                          value_(show_statement.name));
-      return PredicateNode::make(predicate, stored_table_node);
+      return PredicateNode::make(predicate, static_table_node);
     }
-    default:
-      FailInput("hsql::ShowType is not supported.");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
@@ -1089,26 +1247,28 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
       return _translate_create_view(create_statement);
     case hsql::CreateType::kCreateTable:
       return _translate_create_table(create_statement);
-    default:
-      FailInput("hsql::CreateType is not supported.");
+    case hsql::CreateType::kCreateTableFromTbl:
+      FailInput("CREATE TABLE FROM is not yet supported");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsql::CreateStatement& create_statement) {
   auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
+  const auto column_expressions = lqp->column_expressions();
 
   std::unordered_map<ColumnID, std::string> column_names;
 
   if (create_statement.viewColumns) {
     // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-    AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
+    AssertInput(create_statement.viewColumns->size() == column_expressions.size(),
                 "Number of Columns in CREATE VIEW does not match SELECT statement");
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
       column_names.insert_or_assign(column_id, (*create_statement.viewColumns)[column_id]);
     }
   } else {
-    for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
       for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
         column_names.insert_or_assign(column_id, identifier.column_name);
       }
@@ -1153,8 +1313,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
           column_definition.data_type = DataType::String;
           break;
-        default:
-          Fail("CREATE TABLE: Data type not supported");
+        case hsql::DataType::UNKNOWN:
+          Fail("UNKNOWN data type cannot be handled here");
       }
 
       column_definition.name = parser_column_definition->name;
@@ -1172,10 +1332,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
       return DropViewNode::make(drop_statement.name, drop_statement.ifExists);
     case hsql::DropType::kDropTable:
       return DropTableNode::make(drop_statement.name, drop_statement.ifExists);
-
-    default:
-      FailInput("hsql::DropType is not supported.");
+    case hsql::DropType::kDropSchema:
+    case hsql::DropType::kDropIndex:
+    case hsql::DropType::kDropPreparedStatement:
+      FailInput("This DROP type is not implemented yet");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::PrepareStatement& prepare_statement) {
@@ -1187,9 +1349,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 
   auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
-  const auto lqp = prepared_plan_translator.translate_parser_result(parse_result).at(0);
+  const auto translation_result = prepared_plan_translator.translate_parser_result(parse_result);
+  Assert(translation_result.translation_info.cacheable, "Non-cacheable LQP nodes can't be part of prepared statements");
 
-  const auto parameter_ids = prepared_plan_translator.parameter_ids_of_value_placeholders();
+  const auto lqp = translation_result.lqp_nodes.at(0);
+
+  const auto parameter_ids = translation_result.translation_info.parameter_ids_of_value_placeholders;
 
   const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
 
@@ -1287,14 +1452,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   // If all requested expressions are available, no need to create a projection
   if (projection_expressions.empty()) return node;
 
-  projection_expressions.insert(projection_expressions.end(), node->column_expressions().begin(),
-                                node->column_expressions().end());
+  const auto column_expressions = node->column_expressions();
+  projection_expressions.insert(projection_expressions.end(), column_expressions.cbegin(), column_expressions.cend());
 
   return ProjectionNode::make(projection_expressions, node);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
-    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
+    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   auto name = expr.name ? std::string(expr.name) : "";
 
   const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
@@ -1374,18 +1539,21 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         AssertInput(expr.exprList && expr.exprList->size() == 1,
                     "Expected exactly one argument for this AggregateFunction");
 
+        auto aggregate_expression = std::shared_ptr<AggregateExpression>{};
+
         switch (aggregate_function) {
           case AggregateFunction::Min:
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
           case AggregateFunction::Avg:
-          case AggregateFunction::StandardDeviationSample:
-            return std::make_shared<AggregateExpression>(
+          case AggregateFunction::StandardDeviationSample: {
+            aggregate_expression = std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+          } break;
           case AggregateFunction::Any:
             Fail("ANY() is an internal aggregation function.");
           case AggregateFunction::Count:
-          case AggregateFunction::CountDistinct:
+          case AggregateFunction::CountDistinct: {
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
 
@@ -1400,14 +1568,42 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               });
               Assert(leaf_node, "No leaf node found below COUNT(*)");
 
-              const auto column_expression =
-                  std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
-              return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
+              const auto column_expression = std::make_shared<LQPColumnExpression>(leaf_node, INVALID_COLUMN_ID);
+
+              aggregate_expression = std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
-              return std::make_shared<AggregateExpression>(
+              aggregate_expression = std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
             }
+          } break;
         }
+
+        // Check that the aggregate can be calculated on the given expression
+        const auto aggregate_data_type = aggregate_expression->data_type();
+        AssertInput(aggregate_data_type != DataType::Null,
+                    std::string{"Invalid aggregate "} + aggregate_expression->as_column_name() +
+                        " for input data type " +
+                        data_type_to_string.left.at(aggregate_expression->argument()->data_type()));
+
+        // Check for ambiguous expressions that occur both at the current node and in its input tables. Example:
+        //   SELECT COUNT(a) FROM (SELECT a, COUNT(a) FROM t GROUP BY a) t2
+        // Our current expression system cannot handle this case and would consider the two COUNT(a) to be identical,
+        // see #1902 for details. This check here might have false positives, feel free to improve the check or tackle
+        // the underlying issue if this ever becomes an issue.
+        auto table_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+        DebugAssert(_from_clause_result, "_from_clause_result should be set by now");
+        table_expressions.reserve(_from_clause_result->elements_in_order.size());
+        for (const auto& select_list_element : _from_clause_result->elements_in_order) {
+          table_expressions.emplace_back(select_list_element.expression);
+        }
+
+        AssertInput(std::none_of(table_expressions.cbegin(), table_expressions.cend(),
+                                 [&aggregate_expression](const auto input_expression) {
+                                   return *input_expression == *aggregate_expression;
+                                 }),
+                    "Hyrise cannot handle repeated aggregate expressions, see #1902 for details.");
+
+        return aggregate_expression;
       }
 
       /**
@@ -1454,7 +1650,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
       }
 
-      // Translate all other expression types
+      // Translate other expression types that can be expected at this point
       switch (expr.opType) {
         case hsql::kOpUnaryMinus:
           return std::make_shared<UnaryMinusExpression>(left);
@@ -1498,7 +1694,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                                                     ExistsExpressionType::Exists);
 
         default:
-          FailInput("Not handling this OperatorType yet");
+          Fail("Unexpected expression type");  // There are 19 of these, so we make an exception here and use default
       }
     }
 
@@ -1508,23 +1704,24 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     case hsql::kExprArray:
       FailInput("Can't translate a standalone array, arrays only valid in IN expressions");
 
-    case hsql::kExprHint:
     case hsql::kExprStar:
-    case hsql::kExprArrayIndex:
-      FailInput("Can't translate this hsql expression into a Hyrise expression");
+      Fail("Star expression should have been handled earlier");
 
-    default:
-      FailInput("Unknown expression type, can't translate expression");
+    case hsql::kExprArrayIndex:
+    case hsql::kExprDatetimeField:
+    case hsql::kExprHint:
+      FailInput("Can't translate this hsql expression into a Hyrise expression");
   }
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
-    const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
+    const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   const auto sql_identifier_proxy = std::make_shared<SQLIdentifierResolverProxy>(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
   auto subquery_translator =
-      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions};
+      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
 
@@ -1543,7 +1740,7 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
-    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
+    const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   /**
    * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
    * Hyrise supports both.
@@ -1568,7 +1765,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
 
   for (auto case_reverse_idx = size_t{0}; case_reverse_idx < expr.exprList->size(); ++case_reverse_idx) {
     const auto case_idx = expr.exprList->size() - case_reverse_idx - 1;
-    const auto case_clause = (*expr.exprList)[case_idx];
+    const auto* const case_clause = (*expr.exprList)[case_idx];
 
     auto when = _translate_hsql_expr(*case_clause->expr, sql_identifier_resolver);
     if (simple_case_left_operand) {
@@ -1595,12 +1792,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
         return std::make_shared<BinaryPredicateExpression>(
             inverse_predicate_condition(binary_predicate_expression->predicate_condition),
             binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand());
-      } else if (const auto is_null_expression = dynamic_cast<const IsNullExpression*>(&expression);
+      } else if (const auto* const is_null_expression = dynamic_cast<const IsNullExpression*>(&expression);
                  is_null_expression) {
         // NOT (IS NULL ...) -> IS NOT NULL ...
         return std::make_shared<IsNullExpression>(inverse_predicate_condition(is_null_expression->predicate_condition),
                                                   is_null_expression->operand());
-      } else if (const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
+      } else if (const auto* const between_expression = dynamic_cast<const BetweenExpression*>(&expression);
                  between_expression) {
         // a BETWEEN b AND c -> a < b OR a > c
         return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
@@ -1654,22 +1851,27 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements
   return expressions;
 }
 
-SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression)
-    : expression(expression) {}
+std::string SQLTranslator::_trim_meta_table_name(const std::string& name) {
+  DebugAssert(MetaTableManager::is_meta_table_name(name), name + " is not a meta table name.");
+  return name.substr(MetaTableManager::META_PREFIX.size());
+}
 
-SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                                                    const std::vector<SQLIdentifier>& identifiers)
-    : expression(expression), identifiers(identifiers) {}
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression)
+    : expression(init_expression) {}
+
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& init_expression,
+                                                    const std::vector<SQLIdentifier>& init_identifiers)
+    : expression(init_expression), identifiers(init_identifiers) {}
 
 SQLTranslator::TableSourceState::TableSourceState(
-    const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
-    const std::vector<SelectListElement>& elements_in_order,
-    const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver)
-    : lqp(lqp),
-      elements_by_table_name(elements_by_table_name),
-      elements_in_order(elements_in_order),
-      sql_identifier_resolver(sql_identifier_resolver) {}
+    const std::shared_ptr<AbstractLQPNode>& init_lqp,
+    const std::unordered_map<std::string, std::vector<SelectListElement>>& init_elements_by_table_name,
+    const std::vector<SelectListElement>& init_elements_in_order,
+    const std::shared_ptr<SQLIdentifierResolver>& init_sql_identifier_resolver)
+    : lqp(init_lqp),
+      elements_by_table_name(init_elements_by_table_name),
+      elements_in_order(init_elements_in_order),
+      sql_identifier_resolver(init_sql_identifier_resolver) {}
 
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {

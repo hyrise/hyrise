@@ -21,9 +21,9 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
     value = value_expression->value;
   } else if (const auto column_id = node.find_column_id(expression)) {
     value = *column_id;
-  } else if (const auto parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
+  } else if (const auto* const parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
-  } else if (const auto placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
+  } else if (const auto* const placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
     value = placeholder_expression->parameter_id;
   } else {
     return std::nullopt;
@@ -145,10 +145,14 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
       OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b}};
 }
 
-OperatorScanPredicate::OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                                             const AllParameterVariant& value,
-                                             const std::optional<AllParameterVariant>& value2)
-    : column_id(column_id), predicate_condition(predicate_condition), value(value), value2(value2) {}
+OperatorScanPredicate::OperatorScanPredicate(const ColumnID init_column_id,
+                                             const PredicateCondition init_predicate_condition,
+                                             const AllParameterVariant& init_value,
+                                             const std::optional<AllParameterVariant>& init_value2)
+    : column_id(init_column_id),
+      predicate_condition(init_predicate_condition),
+      value(init_value),
+      value2(init_value2) {}
 
 bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs) {
   return lhs.column_id == rhs.column_id && lhs.predicate_condition == rhs.predicate_condition &&

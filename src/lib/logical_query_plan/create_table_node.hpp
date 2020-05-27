@@ -13,7 +13,7 @@ namespace opossum {
  */
 class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public BaseNonQueryNode {
  public:
-  CreateTableNode(const std::string& table_name, bool if_not_exists);
+  CreateTableNode(const std::string& init_table_name, const bool init_if_not_exists);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 

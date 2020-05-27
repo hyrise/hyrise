@@ -45,9 +45,9 @@ std::vector<JoinGraph> JoinGraph::build_all_in_lqp(const std::shared_ptr<Abstrac
   return join_graphs;
 }
 
-JoinGraph::JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-                     const std::vector<JoinGraphEdge>& edges)
-    : vertices(vertices), edges(edges) {}
+JoinGraph::JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& init_vertices,
+                     const std::vector<JoinGraphEdge>& init_edges)
+    : vertices(init_vertices), edges(init_edges) {}
 
 std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_local_predicates(const size_t vertex_idx) const {
   std::vector<std::shared_ptr<AbstractExpression>> predicates;

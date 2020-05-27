@@ -45,8 +45,8 @@ enum class ExpressionType {
  */
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
-  explicit AbstractExpression(const ExpressionType type,
-                              const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+  explicit AbstractExpression(const ExpressionType init_type,
+                              const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments);
   virtual ~AbstractExpression() = default;
 
   /**
@@ -154,6 +154,9 @@ struct ExpressionSharedPtrEqual final {
     return *expression_a == *expression_b;
   }
 };
+
+// Note that operator== ignores the equality functions:
+// https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 
 template <typename Value>
 using ExpressionUnorderedMap =

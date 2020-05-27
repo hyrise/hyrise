@@ -32,7 +32,7 @@ const std::string& IndexScan::name() const {
 }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
-  _in_table = input_table_left();
+  _in_table = left_input_table();
 
   _validate_input();
 
@@ -42,8 +42,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   if (included_chunk_ids.empty()) {
-    jobs.reserve(_in_table->chunk_count());
     const auto chunk_count = _in_table->chunk_count();
+    jobs.reserve(chunk_count);
     for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = _in_table->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -65,9 +65,9 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<IndexScan>(copied_input_left, _index_type, _left_column_ids, _predicate_condition,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<IndexScan>(copied_left_input, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
 
@@ -79,7 +79,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     const auto chunk = _in_table->get_chunk(chunk_id);
     if (!chunk) return;
 
-    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+    const auto matches_out = std::make_shared<RowIDPosList>(_scan_chunk(chunk_id));
     if (matches_out->empty()) return;
 
     Segments segments;
@@ -111,14 +111,14 @@ void IndexScan::_validate_input() {
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
+RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
   auto range_begin = AbstractIndex::Iterator{};
   auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
-  auto matches_out = PosList{};
+  auto matches_out = RowIDPosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
   Assert(index, "Index of specified type not found for segment (vector).");

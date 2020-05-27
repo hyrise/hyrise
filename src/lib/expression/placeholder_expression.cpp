@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-PlaceholderExpression::PlaceholderExpression(const ParameterID parameter_id)
-    : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(parameter_id) {}
+PlaceholderExpression::PlaceholderExpression(const ParameterID init_parameter_id)
+    : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(init_parameter_id) {}
 
 std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
   return std::make_shared<PlaceholderExpression>(parameter_id);

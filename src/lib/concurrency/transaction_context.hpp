@@ -15,33 +15,42 @@ class CommitContext;
 /**
  * @brief Overview of the different transaction phases
  *
- *  +--------+
- *  | Active |
- *  +--------+
- *      |
- *   Execute operators ---------------+
- *      |                             |
- *      | IF (an operator failed)     | ELSE
- *      |                             |
- *  +---------+                    +------------+
- *  | Aborted |                    | Committing |
- *  +---------+                    +------------+
- *      |                             |
- *   Rollback operators             Commit operators
- *      |                             |
- *  +------------+                  Wait for all previous
- *  | RolledBack |                  transaction to be committed
- *  +------------+                    |
- *                                 +-----------+
- *                                 | Committed |
- *                                 +-----------+
+ *       +--------+
+ *       | Active |
+ *       +--------+
+ *           |
+ *   Execute operators ------------------------+
+ *           |                                 |
+ *           | IF (an operator failed)         | ELSE
+ *           |                                 |
+ *           |                          Finish Transaction -----------------------+
+ *           |                                 |                                  |
+ *           |                                 | IF (User requests Commit         | ELSE (User requests Rollback)
+ *     +------------+                          |     or Auto-Commit-Mode)         |
+ *     | Conflicted |                    +------------+                   +------------------+
+ *     +------------+                    | Committing |                   | RolledBackByUser |
+ *           |                           +------------+                   +------------------+
+ *   Rollback operators                        |
+ *           |                           Commit operators
+ *  +-------------------------+                |
+ *  | RolledBackAfterConflict |       Wait for all previous
+ *  +-------------------------+    transaction to be committed
+ *                                             |
+ *                                       +-----------+
+ *                                       | Committed |
+ *                                       +-----------+
+ *
+ *  RolledBackAfterConflict and RolledBackByUser have to be two different transaction phases, because a final transaction
+ *  state of RolledBackAfterConflict is considered as a failure, while RolledBackByUser is considered as a successful
+ *  transaction. Among other things this has an influence on the result message, the database client receives.
  */
 enum class TransactionPhase {
-  Active,      // Transaction has just been created. Operators may be executed.
-  Aborted,     // One of the operators failed. Transaction needs to be rolled back.
-  RolledBack,  // Transaction has been rolled back.
-  Committing,  // Commit ID has been assigned. Operators may commit records.
-  Committed    // Transaction has been committed.
+  Active,                   // Transaction has just been created. Operators may be executed.
+  Conflicted,               // One of the operators ran into a conflict. Transaction needs to be rolled back.
+  RolledBackAfterConflict,  // Transaction has been rolled back because an operator failed. (Considered a failure)
+  RolledBackByUser,         // Transaction has been rolled back due to ROLLBACK;-statement. (Considered a success)
+  Committing,               // Commit ID has been assigned. Operators may commit records.
+  Committed,                // Transaction has been committed.
 };
 
 std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase);
@@ -53,7 +62,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   friend class TransactionManager;
 
  public:
-  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id);
+  TransactionContext(TransactionID transaction_id, CommitID snapshot_commit_id, AutoCommit is_auto_commit);
   ~TransactionContext();
 
   /**
@@ -75,19 +84,27 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   CommitID commit_id() const;
 
   /**
+   * Flag that indicates whether the context belongs to a transaction or non-transaction (i.e., it auto-commits).
+   */
+  AutoCommit is_auto_commit() const;
+
+  /**
    * Returns the current phase of the transaction
    */
   TransactionPhase phase() const;
 
   /**
-   * Returns true if rollback has been called.
+   * Returns true if transaction has run into a conflict or was manually rolled back by the user.
    */
   bool aborted() const;
 
   /**
    * Aborts and rolls back the transaction.
+   * @param rollback_reason specifies whether the rollback happens due to an explicit ROLLBACK command by
+   * the database user or due to a transaction conflict. We need to know this in order to transition into
+   * the correct transaction phase.
    */
-  void rollback();
+  void rollback(RollbackReason rollback_reason);
 
   /**
    * Commits the transaction.
@@ -125,6 +142,13 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void on_operator_finished();
   /**@}*/
 
+  /**
+   * Returns whether the transaction is created (and will also commit) automatically. The alternative would be that it
+   * was created through a user command (BEGIN). This information is used by the SQLPipelineStatement to auto-commit the
+   * transaction - the transaction does not commit itself.
+   */
+  bool is_auto_commit();
+
  private:
   /**
    * @defgroup Lifetime management
@@ -132,15 +156,15 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    */
 
   /**
-   * Sets the transaction phase to Aborted.
+   * Sets the transaction phase to Conflicted and waits for operators to finish.
    * Should be called if an operator fails.
    */
-  void _abort();
+  void _mark_as_conflicted();
 
   /**
    * Sets the transaction phase to RolledBack.
    */
-  void _mark_as_rolled_back();
+  void _mark_as_rolled_back(RollbackReason rollback_reason);
 
   /**
    * Sets transaction phase to Committing.
@@ -174,6 +198,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
+  const AutoCommit _is_auto_commit;
 
   std::vector<std::shared_ptr<AbstractReadWriteOperator>> _read_write_operators;
 

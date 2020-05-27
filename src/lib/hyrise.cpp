@@ -13,10 +13,12 @@ Hyrise::Hyrise() {
   // destructed last.
   boost::container::pmr::get_default_resource();
 
-  plugin_manager = PluginManager{};
   storage_manager = StorageManager{};
+  plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};
+  settings_manager = SettingsManager{};
+  log_manager = LogManager{};
   topology = Topology{};
   _scheduler = std::make_shared<ImmediateExecutionScheduler>();
 }
@@ -27,6 +29,10 @@ void Hyrise::reset() {
 }
 
 const std::shared_ptr<AbstractScheduler>& Hyrise::scheduler() const { return _scheduler; }
+
+bool Hyrise::is_multi_threaded() const {
+  return std::dynamic_pointer_cast<ImmediateExecutionScheduler>(_scheduler) == nullptr;
+}
 
 void Hyrise::set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler) {
   _scheduler->finish();
