@@ -32,7 +32,7 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const std::string& name) const;
   std::vector<std::string> table_names() const;
-  const tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>>& tables() const;
+  const std::unordered_map<std::string, std::shared_ptr<Table>> tables() const;
   /** @} */
 
   /**
@@ -44,7 +44,7 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
   bool has_view(const std::string& name) const;
   std::vector<std::string> view_names() const;
-  const tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>>& views() const;
+  const std::unordered_map<std::string, std::shared_ptr<LQPView>> views() const;
   /** @} */
 
   /**
@@ -55,7 +55,7 @@ class StorageManager : public Noncopyable {
   std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
   bool has_prepared_plan(const std::string& name) const;
   void drop_prepared_plan(const std::string& name);
-  const tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
+  const std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> prepared_plans() const;
   /** @} */
 
   // For debugging purposes mostly, dump all tables as csv
