@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import warnings
 
-from prepare_calibration_data import import_train_data
+from prepare_calibration_data import import_joined_data
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import LinearRegression
@@ -18,7 +18,12 @@ plt.style.use('ggplot')
 def preprocess_data(data):
     # one-hot encoding
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
-    ohe_data = pd.get_dummies(ohe_data, columns=['SCAN_TYPE', 'DATA_TYPE', 'ENCODING', 'SCAN_IMPLEMENTATION', 'COMPRESSION_TYPE'])
+
+    #'OPERATOR_IMPLEMENTATION': 'SCAN_IMPLEMENTATION', 'OPERATOR_DETAIL': 'SCAN_TYPE'
+
+    ohe_data = pd.get_dummies(ohe_data,
+        columns=['OPERATOR_NAME', 'OPERATOR_DETAIL', 'DATA_TYPE', 'ENCODING',
+                 'OPERATOR_IMPLEMENTATION', 'COMPRESSION_TYPE'])
     return ohe_data
 
 
@@ -38,7 +43,7 @@ def train_model(train_data, model_type):
     return model
 
 
-def generate_model_plot(model, test_data, method, encoding, scan, out):
+def generate_model_plot(model, test_data, operator, method, encoding, implementation, out):
     ohe_data = preprocess_data(test_data)
     real_y = np.ravel(ohe_data[['RUNTIME_NS']])
     ohe_data = ohe_data.drop(labels=['RUNTIME_NS'], axis=1)
@@ -55,12 +60,12 @@ def generate_model_plot(model, test_data, method, encoding, scan, out):
 
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c = 'r', linestyle='-')
-    plt.title(f'{encoding}_{scan}_{method}; Score: {model_scores["R2"]}')
+    plt.title(f'{encoding}_{operator}_{implementation}_{method}; Score: {model_scores["R2"]}')
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
     plt.xlabel('Real Time')
     plt.ylabel('Predicted Time')
-    output_path = os.path.join(out, 'plots', f'{method}_{encoding}_{scan}')
+    output_path = os.path.join(out, 'plots', f'{method}_{encoding}_{operator}_{implementation}')
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
 
@@ -116,7 +121,7 @@ def parse_arguments(opt=None):
     # We have achieved the best results with boost
     parser.add_argument('--m', choices={'linear', 'lasso', 'ridge', 'boost'}, default=['boost'], action='append',
                         nargs='+', help='Model type(s). Boost is the default')
-    parser.add_argument('--out', default='costModelOutput', help='Output directory. Default is costModelOutput',
+    parser.add_argument('--out', default='cost_model_output', help='Output directory. Default is cost_model_output',
                         metavar='OUT_DIR')
 
     if (opt):
@@ -125,11 +130,11 @@ def parse_arguments(opt=None):
         return parser.parse_args()
 
 
-def import_data(args):
-    test_data = import_train_data(args.test)
+def import_data(train_path, test_path):
+    test_data = import_joined_data(test_path)
     test_data = test_data.dropna()
 
-    train_data = import_train_data(args.train)
+    train_data = import_joined_data(train_path)
     train_data = train_data.dropna()
 
     # check whether training and test data have the same format
@@ -149,9 +154,9 @@ def main(args):
     out = args.out
 
     if args.test:
-        train_data, test_data = import_data(args)
+        train_data, test_data = import_data(args.train, args.test)
     else:
-        train_data = import_train_data(args.train)
+        train_data = import_joined_data(args.train)
         train_data = train_data.dropna()
         train_data, test_data = train_test_split(train_data)
 
@@ -164,47 +169,52 @@ def main(args):
     # one single model for everything
     for model_type in model_types:
         gtrain_data, gtest_data = add_dummy_types(train_data.copy(), test_data.copy(),
-                                                  ['COMPRESSION_TYPE', 'SCAN_IMPLEMENTATION', 'SCAN_TYPE', 'DATA_TYPE', 'ENCODING'])
+                                                  ['OPERATOR_NAME', 'OPERATOR_DETAIL', 'DATA_TYPE', 'ENCODING',
+                                                   'OPERATOR_IMPLEMENTATION', 'COMPRESSION_TYPE'])
         gmodel = train_model(gtrain_data, model_type)
-        scores[f'{model_type}_general_model'] = generate_model_plot(gmodel, gtest_data, model_type, 'all', 'all',out)
+        scores[f'{model_type}_general_model'] = generate_model_plot(gmodel, gtest_data, 'all', model_type, 'all', 'all', out)
         filename = os.path.join(out, 'models', f'{model_type}_general_model.sav')
         joblib.dump(gmodel, filename)
 
-    # make separate models for different scan operators and combinations of encodings/compressions
-    for encoding in train_data['ENCODING'].unique():
-        for implementation_type in train_data['SCAN_IMPLEMENTATION'].unique():
-            try:
-                # if there is no given test data set, split the given training data into test and training data
-                if not args.test:
-                        model_train_data, model_test_data = train_test_split(
-                            train_data.loc[(train_data['ENCODING'] == encoding)
-                                           & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)])
+    # make separate models for different operators and combinations of encodings/compressions
+    for operator in train_data['OPERATOR_NAME'].unique():
+        for encoding in train_data['ENCODING'].unique():
+            for implementation_type in train_data['OPERATOR_IMPLEMENTATION'].unique():
+                try:
+                    # if there is no given test data set, split the given training data into test and training data
+                    if not args.test:
+                            model_train_data, model_test_data = train_test_split(
+                                train_data.loc[(train_data['OPERATOR_NAME'] == operator)
+                                               & (train_data['ENCODING'] == encoding)
+                                               & (train_data['OPERATOR_IMPLEMENTATION'] == implementation_type)])
 
-                else:
-                    model_train_data = train_data.loc[(train_data['ENCODING'] == encoding)
-                                                      & (train_data['SCAN_IMPLEMENTATION'] == implementation_type)]
-                    model_test_data = test_data.loc[(test_data['ENCODING'] == encoding)
-                                                    & (test_data['SCAN_IMPLEMENTATION'] == implementation_type)]
+                    else:
+                        model_train_data = train_data.loc[(train_data['OPERATOR_NAME'] == operator)
+                                                          & (train_data['ENCODING'] == encoding)
+                                                          & (train_data['OPERATOR_IMPLEMENTATION'] == implementation_type)]
+                        model_test_data = test_data.loc[(test_data['OPERATOR_NAME'] == operator)
+                                                        &(test_data['ENCODING'] == encoding)
+                                                        & (test_data['OPERATOR_IMPLEMENTATION'] == implementation_type)]
 
-            except ValueError:
-                print(f'Not enough data of the combination {encoding}, {implementation_type} to split into training and test data')
-                break
+                except ValueError:
+                    print(f'Not enough data of the combination {encoding}, {operator}, {implementation_type}',
+                          'to split into training and test data')
+                    continue
 
-            # if there is training data for this combination, train a model
-            if not model_train_data.empty:
-                for model_type in model_types:
-                    model_train_data, model_test_data = add_dummy_types(model_train_data.copy(),
-                                                                        model_test_data.copy(),
-                                                                        ['COMPRESSION_TYPE', 'SCAN_TYPE', 'DATA_TYPE'])
-                    model = train_model(model_train_data, model_type)
+                # if there is training data for this combination, train a model
+                if not model_train_data.empty:
+                    for model_type in model_types:
+                        model_train_data, model_test_data = add_dummy_types(model_train_data.copy(),
+                                                                            model_test_data.copy(),
+                                                                            ['COMPRESSION_TYPE', 'OPERATOR_DETAIL', 'DATA_TYPE'])
+                        model = train_model(model_train_data, model_type)
+                        model_name = f'{model_type}_{encoding}_{operator}_{implementation_type}_model'
+                        filename = os.path.join(out, 'models', f'split_{model_name}.sav')
+                        joblib.dump(model, filename)
 
-                    model_name = f'{model_type}_{encoding}_{implementation_type}_model'
-                    filename = os.path.join(out, 'models', f'split_{model_name}.sav')
-                    joblib.dump(model, filename)
-
-                    if not model_test_data.empty:
-                        scores[model_name] = generate_model_plot(model, model_test_data, model_type, encoding,
-                                                                 implementation_type, out)
+                        if not model_test_data.empty:
+                            scores[model_name] = generate_model_plot(model, model_test_data, operator, model_type,
+                                                                     encoding, implementation_type, out)
     log(scores, out)
 
 

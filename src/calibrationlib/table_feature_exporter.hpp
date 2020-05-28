@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <string>
@@ -18,7 +19,7 @@ class TableFeatureExporter {
   void flush();
 
  protected:
-  std::map<TableFeatureExportType, std::shared_ptr<Table>> _tables = {
+  const std::map<TableFeatureExportType, std::shared_ptr<Table>> _tables = {
       {TableFeatureExportType::TABLE,
        std::make_shared<Table>(_column_definitions.at(TableFeatureExportType::TABLE), TableType::Data)},
       {TableFeatureExportType::COLUMN,

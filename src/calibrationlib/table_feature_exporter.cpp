@@ -4,6 +4,7 @@
 #include <string>
 
 #include "constant_mappings.hpp"
+#include "import_export/csv/csv_writer.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 
@@ -28,7 +29,7 @@ void TableFeatureExporter::_export_table_data(std::shared_ptr<const CalibrationT
   const auto row_count = static_cast<int64_t>(table_wrapper->get_table()->row_count());
   const auto chunk_size = static_cast<int32_t>(table_wrapper->get_table()->target_chunk_size());
 
-  _tables[TableFeatureExportType::TABLE]->append({table_name, row_count, chunk_size});
+  _tables.at(TableFeatureExportType::TABLE)->append({table_name, row_count, chunk_size});
 }
 
 void TableFeatureExporter::_export_column_data(std::shared_ptr<const CalibrationTableWrapper> table_wrapper) {
@@ -41,7 +42,7 @@ void TableFeatureExporter::_export_column_data(std::shared_ptr<const Calibration
     const auto column_name = pmr_string{table->column_name(column_id)};
     const auto column_data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
 
-    _tables[TableFeatureExportType::COLUMN]->append({table_name, column_name, column_data_type});
+    _tables.at(TableFeatureExportType::COLUMN)->append({table_name, column_name, column_data_type});
   }
 }
 
@@ -70,7 +71,7 @@ void TableFeatureExporter::_export_segment_data(std::shared_ptr<const Calibratio
           compression_type = pmr_string{ss.str()};
         }
       }
-      _tables[TableFeatureExportType::SEGMENT]->append(
+      _tables.at(TableFeatureExportType::SEGMENT)->append(
           {table_name, column_name, static_cast<int32_t>(chunk_id), encoding_type, compression_type});
     }
   }

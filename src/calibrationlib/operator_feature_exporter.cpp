@@ -5,6 +5,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv/csv_writer.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/table_scan.hpp"

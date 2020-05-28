@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include "import_export/csv/csv_writer.hpp"
 #include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
 
@@ -27,7 +26,7 @@ class OperatorFeatureExporter {
                                const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                const std::shared_ptr<const AbstractLQPNode>& original_node);
 
-  std::shared_ptr<Table> _output_table =
+  const std::shared_ptr<Table> _output_table =
       std::make_shared<Table>(TableColumnDefinitions{{"OPERATOR_NAME", DataType::String, false},
                                                      {"INPUT_ROWS_LEFT", DataType::Long, false},
                                                      {"INPUT_ROWS_RIGHT", DataType::Long, false},
