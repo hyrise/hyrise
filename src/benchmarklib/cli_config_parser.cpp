@@ -30,7 +30,9 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
             << std::endl;
 
   const auto clients = parse_result["clients"].as<uint32_t>();
-  std::cout << "- " + std::to_string(clients) + " simulated clients are scheduling items in parallel" << std::endl;
+  std::cout << "- " + std::to_string(clients) + " simulated ";
+  std::cout << (clients == 1 ? "client is " : "clients are ") << "scheduling items";
+  std::cout << (clients > 1 ? " in parallel" : "") << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
