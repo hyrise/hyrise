@@ -21,10 +21,15 @@ def parse_hyrise_csv(file_name):
 
 
 def import_joined_data(path):
-    operator_data = parse_hyrise_csv(os.path.join(path, 'operators.csv'))
-    table_data = parse_hyrise_csv(os.path.join(path, 'table_meta.csv'))
-    columns_data = parse_hyrise_csv(os.path.join(path, 'column_meta.csv'))
-    chunk_meta = parse_hyrise_csv(os.path.join(path, 'segment_meta.csv'))
+    if not path.endswith(os.sep):
+        path += os.sep
+    operator_data = parse_hyrise_csv(path + 'operators.csv')
+    table_data = parse_hyrise_csv(path + 'table_meta.csv')
+    columns_data = parse_hyrise_csv(path + 'column_meta.csv')
+    chunk_meta = parse_hyrise_csv(path + 'segment_meta.csv')
+
+    # remove some outlier
+    operator_data = operator_data[operator_data['RUNTIME_NS'] < 2*(10**8)]
 
     joined_data = operator_data.merge(table_data, on=['TABLE_NAME'], how='left')
     joined_data = joined_data.merge(columns_data, on=['TABLE_NAME', 'COLUMN_NAME'], how='left')
@@ -36,12 +41,17 @@ def import_joined_data(path):
     joined_data = joined_data.rename(columns={'CHUNK_SIZE': 'MAX_CHUNK_SIZE',
                                               'COLUMN_DATA_TYPE': 'DATA_TYPE', 'ENCODING_TYPE': 'ENCODING'})
 
-    #'OPERATOR_IMPLEMENTATION': 'SCAN_IMPLEMENTATION', 'OPERATOR_DETAIL': 'SCAN_TYPE'
+    # remove the rows with ExpressionEvaluator queries from the test data since we don't have any in the test data
+    joined_data = joined_data.loc[(joined_data['OPERATOR_IMPLEMENTATION'] != 'ExpressionEvaluator')]
 
     # explicitly add selectivity
     joined_data['SELECTIVITY_LEFT'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS_LEFT'])
     joined_data['SELECTIVITY_LEFT'].fillna(0, inplace=True)
     joined_data['SELECTIVITY_RIGHT'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS_RIGHT'])
     joined_data['SELECTIVITY_RIGHT'].fillna(0, inplace=True)
+    print(operator_data[operator_data['RUNTIME_NS'] > 0.5*(10**8)])
+
+    # remove infinite selectivities from empty inputs
     joined_data.replace(np.inf, 0, inplace=True)
+    joined_data.fillna('0', inplace=True)
     return joined_data

@@ -19,8 +19,6 @@ def preprocess_data(data):
     # one-hot encoding
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
 
-    #'OPERATOR_IMPLEMENTATION': 'SCAN_IMPLEMENTATION', 'OPERATOR_DETAIL': 'SCAN_TYPE'
-
     ohe_data = pd.get_dummies(ohe_data,
         columns=['OPERATOR_NAME', 'OPERATOR_DETAIL', 'DATA_TYPE', 'ENCODING',
                  'OPERATOR_IMPLEMENTATION', 'COMPRESSION_TYPE'])

@@ -20,6 +20,8 @@ class OperatorFeatureExporter {
 
   void _add_aggregate_details(const std::shared_ptr<const AbstractOperator>& op);
 
+  void _add_get_table_details(const std::shared_ptr<const AbstractOperator>& op);
+
   void _add_join_details(const std::shared_ptr<const AbstractOperator>& op);
 
   void _add_table_scan_details(const std::shared_ptr<const AbstractOperator>& op,

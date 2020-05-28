@@ -8,6 +8,7 @@
 #include "import_export/csv/csv_writer.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
+#include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/visit_pqp.hpp"
 #include "utils/assert.hpp"
@@ -97,9 +98,15 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
 }
 
 void OperatorFeatureExporter::_add_aggregate_details(const std::shared_ptr<const AbstractOperator>& op) {
-  DebugAssert(op->type() == OperatorType::Aggregate, "Expected AggregateOperator");
+  DebugAssert(op->type() == OperatorType::Aggregate, "Expected Aggregate");
   _current_row[0] = pmr_string{"Aggregate"};
   _current_row[8] = pmr_string{op->name()};
+}
+
+void OperatorFeatureExporter::_add_get_table_details(const std::shared_ptr<const AbstractOperator>& op) {
+  DebugAssert(op->type() == OperatorType::GetTable, "Expected GetTable");
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(op);
+  _current_row[6] = pmr_string{get_table->table_name()};
 }
 
 void OperatorFeatureExporter::_add_join_details(const std::shared_ptr<const AbstractOperator>& op) {
