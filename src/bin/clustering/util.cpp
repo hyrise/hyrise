@@ -40,18 +40,6 @@ const std::set<std::string> tpcds_filename_whitelist() {
   return filename_whitelist;
 }
 
-
-const nlohmann::json _read_clustering_config(const std::string& filename) {
-  if (!std::filesystem::exists(filename)) {
-    std::cout << "clustering config file not found: " << filename << std::endl;
-    std::exit(1);
-  }
-
-  std::ifstream ifs(filename);
-  const auto clustering_config = nlohmann::json::parse(ifs);
-  return clustering_config;
-}
-
 void _extract_get_tables(const std::shared_ptr<const AbstractOperator> pqp_node, std::set<std::shared_ptr<const GetTable>>& get_table_operators) {
   if (pqp_node->type() == OperatorType::GetTable) {
     auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp_node);
@@ -165,6 +153,18 @@ const nlohmann::json _compute_skipped_chunks_per_table() {
   return skipped_chunks_per_table;
 }
 
+const nlohmann::json _read_clustering_information() {
+  const std::string filename = ".clustering_info.json";
+  if (!std::filesystem::exists(filename)) {
+    std::cout << "clustering info file not found: " << filename << std::endl;
+    std::exit(1);
+  }
+
+  std::ifstream ifs(filename);
+  const auto clustering_info = nlohmann::json::parse(ifs);
+  return clustering_info;
+}
+
 void _append_additional_statistics(const std::string& result_file_path) {
       std::ifstream benchmark_result_file(result_file_path);
       auto benchmark_result_json = nlohmann::json::parse(benchmark_result_file);
@@ -172,10 +172,6 @@ void _append_additional_statistics(const std::string& result_file_path) {
       const auto benchmark_count = benchmark_result_json["benchmarks"].size();
       Assert(benchmark_count == 1, "expected " + result_file_path + " file containing exactly one benchmark, but it contains " + std::to_string(benchmark_count));
       const std::string query_name = benchmark_result_json["benchmarks"].at(0)["name"];
-
-      // store clustering config - TODO redundant to do that for each partial file, no huge overhead though
-      const auto clustering_config_json = _read_clustering_config("clustering_config.json");
-      benchmark_result_json["clustering_config"] = clustering_config_json;
 
       benchmark_result_json["pruning_stats"][query_name] = _compute_pruned_chunks_per_table();
       benchmark_result_json["skipped_chunk_stats"][query_name] = _compute_skipped_chunks_per_table();
@@ -208,6 +204,10 @@ void _merge_result_files(const std::string& merge_result_file_name, const std::v
       merge_result_json["skipped_chunk_stats"][query_name] = benchmark_result_json["skipped_chunk_stats"][query_name];
     }
   }
+
+  // store clustering info - config, algo, runtimes
+  const auto clustering_info_json = _read_clustering_information();
+  merge_result_json["clustering_info"] = clustering_info_json;
 
   if (delete_files) {
     for (const auto& path : merge_input_file_names) {

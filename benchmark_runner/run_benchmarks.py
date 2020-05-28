@@ -30,13 +30,18 @@ def run_benchmark(benchmark, config_name, chunk_size):
   # not sure if using "--cache_binary_tables" is a good idea.
   # if a second benchmark does not provide new clustering columns, the old clustering will be loaded and preserved from the table cache.
   # this might influence subsequent benchmarks (e.g. via pruning)
+  output_file = f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"
   p = Popen(
-            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--runs", str(benchmark.max_runs()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", f"{benchmark.result_path()}/{config_name}_{chunk_size}.json"],
+            [benchmark.exec_path(), "./build-release/lib/libhyriseClusteringPlugin.so", "--dont_cache_binary_tables", "--sql_metrics", "--time", str(benchmark.time()), "--runs", str(benchmark.max_runs()), "--scale", str(benchmark.scale()), "--chunk_size", str(chunk_size), "--output", output_file],
             env=process_env,
             stdout=sys.stdout,
             stdin=sys.stdin,
             stderr=sys.stderr
         )
+  p.wait()
+  p = Popen(["mv", "lineitem.cs", output_file + ".cs" ])
+  p.wait()
+  p = Popen(["mv", "lineitem.stats", output_file + ".stats" ])
   p.wait()
 
 def build_sort_order_string(sort_order_per_table):

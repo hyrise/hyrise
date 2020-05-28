@@ -293,4 +293,9 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   return sorted_chunk_with_mvcc;
 }
 
+const nlohmann::json AbstractClusteringAlgo::runtime_statistics() const {
+  return _runtime_statistics;
+}
+
+
 } // namespace opossum

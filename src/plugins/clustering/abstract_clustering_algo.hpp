@@ -6,11 +6,10 @@
 #include <vector>
 #include <utility>
 
+#include "nlohmann/json.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
-
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
-
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -27,13 +26,14 @@ using ClusteringByTable = std::map<std::string, std::vector<std::pair<std::strin
 class AbstractClusteringAlgo {
  public:
 
-  AbstractClusteringAlgo(ClusteringByTable clustering) : clustering_by_table(clustering) {}
+  AbstractClusteringAlgo(ClusteringByTable clustering) : clustering_by_table(clustering), _original_table_sizes{}, _runtime_statistics{} {}
 
   virtual ~AbstractClusteringAlgo() = default;
 
   virtual const std::string description() const = 0;
 
   void run();
+  const nlohmann::json runtime_statistics() const;
 
   ClusteringByTable clustering_by_table;
 
@@ -50,7 +50,9 @@ class AbstractClusteringAlgo {
   void _append_sorted_chunks_to_table(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::shared_ptr<Table> table, bool allow_mutable=true) const;
   std::shared_ptr<Chunk> _sort_chunk(std::shared_ptr<Chunk> chunk, const ColumnID sort_column, const TableColumnDefinitions& column_definitions) const;
 
+
   std::map<std::string, size_t> _original_table_sizes;
+  nlohmann::json _runtime_statistics;
 };
 
 }  // namespace opossum

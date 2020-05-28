@@ -13,7 +13,7 @@ namespace opossum {
 
 class ClusteringPlugin : public AbstractPlugin {
  public:
-  ClusteringPlugin() : storage_manager(Hyrise::get().storage_manager) {}
+  ClusteringPlugin() {}
 
   const std::string description() const final;
 
@@ -21,10 +21,13 @@ class ClusteringPlugin : public AbstractPlugin {
 
   void stop() final;
 
-  StorageManager& storage_manager;
+  static const ClusteringByTable read_clustering_config(const std::string& filename = "clustering_config.json");
 
- protected:
-  const ClusteringByTable _read_clustering_config(const std::string& filename = "clustering_config.json") const;
+ private:
+  void _write_clustering_information() const;
+
+  ClusteringByTable _clustering_config;
+  std::shared_ptr<AbstractClusteringAlgo> _clustering_algo;
 };
 
 }  // namespace opossum

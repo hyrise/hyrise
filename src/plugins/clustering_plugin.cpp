@@ -101,23 +101,24 @@ void _export_chunk_size_statistics() {
 }
 
 void ClusteringPlugin::start() {
-  const auto clustering_config = _read_clustering_config();
-  //std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<SimpleClusteringAlgo>(SimpleClusteringAlgo(clustering_config));
-  std::shared_ptr<AbstractClusteringAlgo> clustering_algo = std::make_shared<DisjointClustersAlgo>(DisjointClustersAlgo(clustering_config));
+  _clustering_config = read_clustering_config();
+  //_clustering_algo = std::make_shared<SimpleClusteringAlgo>(SimpleClusteringAlgo(_clustering_config));
+  _clustering_algo = std::make_shared<DisjointClustersAlgo>(DisjointClustersAlgo(_clustering_config));
 
-  std::cout << "[ClusteringPlugin] Starting clustering, using " << clustering_algo->description() << std::endl;
+  std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 
-  clustering_algo->run();
+  _clustering_algo->run();
 
-  std::cout << "[ClusteringPlugin] Clustering complete." << std::endl;
+  _write_clustering_information();
 
   _export_chunk_pruning_statistics();
   _export_chunk_size_statistics();
+  std::cout << "[ClusteringPlugin] Clustering complete." << std::endl;
 }
 
 void ClusteringPlugin::stop() { }
 
-const ClusteringByTable ClusteringPlugin::_read_clustering_config(const std::string& filename) const {
+const ClusteringByTable ClusteringPlugin::read_clustering_config(const std::string& filename) {
   if (!std::filesystem::exists(filename)) {
     std::cout << "clustering config file not found: " << filename << std::endl;
     std::exit(1);
@@ -126,6 +127,17 @@ const ClusteringByTable ClusteringPlugin::_read_clustering_config(const std::str
   std::ifstream ifs(filename);
   const auto clustering_config = nlohmann::json::parse(ifs);
   return clustering_config;
+}
+
+void ClusteringPlugin::_write_clustering_information() const {
+  nlohmann::json clustering_info;
+  clustering_info["runtime"] = _clustering_algo->runtime_statistics();
+  clustering_info["config"] = _clustering_config;
+  clustering_info["algo"] = _clustering_algo->description();
+
+  std::ofstream out_file(".clustering_info.json");
+  out_file << clustering_info.dump(2) << std::endl;
+  out_file.close();
 }
 
 EXPORT_PLUGIN(ClusteringPlugin)

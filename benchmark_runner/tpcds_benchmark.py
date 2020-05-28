@@ -8,7 +8,7 @@ class TPCDSBenchmark(AbstractBenchmark):
     return "/home/Alexander.Loeser/hyrise/build-release/hyrisePlayground"
 
   def result_path(self):
-    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpcds_mdc_sf_1"
+    return "/home/Alexander.Loeser/hyrise/benchmark_results/tpcds/joins_frequency_clusters"
 
   def time(self):
     return 60
@@ -21,9 +21,100 @@ class TPCDSBenchmark(AbstractBenchmark):
 
   def chunk_sizes(self):
     #return [25000, 100000]
-    return [65000]
+    return [65535]
 
   def sort_orders(self):
+
+  # SF 1 RUNS 1
+    return  {'ss_sold_date_sk-6_ss_ticket_number-9_ss_sold_time_sk-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_ticket_number', 9),
+   ('ss_sold_time_sk', 1)]},
+ 'ss_sold_date_sk-6_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ 'ss_sold_time_sk-7_ss_ticket_number-8_ss_sold_date_sk-1': {'store_sales': [('ss_sold_time_sk',
+    7),
+   ('ss_ticket_number', 8),
+   ('ss_sold_date_sk', 1)]}}
+
+
+  # SF 1 RUNS -1
+    return {'default': {},
+ 'cd_demo_sk-13_cd_education_status-3': {'customer_demographics': [('cd_demo_sk',
+    13),
+   ('cd_education_status', 3)]},
+ 'cd_demo_sk-18_cd_gender-2_cd_education_status-1': {'customer_demographics': [('cd_demo_sk',
+    18),
+   ('cd_gender', 2),
+   ('cd_education_status', 1)]},
+ 'cd_demo_sk-15_cd_marital_status-2_cd_education_status-1': {'customer_demographics': [('cd_demo_sk',
+    15),
+   ('cd_marital_status', 2),
+   ('cd_education_status', 1)]},
+ 'ss_sold_date_sk-6_ss_ticket_number-9_ss_item_sk-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_ticket_number', 9),
+   ('ss_item_sk', 1)]},
+ 'ss_item_sk-8_ss_sold_date_sk-6_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    8),
+   ('ss_sold_date_sk', 6),
+   ('ss_ticket_number', 1)]},
+ 'ss_item_sk-6_ss_ticket_number-8_ss_sold_date_sk-1': {'store_sales': [('ss_item_sk',
+    6),
+   ('ss_ticket_number', 8),
+   ('ss_sold_date_sk', 1)]}}
+
+
+  # SF 1 RUNS -1 
+    return  {
+ 'ss_sold_date_sk-6_ss_ticket_number-9_ss_item_sk-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_ticket_number', 9),
+   ('ss_item_sk', 1)]},
+ 'ss_item_sk-8_ss_sold_date_sk-6_ss_ticket_number-1': {'store_sales': [('ss_item_sk',
+    8),
+   ('ss_sold_date_sk', 6),
+   ('ss_ticket_number', 1)]},
+ 'ss_item_sk-6_ss_ticket_number-8_ss_sold_date_sk-1': {'store_sales': [('ss_item_sk',
+    6),
+   ('ss_ticket_number', 8),
+   ('ss_sold_date_sk', 1)]}}
+
+
+
+    return {
+      'ss_ticket_number-48': {'store_sales': [['ss_ticket_number', 48]]}
+    }
+
+    return {
+ 'default': {},
+ 'cd_demo_sk-13_cd_education_status-3': {'customer_demographics': [('cd_demo_sk',
+    13),
+   ('cd_education_status', 3)]},
+ 'cd_demo_sk-18_cd_gender-2_cd_education_status-1': {'customer_demographics': [('cd_demo_sk',
+    18),
+   ('cd_gender', 2),
+   ('cd_education_status', 1)]},
+ 'cd_demo_sk-15_cd_marital_status-2_cd_education_status-1': {'customer_demographics': [('cd_demo_sk',
+    15),
+   ('cd_marital_status', 2),
+   ('cd_education_status', 1)]},
+ 'ss_sold_date_sk-6_ss_ticket_number-9_ss_sold_time_sk-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_ticket_number', 9),
+   ('ss_sold_time_sk', 1)]},
+ 'ss_sold_date_sk-6_ss_sold_time_sk-8_ss_ticket_number-1': {'store_sales': [('ss_sold_date_sk',
+    6),
+   ('ss_sold_time_sk', 8),
+   ('ss_ticket_number', 1)]},
+ 'ss_sold_time_sk-7_ss_ticket_number-8_ss_sold_date_sk-1': {'store_sales': [('ss_sold_time_sk',
+    7),
+   ('ss_ticket_number', 8),
+   ('ss_sold_date_sk', 1)]}}
+
+
     # SF 1
     return {
       'ss_ticket_number-45_ss_quantity-1': {'store_sales': [('ss_ticket_number', 45), ('ss_quantity', 1)]},
