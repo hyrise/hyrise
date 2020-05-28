@@ -251,7 +251,7 @@ void StorageManager::apply_partitioning() {
 
     for (auto dimension_id = size_t{0}; dimension_id < dimensions.size(); ++dimension_id) {
       const auto& dimension = dimensions[dimension_id];
-      const auto partition_count = static_cast<size_t>(dimension["partitions"]);
+      const auto partition_count = static_cast<size_t>(dimension["clusters"]);
 
       bool partition_by_values;
       if (dimension["mode"] == "size") {

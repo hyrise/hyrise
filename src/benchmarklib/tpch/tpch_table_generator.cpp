@@ -325,7 +325,7 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
   // Allowed as per TPC-H Specification, paragraph 1.5.2
-  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+  return {{"lineitem", "l_comment"}, {"orders", "o_comment"}, {"partsupp", "ps_comment"}, {"part", "p_comment"}, {"customer", "c_comment"}};
 }
 
 void TPCHTableGenerator::_add_constraints(
