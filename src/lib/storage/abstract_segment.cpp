@@ -1,4 +1,3 @@
-
 #include "abstract_segment.hpp"
 
 namespace opossum {
