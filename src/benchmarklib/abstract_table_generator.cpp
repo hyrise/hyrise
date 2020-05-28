@@ -224,10 +224,10 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Apply partitioning if partitioning.json is present
    */
-  if (std::getenv("PARTITIONING") && std::filesystem::exists(std::getenv("PARTITIONING"))) {
+  if (std::getenv("CLUSTERING") && std::filesystem::exists(std::getenv("CLUSTERING"))) {
     storage_manager.apply_partitioning();
   } else {
-    std::cout << "- Not applying partitioning as PARTITIONING environment variable is unset" << std::endl;
+    std::cout << "- Not applying clusterin as CLUSTERING environment variable is unset" << std::endl;
   }
 
   /**

@@ -233,7 +233,7 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
 }
 
 void StorageManager::apply_partitioning() {
-  const auto config_file = std::getenv("PARTITIONING") ? std::getenv("PARTITIONING") : "partitioning.json";
+  const auto config_file = std::getenv("CLUSTERING") ? std::getenv("CLUSTERING") : "clustering.json";
   std::ifstream file(config_file);
   nlohmann::json json;
   file >> json;
@@ -241,7 +241,7 @@ void StorageManager::apply_partitioning() {
   for (const auto& entry : json.items()) {
     const auto& table_name = entry.key();
     const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-    std::cout << "Partitioning " << table_name << " according to " << config_file << std::endl;
+    std::cout << "Clustering " << table_name << " according to " << config_file << std::endl;
     const auto& dimensions = entry.value();
 
     auto partition_by_row_idx = std::vector<size_t>(table->row_count());
@@ -279,7 +279,7 @@ void StorageManager::apply_partitioning() {
             const auto& segment = chunk->get_segment(column_id);
 
             segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
-              Assert(!position.is_null(), "Partitioning on NULL values not yet supported");
+              Assert(!position.is_null(), "Clustering on NULL values not yet supported");
               materialized.emplace_back(std::pair<ColumnDataType, size_t>{position.value(), row_idx});
               row_id_by_row_idx[row_idx] = RowID{chunk_id, position.chunk_offset()};
 
@@ -301,9 +301,9 @@ void StorageManager::apply_partitioning() {
             distinct_values[i] = materialized[i].first;
           }
           distinct_values.erase(std::unique(distinct_values.begin(), distinct_values.end()), distinct_values.end());
-          Assert(partition_count <= distinct_values.size(), "More partitions requested than distinct values found");
+          Assert(partition_count <= distinct_values.size(), "More clusters requested than distinct values found");
         } else {
-          Assert(partition_count <= materialized.size(), "More partitions requested than rows in table");
+          Assert(partition_count <= materialized.size(), "More clusters requested than rows in table");
         }
 
         total_num_partitions *= partition_count;
@@ -361,7 +361,7 @@ void StorageManager::apply_partitioning() {
     // Write segments
     auto segments_by_partition = std::vector<Segments>(total_num_partitions, Segments(table->column_count()));
     {
-      std::cout << "\tWriting partitioned columns in parallel" << std::flush;
+      std::cout << "\tWriting clustered columns in parallel" << std::flush;
       Timer timer;
 
       auto threads = std::vector<std::thread>{};
