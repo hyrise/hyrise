@@ -119,7 +119,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
-  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
+  // For easier understanding of queries in the trends and concepts 1 lecture, we disable the semi join reduction as
+  // the resulting query plans are hard to understand for novices.
+  //optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
   // SemiJoinReductionRule are properly placed, too.
