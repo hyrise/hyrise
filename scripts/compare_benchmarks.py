@@ -3,6 +3,7 @@
 import json
 import math
 import numpy as np
+import re
 import sys
 from terminaltables import AsciiTable
 from termcolor import colored
@@ -47,6 +48,9 @@ def calculate_and_format_p_value(old_durations, new_durations):
         return "(run time too short)"
     elif (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
         is_significant = False
+
+        # in case we cannot decide whether the change is significant due to an insufficient number of measurements, the
+        # add_note_for_insufficient_pvalue_runs flag it set, for which a note is later added to the table output
         global add_note_for_insufficient_pvalue_runs
         add_note_for_insufficient_pvalue_runs = True
         return colored('˅', 'yellow', attrs=['bold'])
@@ -68,11 +72,11 @@ def print_context_overview(old_config, new_config):
         old_value = old_config['context'][key]
         new_value = new_config['context'][key]
         color = 'white'
-        note = ' '
+        marker = ' '
         if old_value != new_value and key not in ignore_difference_for:
             color = 'red'
-            note = '≠'
-        table_lines.append([colored(note + key, color), old_value, new_value])
+            marker = '≠'
+        table_lines.append([colored(marker + key, color), old_value, new_value])
 
     # print keys that are not present in both contexts
     for key in sorted(old_context_keys - common_context_keys):
@@ -87,6 +91,25 @@ def print_context_overview(old_config, new_config):
     table.title = 'Configuration Overview'
     print(table.table)
 
+def emphasize_vertical_separators(lines, vertical_separators_to_duplicate):
+    positions = [m.start() for m in re.finditer('\+', lines[0])]
+    for line_id, line in enumerate(lines):
+        append_plus = True if line[1] == '-' else False
+        start = 0
+        new_line = ''
+        for index, position in enumerate(positions):
+            if index not in vertical_separators_to_duplicate:
+                # skip vertical separators that are not requested to be emphasized
+                continue
+
+            new_line += line[start:position + 1]
+            new_line += '+' if append_plus else '|'
+            start = position + 2
+        new_line += line[start:]
+
+        lines[line_id] = new_line
+
+    return lines
 
 if not len(sys.argv) in [3, 4]:
     exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
@@ -113,7 +136,8 @@ add_note_for_insufficient_pvalue_runs = False
 print_context_overview(old_data, new_data)
 
 table_data = []
-# $latency and $thrghpt will be replaced later with a title spanning two columns
+# $latency and $thrghpt (abbreviated to keep the column at a max width of 8 chars) will later be replaced with a title
+# spanning two columns
 table_data.append(["Item", "", "$latency", "", "Change", "", "$thrghpt", "", "Change", "p-value"])
 table_data.append(["", "", "old", "new", "", "", "old", "new", "", ""])
 
@@ -122,22 +146,22 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     if old['name'] != new['name']:
         name += ' -> ' + new['name']
 
-    old_successful_durations = np.array([run["duration"] for run in old["successful_runs"]], dtype='float64')
-    new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype='float64')
-    old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype='float64')
-    new_unsuccessful_durations = np.array([run["duration"] for run in new["unsuccessful_runs"]], dtype='float64')
-    old_successful_iterations = len(old_successful_durations) + len(old_unsuccessful_durations)
-    new_successful_iterations = len(new_successful_durations) + len(new_unsuccessful_durations)
-    old_avg_successful_iteration = np.mean(old_successful_durations)
-    new_avg_successful_iteration = np.mean(new_successful_durations)
+    old_successful_durations = np.array([run["duration"] for run in old["successful_runs"]], dtype=np.float64)
+    new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype=np.float64)
+    old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype=np.float64)
+    new_unsuccessful_durations = np.array([run["duration"] for run in new["unsuccessful_runs"]], dtype=np.float64)
+    old_iteration_count = len(old_successful_durations) + len(old_unsuccessful_durations)
+    new_iteration_count = len(new_successful_durations) + len(new_unsuccessful_durations)
+    old_avg_successful_duration = np.mean(old_successful_durations)  # defaults to np.float64 for int input
+    new_avg_successful_duration = np.mean(new_successful_durations)
 
-    total_runtime_old += old_avg_successful_iteration if old_avg_successful_iteration else 0.0
-    total_runtime_new += new_avg_successful_iteration if new_avg_successful_iteration else 0.0
+    total_runtime_old += old_avg_successful_duration if not math.isnan(old_avg_successful_duration) else 0.0
+    total_runtime_new += new_avg_successful_duration if not math.isnan(new_avg_successful_duration) else 0.0
 
-    if old_avg_successful_iteration and new_avg_successful_iteration and float(new_avg_successful_iteration) > 0.0:
-        diff_latency = float(new_avg_successful_iteration) / float(old_avg_successful_iteration)
+    if float(old_avg_successful_duration) > 0.0:
+        diff_duration = float(new_avg_successful_duration / old_avg_successful_duration)
     else:
-        diff_latency = float('nan')
+        diff_duration = float('nan')
 
     if float(old['items_per_second']) > 0.0:
         diff_throughput = float(new['items_per_second']) / float(old['items_per_second'])
@@ -146,50 +170,47 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
         diff_throughput = float('nan')
 
     diff_throughput_formatted = color_diff(diff_throughput)
-    diff_latency_formatted = color_diff(diff_latency, True)
+    diff_duration_formatted = color_diff(diff_duration, True)
     p_value_formatted = calculate_and_format_p_value(old_successful_durations, new_successful_durations)
 
     if (old_data['context']['max_runs'] > 0 or new_data['context']['max_runs'] > 0) and \
-       (old_successful_iterations >= old_data['context']['max_runs'] or new_successful_iterations >= new_data['context']['max_runs']):
+       (old_iteration_count >= old_data['context']['max_runs'] or new_iteration_count >= new_data['context']['max_runs']):
         note = colored('˄', 'yellow', attrs=['bold'])
         add_note_for_capped_runs = True
     else:
         note = ' '
 
-    # Note, we use a width of 7/8 for printing to ensure that we can later savely replace the latency/throughput marker
-    # and everything still fits nicely.
+    # Note, we use column widths of 7 (latency) and 8 (throughput) for printing to ensure that we can later savely
+    # replace the latency/throughput marker and everything still fits nicely.
     table_data.append([name, '',
-                       f'{(old_avg_successful_iteration / 1e6):>7.1f}' if old_avg_successful_iteration else float('nan'),
-                       f'{(new_avg_successful_iteration / 1e6):>7.1f}' if new_avg_successful_iteration else float('nan'),
-                       diff_latency_formatted + note if not math.isnan(diff_latency) else '', '',
+                       f'{(old_avg_successful_duration / 1e6):>7.1f}' if old_avg_successful_duration else 'nan',
+                       f'{(new_avg_successful_duration / 1e6):>7.1f}' if new_avg_successful_duration else 'nan',
+                       diff_duration_formatted + note if not math.isnan(diff_duration) else '', '',
                        f'{old["items_per_second"]:>8.2f}', f'{new["items_per_second"]:>8.2f}',
                        diff_throughput_formatted + note, p_value_formatted])
 
     if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
-        old_iterations = len(old_unsuccessful_durations)
-        new_iterations = len(new_unsuccessful_durations)
-        old_avg_unsuccessful_iteration = sum(old_unsuccessful_durations) / old_iterations if old_iterations > 0 else 0.0
-        new_avg_unsuccessful_iteration = sum(new_unsuccessful_durations) / new_iterations if new_iterations > 0 else 0.0
-
         if old_data['context']['benchmark_mode'] == 'Ordered':
-            old_unsuccessful_per_second = float(old_iterations) / (old['duration'] / 1e9)
-            new_unsuccessful_per_second = float(new_iterations) / (new['duration'] / 1e9)
+            old_unsuccessful_per_second = float(len(old_unsuccessful_durations)) / (float(old['duration']) / 1e9)
+            new_unsuccessful_per_second = float(len(new_unsuccessful_durations)) / (float(new['duration']) / 1e9)
         else:
-            old_unsuccessful_per_second = float(old_iterations) / (old_data['summary']['total_duration'] / 1e9)
-            new_unsuccessful_per_second = float(new_iterations) / (new_data['summary']['total_duration'] / 1e9)
+            old_unsuccessful_per_second = float(len(old_unsuccessful_durations)) / (float(old_data['summary']['total_duration']) / 1e9)
+            new_unsuccessful_per_second = float(len(new_unsuccessful_durations)) / (float(new_data['summary']['total_duration']) / 1e9)
 
+        old_avg_unsuccessful_iteration = np.mean(old_unsuccessful_durations)
+        new_avg_unsuccessful_iteration = np.mean(new_unsuccessful_durations)
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
             diff_throughput_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
-            diff_latency_unsuccessful = float(new_avg_unsuccessful_iteration) / float(old_avg_unsuccessful_iteration)
+            diff_duration_unsuccessful = new_avg_unsuccessful_iteration / old_avg_unsuccessful_iteration
         else:
             diff_throughput_unsuccessful = float('nan')
-            diff_latency_unsuccessful = float('nan')
+            diff_duration_unsuccessful = float('nan')
 
         unsuccessful_info = [
             '   unsucc.:', '',
-            f'{(old_avg_unsuccessful_iteration / 1e6):>7.1f}' if old_avg_unsuccessful_iteration else float('nan'),
-            f'{(new_avg_unsuccessful_iteration / 1e6):>7.1f}' if new_avg_unsuccessful_iteration else float('nan'),
-            format_diff(diff_latency_unsuccessful) + ' ' if not math.isnan(diff_latency_unsuccessful) else ' ', '',
+            f'{(old_avg_unsuccessful_iteration / 1e6):>7.1f}' if not math.isnan(old_avg_unsuccessful_iteration) else 'nan',
+            f'{(new_avg_unsuccessful_iteration / 1e6):>7.1f}' if not math.isnan(new_avg_unsuccessful_iteration) else 'nan',
+            format_diff(diff_duration_unsuccessful) + ' ' if not math.isnan(diff_duration_unsuccessful) else ' ', '',
             f'{old_unsuccessful_per_second:>.2f}',
             f'{new_unsuccessful_per_second:>.2f}',
             format_diff(diff_throughput_unsuccessful) + ' ' if not math.isnan(diff_throughput_unsuccessful) else ' '
@@ -211,7 +232,10 @@ result = str(table.table)
 new_result = ''
 lines = result.splitlines()
 
-# Narrow separation column
+# To create the double vertical lines that separate the measurements, an empty column is added.
+lines = emphasize_vertical_separators(lines, [1, 5])
+
+# To create the double vertical lines that separate the measurements, an empty column is added.
 separation_columns = []
 header_strings = lines[4].split('|') # use a result line without empty columns here
 for column_id, text in enumerate(header_strings):
