@@ -54,7 +54,7 @@ ChunkOffset FixedStringDictionarySegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> FixedStringDictionarySegment<T>::copy_using_allocator(
+std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary, alloc);
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);

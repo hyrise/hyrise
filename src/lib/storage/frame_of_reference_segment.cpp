@@ -11,7 +11,7 @@ template <typename T, typename U>
 FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima,
                                                        std::optional<pmr_vector<bool>> null_values,
                                                        std::unique_ptr<const BaseCompressedVector> offset_values)
-    : BaseEncodedSegment{data_type_from_type<T>()},
+    : AbstractEncodedSegment{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
       _offset_values{std::move(offset_values)},
@@ -50,7 +50,7 @@ ChunkOffset FrameOfReferenceSegment<T, U>::size() const {
 }
 
 template <typename T, typename U>
-std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator(
+std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_block_minima = pmr_vector<T>(_block_minima, alloc);
   auto new_offset_values = _offset_values->copy_using_allocator(alloc);

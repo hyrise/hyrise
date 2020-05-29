@@ -319,9 +319,9 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 }
 
 template <typename T>
-uint32_t BinaryWriter::_compressed_vector_width(const BaseEncodedSegment& base_encoded_segment) {
+uint32_t BinaryWriter::_compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment) {
   uint32_t vector_width = 0u;
-  resolve_encoded_segment_type<T>(base_encoded_segment, [&vector_width](auto& typed_segment) {
+  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&vector_width](auto& typed_segment) {
     Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
     switch (*typed_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:

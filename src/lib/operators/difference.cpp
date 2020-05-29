@@ -50,14 +50,14 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
     for (ColumnID column_id{0}; column_id < right_input_table()->column_count(); column_id++) {
-      const auto base_segment = chunk->get_segment(column_id);
+      const auto abstract_segment = chunk->get_segment(column_id);
 
       // filling the row vector with all values from this segment
       auto row_string_buffer = std::stringstream{};
-      for (ChunkOffset chunk_offset = 0; chunk_offset < base_segment->size(); chunk_offset++) {
-        // Previously we called a virtual method of the BaseSegment interface here.
+      for (ChunkOffset chunk_offset = 0; chunk_offset < abstract_segment->size(); chunk_offset++) {
+        // Previously we called a virtual method of the AbstractSegment interface here.
         // It was replaced with a call to the subscript operator as that is equally slow.
-        const auto value = (*base_segment)[chunk_offset];
+        const auto value = (*abstract_segment)[chunk_offset];
         _append_string_representation(string_row_vector[chunk_offset], value);
       }
     }
@@ -84,7 +84,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     std::unordered_map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> out_pos_list_map;
 
     for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); column_id++) {
-      const auto base_segment = in_chunk->get_segment(column_id);
+      const auto abstract_segment = in_chunk->get_segment(column_id);
       // temporary variables needed to create the reference segment
       const auto referenced_segment =
           std::dynamic_pointer_cast<const ReferenceSegment>(in_chunk->get_segment(column_id));
@@ -117,11 +117,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // creating string representation off the row at chunk_offset
       auto row_string_buffer = std::stringstream{};
       for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); column_id++) {
-        const auto base_segment = in_chunk->get_segment(column_id);
+        const auto abstract_segment = in_chunk->get_segment(column_id);
 
-        // Previously a virtual method of the BaseSegment interface was called here.
+        // Previously a virtual method of the AbstractSegment interface was called here.
         // It was replaced with a call to the subscript operator as that is equally slow.
-        const auto value = (*base_segment)[chunk_offset];
+        const auto value = (*abstract_segment)[chunk_offset];
         _append_string_representation(row_string_buffer, value);
       }
       const auto row_string = row_string_buffer.str();
