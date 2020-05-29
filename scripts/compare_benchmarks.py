@@ -91,26 +91,6 @@ def print_context_overview(old_config, new_config):
     table.title = 'Configuration Overview'
     print(table.table)
 
-def emphasize_vertical_separators(lines, vertical_separators_to_duplicate):
-    positions = [m.start() for m in re.finditer('\+', lines[0])]
-    for line_id, line in enumerate(lines):
-        append_plus = True if line[1] == '-' else False
-        start = 0
-        new_line = ''
-        for index, position in enumerate(positions):
-            if index not in vertical_separators_to_duplicate:
-                # skip vertical separators that are not requested to be emphasized
-                continue
-
-            new_line += line[start:position + 1]
-            new_line += '+' if append_plus else '|'
-            start = position + 2
-        new_line += line[start:]
-
-        lines[line_id] = new_line
-
-    return lines
-
 if not len(sys.argv) in [3, 4]:
     exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
 
@@ -232,10 +212,9 @@ result = str(table.table)
 new_result = ''
 lines = result.splitlines()
 
-# To create the double vertical lines that separate the measurements, an empty column is added.
-lines = emphasize_vertical_separators(lines, [1, 5])
 
-# To create the double vertical lines that separate the measurements, an empty column is added.
+# To create the double vertical lines that separate the measurements, empty columns is added to the table. As these
+# empty columns use two spaces as margins, we now remove these unnecessary margins.
 separation_columns = []
 header_strings = lines[4].split('|') # use a result line without empty columns here
 for column_id, text in enumerate(header_strings):
@@ -252,7 +231,10 @@ if len(separation_columns) > 0:
             new_splits = splits[:sep_column_id] + [''] + splits[sep_column_id+1:]
             lines[line_id] = separator.join(new_splits)
 
-# Span throughput/latency header columns
+
+# As the used terminaltables module does not support cells that span multiple columns, we do that manually for latency
+# and throughput in the header. We used two space holders that are narrow enough to not grow the column any wider than
+# necessary for the actual values. As the new header spans two columns, we use the full descriptions.
 for (placeholder, final) in [('$thrghpt', 'Throughput (iter/s)'), ('$latency', 'Latency (ms/iter)')]:
     header_strings = lines[1].split('|')
     for column_id, text in enumerate(header_strings):
@@ -263,7 +245,9 @@ for (placeholder, final) in [('$thrghpt', 'Throughput (iter/s)'), ('$latency', '
             new_title = f' {final} '.ljust(previous_length,' ')
             lines[1] = '|'.join(header_strings[:column_id] + [new_title] + header_strings[column_id+2:])
 
- # swap second line of header with automatically added separator
+
+# Swap second line of header with automatically added separator. Terminaltables does not support multi-line header. So
+# we have the second header line as part of the results after a separator line. We need to swap these.
 lines[2], lines[3] = lines[3], lines[2]
 for (line_number, line) in enumerate(lines):
     if line_number == len(table_data):
@@ -272,6 +256,9 @@ for (line_number, line) in enumerate(lines):
 
     new_result += line + "\n"
 
+
+# In case the runs for the executed benchmark have been cut or the number of runs was insufficient for the p-value
+# calcution, we add notes to the end of the table.
 if add_note_for_capped_runs or add_note_for_insufficient_pvalue_runs:
     first_column_width = len(lines[1].split('|')[1])
     width_for_note = len(lines[0]) - first_column_width - 5 # 5 for seperators and spaces

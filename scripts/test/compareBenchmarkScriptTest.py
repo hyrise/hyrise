@@ -6,9 +6,12 @@ import json
 import math
 import subprocess
 
+# This script takes two JSON result files, runs the compare_benchmarks.py script, and checks that the output is as
+# expected.
 
-# The next two functions check for string matches instaed of using math.isclose() since extracting values from
-# ANSI-colored turned out to be to cumbersome.
+
+# The next two functions check for string matches instead of using math.isclose() since extracting values from
+# ANSI-colored text turned out to be too cumbersome.
 def assert_latency_equals(item_count, runtimes, latency_string):
   avg_latency = sum(runtimes) / item_count / 1_000_000
   assert(str(round(avg_latency, 1)) in latency_string)
@@ -43,6 +46,7 @@ class CompareBenchmarkScriptTest:
     self.check_result_table()
 
 
+  # Checks the contents of context table which is printed above th results
   def check_context_table(self):
     assert(self.script_output.startswith('+Configuration Overview----'))
 
@@ -52,14 +56,16 @@ class CompareBenchmarkScriptTest:
     context_1 = self.results_1['context']
     context_2 = self.results_2['context']
 
-    expected_row_count = max(len(context_1), len(context_2))
+    common_keys = set(context_1.keys()) & set(context_2.keys())
+    expected_row_count = len(common_keys) + (len(context_1) - len(common_keys)) + (len(context_2) - len(common_keys))
     assert((end_of_context_table - 3) == expected_row_count)  #s -3 to substact header
 
     # check for diverging contexts
     if len(context_1) != len(context_2):
-      # when an item exists only in one context, it is still printed and the other side is "undefined"
+      # when an item exists only in one context, it is still printed and the other side is shown an "undefined"
       lines_with_undefined = [line for line in self.script_output_lines[3:end_of_context_table] if 'undefined' in line]
-      assert(0 < len(lines_with_undefined))
+      # if the context differ, there needs to be at least one undefined
+      assert((expected_row_count - common_keys) == len(lines_with_undefined))
 
 
   def check_result_table(self):
@@ -75,33 +81,36 @@ class CompareBenchmarkScriptTest:
     current_position = begin_of_result_table + 1  # first result line
     for old_benchmark, new_benchmark in zip(self.results_1['benchmarks'], self.results_2['benchmarks']):
       current_line = self.script_output_lines[current_position]
-      fields = current_line.split('|')
+      fields = current_line.split('|')  # obtain cells of table
       assert(len(fields) == 12)
 
+      # get actual values of result JSON files
       old_successful_runs = old_benchmark['successful_runs']
       new_successful_runs = new_benchmark['successful_runs']
       old_unsuccessful_runs = old_benchmark['unsuccessful_runs']
       new_unsuccessful_runs = new_benchmark['unsuccessful_runs']
 
+      # expect name in first column
       assert(fields[1].strip() == old_benchmark['name'])
 
+      # check the latency values for both JSON files
       assert_latency_equals(len(old_successful_runs), [run['duration'] for run in old_successful_runs], fields[3])
       assert_latency_equals(len(new_successful_runs), [run['duration'] for run in new_successful_runs], fields[4])
 
-      assert(self.results_1['context']['benchmark_mode'] == self.results_2['context']['benchmark_mode'])
-      divisors = (0.0, 0.0) # ensure failure when new benchmark mode is added through div by 0.0
+      # Get the divisors for both benchmark files. They differ for Ordered and Shuffled mode.
+      divisors = (0.0, 0.0)  # 0.0 ensures failure when new benchmark mode is added through div by 0.0
       if self.results_1['context']['benchmark_mode'] == 'Ordered':
         divisors = (old_benchmark['duration'], new_benchmark['duration'])
       elif self.results_1['context']['benchmark_mode'] == 'Shuffled':
-        assert(self.results_1['context']['benchmark_mode'] == 'Shuffled')
-        assert(self.results_1['context']['benchmark_mode'] == self.results_2['context']['benchmark_mode'])
         divisors = (self.results_1['summary']['total_duration'], self.results_2['summary']['total_duration'])
 
+      # check the throughput values for both JSON files
       assert_throughput_equals(len(old_successful_runs), divisors[0], fields[7])
       assert_throughput_equals(len(new_successful_runs), divisors[1], fields[8])
 
       current_position += 1
 
+      # Check if there has been a single unsucessful run. In this case, a second line for the current item is shown.
       if len(old_unsuccessful_runs) > 0 or len(new_unsuccessful_runs) > 0:
         current_line = self.script_output_lines[current_position]
         fields = current_line.split('|')
