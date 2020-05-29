@@ -32,7 +32,7 @@ class BenchmarkConfig {
   EncodingConfig encoding_config = EncodingConfig{};
   bool indexes = false;
   int64_t max_runs = -1;
-  Duration max_duration = std::chrono::seconds(1);
+  Duration max_duration = std::chrono::seconds(60);
   Duration warmup_duration = std::chrono::seconds(0);
   std::optional<std::string> output_file_path = std::nullopt;
   bool enable_scheduler = false;

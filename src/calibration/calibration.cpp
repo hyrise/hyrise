@@ -41,9 +41,12 @@ int main() {
   const auto tables = table_generator.generate();
 
   if (GENERATE_TEST_DATA) {
+    std::cout << "- Generating test data" << std::endl;
     auto benchmark_runner = CalibrationBenchmarkRunner(PATH_TEST);
     benchmark_runner.run_benchmark(BENCHMARK_TYPE, SCALE_FACTOR, NUMBER_BENCHMARK_EXECUTIONS);
   }
+
+  std::cout << "- Generating training data" << std::endl;
 
   auto feature_exporter = OperatorFeatureExporter(PATH_TRAIN);
   auto lqp_generator = CalibrationLQPGenerator();
@@ -65,6 +68,8 @@ int main() {
     // Export PQP directly after generation
     feature_exporter.export_to_csv(pqp);
   }
+
+  std::cout << "- Exporting training data" << std::endl;
 
   feature_exporter.flush();
 

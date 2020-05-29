@@ -55,15 +55,16 @@ def generate_model_plot(model, test_data, operator, method, encoding, implementa
     axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
     axis_min = min(np.amin(pred_y), np.amin(real_y)) * 0.95
     abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
+    sample_size = '{:,}'.format(test_data.shape[0]).replace(',', '\'')
 
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c = 'r', linestyle='-')
-    plt.title(f'{encoding}_{operator}_{implementation}_{method}; Score: {model_scores["R2"]}')
+    plt.title(f'{encoding}_{operator}_{implementation}_{method}; Score: {model_scores["R2"]} ({sample_size} samples)')
     plt.ylim([axis_min, axis_max])
     plt.xlim([axis_min, axis_max])
     plt.xlabel('Real Time')
     plt.ylabel('Predicted Time')
-    output_path = os.path.join(out, 'plots', f'{method}_{encoding}_{operator}_{implementation}')
+    output_path = os.path.join(out + 'plots', f'{method}_{encoding}_{operator}_{implementation}')
     plt.savefig(output_path, bbox_inches='tight')
     plt.close()
 
@@ -92,7 +93,7 @@ def calculate_error(test_X, y_true, y_pred, model):
 
 
 def log(scores, out):
-    with open(os.path.join(out, 'log.txt'), 'w') as file:
+    with open(f'{out}log.txt', 'w') as file:
         for entry in scores:
             file.write(f'{entry}: {scores[entry]} \n')
 
@@ -149,7 +150,7 @@ def import_data(train_path, test_path):
 def main(args):
     scores = {}
     model_types = args.m if len(args.m) == 1 else args.m[-1]
-    out = args.out
+    out = args.out.endswith(os.sep) ? args.out : args.out + os.sep
 
     if args.test:
         train_data, test_data = import_data(args.train, args.test)
@@ -158,11 +159,11 @@ def main(args):
         train_data = train_data.dropna()
         train_data, test_data = train_test_split(train_data)
 
-    if not os.path.exists(os.path.join(out, 'models')):
-        os.makedirs(os.path.join(out, 'models'))
+    if not os.path.exists(out + 'models'):
+        os.makedirs(out + 'models')
 
-    if not os.path.exists(os.path.join(out, 'plots')):
-        os.makedirs(os.path.join(out, 'plots'))
+    if not os.path.exists(out + 'plots'):
+        os.makedirs(out + 'plots')
 
     # one single model for everything
     for model_type in model_types:
@@ -171,7 +172,7 @@ def main(args):
                                                    'OPERATOR_IMPLEMENTATION', 'COMPRESSION_TYPE'])
         gmodel = train_model(gtrain_data, model_type)
         scores[f'{model_type}_general_model'] = generate_model_plot(gmodel, gtest_data, 'all', model_type, 'all', 'all', out)
-        filename = os.path.join(out, 'models', f'{model_type}_general_model.sav')
+        filename = os.path.join(out + 'models', f'{model_type}_general_model.sav')
         joblib.dump(gmodel, filename)
 
     # make separate models for different operators and combinations of encodings/compressions
@@ -207,7 +208,7 @@ def main(args):
                                                                             ['COMPRESSION_TYPE', 'OPERATOR_DETAIL', 'DATA_TYPE'])
                         model = train_model(model_train_data, model_type)
                         model_name = f'{model_type}_{encoding}_{operator}_{implementation_type}_model'
-                        filename = os.path.join(out, 'models', f'split_{model_name}.sav')
+                        filename = os.path.join(out + 'models', f'split_{model_name}.sav')
                         joblib.dump(model, filename)
 
                         if not model_test_data.empty:

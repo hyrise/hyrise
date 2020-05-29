@@ -1,20 +1,20 @@
 #!/bin/bash -x
 
 if [ $# -gt 0 ];
-then 
+then
 BASE_PATH=$1
 else
-BASE_PATH='./cmake-build-debug'
+BASE_PATH='./cmake-build-release'
 fi
 
-MEASUREMENT_FOLDER='measurements'
-EXECUTABLE='hyrisePlayground'
+MEASUREMENT_FOLDER='data/test'
+EXECUTABLE='hyriseCalibration'
 PYTHON=python3
 
 touch $BASE_PATH/$EXECUTABLE
 
-rm -rf $BASE_PATH/$MEASUREMENT_FOLDER
-mkdir $BASE_PATH/$MEASUREMENT_FOLDER
+#rm -rf $BASE_PATH/$MEASUREMENT_FOLDER
+#mkdir $BASE_PATH/$MEASUREMENT_FOLDER
 
 # to train and predict on the same dataset
 $PYTHON ./python/cost_models.py -train $BASE_PATH/$MEASUREMENT_FOLDER

@@ -71,8 +71,8 @@ void TableFeatureExporter::_export_segment_data(std::shared_ptr<const Calibratio
           compression_type = pmr_string{ss.str()};
         }
       }
-      _tables.at(TableFeatureExportType::SEGMENT)->append(
-          {table_name, column_name, static_cast<int32_t>(chunk_id), encoding_type, compression_type});
+      _tables.at(TableFeatureExportType::SEGMENT)
+          ->append({table_name, column_name, static_cast<int32_t>(chunk_id), encoding_type, compression_type});
     }
   }
 }

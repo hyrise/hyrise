@@ -29,7 +29,9 @@ def import_joined_data(path):
     chunk_meta = parse_hyrise_csv(path + 'segment_meta.csv')
 
     # remove some outlier
-    operator_data = operator_data[operator_data['RUNTIME_NS'] < 2*(10**8)]
+    sdev = np.std(operator_data['RUNTIME_NS'])
+    mean = np.mean(operator_data['RUNTIME_NS'])
+    operator_data = operator_data[operator_data['RUNTIME_NS'] < mean + 3 * sdev]
 
     joined_data = operator_data.merge(table_data, on=['TABLE_NAME'], how='left')
     joined_data = joined_data.merge(columns_data, on=['TABLE_NAME', 'COLUMN_NAME'], how='left')
@@ -49,7 +51,6 @@ def import_joined_data(path):
     joined_data['SELECTIVITY_LEFT'].fillna(0, inplace=True)
     joined_data['SELECTIVITY_RIGHT'] = (joined_data['OUTPUT_ROWS'] / joined_data['INPUT_ROWS_RIGHT'])
     joined_data['SELECTIVITY_RIGHT'].fillna(0, inplace=True)
-    print(operator_data[operator_data['RUNTIME_NS'] > 0.5*(10**8)])
 
     # remove infinite selectivities from empty inputs
     joined_data.replace(np.inf, 0, inplace=True)

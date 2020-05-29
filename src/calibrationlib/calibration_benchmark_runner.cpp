@@ -36,6 +36,7 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
     Hyrise::get().benchmark_runner = benchmark_runner;
     benchmark_runner->run();
 
+    // TO DO: this is not what we want. We only get the PQPs of the LAST 1024 queries here
     const auto& pqp_cache = Hyrise::get().default_pqp_cache;
     const auto cache_map = pqp_cache->snapshot();
 
@@ -46,6 +47,8 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
     // Clear pqp cache for next benchmark run
     pqp_cache->clear();
   }
+
+  std::cout << std::endl << "- Exporting test data" << std::endl;
 
   _feature_exporter.flush();
 
