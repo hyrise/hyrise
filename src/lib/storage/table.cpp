@@ -323,9 +323,9 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const TableConstraintDefinitions& Table::get_soft_unique_constraints() const { return _constraint_definitions; }
+const TableConstraintDefinitions& Table::get_soft_constraints() const { return _constraint_definitions; }
 
-void Table::add_soft_unique_constraints(const TableConstraintDefinition& table_constraint) {
+void Table::add_soft_constraints(const TableConstraintDefinition& table_constraint) {
   Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
 
   // Check column validity

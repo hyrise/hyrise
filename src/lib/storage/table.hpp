@@ -200,8 +200,8 @@ class Table : private Noncopyable {
    * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" constraints to draw attention to that.
    */
-  void add_soft_unique_constraints(const TableConstraintDefinition& table_constraint);
-  const TableConstraintDefinitions& get_soft_unique_constraints() const;
+  void add_soft_constraints(const TableConstraintDefinition& table_constraint);
+  const TableConstraintDefinitions& get_soft_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
