@@ -46,7 +46,7 @@ class CompareBenchmarkScriptTest:
     self.check_result_table()
 
 
-  # Checks the contents of context table which is printed above th results
+  # Checks the contents of context table which is printed above the results.
   def check_context_table(self):
     assert(self.script_output.startswith('+Configuration Overview----'))
 
@@ -68,6 +68,7 @@ class CompareBenchmarkScriptTest:
       assert((expected_row_count - common_keys) == len(lines_with_undefined))
 
 
+  # Checks the contents of result table.
   def check_result_table(self):
     horizontal_table_separators = [i for i, line in enumerate(self.script_output_lines) if line.startswith('+-------')]
     begin_of_result_table = horizontal_table_separators[3]  # first three are for context table
