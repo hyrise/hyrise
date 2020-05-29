@@ -59,8 +59,8 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
       node));
   // clang-format on
 
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
@@ -77,9 +77,9 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
         node)));
   // clang-format on
 
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
@@ -94,7 +94,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
               node))))));
 
 
-  const auto expected_optimized_lqp =
+  const auto expected_lqp =
   PredicateNode::make(greater_than_(b, 40),
     PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(equals_(a, 95),
@@ -104,8 +104,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
               node))))));
   // clang-format on
 
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
@@ -125,19 +125,19 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
       stored_table_node));
 
-  const auto first_expected_optimized_lqp = first_input_lqp->deep_copy();
+  const auto first_expected_lqp = first_input_lqp->deep_copy();
 
-  const auto second_expected_optimized_lqp =
+  const auto second_expected_lqp =
   PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
       stored_table_node));
   // clang-format on
 
-  const auto first_reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, first_input_lqp);
-  const auto second_reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, second_input_lqp);
+  const auto first_actual_lqp = StrategyBaseTest::apply_rule(_rule, first_input_lqp);
+  const auto second_actual_lqp = StrategyBaseTest::apply_rule(_rule, second_input_lqp);
 
-  EXPECT_LQP_EQ(first_reordered_input_lqp, first_expected_optimized_lqp);
-  EXPECT_LQP_EQ(second_reordered_input_lqp, second_expected_optimized_lqp);
+  EXPECT_LQP_EQ(first_actual_lqp, first_expected_lqp);
+  EXPECT_LQP_EQ(second_actual_lqp, second_expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
@@ -177,7 +177,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
         PredicateNode::make(greater_than_(lqp_column_(table_1, ColumnID{0}), 30),
           table_1))));
 
-  const auto expected_optimized_lqp =
+  const auto expected_lqp =
   JoinNode::make(JoinMode::Cross,
     PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 60),
       PredicateNode::make(greater_than_(lqp_column_(table_0, ColumnID{0}), 80),
@@ -188,8 +188,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
           table_1))));
   // clang-format on
 
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
@@ -231,20 +231,20 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
       sub_lqp),
     sub_lqp);
 
-  const auto expected_optimized_sub_lqp =
+  const auto expected_sub_lqp =
   PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 5),
     PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 10),
       table_node));
 
-  const auto expected_optimized_lqp =
+  const auto expected_lqp =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(greater_than_(lqp_column_(table_node, ColumnID{0}), 90),
-      expected_optimized_sub_lqp),
-    expected_optimized_sub_lqp);
+      expected_sub_lqp),
+    expected_sub_lqp);
   // clang-format on
 
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
@@ -260,8 +260,8 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
       node));
   // clang-format on
 
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum
