@@ -65,7 +65,7 @@ class CompareBenchmarkScriptTest:
       # when an item exists only in one context, it is still printed and the other side is shown an "undefined"
       lines_with_undefined = [line for line in self.script_output_lines[3:end_of_context_table] if 'undefined' in line]
       # if the context differ, there needs to be at least one undefined
-      assert((expected_row_count - common_keys) == len(lines_with_undefined))
+      assert((expected_row_count - len(common_keys)) == len(lines_with_undefined))
 
 
   # Checks the contents of result table.
