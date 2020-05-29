@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <unordered_set>
 
 #include "types.hpp"
 
@@ -10,29 +10,29 @@ namespace opossum {
  * Currently, we support UNIQUE and PRIMARY_KEY constraints only.
  * Additional types may be added in the future.
  */
-enum class ConstraintType {PrimaryKey, Unique};
+enum class ConstraintType {PRIMARY_KEY, UNIQUE};
 
 /**
- * Container to define constraints for a given set of column ids.st
- * Some logical checks, like for instance nullability-checks, are performed when constraints are added to actual
- * tables.
+ * Container to define constraints (e.g. UNIQUE or PRIMARY KEY) for a given set of column ids.
+ * Validity checks take place when constraints are added to actual table objects. For example, nullability-checks
+ * in case of PRIMARY_KEY constraints
  */
 class TableConstraintDefinition final {
  public:
   TableConstraintDefinition() = delete;
+  TableConstraintDefinition(std::unordered_set<ColumnID> init_columns, std::unordered_set<ConstraintType> init_types);
 
-  TableConstraintDefinition(std::unordered_set<ColumnID> init_columns, std::unordered_set<ConstraintType> init_types)
-      : columns(std::move(init_columns)), constraint_types(init_types) {
+  bool operator==(const TableConstraintDefinition& rhs) const;
+  bool operator!=(const TableConstraintDefinition& rhs) const;
 
+  const std::unordered_set<ColumnID>& get_columns() const;
+  const std::unordered_set<ConstraintType>& get_constraint_types() const;
 
-  }
-
-  bool operator==(const TableConstraintDefinition& rhs) const {
-    return columns == rhs.columns && constraint_types == rhs.constraint_types;
-  }
-  bool operator!=(const TableConstraintDefinition& rhs) const { return !(rhs == *this); }
+  void add_constraint_type(ConstraintType constraint_type);
 
  private:
+  void validate_input();
+
   std::unordered_set<ColumnID> columns;
   std::unordered_set<ConstraintType> constraint_types;
 };
@@ -40,18 +40,3 @@ class TableConstraintDefinition final {
 using TableConstraintDefinitions = std::unordered_set<TableConstraintDefinition>;
 
 }  // namespace opossum
-
-namespace std {
-
-template <>
-struct hash<opossum::TableConstraintDefinition> {
-  size_t operator()(const opossum::TableConstraintDefinition& table_constraint) const {
-    auto hash = boost::hash_value(table_constraint.is_primary_key);
-    for (const auto& column_id : table_constraint.columns) {
-      boost::hash_combine(hash, boost::hash_value(column_id.t));
-    }
-    return hash;
-  }
-};
-
-}  // namespace std

@@ -421,6 +421,7 @@ set(
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/constraints/table_constraint_definition.cpp
     storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_reference_segment.ipp
