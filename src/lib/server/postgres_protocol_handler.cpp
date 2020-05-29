@@ -217,7 +217,7 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
 template <typename SocketType>
 std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
   const auto packet_size = _read_buffer.template get_value<uint32_t>();
-  const auto portal = _read_buffer.get_string(packet_size - 2 * sizeof(uint32_t));
+  auto portal = _read_buffer.get_string(packet_size - 2 * sizeof(uint32_t));
   /* https://www.postgresql.org/docs/12/protocol-flow.html:
    The result-row count is only meaningful for portals containing commands that return row sets; in other cases
    the command is always executed to completion, and the row count is ignored.

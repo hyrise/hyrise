@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "storage/segment_iterables/base_segment_iterators.hpp"
+#include "storage/segment_iterables/abstract_segment_iterators.hpp"
 
 namespace opossum {
 
@@ -89,7 +89,7 @@ class AnySegmentIterable;
  * The base class specifies a virtual interface which is
  * implemented by the templated sub-class.
  *
- * AnySegmentIterator inherits from BaseSegmentIterator and
+ * AnySegmentIterator inherits from AbstractSegmentIterator and
  * thus has the same interface as all other segment iterators.
  *
  * AnySegmentIterator exists only to improve compile times and should
@@ -98,7 +98,7 @@ class AnySegmentIterable;
  * For another example for type erasure see: https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure
  */
 template <typename T>
-class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, SegmentPosition<T>> {
+class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>, SegmentPosition<T>> {
  public:
   using ValueType = T;
   using IterableType = AnySegmentIterable<T>;

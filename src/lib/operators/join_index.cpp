@@ -64,8 +64,8 @@ const std::string& JoinIndex::name() const {
 }
 
 std::string JoinIndex::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  const auto index_side_str = _index_side == IndexSide::Left ? "Left" : "Right";
+  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto* const index_side_str = _index_side == IndexSide::Left ? "Left" : "Right";
 
   std::ostringstream stream(AbstractJoinOperator::description(description_mode), std::ios_base::ate);
   stream << separator << "Index side: " << index_side_str;
@@ -74,26 +74,26 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 }
 
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates, _index_side);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
   Assert(
       supports({_mode, _primary_predicate.predicate_condition,
-                input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type(), _index_side}),
+                left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type(), _index_side}),
       "JoinIndex doesn't support these parameters");
 
   if (_index_side == IndexSide::Left) {
-    _probe_input_table = input_table_right();
-    _index_input_table = input_table_left();
+    _probe_input_table = right_input_table();
+    _index_input_table = left_input_table();
   } else {
-    _probe_input_table = input_table_left();
-    _index_input_table = input_table_right();
+    _probe_input_table = left_input_table();
+    _index_input_table = right_input_table();
   }
 
   _index_matches.resize(_index_input_table->chunk_count());
@@ -525,7 +525,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
   // Add segments from table to output chunk
   const auto column_count = input_table->column_count();
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    std::shared_ptr<BaseSegment> segment;
+    std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {

@@ -47,10 +47,10 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
 
   auto sort_definitions = std::vector<SortColumnDefinition>{};
   if (multi_column_sort) {
-    sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending},
-                                                          SortColumnDefinition{ColumnID{1}, OrderByMode::Descending}}};
+    sort_definitions = std::vector<SortColumnDefinition>{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},
+                                                          SortColumnDefinition{ColumnID{1}, SortMode::Descending}}};
   } else {
-    sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, OrderByMode::Ascending}};
+    sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}};
   }
 
   for (auto _ : state) {

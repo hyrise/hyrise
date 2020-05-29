@@ -58,7 +58,7 @@ void SimdBp128Compressor::_finish() {
   _data->shrink_to_fit();
 }
 
-bool SimdBp128Compressor::_meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
+bool SimdBp128Compressor::_meta_block_complete() const { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
 
 void SimdBp128Compressor::_pack_meta_block() {
   alignas(16) const auto bits_needed = _bits_needed_per_block();
@@ -109,9 +109,9 @@ void SimdBp128Compressor::_pack_blocks(const uint8_t num_blocks,
                                        const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   DebugAssert(num_blocks <= 16u, "num_blocks must be smaller or equal to 16.");
 
-  auto in = _pending_meta_block.data();
+  const auto* in = _pending_meta_block.data();
   for (auto block_index = 0u; block_index < num_blocks; ++block_index) {
-    const auto out = _data->data() + _data_index;
+    auto* const out = _data->data() + _data_index;
     Packing::pack_block(in, out, bits_needed[block_index]);
 
     in += Packing::block_size;

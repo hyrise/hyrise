@@ -19,7 +19,7 @@ template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
                           pmr_vector<char>&& dictionary, const size_t block_size, const size_t last_block_size,
                           const size_t compressed_size, const size_t num_elements)
-    : BaseEncodedSegment{data_type_from_type<T>()},
+    : AbstractEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
       _dictionary{std::move(dictionary)},
@@ -34,7 +34,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::option
                           pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
                           const size_t block_size, const size_t last_block_size, const size_t compressed_size,
                           const size_t num_elements)
-    : BaseEncodedSegment{data_type_from_type<T>()},
+    : AbstractEncodedSegment{data_type_from_type<T>()},
       _lz4_blocks{std::move(lz4_blocks)},
       _null_values{std::move(null_values)},
       _dictionary{std::move(dictionary)},
@@ -176,7 +176,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& decompressed_data,
                                       const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;
@@ -235,7 +235,7 @@ template <typename T>
 void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::vector<char>& decompressed_data,
                                                const size_t write_offset) const {
   const auto decompressed_block_size = block_index + 1 != _lz4_blocks.size() ? _block_size : _last_block_size;
-  auto& compressed_block = _lz4_blocks[block_index];
+  const auto& compressed_block = _lz4_blocks[block_index];
   const auto compressed_block_size = compressed_block.size();
 
   int decompressed_result;
@@ -419,7 +419,7 @@ T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_lz4_blocks = pmr_vector<pmr_vector<char>>{alloc};
   for (const auto& block : _lz4_blocks) {
     new_lz4_blocks.emplace_back(pmr_vector<char>{block, alloc});

@@ -113,8 +113,8 @@ class AggregateHash : public AbstractAggregateOperator {
   void _aggregate();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
@@ -127,7 +127,7 @@ class AggregateHash : public AbstractAggregateOperator {
   void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
-  void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
+  void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                           const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
