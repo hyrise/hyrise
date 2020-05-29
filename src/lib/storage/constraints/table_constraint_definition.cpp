@@ -18,6 +18,10 @@ const std::unordered_set<ConstraintType>& TableConstraintDefinition::get_constra
   return constraint_types;
 }
 
+bool TableConstraintDefinition::defines(ConstraintType constraint_type) const {
+  return constraint_types.contains(constraint_type);
+}
+
 void TableConstraintDefinition::add_constraint_type(ConstraintType constraint_type) {
   const auto [iter, success] = constraint_types.insert(constraint_type);
   if(success) {

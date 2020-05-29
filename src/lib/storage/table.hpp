@@ -200,7 +200,7 @@ class Table : private Noncopyable {
    * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" constraints to draw attention to that.
    */
-  void add_soft_unique_constraint(const TableConstraintDefinition& table_constraint);
+  void add_soft_unique_constraints(const TableConstraintDefinition& table_constraint);
   const TableConstraintDefinitions& get_soft_unique_constraints() const;
 
   /**

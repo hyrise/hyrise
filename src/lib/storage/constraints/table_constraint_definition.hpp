@@ -28,6 +28,8 @@ class TableConstraintDefinition final {
   const std::unordered_set<ColumnID>& get_columns() const;
   const std::unordered_set<ConstraintType>& get_constraint_types() const;
 
+  bool defines(ConstraintType constraint_type) const;
+
   void add_constraint_type(ConstraintType constraint_type);
 
  private:
