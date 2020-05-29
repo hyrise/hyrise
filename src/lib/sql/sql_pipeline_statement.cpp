@@ -29,6 +29,9 @@
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
+//DEBUG
+#include "visualization/lqp_visualizer.hpp"
+
 namespace opossum {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
@@ -157,6 +160,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_split_unoptimi
 }
 
 const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logical_plan() {
+  std::cout << _sql_string << std::endl;
   if (_optimized_logical_plan) {
     return _optimized_logical_plan;
   }
@@ -166,22 +170,39 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
   const auto unoptimized_lqp = get_split_unoptimized_logical_plan(extracted_values);
 
+  // DEBUG OUTPUT
+  LQPVisualizer visualizer;
+  visualizer.visualize({unoptimized_lqp}, "unoptimized_lqp.png");
+  //
+
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
     if (const auto cached_plan = lqp_cache->try_get(unoptimized_lqp)) {
-      const auto plan = cached_plan.value()->lqp;
-      DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
+      const auto plan = cached_plan.value();
+      DebugAssert(plan->lqp, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
-      if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
+      if (lqp_is_validated(plan->lqp) == (_use_mvcc == UseMvcc::Yes)) {
         // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
         // and concurrent translations might conflict.
-        _optimized_logical_plan = cached_plan.value()->instantiate(extracted_values);
+
+        // DEBUG OUTPUT
+        LQPVisualizer visualizer2;
+        visualizer2.visualize({plan->lqp}, "cached_plan.png");
+        //
+
+        _optimized_logical_plan = plan->instantiate(extracted_values);
         auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
         _metrics->query_plan_cache_hit = true;
         _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
         const auto done_cache = std::chrono::high_resolution_clock::now();
         _metrics->cache_duration =
             std::chrono::duration_cast<std::chrono::nanoseconds>(done_cache - started_preoptimization_cache);
+
+        // DEBUG OUTPUT
+        LQPVisualizer visualizer3;
+        visualizer3.visualize({_optimized_logical_plan}, "post_cache_optimized_plan.png");
+        //
+
         return _optimized_logical_plan;
       }
     }
@@ -198,6 +219,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   const auto started_optimize = std::chrono::high_resolution_clock::now();
 
   auto optimized_without_values = _optimizer->optimize(std::move(temp_unoptimized_logical_plan));
+
+  // DEBUG OUTPUT
+  LQPVisualizer visualizer4;
+  visualizer4.visualize({optimized_without_values}, "optimized_without_values.png");
+  //
 
   const auto done_optimize = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration =
@@ -218,6 +244,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   auto temp_optimized_logical_plan = _optimized_logical_plan->deep_copy();
 
   _optimized_logical_plan = _post_caching_optimizer->optimize(std::move(temp_optimized_logical_plan));
+
+  // DEBUG OUTPUT
+  LQPVisualizer visualizer5;
+  visualizer5.visualize({_optimized_logical_plan}, "optimized_lqp.png");
+  //
 
   const auto done_postoptimization_cache = std::chrono::high_resolution_clock::now();
   _metrics->cache_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
