@@ -132,9 +132,10 @@ void ValueSegment<T>::resize(const size_t size) {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<AbstractSegment> ValueSegment<T>::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
   pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
-  std::shared_ptr<BaseSegment> copy;
+  std::shared_ptr<AbstractSegment> copy;
   if (is_nullable()) {
     pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
     copy = std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));

@@ -22,7 +22,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     // we want to custom-build the index, but we have to create an index with a non-empty segment.
     // Therefore we build an index and reset the root.
     dict_segment1 = create_dict_segment_by_type<pmr_string>(DataType::String, {"test"});
-    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment1}));
+    index1 =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
     /* root   childx    childxx  childxxx  leaf->chunk offsets
@@ -52,7 +53,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     std::uniform_int_distribution<int32_t> uni_integer(0, std::numeric_limits<int32_t>::max());
 
     auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
-    auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+    auto index =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
     std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
 
@@ -84,7 +86,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   }
 
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment1 = nullptr;
+  std::shared_ptr<AbstractSegment> dict_segment1 = nullptr;
   std::shared_ptr<ARTNode> root = nullptr;
   std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
   std::vector<ValueID> keys1;
@@ -165,7 +167,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   std::shuffle(ints.begin(), ints.end(), _rng);
 
   auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, ints);
-  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
   for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
     EXPECT_EQ((*segment)[*index->lower_bound({i})], AllTypeVariant{i});
@@ -199,7 +201,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
   std::vector<std::optional<int32_t>> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
 
   auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
-  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
   // We check whether the index answer (i.e., position(s) for a search value) is correct
   EXPECT_EQ(*index->cbegin(), 0);

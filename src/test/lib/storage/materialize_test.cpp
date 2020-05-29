@@ -27,21 +27,21 @@ class MaterializeTest : public EncodingTest {
   }
 
   template <typename T>
-  std::vector<T> materialize_values_to_vector(const BaseSegment& segment) {
+  std::vector<T> materialize_values_to_vector(const AbstractSegment& segment) {
     std::vector<T> values;
     materialize_values(segment, values);
     return values;
   }
 
   template <typename T>
-  std::vector<std::pair<bool, T>> materialize_values_and_nulls_to_vector(const BaseSegment& segment) {
+  std::vector<std::pair<bool, T>> materialize_values_and_nulls_to_vector(const AbstractSegment& segment) {
     std::vector<std::pair<bool, T>> values_and_nulls;
     materialize_values_and_nulls(segment, values_and_nulls);
     return values_and_nulls;
   }
 
   template <typename T>
-  std::vector<bool> materialize_nulls_to_vector(const BaseSegment& segment) {
+  std::vector<bool> materialize_nulls_to_vector(const AbstractSegment& segment) {
     std::vector<bool> nulls;
     materialize_nulls<T>(segment, nulls);
     return nulls;
