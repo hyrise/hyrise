@@ -31,27 +31,27 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
 
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("a", _table_a);
-    _stored_table_a = std::make_shared<StoredTableNode>("a");
+    _stored_table_a = StoredTableNode::make("a");
     _a_a = _stored_table_a->get_column("a");
     _a_b = _stored_table_a->get_column("b");
 
     Hyrise::get().storage_manager.add_table("b", _table_b);
-    _stored_table_b = std::make_shared<StoredTableNode>("b");
+    _stored_table_b = StoredTableNode::make("b");
     _b_a = _stored_table_b->get_column("a");
     _b_b = _stored_table_b->get_column("b");
 
     Hyrise::get().storage_manager.add_table("c", _table_c);
-    _stored_table_c = std::make_shared<StoredTableNode>("c");
+    _stored_table_c = StoredTableNode::make("c");
     _c_a = _stored_table_c->get_column("a");
     _c_b = _stored_table_c->get_column("b");
 
     Hyrise::get().storage_manager.add_table("d", _table_d);
-    _stored_table_d = std::make_shared<StoredTableNode>("d");
+    _stored_table_d = StoredTableNode::make("d");
     _d_a = _stored_table_d->get_column("a");
     _d_b = _stored_table_d->get_column("b");
 
     Hyrise::get().storage_manager.add_table("e", _table_e);
-    _stored_table_e = std::make_shared<StoredTableNode>("e");
+    _stored_table_e = StoredTableNode::make("e");
     _e_a = _stored_table_e->get_column("a");
     _e_b = _stored_table_e->get_column("b");
 
@@ -59,16 +59,12 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
 
     {
       // Initialization of projection pushdown LQP
-      const auto int_float_node_a = StoredTableNode::make("a");
-      auto a = _stored_table_a->get_column("a");
+      auto parameter_c = correlated_parameter_(ParameterID{0}, _a_a);
+      auto lqp_c =
+          AggregateNode::make(expression_vector(), expression_vector(max_(add_(_a_a, parameter_c))),
+                              ProjectionNode::make(expression_vector(add_(_a_a, parameter_c)), _stored_table_a));
 
-      auto parameter_c = correlated_parameter_(ParameterID{0}, a);
-      auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
-                                       ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
-
-      _subquery_c = lqp_subquery_(lqp_c, std::make_pair(ParameterID{0}, a));
-
-      _projection_pushdown_node = ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c), _stored_table_a);
+      _subquery_c = lqp_subquery_(lqp_c, std::make_pair(ParameterID{0}, _a_a));
     }
 
     _parameter_a_a = correlated_parameter_(ParameterID{0}, _a_a);
@@ -278,10 +274,6 @@ TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectio
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  // TODO(Marcel) If a node mapping is created in `lqp_find_subplan_mismatch` which is called in `EXPECT_LQP_EQ`, the
-  // nodes of sub-queries are not mapped. Consequently, `expression_adapt_to_different_lqp` cannot find the
-  // StoredTableNode of the sub-query in the node mapping. Therefore, an assertion fails: "Couldn't find referenced
-  // node x in NodeMapping."
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -300,7 +292,7 @@ TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjecti
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  // TODO(Marcel) see TODO in `AllowedValuePredicatePushdownThroughProjectionTest`
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -315,7 +307,7 @@ TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTe
   const auto expected_lqp = input_lqp->deep_copy();
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  // TODO(Marcel) see TODO in `AllowedValuePredicatePushdownThroughProjectionTest`
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -327,11 +319,16 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
     PredicateNode::make(greater_than_(_subquery_c, _a_b),
       ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
         _stored_table_a)));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(_subquery_c, _a_b),
+     ProjectionNode::make(expression_vector(_a_a, _a_b, _subquery_c),
+        PredicateNode::make(greater_than_(_a_a, _a_b),
+          _stored_table_a)));
   // clang-format on
-  const auto expected_lqp = input_lqp->deep_copy();
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  // TODO(Marcel) see TODO in `AllowedValuePredicatePushdownThroughProjectionTest`
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
