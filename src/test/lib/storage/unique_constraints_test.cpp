@@ -2,18 +2,7 @@
 
 #include "base_test.hpp"
 
-#include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
-#include "operators/delete.hpp"
-#include "operators/get_table.hpp"
-#include "operators/insert.hpp"
-#include "operators/projection.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/update.hpp"
-#include "operators/validate.hpp"
 #include "storage/table.hpp"
 #include "storage/constraints/table_unique_constraint.hpp"
 
@@ -54,11 +43,6 @@ TEST_F(UniqueConstraintsTest, InvalidConstraintAdd) {
   auto& sm = Hyrise::get().storage_manager;
   auto table = sm.get_table("table");
   auto table_nullable = sm.get_table("table_nullable");
-
-  // TODO(Julian) Update test: Invalid because the constraint contains duplicated columns.
-  //  auto count_before = table->get_soft_unique_constraints().size();
-  //  table->add_soft_unique_constraint({{ColumnID{1}, ColumnID{1}}, {ConstraintType::UNIQUE}});
-  //  EXPECT_EQ(table->get_soft_unique_constraints().size(), count_before + 1);
 
   // Invalid because the column id is out of range
   EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{5}}, KeyConstraintType::UNIQUE}),
