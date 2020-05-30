@@ -9,7 +9,7 @@ namespace opossum {
  * Validity checks take place when unique constraints are added to tables. For example, checks for nullability in
  * case of PRIMARY_KEY constraints.
  */
-class TableUniqueConstraint final : TableKeyConstraint {
+class TableUniqueConstraint final : public TableKeyConstraint {
   TableUniqueConstraint(std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
 };
 
