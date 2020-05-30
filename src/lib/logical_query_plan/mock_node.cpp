@@ -16,9 +16,7 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
     : AbstractLQPNode(LQPNodeType::Mock),
       name(init_name),
       _column_definitions(column_definitions),
-      _unique_constraints(constraints) {
-  // Maybe TODO(Julian) Check the validity of given constraints
-}
+      _unique_constraints(constraints) {}
 
 std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();

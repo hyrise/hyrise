@@ -52,8 +52,7 @@ TEST_F(UniqueConstraintsTest, InvalidConstraintAdd) {
                std::logic_error);
 
   // Invalid because there is still a nullable column.
-  EXPECT_THROW(table_nullable->add_soft_unique_constraint(
-                   TableUniqueConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
+  EXPECT_THROW(table_nullable->add_soft_unique_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
 
   table->add_soft_unique_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});

@@ -333,7 +333,7 @@ void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   const auto& customer_table = table_info_by_name.at("customer").table;
   customer_table->add_soft_unique_constraint(
-      TableUniqueConstraint{{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
+      {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& orders_table = table_info_by_name.at("orders").table;
   const auto orders_pk_constraint =
