@@ -7,8 +7,8 @@
 namespace opossum {
 
 /**
- * In SQL a key Currently, we support UNIQUE and PRIMARY_KEY types only.
- * In the future, we may add a FOREIGN KEY type as well.
+ * Currently, only UNIQUE and PRIMARY_KEY key types are implemented.
+ * In the future, we may implement a FOREIGN KEY type and a corresponding subclass as well.
  */
 enum class KeyConstraintType {
   PRIMARY_KEY,
@@ -17,7 +17,7 @@ enum class KeyConstraintType {
 };
 
 /**
- * Abstract container class to define table constraints, spanning a set of column ids.
+ * Abstract container class to define table constraints spanning a set of column ids.
  */
 class TableKeyConstraint {
  public:
