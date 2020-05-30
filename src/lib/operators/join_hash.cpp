@@ -495,7 +495,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *          PosLists Chunk by Chunk
      *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
      *
-     * They hold one entry per column in the table, not per BaseSegment in a single chunk
+     * They hold one entry per column in the table, not per AbstractSegment in a single chunk
      */
 
     PosListsByChunk build_side_pos_lists_by_segment;

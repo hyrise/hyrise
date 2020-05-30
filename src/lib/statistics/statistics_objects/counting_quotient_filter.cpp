@@ -93,7 +93,7 @@ inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementTyp
 }
 
 template <typename ElementType>
-void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const BaseSegment>& segment) {
+void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const AbstractSegment>& segment) {
   segment_iterate<ElementType>(*segment, [&](const auto& position) {
     if (position.is_null()) return;
     insert(position.value());

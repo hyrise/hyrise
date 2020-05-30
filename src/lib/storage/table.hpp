@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
 #include "storage/constraints/table_unique_constraint.hpp"

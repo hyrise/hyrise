@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {
@@ -13,9 +13,9 @@ enum class CompressedVectorType : uint8_t;
  * Since encoded segments are immutable, all member variables
  * of sub-classes should be declared const.
  */
-class BaseEncodedSegment : public BaseSegment {
+class AbstractEncodedSegment : public AbstractSegment {
  public:
-  using BaseSegment::BaseSegment;
+  using AbstractSegment::AbstractSegment;
 
   virtual EncodingType encoding_type() const = 0;
 

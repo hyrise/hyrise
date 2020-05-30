@@ -28,7 +28,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -38,13 +38,13 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode = MemoryUsageCalculationMode::Full) const final;
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
   std::optional<CompressedVectorType> compressed_vector_type() const final;

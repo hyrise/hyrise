@@ -98,17 +98,17 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return list;
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
-                                                     const DataType data_type) {
+  std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,
+                                                         const DataType data_type) {
     auto segment_encoding_spec = GetParam();
-    return this->encode_segment(base_segment, data_type, segment_encoding_spec);
+    return this->encode_segment(abstract_segment, data_type, segment_encoding_spec);
   }
 
-  std::shared_ptr<BaseEncodedSegment> encode_segment(const std::shared_ptr<BaseSegment>& base_segment,
-                                                     const DataType data_type,
-                                                     const SegmentEncodingSpec& segment_encoding_spec) {
-    return std::dynamic_pointer_cast<BaseEncodedSegment>(
-        ChunkEncoder::encode_segment(base_segment, data_type, segment_encoding_spec));
+  std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,
+                                                         const DataType data_type,
+                                                         const SegmentEncodingSpec& segment_encoding_spec) {
+    return std::dynamic_pointer_cast<AbstractEncodedSegment>(
+        ChunkEncoder::encode_segment(abstract_segment, data_type, segment_encoding_spec));
   }
 };
 
@@ -133,11 +133,11 @@ INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::String);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::String);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -153,11 +153,11 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) 
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::String);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::String);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -186,11 +186,11 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
   auto value_segment = create_string_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::String);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::String);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -206,11 +206,11 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableStringSegment) {
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
   auto value_segment = create_string_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::String);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::String);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -239,13 +239,13 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkOffsetsList) {
   auto value_segment = create_string_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::String);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::String);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
   auto position_filter = create_sequential_position_filter();
 
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
@@ -265,13 +265,13 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithChunkO
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegmentWithShuffledChunkOffsetsList) {
   auto value_segment = create_string_with_null_value_segment();
-  auto base_encoded_segment = this->encode_segment(value_segment, DataType::String);
+  auto abstract_encoded_segment = this->encode_segment(value_segment, DataType::String);
 
-  EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
+  EXPECT_EQ(value_segment->size(), abstract_encoded_segment->size());
 
   auto position_filter = create_random_access_position_filter();
 
-  resolve_encoded_segment_type<pmr_string>(*base_encoded_segment, [&](const auto& encoded_segment) {
+  resolve_encoded_segment_type<pmr_string>(*abstract_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 

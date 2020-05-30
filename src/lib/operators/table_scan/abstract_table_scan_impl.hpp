@@ -151,9 +151,9 @@ class AbstractTableScanImpl {
       // Next, write *all* offsets in the block into `offsets`
       auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
 
-      if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
-                                                                      std::decay_t<decltype(*left_it)>,
-                                                                      std::decay_t<decltype(left_it)>>,
+      if constexpr (!std::is_base_of_v<AbstractPointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
+                                                                          std::decay_t<decltype(*left_it)>,
+                                                                          std::decay_t<decltype(left_it)>>,
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup

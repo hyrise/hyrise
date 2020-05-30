@@ -160,9 +160,9 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
   const auto chunk = test_table->get_chunk(ChunkID{0u});
-  const auto base_segment = chunk->get_segment(ColumnID{0u});
+  const auto abstract_segment = chunk->get_segment(ColumnID{0u});
 
-  resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+  resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     using SegmentType = std::decay_t<decltype(segment)>;
 
@@ -195,7 +195,7 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
         if (with_position_filter) {
           begin += position_filter->size() - 1;
         } else {
-          begin += base_segment->size() - 1;
+          begin += abstract_segment->size() - 1;
         }
         --end;
 
@@ -265,9 +265,9 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
   const auto chunk = test_table->get_chunk(ChunkID{0u});
-  const auto base_segment = chunk->get_segment(ColumnID{0u});
+  const auto abstract_segment = chunk->get_segment(ColumnID{0u});
 
-  resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+  resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     using SegmentType = std::decay_t<decltype(segment)>;
 
@@ -327,9 +327,9 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
   const auto chunk = test_table->get_chunk(ChunkID{0u});
-  const auto base_segment = chunk->get_segment(ColumnID{0u});
+  const auto abstract_segment = chunk->get_segment(ColumnID{0u});
 
-  resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+  resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     const auto iterable = create_iterable_from_segment<ColumnDataType, false /* no type erasure */>(segment);
