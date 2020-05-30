@@ -9,6 +9,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "storage/constraints/table_unique_constraint.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -29,14 +30,13 @@ class ProjectionNodeTest : public BaseTest {
 
     // Constraints for later use
     // Primary Key: a, b
-    _table_constraint_1 =
-        TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, {ConstraintType::PRIMARY_KEY}};
+    _unique_constraint_1 = {std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
     // Unique: b
-    _table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, {ConstraintType::UNIQUE}};
+    _unique_constraint_2 = {std::unordered_set<ColumnID>{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }
 
-  TableConstraintDefinition _table_constraint_1;
-  TableConstraintDefinition _table_constraint_2;
+  TableUniqueConstraint _unique_constraint_1;
+  TableUniqueConstraint _unique_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
