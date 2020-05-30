@@ -153,8 +153,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesNone) {
 
   // Constraint across all columns => No more columns available to create a functional dependency from
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
-  table->add_soft_unique_constraint({{_a->original_column_id, _b->original_column_id, _c->original_column_id},
-                                    KeyConstraintType::UNIQUE});
+  table->add_soft_unique_constraint(
+      {{_a->original_column_id, _b->original_column_id, _c->original_column_id}, KeyConstraintType::UNIQUE});
 
   EXPECT_TRUE(_stored_table_node->functional_dependencies().empty());
 }

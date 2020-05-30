@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
-#include "storage/table.hpp"
 #include "storage/constraints/table_unique_constraint.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -45,8 +45,7 @@ TEST_F(UniqueConstraintsTest, InvalidConstraintAdd) {
   auto table_nullable = sm.get_table("table_nullable");
 
   // Invalid because the column id is out of range
-  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{5}}, KeyConstraintType::UNIQUE}),
-               std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{5}}, KeyConstraintType::UNIQUE}), std::logic_error);
 
   // Invalid because the column must be non nullable for a primary key.
   EXPECT_THROW(table_nullable->add_soft_unique_constraint({{ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
@@ -54,33 +53,30 @@ TEST_F(UniqueConstraintsTest, InvalidConstraintAdd) {
 
   // Invalid because there is still a nullable column.
   EXPECT_THROW(table_nullable->add_soft_unique_constraint(
-      TableUniqueConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
+                   TableUniqueConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
 
   table->add_soft_unique_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
 
   // Invalid because another primary key already exists.
-  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
-               std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}), std::logic_error);
 
   // Invalid because a constraint on the same column already exists.
-  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE}),
-               std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE}), std::logic_error);
 
   table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
 
   // Invalid because a concatenated constraint on the same columns already exists.
-  EXPECT_THROW(
-      table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
-      std::logic_error);
-  EXPECT_THROW(
-      table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
-      std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
+               std::logic_error);
+  EXPECT_THROW(table->add_soft_unique_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
+               std::logic_error);
 }
 
 TEST_F(UniqueConstraintsTest, Equals) {
   const auto unique_constraint_a = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto primary_key_constraint_a = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+  const auto primary_key_constraint_a =
+      TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
   const auto unique_constraint_b = TableUniqueConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
   const auto unique_constraint_c = TableUniqueConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
 

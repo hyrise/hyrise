@@ -333,21 +333,23 @@ void Table::add_soft_unique_constraint(const TableUniqueConstraint& unique_const
     Assert(column_id < column_count(), "ColumnID out of range");
 
     // PRIMARY KEY requires non-nullable columns
-    if(unique_constraint.type() == KeyConstraintType::PRIMARY_KEY) {
-      Assert(!column_is_nullable(column_id),"Column must be non-nullable to comply with PRIMARY KEY.");
+    if (unique_constraint.type() == KeyConstraintType::PRIMARY_KEY) {
+      Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
     }
   }
 
   {
     auto scoped_lock = acquire_append_mutex();
 
-    for(const auto& existing_constraint : _soft_unique_constraints) {
+    for (const auto& existing_constraint : _soft_unique_constraints) {
       // Ensure that no other PRIMARY KEY is defined
-      Assert(existing_constraint.type() == KeyConstraintType::UNIQUE
-                   || unique_constraint.type() == KeyConstraintType::UNIQUE, "Another primary key already exists for "
-               "this table.");
+      Assert(existing_constraint.type() == KeyConstraintType::UNIQUE ||
+                 unique_constraint.type() == KeyConstraintType::UNIQUE,
+             "Another primary key already exists for "
+             "this table.");
       // Ensure that no other unique constraint for the same column set exists
-      Assert(unique_constraint.columns() != existing_constraint.columns(), "Another unique constraint for the same "
+      Assert(unique_constraint.columns() != existing_constraint.columns(),
+             "Another unique constraint for the same "
              "column set already exists.");
     }
 

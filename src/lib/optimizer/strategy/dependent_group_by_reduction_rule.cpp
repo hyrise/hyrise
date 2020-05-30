@@ -22,8 +22,8 @@ using namespace opossum;  // NOLINT
  *
  * @returns Boolean value denoting whether at the group-by list of @param aggregate_node changed.
  */
-bool remove_dependent_group_by_columns(const FunctionalDependency& fd, AggregateNode& aggregate_node, const
-                                       ExpressionUnorderedSet& group_by_columns) {
+bool remove_dependent_group_by_columns(const FunctionalDependency& fd, AggregateNode& aggregate_node,
+                                       const ExpressionUnorderedSet& group_by_columns) {
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list

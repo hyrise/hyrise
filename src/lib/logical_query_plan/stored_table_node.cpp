@@ -120,8 +120,8 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     for (const auto& expression : expressions) {
       // Check whether column expression belongs on the left (determinants) or right (dependents) side of the FD
       const auto column_id = static_cast<const LQPColumnExpression&>(*expression).original_column_id;
-      if (std::find(constraint.columns().cbegin(), constraint.columns().cend(), column_id) == constraint.columns().cend
-                                                                                             ()) {
+      if (std::find(constraint.columns().cbegin(), constraint.columns().cend(), column_id) ==
+          constraint.columns().cend()) {
         dependents.insert(expression);
       } else {
         determinants.insert(expression);
