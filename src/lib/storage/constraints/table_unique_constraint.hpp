@@ -11,6 +11,7 @@ namespace opossum {
  */
 class TableUniqueConstraint final : public TableKeyConstraint {
  public:
+  TableUniqueConstraint();
   TableUniqueConstraint(const std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
 };
 

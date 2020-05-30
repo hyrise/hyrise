@@ -2,6 +2,8 @@
 
 namespace opossum {
 
+TableUniqueConstraint::TableUniqueConstraint() : TableKeyConstraint({}, KeyConstraintType::NONE) {}
+
 TableUniqueConstraint::TableUniqueConstraint(const std::unordered_set<ColumnID> &init_columns, KeyConstraintType
                                                                                               init_key_type)
 : TableKeyConstraint(init_columns, init_key_type) {
