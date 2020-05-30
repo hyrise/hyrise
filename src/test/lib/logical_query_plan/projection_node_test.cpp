@@ -30,9 +30,9 @@ class ProjectionNodeTest : public BaseTest {
 
     // Constraints for later use
     // Primary Key: a, b
-    _unique_constraint_1 = {std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+    _unique_constraint_1 = {{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
     // Unique: b
-    _unique_constraint_2 = {std::unordered_set<ColumnID>{ColumnID{1}}, KeyConstraintType::UNIQUE};
+    _unique_constraint_2 = {{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }
 
   TableUniqueConstraint _unique_constraint_1;
