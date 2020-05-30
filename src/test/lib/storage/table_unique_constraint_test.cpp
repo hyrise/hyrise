@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class UniqueConstraintsTest : public BaseTest {
+class TableUniqueConstraintTest : public BaseTest {
  protected:
   void SetUp() override {
     {
@@ -39,7 +39,7 @@ class UniqueConstraintsTest : public BaseTest {
   }
 };
 
-TEST_F(UniqueConstraintsTest, InvalidConstraintAdd) {
+TEST_F(TableUniqueConstraintTest, InvalidConstraintAdd) {
   auto& sm = Hyrise::get().storage_manager;
   auto table = sm.get_table("table");
   auto table_nullable = sm.get_table("table_nullable");
