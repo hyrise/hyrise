@@ -17,14 +17,14 @@ enum KeyConstraintType : bool {PRIMARY_KEY, UNIQUE};
  */
 class TableKeyConstraint {
  public:
-  explicit TableKeyConstraint(std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
+  explicit TableKeyConstraint(const std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
   virtual ~TableKeyConstraint() = default;
 
   const std::unordered_set<ColumnID>& columns() const;
   KeyConstraintType type() const;
 
-  bool operator==(const TableKeyConstraint& rhs);
-  bool operator!=(const TableKeyConstraint& rhs);
+  bool operator==(const TableKeyConstraint& rhs) const;
+  bool operator!=(const TableKeyConstraint& rhs) const;
 
  private:
   std::unordered_set<ColumnID> _columns;
