@@ -53,32 +53,29 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     Hyrise::get().storage_manager.add_table("e", _table_e);
     _stored_table_e = StoredTableNode::make("e");
     _e_a = _stored_table_e->get_column("a");
-    _e_b = _stored_table_e->get_column("b");
 
     _rule = std::make_shared<PredicatePlacementRule>();
 
     {
       // Initialization of projection pushdown LQP
       auto parameter_c = correlated_parameter_(ParameterID{0}, _a_a);
+      // clang-format off
       auto lqp_c =
-          AggregateNode::make(expression_vector(), expression_vector(max_(add_(_a_a, parameter_c))),
-                              ProjectionNode::make(expression_vector(add_(_a_a, parameter_c)), _stored_table_a));
-
+        AggregateNode::make(expression_vector(), expression_vector(max_(add_(_a_a, parameter_c))),
+          ProjectionNode::make(expression_vector(add_(_a_a, parameter_c)), _stored_table_a));
+      // clang-format on
       _subquery_c = lqp_subquery_(lqp_c, std::make_pair(ParameterID{0}, _a_a));
     }
 
-    _parameter_a_a = correlated_parameter_(ParameterID{0}, _a_a);
-    _subquery_lqp = PredicateNode::make(equals_(_parameter_a_a, _b_a), _stored_table_b);
-    _subquery = lqp_subquery_(_subquery_lqp, std::make_pair(ParameterID{0}, _a_a));
+    const auto parameter_a_a = correlated_parameter_(ParameterID{0}, _a_a);
+    const auto subquery_lqp = PredicateNode::make(equals_(parameter_a_a, _b_a), _stored_table_b);
+    _subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, _a_a));
   }
 
   inline static std::shared_ptr<Table> _table_a, _table_b, _table_c, _table_d, _table_e;
-  std::shared_ptr<CorrelatedParameterExpression> _parameter_a_a;
-  std::shared_ptr<AbstractLQPNode> _subquery_lqp;
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _stored_table_a, _stored_table_b, _stored_table_c, _stored_table_d, _stored_table_e;
-  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a, _e_b;
-  std::shared_ptr<ProjectionNode> _projection_pushdown_node;
+  std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a;
   std::shared_ptr<opossum::LQPSubqueryExpression> _subquery_c, _subquery;
 };
 

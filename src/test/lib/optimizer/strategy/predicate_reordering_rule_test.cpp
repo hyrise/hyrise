@@ -114,30 +114,36 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   auto stored_table_node = StoredTableNode::make("table_a");
 
-  // clang-format off
-  const auto first_input_lqp =
-  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40),
-    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
-      stored_table_node));
+  {
+    // clang-format off
+    const auto input_lqp =
+    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 40),
+      PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+        stored_table_node));
+    // clang-format on
+    const auto expected_lqp = input_lqp->deep_copy();
 
-  const auto second_input_lqp =
-  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    // clang-format off
+    const auto input_lqp =
+    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+      PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
+        stored_table_node));
+
+    const auto expected_lqp =
     PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
-      stored_table_node));
+      PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
+        stored_table_node));
+    // clang-format on
 
-  const auto first_expected_lqp = first_input_lqp->deep_copy();
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  const auto second_expected_lqp =
-  PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 400),
-    PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 20),
-      stored_table_node));
-  // clang-format on
-
-  const auto first_actual_lqp = StrategyBaseTest::apply_rule(_rule, first_input_lqp);
-  const auto second_actual_lqp = StrategyBaseTest::apply_rule(_rule, second_input_lqp);
-
-  EXPECT_LQP_EQ(first_actual_lqp, first_expected_lqp);
-  EXPECT_LQP_EQ(second_actual_lqp, second_expected_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
@@ -153,9 +159,9 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
      *           |                     |
      *  Predicate(a > 60)     Predicate(a > 50)
      *           |                     |
-     *        Table_0           Predicate(a > 30)
+     *        Table_0         Predicate(a > 30)
      *                                 |
-     *                               Table_1
+     *                              Table_1
      */
 
   /**
