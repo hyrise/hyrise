@@ -10,7 +10,8 @@ namespace opossum {
  * case of PRIMARY_KEY constraints.
  */
 class TableUniqueConstraint final : public TableKeyConstraint {
-  TableUniqueConstraint(std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
+ public:
+  TableUniqueConstraint(const std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
 };
 
 using TableUniqueConstraints = std::unordered_set<TableUniqueConstraint>;

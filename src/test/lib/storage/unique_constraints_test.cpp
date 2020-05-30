@@ -15,10 +15,11 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
+#include "storage/constraints/table_unique_constraint.hpp"
 
 namespace opossum {
 
-class ConstraintsTest : public BaseTest {
+class UniqueConstraintsTest : public BaseTest {
  protected:
   void SetUp() override {
     {
@@ -49,7 +50,7 @@ class ConstraintsTest : public BaseTest {
   }
 };
 
-TEST_F(ConstraintsTest, InvalidConstraintAdd) {
+TEST_F(UniqueConstraintsTest, InvalidConstraintAdd) {
   auto& sm = Hyrise::get().storage_manager;
   auto table = sm.get_table("table");
   auto table_nullable = sm.get_table("table_nullable");
@@ -69,7 +70,7 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
 
   // Invalid because there is still a nullable column.
   EXPECT_THROW(table_nullable->add_soft_unique_constraint(
-                   TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
+      TableUniqueConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
 
   table->add_soft_unique_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
@@ -93,22 +94,22 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
       std::logic_error);
 }
 
-TEST_F(ConstraintsTest, Equals) {
-  const auto constraint_a = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto constraint_a_pk = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
-  const auto constraint_b = TableUniqueConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
-  const auto constraint_c = TableUniqueConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+TEST_F(UniqueConstraintsTest, Equals) {
+  const auto unique_constraint_a = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto primary_key_constraint_a = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+  const auto unique_constraint_b = TableUniqueConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+  const auto unique_constraint_c = TableUniqueConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
 
-  EXPECT_TRUE(constraint_a == constraint_a);
+  EXPECT_TRUE(unique_constraint_a == unique_constraint_a);
 
-  EXPECT_FALSE(constraint_a == constraint_a_pk);
-  EXPECT_FALSE(constraint_a_pk == constraint_a);
+  EXPECT_FALSE(unique_constraint_a == primary_key_constraint_a);
+  EXPECT_FALSE(primary_key_constraint_a == unique_constraint_a);
 
-  EXPECT_FALSE(constraint_a == constraint_b);
-  EXPECT_FALSE(constraint_b == constraint_a);
+  EXPECT_FALSE(unique_constraint_a == unique_constraint_b);
+  EXPECT_FALSE(unique_constraint_b == unique_constraint_a);
 
-  EXPECT_FALSE(constraint_c == constraint_a);
-  EXPECT_FALSE(constraint_a == constraint_c);
+  EXPECT_FALSE(unique_constraint_c == unique_constraint_a);
+  EXPECT_FALSE(unique_constraint_a == unique_constraint_c);
 }
 
 }  // namespace opossum
