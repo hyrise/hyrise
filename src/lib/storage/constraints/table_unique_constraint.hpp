@@ -14,6 +14,6 @@ class TableUniqueConstraint final : public TableKeyConstraint {
   TableUniqueConstraint(const std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
 };
 
-using TableUniqueConstraints = std::unordered_set<TableUniqueConstraint>;
+using TableUniqueConstraints = std::vector<TableUniqueConstraint>;
 
 }  // namespace opossum

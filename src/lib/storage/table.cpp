@@ -351,7 +351,7 @@ void Table::add_soft_unique_constraint(const TableUniqueConstraint& unique_const
              "column set already exists.");
     }
 
-    _soft_unique_constraints.emplace(unique_constraint);
+    _soft_unique_constraints.push_back(unique_constraint);
   }
 }
 

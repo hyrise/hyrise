@@ -106,7 +106,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     //  a) unique (a guarantee already provided by the current unique constraint) and
     //  b) non-nullable
     //  c) a subset of the output columns
-    if (std::any_of(constraint.columns.cbegin(), constraint.columns.cend(), [this](const auto column_id) {
+    if (std::any_of(constraint.columns().cbegin(), constraint.columns().cend(), [this](const auto column_id) {
           bool is_pruned =
               std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend();
           return is_pruned || this->is_column_nullable(column_id);
@@ -120,14 +120,15 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
     for (const auto& expression : expressions) {
       // Check whether column expression belongs on the left (determinants) or right (dependents) side of the FD
       const auto column_id = static_cast<const LQPColumnExpression&>(*expression).original_column_id;
-      if (std::find(constraint.columns.cbegin(), constraint.columns.cend(), column_id) == constraint.columns.cend()) {
+      if (std::find(constraint.columns().cbegin(), constraint.columns().cend(), column_id) == constraint.columns().cend
+                                                                                             ()) {
         dependents.insert(expression);
       } else {
         determinants.insert(expression);
       }
     }
 
-    Assert(determinants.size() == constraint.columns.size(), "Mismatching number of determinants");
+    Assert(determinants.size() == constraint.columns().size(), "Mismatching number of determinants");
 
     // Create functional dependency
     if (!determinants.empty() && !dependents.empty()) fds.emplace_back(determinants, dependents);

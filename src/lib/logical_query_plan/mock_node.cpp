@@ -109,8 +109,8 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-void MockNode::set_unique_constraints(const TableUniqueConstraints& table_constraints) {
-  _unique_constraints = table_constraints;
+void MockNode::set_unique_constraints(const TableUniqueConstraints& unique_constraints) {
+  _unique_constraints = unique_constraints;
 }
 
 size_t MockNode::_on_shallow_hash() const {

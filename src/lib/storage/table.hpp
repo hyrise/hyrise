@@ -238,9 +238,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
-  /**
-   * Currently, we do not enforce unique constraints. Therefore, we consider them as "soft unique constraints".
-   */
+  // "Soft" unique constraints because we do not enforce them.
   TableUniqueConstraints _soft_unique_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
