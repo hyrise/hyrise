@@ -12,11 +12,11 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name,
-                   const TableConstraintDefinitions& constraints)
+                   const TableUniqueConstraints& constraints)
     : AbstractLQPNode(LQPNodeType::Mock),
       name(init_name),
       _column_definitions(column_definitions),
-      _table_constraints(constraints) {
+      _unique_constraints(constraints) {
   // Maybe TODO(Julian) Check the validity of given constraints
 }
 
@@ -109,8 +109,8 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-void MockNode::set_table_constraints(const TableConstraintDefinitions& table_constraints) {
-  _table_constraints = table_constraints;
+void MockNode::set_unique_constraints(const TableUniqueConstraints& table_constraints) {
+  _unique_constraints = table_constraints;
 }
 
 size_t MockNode::_on_shallow_hash() const {

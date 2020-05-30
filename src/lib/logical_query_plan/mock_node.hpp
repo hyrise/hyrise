@@ -7,7 +7,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "storage/constraints/table_constraint_definition.hpp"
+#include "storage/constraints/table_unique_constraint.hpp"
 
 namespace opossum {
 
@@ -26,7 +26,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {},
-                    const TableConstraintDefinitions& constraints = {});
+                    const TableUniqueConstraints& constraints = {});
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& column_name) const;
 
@@ -52,7 +52,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
-  void set_table_constraints(const TableConstraintDefinitions& table_constraints);
+  void set_unique_constraints(const TableUniqueConstraints& table_constraints);
 
   std::optional<std::string> name;
 
@@ -66,7 +66,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
-  TableConstraintDefinitions _table_constraints;
+  TableUniqueConstraints _unique_constraints;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
   std::vector<FunctionalDependency> _functional_dependencies;
