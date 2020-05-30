@@ -72,7 +72,7 @@ TEST_F(TableUniqueConstraintTest, InvalidConstraintAdd) {
                std::logic_error);
 }
 
-TEST_F(UniqueConstraintsTest, Equals) {
+TEST_F(TableUniqueConstraintTest, Equals) {
   const auto unique_constraint_a = TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
   const auto primary_key_constraint_a =
       TableUniqueConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
