@@ -27,16 +27,8 @@ class ProjectionNodeTest : public BaseTest {
 
     // SELECT c, a, b, b+c AS some_addition, a+c [...]
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
-
-    // Constraints for later use
-    // Primary Key: a, b
-    _unique_constraint_1 = {{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
-    // Unique: b
-    _unique_constraint_2 = {{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }
 
-  TableUniqueConstraint _unique_constraint_1;
-  TableUniqueConstraint _unique_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;

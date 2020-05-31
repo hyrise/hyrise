@@ -9,7 +9,6 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/constraints/table_unique_constraint.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -36,11 +35,6 @@ class JoinNodeTest : public BaseTest {
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
-    // Prepare constraint definitions
-    _unique_constraint_a = {{_t_a_a->original_column_id}, KeyConstraintType::UNIQUE};
-    _unique_constraint_b_c = {{_t_a_b->original_column_id, _t_a_c->original_column_id}, KeyConstraintType::UNIQUE};
-    _unique_constraint_x = {{_t_b_x->original_column_id}, KeyConstraintType::UNIQUE};
-    _unique_constraint_y = {{_t_b_y->original_column_id}, KeyConstraintType::UNIQUE};
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -54,10 +48,6 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _t_a_c;
   std::shared_ptr<LQPColumnExpression> _t_b_x;
   std::shared_ptr<LQPColumnExpression> _t_b_y;
-  TableUniqueConstraint _unique_constraint_a;
-  TableUniqueConstraint _unique_constraint_b_c;
-  TableUniqueConstraint _unique_constraint_x;
-  TableUniqueConstraint _unique_constraint_y;
 };
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross"); }
@@ -197,7 +187,7 @@ TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
   ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
     JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
       _mock_node_a,
-        _mock_node_b));
+      _mock_node_b));
   // clang-format on
 
   EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
