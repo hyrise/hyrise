@@ -13,7 +13,7 @@ namespace opossum {
 enum class KeyConstraintType { PRIMARY_KEY, UNIQUE, NONE };
 
 /**
- * Abstract container class to define table constraints spanning a set of column ids.
+ * Abstract container class for defining table constraints based on a set of column IDs representing an SQL key.
  */
 class TableKeyConstraint {
  public:
