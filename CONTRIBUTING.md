@@ -20,7 +20,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
 - Include in this order: header for implementation file, c system, c++ system, other
 - If your templated methods/classes are used outside of your file, they have to be in the header. But if you only use them internally, you should place them in the cpp file.
-- Try to keep the size of your templated methods as small as possible (Thin Template idiom). If only a small part of your method depends on the template parameter, consider moving the rest into a non-templated method. This reduces compile times.
+- Try to keep the size of your templated methods as small as possible (thin template idiom). If only a small part of your method depends on the template parameter, consider moving the rest into a non-templated method. This reduces compile times.
 - Use smart pointers over c-style pointers
 - Use `HYRISE_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
@@ -35,13 +35,14 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 
 ## Naming Conventions
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp
-- Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`
+- Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `TableScan`
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
-- Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
-- Private / protected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
-- Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
+- Functions: lowercase separated by underscores, e.g., `append_mutable_chunk()`
+- Private / protected members / methods: like variables / functions with leading underscore, e.g., `_on_execute()`
+- Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., `BaseValueSegment`), while classes that have multiple differing implementations are named `AbstractXY` (e.g., `AbstractOperator`)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 - In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`
+- If an identifier contains a verb or adjective in addition to a noun, the schema [verb|adjective]\[verb] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ or `set_left_input()` rather than ~~`set_input_left()`~~.
 
 ### Naming convention for gtest macros:
 
@@ -55,7 +56,7 @@ If you want to test a single module, class or test you have to execute the test 
 - Testing the RowCount test: `./build/hyriseTest --gtest_filter="StorageTableTest.RowCount"`
 
 ## Performance Warnings
-- Sometimes, we have convenience functions, such as BaseColumn::operator[], or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
+- Sometimes, we have convenience functions, such as `ReferenceSegment::operator[]`, or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in `performance_warning.hpp`.
 
 ## Documentation
 - Most documentation should happen in the code or in the beginning of the header file
