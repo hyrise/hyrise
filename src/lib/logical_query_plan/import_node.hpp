@@ -12,7 +12,7 @@ namespace opossum {
 /**
  * This node type represents the IMPORT / COPY FROM management command.
  */
-class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
+class ImportNode : public EnableMakeForLQPNode<ImportNode>, public AbstractNonQueryNode {
  public:
   ImportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
 

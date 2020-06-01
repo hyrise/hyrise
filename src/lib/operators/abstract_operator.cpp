@@ -73,9 +73,9 @@ void AbstractOperator::execute() {
       [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
       if (!_output) {
         DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
-      } else if (std::dynamic_pointer_cast<const BaseNonQueryNode>(lqp_node) ||
+      } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
                  std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
-        // BaseNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return 'OK'
+        // AbstractNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return 'OK'
         // for better compatibility with the console and the server. We do not assert anything here.
         // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
         // need to be tested.

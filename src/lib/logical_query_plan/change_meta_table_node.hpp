@@ -17,7 +17,7 @@ class AbstractExpression;
  * and one with updated or inserted values.
  * Further documentation for the resulting operator's inputs can be found at operators/change_meta_table.hpp
  */
-class ChangeMetaTableNode : public EnableMakeForLQPNode<ChangeMetaTableNode>, public BaseNonQueryNode {
+class ChangeMetaTableNode : public EnableMakeForLQPNode<ChangeMetaTableNode>, public AbstractNonQueryNode {
  public:
   explicit ChangeMetaTableNode(const std::string& init_table_name, const MetaTableChangeType& init_change_type);
 

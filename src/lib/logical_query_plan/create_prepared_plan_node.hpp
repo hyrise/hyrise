@@ -9,7 +9,7 @@ class PreparedPlan;
 /**
  * LQP equivalent to the PrepareStatement operator.
  */
-class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNode>, public BaseNonQueryNode {
+class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNode>, public AbstractNonQueryNode {
  public:
   CreatePreparedPlanNode(const std::string& init_name, const std::shared_ptr<PreparedPlan>& init_prepared_plan);
 

@@ -11,7 +11,7 @@ namespace opossum {
  * This node type wraps a table and can be used as input for a CreateTableNode to represent a simple
  * CREATE TABLE management command.
  */
-class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
+class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public AbstractNonQueryNode {
  public:
   // Some tables should not be copied but recreated. Currently, this applies to meta tables.
   explicit StaticTableNode(const std::shared_ptr<Table>& init_table);

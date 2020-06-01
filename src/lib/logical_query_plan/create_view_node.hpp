@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * This node type represents the CREATE VIEW management command.
  */
-class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public BaseNonQueryNode {
+class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public AbstractNonQueryNode {
  public:
   CreateViewNode(const std::string& init_view_name, const std::shared_ptr<LQPView>& init_view, bool init_if_not_exists);
 

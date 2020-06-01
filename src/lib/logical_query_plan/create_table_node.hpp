@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * This node type represents the CREATE TABLE management command.
  */
-class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public BaseNonQueryNode {
+class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public AbstractNonQueryNode {
  public:
   CreateTableNode(const std::string& init_table_name, const bool init_if_not_exists);
 
