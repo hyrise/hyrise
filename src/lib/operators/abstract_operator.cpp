@@ -7,7 +7,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/base_non_query_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"

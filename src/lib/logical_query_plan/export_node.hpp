@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "base_non_query_node.hpp"
+#include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "import_export/file_type.hpp"
 #include "storage/table_column_definition.hpp"

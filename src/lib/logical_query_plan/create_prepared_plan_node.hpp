@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logical_query_plan/base_non_query_node.hpp"
+#include "logical_query_plan/abstract_non_query_node.hpp"
 
 namespace opossum {
 
