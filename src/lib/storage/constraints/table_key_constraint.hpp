@@ -17,7 +17,7 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE, NONE };
  */
 class TableKeyConstraint {
  public:
-  explicit TableKeyConstraint(const std::unordered_set<ColumnID>& init_columns, KeyConstraintType init_key_type);
+  explicit TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type);
   virtual ~TableKeyConstraint() = default;
 
   const std::unordered_set<ColumnID>& columns() const;

@@ -2,8 +2,7 @@
 
 namespace opossum {
 
-TableKeyConstraint::TableKeyConstraint(const std::unordered_set<ColumnID>& init_columns,
-                                       KeyConstraintType init_key_type)
+TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type)
     : _columns(std::move(init_columns)), _key_type(init_key_type) {}
 
 const std::unordered_set<ColumnID>& TableKeyConstraint::columns() const { return _columns; }
