@@ -11,12 +11,8 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name,
-                   const TableUniqueConstraints& constraints)
-    : AbstractLQPNode(LQPNodeType::Mock),
-      name(init_name),
-      _column_definitions(column_definitions),
-      _unique_constraints(constraints) {}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
+    : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
 
 std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
