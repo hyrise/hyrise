@@ -10,7 +10,7 @@ namespace opossum {
  * Currently, only UNIQUE and PRIMARY_KEY key types are implemented.
  * In the future, we may implement a FOREIGN KEY type and a corresponding subclass as well.
  */
-enum class KeyConstraintType { PRIMARY_KEY, UNIQUE, NONE };
+enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
 /**
  * Abstract container class for defining table constraints based on a set of column IDs representing an SQL key.

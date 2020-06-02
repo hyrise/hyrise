@@ -11,9 +11,6 @@ namespace opossum {
  */
 class TableUniqueConstraint final : public TableKeyConstraint {
  public:
-  // Default constructor to allow for simple declarations
-  TableUniqueConstraint();
-
   /**
    * Creates a unique constraint based on a given column set @param init_columns and a given @param init_key_type which
    * can be either UNIQUE or PRIMARY_KEY.
