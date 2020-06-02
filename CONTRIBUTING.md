@@ -42,7 +42,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., `BaseValueSegment`), while classes that have multiple differing implementations are named `AbstractXY` (e.g., `AbstractOperator`)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 - In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`
-- If an identifier contains a verb or adjective in addition to a noun, the schema [verb|adjective]\[verb] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ or `set_left_input()` rather than ~~`set_input_left()`~~.
+- If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[verb] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than ~~`set_input_left()`~~.
 
 ### Naming convention for gtest macros:
 
