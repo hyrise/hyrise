@@ -8,7 +8,7 @@ namespace opossum {
 
 ExportNode::ExportNode(const std::string& init_table_name, const std::string& init_file_name,
                        const FileType init_file_type)
-    : BaseNonQueryNode(LQPNodeType::Export),
+    : AbstractNonQueryNode(LQPNodeType::Export),
       table_name(init_table_name),
       file_name(init_file_name),
       file_type(init_file_type) {}
