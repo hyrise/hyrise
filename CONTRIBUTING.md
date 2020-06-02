@@ -20,7 +20,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
 - Include in this order: header for implementation file, c system, c++ system, other
 - If your templated methods/classes are used outside of your file, they have to be in the header. But if you only use them internally, you should place them in the cpp file.
-- Try to keep the size of your templated methods as small as possible (thin template idiom). If only a small part of your method depends on the template parameter, consider moving the rest into a non-templated method. This reduces compile times.
+- Try to keep the size of your templated methods as small as possible (Thin Template idiom). If only a small part of your method depends on the template parameter, consider moving the rest into a non-templated method. This reduces compile times.
 - Use smart pointers over c-style pointers
 - Use `HYRISE_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
@@ -42,7 +42,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., `BaseValueSegment`), while classes that have multiple differing implementations are named `AbstractXY` (e.g., `AbstractOperator`)
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 - In cases where a constructor parameter would have the same name as the member it initializes, prefix it with `init`: `C(int init_foo) : foo(init_foo) {}`
-- If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[verb] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than ~~`set_input_left()`~~.
+- If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[noun] is preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than ~~`set_input_left()`~~.
 
 ### Naming convention for gtest macros:
 
