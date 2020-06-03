@@ -227,34 +227,7 @@ void AbstractTableGenerator::generate_and_store() {
   if (std::getenv("CLUSTERING") && std::filesystem::exists(std::getenv("CLUSTERING"))) {
     storage_manager.apply_partitioning();
   } else {
-    std::cout << "- Not applying clusterin as CLUSTERING environment variable is unset" << std::endl;
-  }
-
-  /**
-   * Dump dictionaries for external analysis
-   */
-  {
-    for (const auto& table_name : storage_manager.table_names()) {
-      const auto table = storage_manager.get_table(table_name);
-      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        const auto column_name = table->column_name(column_id);
-        const auto column_data_type = table->column_data_type(column_id);
-        resolve_data_type(column_data_type, [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-          for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-            auto out = std::ofstream(table_name + "." + column_name + "." + std::to_string(chunk_id) + ".dict");
-
-            const auto chunk = table->get_chunk(chunk_id);
-            const auto& dictionary_segment = dynamic_cast<const DictionarySegment<ColumnDataType>&>(*chunk->get_segment(column_id));
-            const auto& dictionary = dictionary_segment.dictionary();
-
-            for (auto dictionary_entry : *dictionary) {
-              out << dictionary_entry << '\0';
-            }
-          }
-        });
-      }
-    }
+    std::cout << "- Not applying clustering as CLUSTERING environment variable is unset" << std::endl;
   }
 
   /**

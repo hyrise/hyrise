@@ -130,6 +130,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   template <typename Accessor>
   class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor>, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
     using PosListIteratorType = AbstractPosList::PosListIterator<>;
@@ -179,6 +180,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   class MultipleChunkIterator
       : public BaseSegmentIterator<MultipleChunkIterator<PosListIteratorType>, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
 

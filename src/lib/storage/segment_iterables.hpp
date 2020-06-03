@@ -142,6 +142,7 @@ class SegmentIterable {
 template <typename Derived>
 class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
  public:
+  typedef std::random_access_iterator_tag iterator_category;
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   /**

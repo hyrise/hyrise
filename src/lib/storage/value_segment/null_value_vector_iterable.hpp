@@ -38,6 +38,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
  private:
   class Iterator : public BaseSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = bool;
     using NullValueIterator = pmr_vector<bool>::const_iterator;
 
@@ -68,6 +69,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
                                                                     IsNullSegmentPosition, PosListIteratorType> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = bool;
     using NullValueVector = pmr_vector<bool>;
 

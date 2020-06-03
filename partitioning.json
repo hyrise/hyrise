@@ -1,8 +1,22 @@
 {
-  "lineitem" : [
-        {"column_name": "l_shipdate", "partitions": 60, "mode": "size"},
-        {"column_name": "l_discount", "partitions": 7, "mode": "size"},
-        {"column_name": "l_returnflag", "partitions": 3, "mode": "values"}
-  ]
-}
-
+   "customer":[
+      {
+         "column_name": "c_mktsegment",
+         "clusters": 2,
+         "mode": "size"
+      }
+   ],
+   "lineitem":[
+      {
+         "column_name": "l_shipdate",
+         "clusters": 92,
+         "mode": "size"
+      }
+   ],
+   "orders":[
+      {
+         "column_name": "o_orderdate",
+         "clusters": 30,
+         "mode": "size"
+      }
+   ]}

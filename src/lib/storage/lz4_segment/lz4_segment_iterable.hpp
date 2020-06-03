@@ -92,6 +92,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   template <typename ValueIterator>
   class Iterator : public BaseSegmentIterator<Iterator<ValueIterator>, SegmentPosition<T>> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = LZ4SegmentIterable<T>;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
@@ -142,6 +143,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
                                                                     SegmentPosition<T>, PosListIteratorType> {
    public:
+    typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
     using IterableType = LZ4SegmentIterable<T>;
     using DataIteratorType = typename std::vector<T>::const_iterator;
