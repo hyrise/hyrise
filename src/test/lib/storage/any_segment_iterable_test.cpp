@@ -42,7 +42,7 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
  protected:
-  std::shared_ptr<BaseSegment> int_segment;
+  std::shared_ptr<AbstractSegment> int_segment;
 
   inline static pmr_vector<int32_t> int_values;
   inline static std::shared_ptr<RowIDPosList> position_filter;

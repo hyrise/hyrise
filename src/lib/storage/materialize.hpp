@@ -3,7 +3,7 @@
 #include <optional>
 
 #include "resolve_type.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
 namespace opossum {
@@ -23,7 +23,7 @@ namespace opossum {
 
 // Materialize the values in the segment
 template <typename Container>
-void materialize_values(const BaseSegment& segment, Container& container) {
+void materialize_values(const AbstractSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type;
 
   resolve_segment_type<ContainerValueType>(segment, [&](const auto& typed_segment) {
@@ -33,7 +33,7 @@ void materialize_values(const BaseSegment& segment, Container& container) {
 
 // Materialize the values/nulls in the segment
 template <typename Container>
-void materialize_values_and_nulls(const BaseSegment& segment, Container& container) {
+void materialize_values_and_nulls(const AbstractSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type::second_type;
 
   resolve_segment_type<ContainerValueType>(segment, [&](const auto& typed_segment) {
@@ -43,7 +43,7 @@ void materialize_values_and_nulls(const BaseSegment& segment, Container& contain
 
 // Materialize the nulls in the segment
 template <typename SegmentValueType, typename Container>
-void materialize_nulls(const BaseSegment& segment, Container& container) {
+void materialize_nulls(const AbstractSegment& segment, Container& container) {
   resolve_segment_type<SegmentValueType>(segment, [&](const auto& typed_segment) {
     create_iterable_from_segment<SegmentValueType>(typed_segment).materialize_nulls(container);
   });

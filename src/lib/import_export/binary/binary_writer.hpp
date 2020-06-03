@@ -199,7 +199,7 @@ class BinaryWriter {
   static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
 
   template <typename T>
-  static uint32_t _compressed_vector_width(const BaseEncodedSegment& base_encoded_segment);
+  static uint32_t _compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment);
 
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,

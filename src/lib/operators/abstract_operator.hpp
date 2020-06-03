@@ -104,17 +104,17 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<AbstractOperator> deep_copy() const;
 
   // Get the input operators.
-  std::shared_ptr<const AbstractOperator> input_left() const;
-  std::shared_ptr<const AbstractOperator> input_right() const;
+  std::shared_ptr<const AbstractOperator> left_input() const;
+  std::shared_ptr<const AbstractOperator> right_input() const;
 
   // Return input operators.
   // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
-  std::shared_ptr<AbstractOperator> mutable_input_left() const;
-  std::shared_ptr<AbstractOperator> mutable_input_right() const;
+  std::shared_ptr<AbstractOperator> mutable_left_input() const;
+  std::shared_ptr<AbstractOperator> mutable_right_input() const;
 
   // Return the output tables of the inputs
-  std::shared_ptr<const Table> input_table_left() const;
-  std::shared_ptr<const Table> input_table_right() const;
+  std::shared_ptr<const Table> left_input_table() const;
+  std::shared_ptr<const Table> right_input_table() const;
 
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
   const OperatorPerformanceData& performance_data() const;
@@ -150,14 +150,14 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
   virtual std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const = 0;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const = 0;
 
   const OperatorType _type;
 
   // Shared pointers to input operators, can be nullptr.
-  std::shared_ptr<const AbstractOperator> _input_left;
-  std::shared_ptr<const AbstractOperator> _input_right;
+  std::shared_ptr<const AbstractOperator> _left_input;
+  std::shared_ptr<const AbstractOperator> _right_input;
 
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;

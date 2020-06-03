@@ -61,8 +61,8 @@ const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const { return _pruned_
 const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 

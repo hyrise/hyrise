@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -61,12 +61,12 @@ class BinaryParser {
   static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
-  static std::shared_ptr<BaseSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, DataType data_type,
-                                                      bool is_nullable);
+  static std::shared_ptr<AbstractSegment> _import_segment(std::ifstream& file, ChunkOffset row_count,
+                                                          DataType data_type, bool is_nullable);
 
   template <typename ColumnDataType>
   // Reads the column type from the given file and chooses a segment import function from it.
-  static std::shared_ptr<BaseSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  static std::shared_ptr<AbstractSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
   template <typename T>
   static std::shared_ptr<ValueSegment<T>> _import_value_segment(std::ifstream& file, ChunkOffset row_count,

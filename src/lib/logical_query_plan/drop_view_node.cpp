@@ -12,7 +12,7 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 DropViewNode::DropViewNode(const std::string& init_view_name, const bool init_if_exists)
-    : BaseNonQueryNode(LQPNodeType::DropView), view_name(init_view_name), if_exists(init_if_exists) {}
+    : AbstractNonQueryNode(LQPNodeType::DropView), view_name(init_view_name), if_exists(init_if_exists) {}
 
 std::string DropViewNode::description(const DescriptionMode mode) const { return "[Drop] View: '"s + view_name + "'"; }
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "base_non_query_node.hpp"
+#include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
 
-class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public BaseNonQueryNode {
+class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public AbstractNonQueryNode {
  public:
   DropTableNode(const std::string& init_table_name, bool init_if_exists);
 
