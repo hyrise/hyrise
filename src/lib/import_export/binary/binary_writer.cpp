@@ -268,7 +268,7 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
   // Write block size
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
 
-  // Write last decompressed block size
+  // Write last block size
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
 
   // Write compressed size for each LZ4 Block

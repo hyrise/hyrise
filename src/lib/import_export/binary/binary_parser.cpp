@@ -229,8 +229,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 
   pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
 
-  const auto compressed_size =
-      static_cast<size_t>(std::accumulate(lz4_block_sizes.begin(), lz4_block_sizes.end(), 0));
+  const auto compressed_size = std::accumulate(lz4_block_sizes.begin(), lz4_block_sizes.end(), size_t{0});
 
   pmr_vector<pmr_vector<char>> lz4_blocks(block_count);
   for (uint32_t block_index = 0; block_index < block_count; ++block_index) {
