@@ -82,7 +82,7 @@ namespace opossum {
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids, std::make_unique<StepOperatorPerformanceData>()) {
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids, std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
 }
 
 const std::string& AggregateHash::name() const {
@@ -184,7 +184,7 @@ void AggregateHash::_aggregate() {
   using AggregateKeysAllocator =
       boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
 
-  auto input_table = left_input_table();
+  const auto& input_table = left_input_table();
 
   for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
     DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
@@ -475,7 +475,7 @@ void AggregateHash::_aggregate() {
       _contexts_per_column[aggregate_idx] = context;
       continue;
     }
-    auto data_type = input_table->column_data_type(input_column_id);
+    const auto data_type = input_table->column_data_type(input_column_id);
     _contexts_per_column[aggregate_idx] =
         _create_aggregate_context<AggregateKey>(data_type, aggregate->aggregate_function);
   }
@@ -563,8 +563,8 @@ void AggregateHash::_aggregate() {
           continue;
         }
 
-        auto base_segment = chunk_in->get_segment(input_column_id);
-        auto data_type = input_table->column_data_type(input_column_id);
+        const auto base_segment = chunk_in->get_segment(input_column_id);
+        const auto data_type = input_table->column_data_type(input_column_id);
 
         /*
         Invoke correct aggregator for each segment
@@ -615,7 +615,7 @@ void AggregateHash::_aggregate() {
 }
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
-  auto& step_performance_data = static_cast<StepOperatorPerformanceData&>(*performance_data);
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;
 
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
@@ -640,8 +640,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   }
   step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::Aggregate)] = timer.lap();
 
-  const auto& input_table = left_input_table();
-
   /**
    * Write group-by columns.
    *
@@ -665,7 +663,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   /*
   Write the aggregated columns to the output
   */
-  const auto& input_table = input_table_left();
+  const auto& input_table = left_input_table();
   ColumnID aggregate_idx{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());

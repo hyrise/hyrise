@@ -69,7 +69,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   AbstractOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
       const std::shared_ptr<const AbstractOperator>& right = nullptr,
-      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
+      std::unique_ptr<AbstractOperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
   virtual ~AbstractOperator() = default;
 
@@ -122,7 +122,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // LQP node with which this operator has been created. Might be uninitialized.
   std::shared_ptr<const AbstractLQPNode> lqp_node;
 
-  std::unique_ptr<OperatorPerformanceData> performance_data;
+  std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
   // abstract method to actually execute the operator

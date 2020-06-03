@@ -53,7 +53,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinIndex::PerformanceData>()),
+                           std::make_unique<JoinIndex::JoinIndexPerformanceData>()),
       _index_side(index_side),
       _adjusted_primary_predicate(primary_predicate) {
   if (_index_side == IndexSide::Left) {
@@ -143,7 +143,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _probe_pos_list->reserve(pos_list_size_to_reserve);
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
-  auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
+  auto& join_index_performance_data = static_cast<JoinIndexPerformanceData&>(*performance_data);
   Timer timer;
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
@@ -280,7 +280,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
   PerformanceWarning("Fallback nested loop used.");
-  auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
+  auto& join_index_performance_data = static_cast<JoinIndexPerformanceData&>(*performance_data);
 
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
   Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -603,12 +603,13 @@ void JoinIndex::_on_cleanup() {
   _index_matches.clear();
 }
 
-void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-  StepOperatorPerformanceData::output_to_stream(stream, description_mode);
+void JoinIndex::JoinIndexPerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
-  stream << (description_mode == DescriptionMode::SingleLine ? ", " : "\n");
-  stream << "indexes used for " << chunks_scanned_with_index << " of " <<
-            chunks_scanned_with_index + chunks_scanned_without_index << " chunk(s)";
+  const auto chunk_count = chunks_scanned_with_index + chunks_scanned_without_index;
+  stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") <<
+            "Indexes used for " << chunks_scanned_with_index << " of " <<
+            chunk_count << " chunk" << (chunk_count > 1 ? "s" : "") << ".";
 }
 
 }  // namespace opossum

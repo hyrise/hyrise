@@ -140,7 +140,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
                                     const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  const auto& performance_data = from->performance_data();
+  const auto& performance_data = *from->performance_data;
   if (performance_data.executed && performance_data.has_output) {
     std::stringstream stream;
 
@@ -168,7 +168,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   VizVertexInfo info = _default_vertex;
   auto label = op->description(DescriptionMode::MultiLine);
 
-  const auto& performance_data = op->performance_data();
+  const auto& performance_data = *op->performance_data;
   if (performance_data.executed) {
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);

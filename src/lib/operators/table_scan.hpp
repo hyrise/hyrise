@@ -48,7 +48,7 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   std::vector<ChunkID> excluded_chunk_ids;
 
-  struct TableScanPerformanceData : public OperatorPerformanceData {
+  struct TableScanPerformanceData : public OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps> {
     size_t chunk_scans_skipped{0};
     size_t chunk_scans_sorted{0};
 

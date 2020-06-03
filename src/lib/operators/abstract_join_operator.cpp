@@ -15,7 +15,7 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const OperatorJoinPredicate& primary_predicate,
                                            const std::vector<OperatorJoinPredicate>& secondary_predicates,
-                                           std::unique_ptr<OperatorPerformanceData> init_performance_data)
+                                           std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : AbstractReadOnlyOperator(type, left, right, std::move(init_performance_data)),
       _mode(mode),
       _primary_predicate(primary_predicate),

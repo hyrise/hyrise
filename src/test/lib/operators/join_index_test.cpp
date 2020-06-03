@@ -101,7 +101,7 @@ class OperatorsJoinIndexTest : public BaseTest {
       index_side_input = right;
     }
 
-    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
+    const auto& performance_data = static_cast<const JoinIndex::JoinIndexPerformanceData&>(*join->performance_data);
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
       EXPECT_EQ(performance_data.chunks_scanned_with_index,
@@ -192,12 +192,13 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
 }
 
 TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
-  auto performance_data = JoinIndex::PerformanceData{};
+  auto performance_data = JoinIndex::JoinIndexPerformanceData{};
 
   performance_data.executed = true;
   performance_data.has_output = true;
   performance_data.output_row_count = 2u;
   performance_data.output_chunk_count = 1u;
+  performance_data.step_runtimes[static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)] = std::chrono::nanoseconds{17};
   performance_data.walltime = std::chrono::nanoseconds{999u};
   performance_data.chunks_scanned_with_index = 10u;
   performance_data.chunks_scanned_without_index = 5u;
@@ -205,13 +206,15 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   {
     std::stringstream stream;
     stream << performance_data;
-    EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns, indexes used for 10 of 15 chunk(s)");
+    EXPECT_EQ(stream.str(), "2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
+                            "NestedLoopJoining 0 ns, OutputWriting 0 ns. Indexes used for 10 of 15 chunks.");
   }
 
   {
     std::stringstream stream;
     performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
-    EXPECT_EQ(stream.str(), "2 row(s) in 1 chunk(s), 999 ns\nindexes used for 10 of 15 chunk(s)");
+    EXPECT_EQ(stream.str(), "2 rows in 1 chunk, 999 ns.\nOperator step runtimes: IndexJoining 17 ns, "
+                            "NestedLoopJoining 0 ns, OutputWriting 0 ns.\nIndexes used for 10 of 15 chunks.");
   }
 }
 

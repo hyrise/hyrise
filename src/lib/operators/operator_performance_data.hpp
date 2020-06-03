@@ -4,7 +4,10 @@
 #include <iostream>
 #include <string>
 
+#include <magic_enum.hpp>
+
 #include "types.hpp"
+#include "utils/format_duration.hpp"
 
 namespace opossum {
 /**
@@ -14,19 +17,12 @@ TODO
   * JoinIndex) or StepOperatorPerformanceData (when operator steps shall be tracked, e.g., HashJoin).
   * Only used in PQP Visualize and plugins right now (analyze PQP).
   */
-// struct BaseOperatorPerformanceData {
-//     enum class NoStages { };
+struct AbstractOperatorPerformanceData : public Noncopyable {
+  enum class NoSteps {};
 
-//     virtual ~BaseOperatorPerformanceData() = default;
-//     virtual void print() = 0;
+  virtual ~AbstractOperatorPerformanceData() = default;
 
-//     std::array<int, 10> stages;
-// };
-
-struct OperatorPerformanceData : public Noncopyable {
-  virtual ~OperatorPerformanceData() = default;
-
-  enum class NoStages { };
+  virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 
   bool executed{false};
   std::chrono::nanoseconds walltime{0};
@@ -37,39 +33,45 @@ struct OperatorPerformanceData : public Noncopyable {
   uint64_t output_row_count{0};
   uint64_t output_chunk_count{0};
 
-  virtual void output_to_stream(std::ostream& stream,
-                                DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+  std::array<std::chrono::nanoseconds, 10> step_runtimes{};
 };
 
-struct StepOperatorPerformanceData : public OperatorPerformanceData {
-  StepOperatorPerformanceData() : OperatorPerformanceData{} {}
+template <typename Steps>
+struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
+  void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+    if (!executed) {
+      stream << "Not executed.";
+      return;
+    }
 
-  std::array<std::chrono::nanoseconds, 10> step_runtimes;
+    if (!has_output) {
+      stream << "Executed, but no output.";
+      return;
+    }
 
-  std::chrono::nanoseconds get_step_runtime(const size_t step) const { return step_runtimes[step]; }
+    stream << output_row_count << " row" << (output_row_count > 1 ? "s" : "") << " in " << output_chunk_count <<
+              " chunk" << (output_chunk_count > 1 ? "s" : "") << ", " <<
+              format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime)) << ".";
 
-  virtual void output_to_stream(std::ostream& stream,
-                                DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+    if constexpr (!std::is_same_v<Steps, NoSteps>) {
+      static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");
+      stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") <<
+                "Operator step runtimes: ";
+      for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
+        if (step_index > 0) stream << ", ";
+        stream << magic_enum::enum_name(static_cast<Steps>(step_index)) << " " <<
+                  format_duration(step_runtimes[step_index]);
+      }
+      stream << ".";
+    }
+  }
+
+  std::chrono::nanoseconds get_step_runtime(const size_t step) const {
+    DebugAssert(step < magic_enum::enum_count<Steps>(), "Step index is too large.");
+    return step_runtimes[step];
+  }
 };
 
-std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& performance_data);
-std::ostream& operator<<(std::ostream& stream, const StepOperatorPerformanceData& performance_data);
+std::ostream& operator<<(std::ostream& stream, const AbstractOperatorPerformanceData& performance_data);
 
 }  // namespace opossum
-
-
-
-
-// template <typename Stages>
-// struct OperatorPerformanceData : public BaseOperatorPerformanceData {
-//     void print() {
-//         std::cout << "\t15 rows returned, 13ms total" << std::endl;
-//         if constexpr (!std::is_same_v<Stages, NoStages>) {
-//             std::cout << "\tHier kommen die stages:" << std::endl;
-//             static_assert(magic_enum::enum_count<Stages>() < sizeof(stages), "Too many stages");
-//             for (auto stage_index = size_t{0}; stage_index < magic_enum::enum_count<Stages>(); ++stage_index) {
-//                 std::cout << "\t\t" << magic_enum::enum_name(static_cast<Stages>(stage_index)) << ": " << stages[stage_index] << std::endl;
-//             }
-//         }
-//     }
-// };
