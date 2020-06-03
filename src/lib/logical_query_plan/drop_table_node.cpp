@@ -3,7 +3,7 @@
 namespace opossum {
 
 DropTableNode::DropTableNode(const std::string& init_table_name, const bool init_if_exists)
-    : BaseNonQueryNode(LQPNodeType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
+    : AbstractNonQueryNode(LQPNodeType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
 
 std::string DropTableNode::description(const DescriptionMode mode) const {
   return std::string("[DropTable] Name: '") + table_name + "'";
