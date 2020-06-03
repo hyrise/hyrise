@@ -70,6 +70,15 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
     DebugAssert(step < magic_enum::enum_count<Steps>(), "Step index is too large.");
     return step_runtimes[step];
   }
+
+  std::chrono::nanoseconds get_step_runtime(const Steps step) const {
+    DebugAssert(magic_enum::enum_integer(step) < magic_enum::enum_count<Steps>(), "Step index is too large.");
+    return step_runtimes[static_cast<size_t>(step)];
+  }
+
+  void set_step_runtime(const Steps step, const std::chrono::nanoseconds duration) {
+    step_runtimes[static_cast<size_t>(step)] = duration;
+  }
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperatorPerformanceData& performance_data);

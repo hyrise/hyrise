@@ -280,8 +280,8 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
 
 TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   OperatorPerformanceData<JoinHash::OperatorSteps> performance_data;
-  performance_data.step_runtimes[0] = std::chrono::nanoseconds{17};
-  performance_data.step_runtimes[3] = std::chrono::nanoseconds{17};
+  performance_data.set_step_runtime(JoinHash::OperatorSteps::Materialization, std::chrono::nanoseconds{17});
+  performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, std::chrono::nanoseconds{17});
   performance_data.executed = true;
   performance_data.has_output = true;
   performance_data.output_row_count = 1u;
