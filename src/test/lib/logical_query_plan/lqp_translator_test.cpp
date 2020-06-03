@@ -507,9 +507,9 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
-  // As the vector of indexed chunks contain the chunk ids {0, 2} and the vector of pruned chunks 
-  // contains the chunk id {0}, the first indexed chunk is pruned. Correspondingly, the ids of the 
-  // indexed chunks have to be adopted, so that the index chunk with the id 2 has now the id 1. 
+  // As the vector of indexed chunks contain the chunk ids {0, 2} and the vector of pruned chunks
+  // contains the chunk id {0}, the first indexed chunk is pruned. Correspondingly, the ids of the
+  // indexed chunks have to be adopted, so that the index chunk with the id 2 has now the id 1.
   std::vector<ChunkID> index_scan_chunk_ids = {ChunkID{1}};
 
   /**
