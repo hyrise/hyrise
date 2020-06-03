@@ -17,9 +17,9 @@ class SegmentIteratorsTest : public EncodingTest {
     ASSERT_FALSE(position_filter_multi_chunk->references_single_chunk());
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      const auto base_segment = table->get_chunk(ChunkID{0})->get_segment(column_id);
+      const auto abstract_segment = table->get_chunk(ChunkID{0})->get_segment(column_id);
 
-      resolve_data_and_segment_type(*base_segment, [&](const auto data_type_t, const auto& segment) {
+      resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         using SegmentType = std::decay_t<decltype(segment)>;
 

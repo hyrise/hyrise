@@ -2,7 +2,7 @@
 
 #include "base_test.hpp"
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
@@ -51,10 +51,10 @@ class SegmentAccessorTest : public BaseTest {
 
   std::shared_ptr<BaseValueSegment> val_seg_int;
   std::shared_ptr<BaseValueSegment> val_seg_str;
-  std::shared_ptr<BaseSegment> dict_seg_int;
-  std::shared_ptr<BaseSegment> dict_seg_str;
-  std::shared_ptr<BaseSegment> ref_seg_int;
-  std::shared_ptr<BaseSegment> ref_seg_str;
+  std::shared_ptr<AbstractSegment> dict_seg_int;
+  std::shared_ptr<AbstractSegment> dict_seg_str;
+  std::shared_ptr<AbstractSegment> ref_seg_int;
+  std::shared_ptr<AbstractSegment> ref_seg_str;
 
   std::shared_ptr<Table> tbl;
   std::shared_ptr<Chunk> chunk;

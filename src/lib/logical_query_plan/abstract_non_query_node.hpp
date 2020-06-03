@@ -9,7 +9,7 @@ namespace opossum {
  *
  * Helper class that provides a column_expressions() override and contains an empty dummy expression vector
  */
-class BaseNonQueryNode : public AbstractLQPNode {
+class AbstractNonQueryNode : public AbstractLQPNode {
  public:
   using AbstractLQPNode::AbstractLQPNode;
 

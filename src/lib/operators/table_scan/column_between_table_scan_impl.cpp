@@ -35,7 +35,7 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
 std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
@@ -64,7 +64,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 }
 
 void ColumnBetweenTableScanImpl::_scan_generic_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
@@ -153,7 +153,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
   });
 }
 
-void ColumnBetweenTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
                                                       const SortMode sort_mode) const {

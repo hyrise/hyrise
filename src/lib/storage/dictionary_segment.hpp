@@ -26,7 +26,7 @@ class DictionarySegment : public BaseDictionarySegment {
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -43,13 +43,13 @@ class DictionarySegment : public BaseDictionarySegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
   std::optional<CompressedVectorType> compressed_vector_type() const final;

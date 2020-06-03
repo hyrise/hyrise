@@ -4,13 +4,13 @@
 #include <optional>
 
 #include "all_type_variant.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 
-class BaseEncodedSegment;
+class AbstractEncodedSegment;
 class BaseSegmentEncoder;
 class BaseValueSegment;
 
@@ -22,7 +22,7 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type);
 /**
  * @return the segment encoding spec for the given segment.
  */
-SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const BaseSegment>& segment);
+SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const AbstractSegment>& segment);
 
 /**
  * @brief Returns the vector compression type for a given compressed vector type.

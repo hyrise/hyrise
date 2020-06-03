@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables.hpp"
@@ -59,7 +59,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
  private:
   template <typename ZsIteratorType, typename DictionaryIteratorType>
-  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType, DictionaryIteratorType>, SegmentPosition<T>> {
+  class Iterator
+      : public AbstractSegmentIterator<Iterator<ZsIteratorType, DictionaryIteratorType>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
@@ -110,7 +111,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   };
 
   template <typename ZsDecompressorType, typename DictionaryIteratorType, typename PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<
+  class PointAccessIterator : public AbstractPointAccessSegmentIterator<
                                   PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, PosListIteratorType>,
                                   SegmentPosition<T>, PosListIteratorType> {
    public:
@@ -120,7 +121,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
                         ZsDecompressorType attribute_decompressor, PosListIteratorType position_filter_begin,
                         PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<
+        : AbstractPointAccessSegmentIterator<
               PointAccessIterator<ZsDecompressorType, DictionaryIteratorType, PosListIteratorType>, SegmentPosition<T>,
               PosListIteratorType>{std::move(position_filter_begin), std::move(position_filter_it)},
           _dictionary_begin_it{std::move(dictionary_begin_it)},

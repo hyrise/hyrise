@@ -129,7 +129,7 @@ struct AggregateContext : public AggregateResultContext<ColumnDataType, Aggregat
 };
 
 template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
-void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
+void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                                        const KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
@@ -143,7 +143,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
 
-  segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
+  segment_iterate<ColumnDataType>(abstract_segment, [&](const auto& position) {
     auto& result =
         get_or_add_result(result_ids, results, get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                           RowID{chunk_id, chunk_offset});
@@ -289,9 +289,9 @@ void AggregateHash::_aggregate() {
             // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
             for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
-              const auto base_segment = chunk_in->get_segment(groupby_column_id);
+              const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 const auto int_to_uint = [](const int32_t value) {
                   // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
                   // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
@@ -343,9 +343,9 @@ void AggregateHash::_aggregate() {
               const auto chunk_in = input_table->get_chunk(chunk_id);
               if (!chunk_in) continue;
 
-              const auto base_segment = chunk_in->get_segment(groupby_column_id);
+              const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
               ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
                 if (position.is_null()) {
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                     keys_per_chunk[chunk_id][chunk_offset] = 0u;
@@ -563,7 +563,7 @@ void AggregateHash::_aggregate() {
           continue;
         }
 
-        const auto base_segment = chunk_in->get_segment(input_column_id);
+        const auto abstract_segment = chunk_in->get_segment(input_column_id);
         const auto data_type = input_table->column_data_type(input_column_id);
 
         /*
@@ -575,36 +575,36 @@ void AggregateHash::_aggregate() {
 
           switch (aggregate->aggregate_function) {
             case AggregateFunction::Min:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Min, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Max:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Max, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Sum:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Sum, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Avg:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Count:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                         *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
-                  chunk_id, aggregate_idx, *base_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::StandardDeviationSample:
               _aggregate_segment<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>(
-                  chunk_id, aggregate_idx, *base_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
               break;
             case AggregateFunction::Any:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(chunk_id, aggregate_idx,
-                                                                                       *base_segment, keys_per_chunk);
+              _aggregate_segment<ColumnDataType, AggregateFunction::Any, AggregateKey>(
+                  chunk_id, aggregate_idx, *abstract_segment, keys_per_chunk);
           }
         });
 
