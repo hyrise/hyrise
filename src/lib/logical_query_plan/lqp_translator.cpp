@@ -215,17 +215,21 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<ChunkID> indexed_chunks;
 
   auto pruned_table_chunk_id = 0;
-  
+  auto pruned_vector_id = 0; 
+
   // Create a vector of chunk ids that have a GroupKey index and are not prunned. 
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
-    // Check if vector of pruned chunk ids contains the current chunk id
-    // Assumption: pruned_chunk_ids is sorted
-    if (!std::binary_search(pruned_chunk_ids.begin(), pruned_chunk_ids.end(), chunk_id)) {
-      // Check if segment has a GroupKey index
+    Assert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), 
+      "Expected sorted vector of ColumnIDs");
+    // Check if chunk is pruned
+    if (pruned_vector_id < static_cast<int>(pruned_chunk_ids.size()) && 
+      chunk_id == pruned_chunk_ids[pruned_vector_id]) {
+      pruned_vector_id += 1;
+    } else {
+      // Check if chunk has GroupKey index
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-        // Add pruned table chunk id to indexed chunks vector
         indexed_chunks.emplace_back(pruned_table_chunk_id);
       }
       pruned_table_chunk_id += 1;

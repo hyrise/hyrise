@@ -528,9 +528,6 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  for (auto testdad : index_scan_op->included_chunk_ids) {
-   std::cout << testdad << std::endl;
-  }
   EXPECT_EQ(index_scan_op->included_chunk_ids, index_scan_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
