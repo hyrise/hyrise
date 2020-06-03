@@ -20,8 +20,8 @@ def preprocess_data(data):
     ohe_data = data.drop(labels=['TABLE_NAME', 'COLUMN_NAME'], axis=1)
 
     ohe_data = pd.get_dummies(ohe_data,
-        columns=['OPERATOR_NAME', 'OPERATOR_DETAIL', 'DATA_TYPE', 'ENCODING',
-                 'OPERATOR_IMPLEMENTATION', 'COMPRESSION_TYPE'])
+    						  columns=['OPERATOR_NAME', 'OPERATOR_DETAIL', 'DATA_TYPE', 'ENCODING',
+                 					   'OPERATOR_IMPLEMENTATION', 'COMPRESSION_TYPE'])
     return ohe_data
 
 
@@ -55,7 +55,7 @@ def generate_model_plot(model, test_data, operator, method, encoding, implementa
     axis_max = max(np.amax(pred_y), np.amax(real_y)) * 1.05
     axis_min = min(np.amin(pred_y), np.amin(real_y)) * 0.95
     abline_values = range(int(axis_min), int(axis_max), int((axis_max-axis_min)/100))
-    sample_size = '{:,}'.format(test_data.shape[0]).replace(',', '\'')
+    sample_size = '{:,}'.format(ohe_data.shape[0]).replace(',', '\'')
 
     # Plot the best fit line over the actual values
     plt.plot(abline_values, abline_values, c = 'r', linestyle='-')
