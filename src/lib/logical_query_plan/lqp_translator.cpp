@@ -210,7 +210,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
 
-  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
+  DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
     "Expected sorted vector of ColumnIDs");
 
   const auto table_name = stored_table_node->table_name;
@@ -218,13 +218,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<ChunkID> indexed_chunks;
 
   auto pruned_table_chunk_id = ChunkID{0};
-  auto pruned_chunk_ids_iter = pruned_chunk_ids.begin();
+  auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
 
-  // Create a vector of chunk ids that have a GroupKey index and are not prunned.
+  // Create a vector of chunk ids that have a GroupKey index and are not pruned.
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // Check if chunk is pruned
-    if (pruned_chunk_ids_iter <= pruned_chunk_ids.end() && chunk_id == *pruned_chunk_ids_iter) {
+    if (pruned_chunk_ids_iter != pruned_chunk_ids.cend() && chunk_id == *pruned_chunk_ids_iter) {
       ++pruned_chunk_ids_iter;
       continue;
     }
