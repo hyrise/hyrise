@@ -75,11 +75,12 @@ int main(int argc, char* argv[]) {
   if (BENCHMARK == "tpch") {
     const auto scale_factor = cli_parse_result["scale"].as<float>();
     std::cout << "- Scale factor is " << scale_factor << std::endl;
-    for (auto query_id = 0u; query_id < 22; query_id++) {
-    //for (auto query_id = 17u; query_id < 18; query_id++) {
+    //for (auto query_id = 0u; query_id < 22; query_id++) {
+    for (auto query_id = 21u; query_id < 22; query_id++) {
+      if (config->verify && query_id == 14) continue;
+
       if (plugin_loaded) Assert(Hyrise::get().storage_manager.has_table("lineitem"), "lineitem disappeared");
       const std::vector<BenchmarkItemID> tpch_query_ids_benchmark = {BenchmarkItemID{query_id}};
-
       std::stringstream query_name_stream;
       query_name_stream << std::setw(2) << std::setfill('0') << (query_id + 1);
       config->output_file_path = output_file_path + "." + query_name_stream.str();
@@ -108,10 +109,11 @@ int main(int argc, char* argv[]) {
 
       // after the benchmark was executed, add more interesting statistics to the json.
       // we could also modify the benchmark to directly export this information, but that feels hacky.
-      if (!config->enable_visualization) _append_additional_statistics(*config->output_file_path);
+      if (!(config->enable_visualization || config->verify)) _append_additional_statistics(*config->output_file_path);
+
     }
 
-    if (!config->enable_visualization) _merge_result_files(output_file_path, result_file_names);
+    if (!(config->enable_visualization || config->verify)) _merge_result_files(output_file_path, result_file_names);
   } else if (BENCHMARK == "tpcds") {
     const std::string query_path = "resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification/";
     const auto scale_factor = cli_parse_result["scale"].as<float>();
@@ -146,9 +148,9 @@ int main(int argc, char* argv[]) {
 
       // after the benchmark was executed, add more interesting statistics to the json.
       // we could also modify the benchmark to directly export this information, but that feels hacky.
-      if (!config->enable_visualization) _append_additional_statistics(*config->output_file_path);
+      if (!(config->enable_visualization || config->verify)) _append_additional_statistics(*config->output_file_path);
     }
-    if (!config->enable_visualization) _merge_result_files(output_file_path, result_file_names);
+    if (!(config->enable_visualization || config->verify)) _merge_result_files(output_file_path, result_file_names);
   } else if (BENCHMARK == "job") {
     const auto table_path = "hyrise/imdb_data";
     const auto query_path = "hyrise/third_party/join-order-benchmark";
