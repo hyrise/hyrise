@@ -92,7 +92,8 @@ def print_context_overview(old_config, new_config):
     print(table.table)
 
 
-# Doubles the separators (can be | normal rows and + for horizontal separators within the table)
+# Doubles the separators (can be | normal rows and + for horizontal separators within the table) given by the list
+# vertical_separators_to_duplicate. [0, 3] means that the first and fourth separator are doubled.
 def double_vertical_separators(lines, vertical_separators_to_duplicate):
    for line_id, line in enumerate(lines):
         vertical_separator = line[0]
