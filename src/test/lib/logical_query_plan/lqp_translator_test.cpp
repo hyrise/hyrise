@@ -495,9 +495,9 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
-  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  std::vector<ChunkID> pruned_chunk_ids = {ChunkID{0}};
+  auto index_column_ids = std::vector{ColumnID{1}};
+  auto index_chunk_ids = std::vector{ChunkID{0}, ChunkID{2}};
+  auto pruned_chunk_ids = std::vector{ChunkID{0}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
@@ -507,9 +507,9 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
-  // As the vector of indexed chunks contain the chunk ids {0, 2} and the vector of pruned chunks
+  // As the vector of indexed chunks contains the chunk ids {0, 2} and the vector of pruned chunks
   // contains the chunk id {0}, the first indexed chunk is pruned. Correspondingly, the ids of the
-  // indexed chunks have to be adopted, so that the index chunk with the id 2 has now the id 1.
+  // indexed chunks have to be adapted, so that the indexed chunk with the id 2 now has the id 1.
   std::vector<ChunkID> index_scan_chunk_ids = {ChunkID{1}};
 
   /**

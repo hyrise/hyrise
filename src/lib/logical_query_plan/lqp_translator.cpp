@@ -222,7 +222,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // Create a vector of chunk ids that have a GroupKey index and are not prunned.
   const auto chunk_count = table->chunk_count();
-  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // Check if chunk is pruned
     if (pruned_chunk_ids_iter <= pruned_chunk_ids.end() && chunk_id == *pruned_chunk_ids_iter) {
       ++pruned_chunk_ids_iter;
