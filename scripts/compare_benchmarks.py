@@ -91,6 +91,21 @@ def print_context_overview(old_config, new_config):
     table.title = 'Configuration Overview'
     print(table.table)
 
+
+# Doubles the separators (can be | normal rows and + for horizontal separators within the table)
+def double_vertical_separators(lines, vertical_separators_to_duplicate):
+   for line_id, line in enumerate(lines):
+        vertical_separator = line[0]
+        # positions might change due to color coding
+        pos_separators = [m.start() for m in re.finditer(re.escape(vertical_separator), line)]
+        # 0 required for splicing
+        pos_splits = [0] + [pos_separators[index] for index in vertical_separators_to_duplicate]
+        new_line = [line[i:j] for i,j in zip(pos_splits, pos_splits[1:] + [None])]
+        lines[line_id] = vertical_separator.join(new_line)
+   return lines
+
+
+
 if not len(sys.argv) in [3, 4]:
     exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
 
@@ -118,8 +133,8 @@ print_context_overview(old_data, new_data)
 table_data = []
 # $latency and $thrghpt (abbreviated to keep the column at a max width of 8 chars) will later be replaced with a title
 # spanning two columns
-table_data.append(["Item", "", "$latency", "", "Change", "", "$thrghpt", "", "Change", "p-value"])
-table_data.append(["", "", "old", "new", "", "", "old", "new", "", ""])
+table_data.append(["Item", "$latency", "", "Change", "$thrghpt", "", "Change", "p-value"])
+table_data.append(["", "old", "new", "", "old", "new", "", ""])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
@@ -162,10 +177,10 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 
     # Note, we use column widths of 7 (latency) and 8 (throughput) for printing to ensure that we can later savely
     # replace the latency/throughput marker and everything still fits nicely.
-    table_data.append([name, '',
+    table_data.append([name,
                        f'{(old_avg_successful_duration / 1e6):>7.1f}' if old_avg_successful_duration else 'nan',
                        f'{(new_avg_successful_duration / 1e6):>7.1f}' if new_avg_successful_duration else 'nan',
-                       diff_duration_formatted + note if not math.isnan(diff_duration) else '', '',
+                       diff_duration_formatted + note if not math.isnan(diff_duration) else '',
                        f'{old["items_per_second"]:>8.2f}', f'{new["items_per_second"]:>8.2f}',
                        diff_throughput_formatted + note, p_value_formatted])
 
@@ -187,10 +202,10 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
             diff_duration_unsuccessful = float('nan')
 
         unsuccessful_info = [
-            '   unsucc.:', '',
+            '   unsucc.:',
             f'{(old_avg_unsuccessful_iteration / 1e6):>7.1f}' if not math.isnan(old_avg_unsuccessful_iteration) else 'nan',
             f'{(new_avg_unsuccessful_iteration / 1e6):>7.1f}' if not math.isnan(new_avg_unsuccessful_iteration) else 'nan',
-            format_diff(diff_duration_unsuccessful) + ' ' if not math.isnan(diff_duration_unsuccessful) else ' ', '',
+            format_diff(diff_duration_unsuccessful) + ' ' if not math.isnan(diff_duration_unsuccessful) else ' ',
             f'{old_unsuccessful_per_second:>.2f}',
             f'{new_unsuccessful_per_second:>.2f}',
             format_diff(diff_throughput_unsuccessful) + ' ' if not math.isnan(diff_throughput_unsuccessful) else ' '
@@ -199,9 +214,9 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
         unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
         table_data.append(unsuccessful_info_colored)
 
-table_data.append(['Sum', '', f'{(total_runtime_old / 1e6):>7.1f}', f'{(total_runtime_new / 1e6):>7.1f}',
+table_data.append(['Sum', f'{(total_runtime_old / 1e6):>7.1f}', f'{(total_runtime_new / 1e6):>7.1f}',
                    color_diff(total_runtime_new / total_runtime_old, True) + ' '])
-table_data.append(['Geomean', '' , '', '', '', '', '', '', color_diff(geometric_mean(diffs_throughput)) + ' '])
+table_data.append(['Geomean', '', '', '', '', '', color_diff(geometric_mean(diffs_throughput)) + ' '])
 
 table = AsciiTable(table_data)
 for column_index in range(1, len(table_data[0])): # all columns justified to right, except for item name
@@ -213,24 +228,8 @@ new_result = ''
 lines = result.splitlines()
 
 
-# To create the double vertical lines that separate the measurements, empty columns is added to the table. As these
-# empty columns use two spaces as margins, we now remove these unnecessary margins.
-separation_columns = []
-header_strings = lines[4].split('|') # use a result line without empty columns here
-for column_id, text in enumerate(header_strings):
-    # find empty columns
-    # ignore first and last as this is "outside" of the actual table
-    if text.strip() == "" and column_id > 0 and column_id < len(header_strings)-1:
-        separation_columns.append(column_id)
-
-if len(separation_columns) > 0:
-    for sep_column_id in separation_columns:
-        for line_id, line in enumerate(lines):
-            separator = '|' if line[0] == '|' else '+'
-            splits = line.split(separator)
-            new_splits = splits[:sep_column_id] + [''] + splits[sep_column_id+1:]
-            lines[line_id] = separator.join(new_splits)
-
+# Double the vertical line between the item names and the two major measurements.
+lines = double_vertical_separators(lines, [1, 4])
 
 # As the used terminaltables module does not support cells that span multiple columns, we do that manually for latency
 # and throughput in the header. We used two space holders that are narrow enough to not grow the column any wider than
