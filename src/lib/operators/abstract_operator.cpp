@@ -143,8 +143,6 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_right_input() const 
   return std::const_pointer_cast<AbstractOperator>(_right_input);
 }
 
-// const std::unique_ptr<AbstractOperatorPerformanceData> AbstractOperator::performance_data() const { return performance_data; }
-
 std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { return _left_input; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }

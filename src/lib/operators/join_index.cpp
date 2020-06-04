@@ -602,13 +602,13 @@ void JoinIndex::_on_cleanup() {
   _index_matches.clear();
 }
 
-void JoinIndex::JoinIndexPerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+void JoinIndex::JoinIndexPerformanceData::output_to_stream(std::ostream& stream,
+                                                           DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
   const auto chunk_count = chunks_scanned_with_index + chunks_scanned_without_index;
-  stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") <<
-            "Indexes used for " << chunks_scanned_with_index << " of " <<
-            chunk_count << " chunk" << (chunk_count > 1 ? "s" : "") << ".";
+  stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") << "Indexes used for "
+         << chunks_scanned_with_index << " of " << chunk_count << " chunk" << (chunk_count > 1 ? "s" : "") << ".";
 }
 
 }  // namespace opossum

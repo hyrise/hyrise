@@ -49,5 +49,4 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperatorPerformance
   return stream;
 }
 
-
 }  // namespace opossum

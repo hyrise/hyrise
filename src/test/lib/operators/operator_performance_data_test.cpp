@@ -218,7 +218,8 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStepRuntimes) {
 
   aggregate->execute();
 
-  auto& performance_data = static_cast<const OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*aggregate->performance_data);
+  auto& performance_data =
+      static_cast<const OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*aggregate->performance_data);
 
   for (const auto step : magic_enum::enum_values<AggregateHash::OperatorSteps>()) {
     EXPECT_GT(performance_data.get_step_runtime(step).count(), 0);
@@ -290,8 +291,9 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
 
   std::stringstream stringstream;
   stringstream << performance_data;
-  EXPECT_TRUE(stringstream.str().starts_with("1 row in 1 chunk, 2 ns. Operator step runtimes: Materialization 17 ns, "
-                                             "Clustering 0 ns, Building 0 ns, Probing 17 ns, OutputWriting 0 ns."));
+  EXPECT_TRUE(
+      stringstream.str().starts_with("1 row in 1 chunk, 2 ns. Operator step runtimes: Materialization 17 ns, "
+                                     "Clustering 0 ns, Building 0 ns, Probing 17 ns, OutputWriting 0 ns."));
 }
 
 TEST_F(OperatorPerformanceDataTest, OutputToStream) {

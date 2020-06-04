@@ -82,8 +82,8 @@ namespace opossum {
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids, std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
-}
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
+                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
 
 const std::string& AggregateHash::name() const {
   static const auto name = std::string{"AggregateHash"};
