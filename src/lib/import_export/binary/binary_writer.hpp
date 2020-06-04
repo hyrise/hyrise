@@ -177,10 +177,10 @@ class BinaryWriter {
    * Encoding Type               | EncodingType                        | 1
    * Number of Rows (in seg)     | uint32_t                            | 4
    * Number of Blocks            | uint32_t                            | 4
-   * Maximum lz4 Block size      | uint32_t                            | 4
-   * Last lz4 Block size         | uint32_t                            | 4
-   * lz4 Block sizes             | vector<uint32_t>                    | Number of blocks * 4
-   * lz4 Blocks                  | vector<vector<char>>                | Sum(lz4 block sizes)
+   * Maximum LZ4 Block size      | uint32_t                            | 4
+   * Last LZ4 Block size         | uint32_t                            | 4
+   * LZ4 Block sizes             | vector<uint32_t>                    | Number of blocks * 4
+   * LZ4 Blocks                  | vector<vector<char>>                | Sum(lz4 block sizes)
    * NULL values' size           | uint32_t                            | 4
    * NULL values¹                | vector<bool> (BoolAsByteType)       | Size * 1
    * Dictionary size             | uint32_t                            | 4
