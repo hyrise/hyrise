@@ -18,7 +18,9 @@ TODO
   * Only used in PQP Visualize and plugins right now (analyze PQP).
   */
 struct AbstractOperatorPerformanceData : public Noncopyable {
-  enum class NoSteps {};
+  enum class NoSteps {
+    Invalid  // Needed by magic_enum for enum_count
+  };
 
   virtual ~AbstractOperatorPerformanceData() = default;
 
@@ -32,8 +34,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   bool has_output{false};
   uint64_t output_row_count{0};
   uint64_t output_chunk_count{0};
-
-  std::array<std::chrono::nanoseconds, 10> step_runtimes{};
 };
 
 template <typename Steps>
@@ -79,6 +79,8 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
   void set_step_runtime(const Steps step, const std::chrono::nanoseconds duration) {
     step_runtimes[static_cast<size_t>(step)] = duration;
   }
+
+  std::array<std::chrono::nanoseconds, magic_enum::enum_count<Steps>()> step_runtimes{};
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperatorPerformanceData& performance_data);

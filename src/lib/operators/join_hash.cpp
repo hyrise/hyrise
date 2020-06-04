@@ -346,7 +346,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
           build_side_bloom_filter);
     }
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Materialization)] = timer_materialization.lap();
+    _performance.set_step_runtime(OperatorSteps::Materialization, timer_materialization.lap());
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
@@ -391,7 +391,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       histograms_build_column.clear();
       histograms_probe_column.clear();
 
-      _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Clustering)] = timer_clustering.lap();
+      _performance.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
     } else {
       // short cut: skip radix partitioning and use materialized data directly
       radix_build_column = std::move(materialized_build_column);
@@ -415,18 +415,23 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
                                                        probe_side_bloom_filter);
     }
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Building)] = timer_hash_map_building.lap();
+    _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
 
-    // Short cut for AntiNullAsTrue
-    //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted
-    //   anyway (as long as JoinHash/AntiNullAsTrue doesn't support secondary predicates). Doing this early out
-    //   right here is hacky, but during probing we assume NULL values on the build side do not matter, so we'd have no
-    //   chance detecting a NULL value on the build side there.
+    /**
+     * Short cut for AntiNullAsTrue:
+     *   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted anyway (as
+     *   long as JoinHash/AntiNullAsTrue doesn't support secondary predicates). Doing this early out right here is
+     *   hacky, but during probing we assume NULL values on the build side do not matter, so we'd have no chance
+     *   detecting a NULL value on the build side there.
+     */
     if (_mode == JoinMode::AntiNullAsTrue) {
       for (const auto& build_side_partition : radix_build_column) {
         for (const auto null_value : build_side_partition.null_values) {
           if (null_value) {
-            return _join_hash._build_output_table({});
+            Timer timer_output_writing;
+            const auto result = _join_hash._build_output_table({});
+            _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+            return result;
           }
         }
       }
@@ -485,7 +490,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::Probing)] = timer_probing.lap();
+    _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
     // After probing, the partitioned columns are not needed anymore.
     radix_build_column.clear();
@@ -576,7 +581,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
       ++output_chunk_id;
     }
-    _performance.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer_output_writing.lap();
+    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

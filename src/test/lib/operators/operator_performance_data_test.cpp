@@ -145,10 +145,10 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
   for (const auto step : magic_enum::enum_values<JoinHash::OperatorSteps>()) {
     if (step == JoinHash::OperatorSteps::Clustering) {
       // Clustering step (i.e., radix partitioning) is not executed for small joins.
-      EXPECT_EQ(perf.get_step_runtime(static_cast<size_t>(step)).count(), 0ul);
+      EXPECT_EQ(perf.get_step_runtime(step).count(), 0ul);
       continue;
     }
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(step)).count(), 0ul);
+    EXPECT_GT(perf.get_step_runtime(step).count(), 0ul);
   }
 }
 
@@ -166,9 +166,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::JoinIndexPerformanceData&>(*join->performance_data);
 
-    EXPECT_EQ(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
+    EXPECT_EQ(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
   }
@@ -184,9 +184,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::JoinIndexPerformanceData&>(*join->performance_data);
 
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
-    EXPECT_EQ(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
+    EXPECT_EQ(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
   }
@@ -200,9 +200,9 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     join->execute();
     auto& perf = static_cast<const JoinIndex::JoinIndexPerformanceData&>(*join->performance_data);
 
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)).count(), 0);
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::NestedLoopJoining)).count(), 0);
-    EXPECT_GT(perf.get_step_runtime(static_cast<size_t>(JoinIndex::OperatorSteps::OutputWriting)).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
   }
@@ -221,7 +221,7 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStepRuntimes) {
   auto& performance_data = static_cast<const OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*aggregate->performance_data);
 
   for (const auto step : magic_enum::enum_values<AggregateHash::OperatorSteps>()) {
-    EXPECT_GT(performance_data.get_step_runtime(static_cast<size_t>(step)).count(), 0);
+    EXPECT_GT(performance_data.get_step_runtime(step).count(), 0);
   }
 }
 
