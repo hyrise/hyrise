@@ -214,26 +214,28 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
-  auto pruned_table_chunk_id = 0;
+  auto pruned_table_chunk_id = ChunkID{0};
   auto pruned_vector_id = 0;
+
+  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
+    "Expected sorted vector of ColumnIDs");
 
   // Create a vector of chunk ids that have a GroupKey index and are not prunned.
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
-    Assert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()),
-      "Expected sorted vector of ColumnIDs");
     // Check if chunk is pruned
     if (pruned_vector_id < static_cast<int>(pruned_chunk_ids.size()) &&
       chunk_id == pruned_chunk_ids[pruned_vector_id]) {
       ++pruned_vector_id;
-    } else {
-      // Check if chunk has GroupKey index
-      const auto chunk = table->get_chunk(chunk_id);
-      if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-        indexed_chunks.emplace_back(pruned_table_chunk_id);
-      }
-      ++pruned_table_chunk_id;
+      continue;
     }
+
+    // Check if chunk has GroupKey index
+    const auto chunk = table->get_chunk(chunk_id);
+    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+      indexed_chunks.emplace_back(pruned_table_chunk_id);
+    }
+    ++pruned_table_chunk_id;
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
