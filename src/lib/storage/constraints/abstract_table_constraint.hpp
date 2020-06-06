@@ -7,7 +7,9 @@
 namespace opossum {
 
 /**
- * Abstract class for defining table constraints on a given set of column IDs.
+ * Abstract container class for the definition of table constraints which are based on a set of column
+ * ids. Subclasses should leverage the OOP structure to add additional fields. In case of CHECK and FOREIGN KEY
+ * implementations, these fields may include check definitions and referenced keys.
  */
 class AbstractTableConstraint {
  public:
