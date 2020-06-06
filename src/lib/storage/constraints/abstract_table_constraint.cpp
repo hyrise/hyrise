@@ -9,7 +9,7 @@ const std::unordered_set<ColumnID>& AbstractTableConstraint::columns() const { r
 
 bool AbstractTableConstraint::operator==(const AbstractTableConstraint& rhs) const {
   if (this == &rhs) return true;
-  if(typeid(this) != typeid(rhs)) return false;
+  if(typeid(*this) != typeid(rhs)) return false;
   if(columns() != rhs.columns()) return false;
   return _on_shallow_equals(rhs);
 }
