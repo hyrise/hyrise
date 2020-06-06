@@ -323,17 +323,17 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const TableUniqueConstraints& Table::get_soft_unique_constraints() const { return _soft_unique_constraints; }
+const TableKeyConstraints& Table::get_soft_table_key_constraints() const { return _soft_table_key_constraints; }
 
-void Table::add_soft_unique_constraint(const TableUniqueConstraint& unique_constraint) {
+void Table::add_soft_table_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "Unique constraints are not tracked for reference tables across the PQP.");
 
   // Check column validity
-  for (const auto& column_id : unique_constraint.columns()) {
+  for (const auto& column_id : table_key_constraint.columns()) {
     Assert(column_id < column_count(), "ColumnID out of range");
 
     // PRIMARY KEY requires non-nullable columns
-    if (unique_constraint.type() == KeyConstraintType::PRIMARY_KEY) {
+    if (table_key_constraint.type() == KeyConstraintType::PRIMARY_KEY) {
       Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
     }
   }
@@ -341,19 +341,19 @@ void Table::add_soft_unique_constraint(const TableUniqueConstraint& unique_const
   {
     auto scoped_lock = acquire_append_mutex();
 
-    for (const auto& existing_constraint : _soft_unique_constraints) {
+    for (const auto& existing_constraint : _soft_table_key_constraints) {
       // Ensure that no other PRIMARY KEY is defined
       Assert(existing_constraint.type() == KeyConstraintType::UNIQUE ||
-                 unique_constraint.type() == KeyConstraintType::UNIQUE,
+                 table_key_constraint.type() == KeyConstraintType::UNIQUE,
              "Another primary key already exists for "
              "this table.");
       // Ensure that no other unique constraint for the same column set exists
-      Assert(unique_constraint.columns() != existing_constraint.columns(),
+      Assert(table_key_constraint.columns() != existing_constraint.columns(),
              "Another unique constraint for the same "
              "column set already exists.");
     }
 
-    _soft_unique_constraints.push_back(unique_constraint);
+    _soft_table_key_constraints.push_back(table_key_constraint);
   }
 }
 
