@@ -107,9 +107,7 @@ void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
   _table_key_constraints = key_constraints;
 }
 
-const TableKeyConstraints& MockNode::get_key_constraints() const {
-  return _table_key_constraints;
-}
+const TableKeyConstraints& MockNode::get_key_constraints() const { return _table_key_constraints; }
 
 size_t MockNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(_table_statistics);
