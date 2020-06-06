@@ -326,7 +326,7 @@ std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes
 const TableKeyConstraints& Table::get_soft_table_key_constraints() const { return _soft_table_key_constraints; }
 
 void Table::add_soft_table_key_constraint(const TableKeyConstraint& table_key_constraint) {
-  Assert(_type == TableType::Data, "Unique constraints are not tracked for reference tables across the PQP.");
+  Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
 
   // Check column validity
   for (const auto& column_id : table_key_constraint.columns()) {
@@ -347,10 +347,9 @@ void Table::add_soft_table_key_constraint(const TableKeyConstraint& table_key_co
                  table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
              "Another primary key already exists for "
              "this table.");
-      // Ensure that no other unique constraint for the same column set exists
+      // Ensure there is only one key constraint per column set.
       Assert(table_key_constraint.columns() != existing_constraint.columns(),
-             "Another unique constraint for the same "
-             "column set already exists.");
+             "Another key constraint for the same column set has already been defined.");
     }
 
     _soft_table_key_constraints.push_back(table_key_constraint);
