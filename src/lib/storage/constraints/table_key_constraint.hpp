@@ -1,34 +1,24 @@
 #pragma once
 
-#include <unordered_set>
-
-#include "types.hpp"
+#include "abstract_table_constraint.hpp"
 
 namespace opossum {
 
-/**
- * Currently, only UNIQUE and PRIMARY_KEY key types are implemented.
- * In the future, we may implement a FOREIGN KEY type and a corresponding subclass as well.
- */
-enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
+enum class KeyConstraintType : bool { PRIMARY_KEY, UNIQUE };
 
-/**
- * Abstract container class for defining table constraints based on a set of column IDs representing an SQL key.
- */
-class TableKeyConstraint {
+class TableKeyConstraint final : public AbstractTableConstraint {
  public:
-  explicit TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type);
-  virtual ~TableKeyConstraint() = default;
 
-  const std::unordered_set<ColumnID>& columns() const;
-  KeyConstraintType type() const;
+  TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type);
 
-  bool operator==(const TableKeyConstraint& rhs) const;
-  bool operator!=(const TableKeyConstraint& rhs) const;
+  KeyConstraintType key_type() const;
+
+  bool operator==(const AbstractTableConstraint& rhs) const override;
 
  private:
-  std::unordered_set<ColumnID> _columns;
   KeyConstraintType _key_type;
 };
+
+using TableKeyConstraints = std::vector<TableKeyConstraint>;
 
 }  // namespace opossum

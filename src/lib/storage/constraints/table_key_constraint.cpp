@@ -3,16 +3,14 @@
 namespace opossum {
 
 TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type)
-    : _columns(std::move(init_columns)), _key_type(init_key_type) {}
+    : AbstractTableConstraint(std::move(init_columns)), _key_type(init_key_type) {}
 
-const std::unordered_set<ColumnID>& TableKeyConstraint::columns() const { return _columns; }
+KeyConstraintType TableKeyConstraint::key_type() const { return _key_type; }
 
-KeyConstraintType TableKeyConstraint::type() const { return _key_type; }
-
-bool TableKeyConstraint::operator==(const TableKeyConstraint& rhs) const {
-  return _columns == rhs.columns() && _key_type == rhs.type();
+bool TableKeyConstraint::operator==(const AbstractTableConstraint& rhs) const {
+//  const auto& rhs_key_constraint = dynamic_cast<TableKeyConstraint>(rhs);
+//  return rhs_key_constraint && key_type() == rhs_key_constraint.key_type() && _columns = rhs_key_constraint.columns();
+  return false;
 }
-
-bool TableKeyConstraint::operator!=(const TableKeyConstraint& rhs) const { return !(rhs == *this); }
 
 }  // namespace opossum
