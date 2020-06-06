@@ -96,7 +96,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {
   auto fds = std::vector<FunctionalDependency>();
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& unique_constraints = table->get_soft_unique_constraints();
+  const auto& unique_constraints = table->get_soft_table_key_constraints();
 
   const auto expressions = column_expressions();
 

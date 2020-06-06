@@ -256,7 +256,7 @@ void try_join_to_semi_rewrite(
       if (!stored_table_node) return false;
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      for (const auto& unique_constraint : table->get_soft_unique_constraints()) {
+      for (const auto& unique_constraint : table->get_soft_table_key_constraints()) {
         // This currently does not handle multi-column constraints, but that should be easy to add once needed.
         if (unique_constraint.columns().size() > 1) continue;
         if (*unique_constraint.columns().cbegin() == column->original_column_id) {

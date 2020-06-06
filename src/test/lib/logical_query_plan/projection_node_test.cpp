@@ -9,7 +9,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "storage/constraints/table_unique_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

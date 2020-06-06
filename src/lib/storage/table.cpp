@@ -333,7 +333,7 @@ void Table::add_soft_table_key_constraint(const TableKeyConstraint& table_key_co
     Assert(column_id < column_count(), "ColumnID out of range");
 
     // PRIMARY KEY requires non-nullable columns
-    if (table_key_constraint.type() == KeyConstraintType::PRIMARY_KEY) {
+    if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
       Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
     }
   }
@@ -343,8 +343,8 @@ void Table::add_soft_table_key_constraint(const TableKeyConstraint& table_key_co
 
     for (const auto& existing_constraint : _soft_table_key_constraints) {
       // Ensure that no other PRIMARY KEY is defined
-      Assert(existing_constraint.type() == KeyConstraintType::UNIQUE ||
-                 table_key_constraint.type() == KeyConstraintType::UNIQUE,
+      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
              "Another primary key already exists for "
              "this table.");
       // Ensure that no other unique constraint for the same column set exists
