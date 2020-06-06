@@ -107,6 +107,10 @@ void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
   _table_key_constraints = key_constraints;
 }
 
+const TableKeyConstraints& MockNode::get_key_constraints() const {
+  return _table_key_constraints;
+}
+
 size_t MockNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(_table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
@@ -122,6 +126,7 @@ size_t MockNode::_on_shallow_hash() const {
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
+  mock_node->set_key_constraints(_table_key_constraints);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }
@@ -129,7 +134,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
   return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&
-         mock_node.name == name;
+         mock_node.name == name && mock_node.get_key_constraints() == _table_key_constraints;
 }
 
 }  // namespace opossum
