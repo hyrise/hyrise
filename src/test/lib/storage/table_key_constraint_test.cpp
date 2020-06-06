@@ -74,12 +74,14 @@ TEST_F(TableKeyConstraintTest, InvalidConstraintAdd) {
 
 TEST_F(TableKeyConstraintTest, Equals) {
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto primary_key_constraint_a =
-      TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_a_reordered = TableKeyConstraint{{ColumnID{2}, ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto primary_key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
 
   EXPECT_TRUE(key_constraint_a == key_constraint_a);
+  EXPECT_TRUE(key_constraint_a == key_constraint_a_reordered);
 
   EXPECT_FALSE(key_constraint_a == primary_key_constraint_a);
   EXPECT_FALSE(primary_key_constraint_a == key_constraint_a);

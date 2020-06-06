@@ -7,10 +7,10 @@ TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns
 
 KeyConstraintType TableKeyConstraint::key_type() const { return _key_type; }
 
-bool TableKeyConstraint::operator==(const AbstractTableConstraint& rhs) const {
-//  const auto& rhs_key_constraint = dynamic_cast<TableKeyConstraint>(rhs);
-//  return rhs_key_constraint && key_type() == rhs_key_constraint.key_type() && _columns = rhs_key_constraint.columns();
-  return false;
+bool TableKeyConstraint::_on_shallow_equals(const AbstractTableConstraint& table_constraint) const {
+  DebugAssert(dynamic_cast<const AbstractTableConstraint*>(&table_constraint),
+              "Different table_constraint type should have been caught by AbstractTableConstraint::operator==");
+  return key_type() == static_cast<const TableKeyConstraint&>(table_constraint).key_type();
 }
 
 }  // namespace opossum

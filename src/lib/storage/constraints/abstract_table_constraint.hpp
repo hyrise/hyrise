@@ -18,8 +18,12 @@ class AbstractTableConstraint {
 
   const std::unordered_set<ColumnID>& columns() const;
 
-  virtual bool operator==(const AbstractTableConstraint& rhs) const = 0;
-  virtual bool operator!=(const AbstractTableConstraint& rhs) const;
+  bool operator==(const AbstractTableConstraint& rhs) const;
+  bool operator!=(const AbstractTableConstraint& rhs) const;
+
+ protected:
+  // Compare this table constraint with another of the same type. Column ids are already compared by the caller.
+  virtual bool _on_shallow_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
  private:
   std::unordered_set<ColumnID> _columns;
