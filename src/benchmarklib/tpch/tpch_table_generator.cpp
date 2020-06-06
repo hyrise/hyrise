@@ -332,45 +332,45 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_table_key_constraint(
+  customer_table->add_soft_key_constraint(
       {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& orders_table = table_info_by_name.at("orders").table;
   const auto orders_pk_constraint =
       TableKeyConstraint{{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY};
-  orders_table->add_soft_table_key_constraint(orders_pk_constraint);
+  orders_table->add_soft_key_constraint(orders_pk_constraint);
 
   const auto& lineitem_table = table_info_by_name.at("lineitem").table;
   const auto lineitem_pk_constraint = TableKeyConstraint{
       {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
       KeyConstraintType::PRIMARY_KEY};
-  lineitem_table->add_soft_table_key_constraint(lineitem_pk_constraint);
+  lineitem_table->add_soft_key_constraint(lineitem_pk_constraint);
 
   const auto& part_table = table_info_by_name.at("part").table;
   const auto part_table_pk_constraint =
       TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY};
-  part_table->add_soft_table_key_constraint(part_table_pk_constraint);
+  part_table->add_soft_key_constraint(part_table_pk_constraint);
 
   const auto& partsupp_table = table_info_by_name.at("partsupp").table;
   const auto partsupp_pk_constraint = TableKeyConstraint{
       {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
       KeyConstraintType::PRIMARY_KEY};
-  partsupp_table->add_soft_table_key_constraint(partsupp_pk_constraint);
+  partsupp_table->add_soft_key_constraint(partsupp_pk_constraint);
 
   const auto& supplier_table = table_info_by_name.at("supplier").table;
   const auto supplier_pk_constraint =
       TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY};
-  supplier_table->add_soft_table_key_constraint(supplier_pk_constraint);
+  supplier_table->add_soft_key_constraint(supplier_pk_constraint);
 
   const auto& nation_table = table_info_by_name.at("nation").table;
   const auto nation_pk_constraint =
       TableKeyConstraint{{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY};
-  nation_table->add_soft_table_key_constraint(nation_pk_constraint);
+  nation_table->add_soft_key_constraint(nation_pk_constraint);
 
   const auto& region_table = table_info_by_name.at("region").table;
   const auto region_pk_constraint =
       TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY};
-  region_table->add_soft_table_key_constraint(region_pk_constraint);
+  region_table->add_soft_key_constraint(region_pk_constraint);
 }
 
 }  // namespace opossum
