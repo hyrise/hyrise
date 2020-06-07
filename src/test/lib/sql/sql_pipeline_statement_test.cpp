@@ -97,6 +97,7 @@ class SQLPipelineStatementTest : public BaseTest {
       "> 1000";
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
+  const std::string _parameter_query = "SELECT * FROM table_a WHERE table_a.a > 1000 AND table_a.b < 458";
 
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
@@ -286,11 +287,13 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
+  auto validated_sql_pipeline = SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   const auto cache_key = validated_statement->get_split_unoptimized_logical_plan(values);
+
+  EXPECT_EQ(values.size(), 2);
 
   // Expect cache to be empty
   EXPECT_FALSE(_lqp_cache->has(cache_key));
@@ -305,30 +308,35 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 
   // Requesting a not validated version does not evict validated version
   auto not_validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
+      SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
   auto not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
+  std::vector<std::shared_ptr<AbstractExpression>> not_validated_values;
+  const auto not_validated_cache_key = not_validated_statement->get_split_unoptimized_logical_plan(not_validated_values);
 
-  const auto not_validated_cache_key = not_validated_statement->get_split_unoptimized_logical_plan(values);
+  EXPECT_EQ(not_validated_values.size(), 2);
+
   const auto& not_validated_lqp = not_validated_statement->get_optimized_logical_plan();
 
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
   // Expect cache to contain both validated and not validated LQP
   EXPECT_TRUE(_lqp_cache->has(cache_key));
-  const auto not_validated_cached_lqp_1 = _lqp_cache->try_get(cache_key).value()->instantiate(values);
-  EXPECT_TRUE(lqp_is_validated(not_validated_cached_lqp_1));
+  const auto validated_cached_lqp_1 = _lqp_cache->try_get(cache_key).value()->instantiate(values);
+  EXPECT_TRUE(lqp_is_validated(validated_cached_lqp_1));
   EXPECT_TRUE(_lqp_cache->has(not_validated_cache_key));
-  const auto not_validated_cached_lqp_2 = _lqp_cache->try_get(not_validated_cache_key).value()->instantiate(values);
-  EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp_2));
+  const auto validated_cached_lqp_2 = _lqp_cache->try_get(not_validated_cache_key).value()->instantiate(not_validated_values);
+  EXPECT_FALSE(lqp_is_validated(validated_cached_lqp_2));
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   auto not_validated_sql_pipeline =
-      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
+      SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline();
   auto not_validated_statement = get_sql_pipeline_statements(not_validated_sql_pipeline).at(0);
 
   std::vector<std::shared_ptr<AbstractExpression>> values;
   auto cache_key = not_validated_statement->get_split_unoptimized_logical_plan(values);
+
+  EXPECT_EQ(values.size(), 2);
 
   // Expect cache to be empty
   EXPECT_FALSE(_lqp_cache->has(cache_key));
@@ -342,9 +350,12 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
   // Requesting a validated version does not evict not validated version
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline();
+  auto validated_sql_pipeline = SQLPipelineBuilder{_parameter_query}.with_lqp_cache(_lqp_cache).create_pipeline();
   auto validated_statement = get_sql_pipeline_statements(validated_sql_pipeline).at(0);
-  auto validated_cache_key = validated_statement->get_split_unoptimized_logical_plan(values);
+  std::vector<std::shared_ptr<AbstractExpression>> validated_values;
+  auto validated_cache_key = validated_statement->get_split_unoptimized_logical_plan(validated_values);
+
+  EXPECT_EQ(validated_values.size(), 2);
 
   const auto& validated_lqp = validated_statement->get_optimized_logical_plan();
 
@@ -354,7 +365,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   EXPECT_TRUE(_lqp_cache->has(cache_key));
   const auto validated_cached_lqp_1 = _lqp_cache->try_get(cache_key).value()->instantiate(values);
   EXPECT_FALSE(lqp_is_validated(validated_cached_lqp_1));
-  const auto validated_cached_lqp_2 = _lqp_cache->try_get(validated_cache_key).value()->instantiate(values);
+  const auto validated_cached_lqp_2 = _lqp_cache->try_get(validated_cache_key).value()->instantiate(validated_values);
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp_2));
 }
 
@@ -753,6 +764,20 @@ TEST_F(SQLPipelineStatementTest, SQLTranslationInfo) {
     const auto parameters = std::vector<ParameterID>{ParameterID(0), ParameterID(2)};
     EXPECT_EQ(translation_info.parameter_ids_of_value_placeholders, parameters);
   }
+}
+
+TEST_F(SQLPipelineStatementTest, ParameterExtraction) {
+  auto sql_pipeline = SQLPipelineBuilder{_parameter_query}.create_pipeline();
+  auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
+
+  std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
+  const auto cache_key = statement->get_split_unoptimized_logical_plan(extracted_values);
+
+  EXPECT_EQ(extracted_values.size(), 2);
+  auto value_1 = std::static_pointer_cast<ValueExpression>(extracted_values.at(0))->value;
+  auto value_2 = std::static_pointer_cast<ValueExpression>(extracted_values.at(1))->value;
+  EXPECT_EQ(boost::get<int32_t>(value_1), 1000);
+  EXPECT_EQ(boost::get<int32_t>(value_2), 458);
 }
 
 }  // namespace opossum
