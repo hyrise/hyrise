@@ -173,6 +173,10 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
     info.pen_width = static_cast<double>(total.count());
+
+    std::stringstream operator_performance_data_stream;
+    performance_data.output_to_stream(operator_performance_data_stream, DescriptionMode::MultiLine);
+    info.tooltip = operator_performance_data_stream.str();
   } else {
     info.pen_width = 1.0;
   }

@@ -49,16 +49,19 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
       return;
     }
 
-    stream << output_row_count << " row" << (output_row_count > 1 ? "s" : "") << " in " << output_chunk_count
-           << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", "
+    stream << "Output: " << output_row_count << " row" << (output_row_count > 1 ? "s" : "") << " in "
+           << output_chunk_count << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", "
            << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime)) << ".";
 
     if constexpr (!std::is_same_v<Steps, NoSteps>) {
       static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");
-      stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") << "Operator step runtimes: ";
+      const auto separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+      stream << separator << "Operator step runtimes:" << separator;
       for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
-        if (step_index > 0) stream << ", ";
-        stream << magic_enum::enum_name(static_cast<Steps>(step_index)) << " "
+        if (step_index > 0) {
+          stream << (description_mode == DescriptionMode::SingleLine ? "," : "\n");
+        }
+        stream << " " << magic_enum::enum_name(static_cast<Steps>(step_index)) << " "
                << format_duration(step_runtimes[step_index]);
       }
       stream << ".";
