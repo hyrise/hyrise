@@ -292,7 +292,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   std::stringstream stringstream;
   stringstream << performance_data;
   EXPECT_TRUE(
-      stringstream.str().starts_with("1 row in 1 chunk, 2 ns. Operator step runtimes: Materialization 17 ns, "
+      stringstream.str().starts_with("Output: 1 row in 1 chunk, 2 ns. Operator step runtimes: Materialization 17 ns, "
                                      "Clustering 0 ns, Building 0 ns, Probing 17 ns, OutputWriting 0 ns."));
 }
 
@@ -316,14 +316,14 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
     performance_data.output_chunk_count = 1u;
     performance_data.walltime = std::chrono::nanoseconds{999u};
     stream << performance_data;
-    EXPECT_EQ(stream.str(), "2 rows in 1 chunk, 999 ns.");
+    EXPECT_EQ(stream.str(), "Output: 2 rows in 1 chunk, 999 ns.");
 
     // Switch chunk/rows to test for plural.
     performance_data.output_row_count = 1u;
     performance_data.output_chunk_count = 2u;
     stream.str("");
     stream << performance_data;
-    EXPECT_EQ(stream.str(), "1 row in 2 chunks, 999 ns.");
+    EXPECT_EQ(stream.str(), "Output: 1 row in 2 chunks, 999 ns.");
   }
 }
 

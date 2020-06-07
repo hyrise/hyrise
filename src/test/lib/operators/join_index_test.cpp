@@ -208,7 +208,7 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
     std::stringstream stream;
     stream << performance_data;
     EXPECT_EQ(stream.str(),
-              "2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
+              "Output: 2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
               "NestedLoopJoining 0 ns, OutputWriting 0 ns. Indexes used for 10 of 15 chunks.");
   }
 
@@ -216,8 +216,8 @@ TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
     std::stringstream stream;
     performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
     EXPECT_EQ(stream.str(),
-              "2 rows in 1 chunk, 999 ns.\nOperator step runtimes: IndexJoining 17 ns, "
-              "NestedLoopJoining 0 ns, OutputWriting 0 ns.\nIndexes used for 10 of 15 chunks.");
+              "Output: 2 rows in 1 chunk, 999 ns.\nOperator step runtimes:\n IndexJoining 17 ns\n "
+              "NestedLoopJoining 0 ns\n OutputWriting 0 ns.\nIndexes used for 10 of 15 chunks.");
   }
 }
 

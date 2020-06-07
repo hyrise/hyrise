@@ -55,8 +55,8 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
 
     if constexpr (!std::is_same_v<Steps, NoSteps>) {
       static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");
-      const auto separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
-      stream << separator << "Operator step runtimes:" << separator;
+      stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") << "Operator step runtimes:"
+             << (description_mode == DescriptionMode::SingleLine ? "" : "\n");
       for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
         if (step_index > 0) {
           stream << (description_mode == DescriptionMode::SingleLine ? "," : "\n");
