@@ -7,7 +7,7 @@
 
 #include "base_test.hpp"
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/value_segment.hpp"
@@ -39,7 +39,7 @@ class GroupKeyIndexTest : public BaseTest {
     dict_segment = ChunkEncoder::encode_segment(value_segment_str, DataType::String,
                                                 SegmentEncodingSpec{EncodingType::Dictionary});
 
-    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment}));
+    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment}));
 
     value_start_offsets = &(index->_value_start_offsets);
     positions = &(index->_positions);
@@ -47,7 +47,7 @@ class GroupKeyIndexTest : public BaseTest {
   }
 
   std::shared_ptr<GroupKeyIndex> index = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment = nullptr;
+  std::shared_ptr<AbstractSegment> dict_segment = nullptr;
 
   /**
    * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the
@@ -90,11 +90,11 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
       create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt});
   const auto& dict_segment_int_empty = create_dict_segment_by_type<int32_t>(DataType::Int, {});
   const auto& index_int_empty =
-      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_empty}));
+      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_empty}));
   const auto& index_int_no_nulls =
-      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_no_nulls}));
+      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_no_nulls}));
   const auto& index_int_nulls =
-      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_nulls}));
+      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_int_nulls}));
 
   // A2, B1, C1
   // expected memory consumption:

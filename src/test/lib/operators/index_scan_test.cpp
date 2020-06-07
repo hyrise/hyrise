@@ -284,13 +284,13 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
 
   auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
   ASSERT_TRUE(union_op);
-  auto index_scan = std::dynamic_pointer_cast<IndexScan>(union_op->mutable_input_left());
+  auto index_scan = std::dynamic_pointer_cast<IndexScan>(union_op->mutable_left_input());
   ASSERT_TRUE(index_scan);
   EXPECT_EQ(index_scan->included_chunk_ids, indexed_chunks);
-  auto table_scan = std::dynamic_pointer_cast<TableScan>(union_op->mutable_input_right());
+  auto table_scan = std::dynamic_pointer_cast<TableScan>(union_op->mutable_right_input());
   ASSERT_TRUE(table_scan);
   EXPECT_EQ(table_scan->excluded_chunk_ids, indexed_chunks);
-  auto get_table = std::dynamic_pointer_cast<GetTable>(table_scan->mutable_input_left());
+  auto get_table = std::dynamic_pointer_cast<GetTable>(table_scan->mutable_left_input());
   ASSERT_TRUE(get_table);
 
   // Add values:

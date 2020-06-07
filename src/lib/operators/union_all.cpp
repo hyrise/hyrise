@@ -20,16 +20,16 @@ const std::string& UnionAll::name() const {
 }
 
 std::shared_ptr<const Table> UnionAll::_on_execute() {
-  DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
+  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
               "Input tables must have same number of columns");
-  DebugAssert(input_table_left()->type() == input_table_right()->type(), "Input tables must have the same type");
+  DebugAssert(left_input_table()->type() == right_input_table()->type(), "Input tables must have the same type");
 
   auto output_chunks =
-      std::vector<std::shared_ptr<Chunk>>{input_table_left()->chunk_count() + input_table_right()->chunk_count()};
+      std::vector<std::shared_ptr<Chunk>>{left_input_table()->chunk_count() + right_input_table()->chunk_count()};
   auto output_chunk_idx = size_t{0};
 
   // add positions to output by iterating over both input tables
-  for (const auto& input : {input_table_left(), input_table_right()}) {
+  for (const auto& input : {left_input_table(), right_input_table()}) {
     // iterating over all chunks of table input
     const auto chunk_count = input->chunk_count();
     for (ChunkID in_chunk_id{0}; in_chunk_id < chunk_count; in_chunk_id++) {
@@ -50,13 +50,13 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
     }
   }
 
-  return std::make_shared<Table>(input_table_left()->column_definitions(), input_table_left()->type(),
+  return std::make_shared<Table>(left_input_table()->column_definitions(), left_input_table()->type(),
                                  std::move(output_chunks));
 }
 std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<UnionAll>(copied_input_left, copied_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<UnionAll>(copied_left_input, copied_right_input);
 }
 
 void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

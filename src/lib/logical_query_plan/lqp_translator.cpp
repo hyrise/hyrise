@@ -208,16 +208,32 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   if (value2_variant) right_values2.emplace_back(*value2_variant);
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+
+  DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
+    "Expected sorted vector of ColumnIDs");
+
   const auto table_name = stored_table_node->table_name;
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
+  auto pruned_table_chunk_id = ChunkID{0};
+  auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
+
+  // Create a vector of chunk ids that have a GroupKey index and are not pruned.
   const auto chunk_count = table->chunk_count();
-  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    // Check if chunk is pruned
+    if (pruned_chunk_ids_iter != pruned_chunk_ids.cend() && chunk_id == *pruned_chunk_ids_iter) {
+      ++pruned_chunk_ids_iter;
+      continue;
+    }
+    // Check if chunk has GroupKey index
     const auto chunk = table->get_chunk(chunk_id);
     if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-      indexed_chunks.emplace_back(chunk_id);
+      indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
+    ++pruned_table_chunk_id;
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
@@ -296,14 +312,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_left_operator = translate_node(node->left_input());
-  const auto input_right_operator = translate_node(node->right_input());
+  const auto left_input_operator = translate_node(node->left_input());
+  const auto right_input_operator = translate_node(node->right_input());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode == JoinMode::Cross) {
     PerformanceWarning("CROSS join used");
-    return std::make_shared<Product>(input_left_operator, input_right_operator);
+    return std::make_shared<Product>(left_input_operator, right_input_operator);
   }
 
   Assert(!join_node->join_predicates().empty(), "Need predicate for non Cross Join");
@@ -340,7 +356,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
-      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+      join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
   });

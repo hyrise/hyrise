@@ -32,7 +32,7 @@ const std::string& IndexScan::name() const {
 }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
-  _in_table = input_table_left();
+  _in_table = left_input_table();
 
   _validate_input();
 
@@ -65,9 +65,9 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<IndexScan>(copied_input_left, _index_type, _left_column_ids, _predicate_condition,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<IndexScan>(copied_left_input, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
 

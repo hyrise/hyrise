@@ -45,7 +45,7 @@ constexpr auto encoded_segment_for_type = hana::make_map(
  * @see resolve_segment_type in resolve_type.hpp for info on usage
  */
 template <typename ColumnDataType, typename Functor>
-void resolve_encoded_segment_type(const BaseEncodedSegment& segment, const Functor& functor) {
+void resolve_encoded_segment_type(const AbstractEncodedSegment& segment, const Functor& functor) {
   // Iterate over all pairs in the map
   hana::fold(encoded_segment_for_type, false, [&](auto match_found, auto encoded_segment_pair) {
     const auto encoding_type_c = hana::first(encoded_segment_pair);

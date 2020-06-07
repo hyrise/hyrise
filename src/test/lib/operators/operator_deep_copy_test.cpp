@@ -74,8 +74,8 @@ TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   EXPECT_NE(copied_join, nullptr) << "Could not copy Join";
 
   // table wrappers need to be executed manually
-  copied_join->mutable_input_left()->execute();
-  copied_join->mutable_input_right()->execute();
+  copied_join->mutable_left_input()->execute();
+  copied_join->mutable_right_input()->execute();
   copied_join->execute();
   EXPECT_TABLE_EQ_UNORDERED(copied_join->get_output(), expected_result);
 }
@@ -93,8 +93,8 @@ TEST_F(OperatorDeepCopyTest, DeepCopyDifference) {
   EXPECT_NE(copied_difference, nullptr) << "Could not copy Difference";
 
   // table wrapper needs to be executed manually
-  copied_difference->mutable_input_left()->execute();
-  copied_difference->mutable_input_right()->execute();
+  copied_difference->mutable_left_input()->execute();
+  copied_difference->mutable_right_input()->execute();
   copied_difference->execute();
   EXPECT_TABLE_EQ_UNORDERED(copied_difference->get_output(), expected_result);
 }
@@ -126,7 +126,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
   EXPECT_NE(copied_limit, nullptr) << "Could not copy Limit";
 
   // table wrapper needs to be executed manually
-  copied_limit->mutable_input_left()->execute();
+  copied_limit->mutable_left_input()->execute();
   copied_limit->execute();
   EXPECT_TABLE_EQ_UNORDERED(copied_limit->get_output(), expected_result);
 }
@@ -145,7 +145,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
   EXPECT_NE(copied_sort, nullptr) << "Could not copy Sort";
 
   // table wrapper needs to be executed manually
-  copied_sort->mutable_input_left()->execute();
+  copied_sort->mutable_left_input()->execute();
   copied_sort->execute();
   EXPECT_TABLE_EQ_UNORDERED(copied_sort->get_output(), expected_result);
 }
@@ -163,7 +163,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
   EXPECT_NE(copied_scan, nullptr) << "Could not copy Scan";
 
   // table wrapper needs to be executed manually
-  copied_scan->mutable_input_left()->execute();
+  copied_scan->mutable_left_input()->execute();
   copied_scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(copied_scan->get_output(), expected_result);
 }
@@ -178,7 +178,7 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 
   auto copied_pqp = union_positions->deep_copy();
 
-  EXPECT_EQ(copied_pqp->input_left()->input_left(), copied_pqp->input_right()->input_left());
+  EXPECT_EQ(copied_pqp->left_input()->left_input(), copied_pqp->right_input()->left_input());
 }
 
 TEST_F(OperatorDeepCopyTest, Subquery) {

@@ -53,8 +53,8 @@ class RadixClusterSort {
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                    const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count)
-      : _input_table_left{left},
-        _input_table_right{right},
+      : _left_input_table{left},
+        _right_input_table{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
         _equi_case{equi_case},
@@ -119,8 +119,8 @@ class RadixClusterSort {
   };
 
   // Input parameters
-  std::shared_ptr<const Table> _input_table_left;
-  std::shared_ptr<const Table> _input_table_right;
+  std::shared_ptr<const Table> _left_input_table;
+  std::shared_ptr<const Table> _right_input_table;
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
   bool _equi_case;
@@ -285,8 +285,8 @@ class RadixClusterSort {
   * right table in a pair.
   **/
   std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<MaterializedSegmentList<T>>> _range_cluster(
-      const std::unique_ptr<MaterializedSegmentList<T>>& input_left,
-      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, std::vector<T> sample_values) {
+      const std::unique_ptr<MaterializedSegmentList<T>>& left_input,
+      const std::unique_ptr<MaterializedSegmentList<T>>& right_input, std::vector<T> sample_values) {
     const std::vector<T> split_values = _pick_split_values(sample_values);
 
     // Implements range clustering
@@ -305,8 +305,8 @@ class RadixClusterSort {
       return split_values.size();
     };
 
-    auto output_left = _cluster(input_left, clusterer);
-    auto output_right = _cluster(input_right, clusterer);
+    auto output_left = _cluster(left_input, clusterer);
+    auto output_right = _cluster(right_input, clusterer);
 
     return {std::move(output_left), std::move(output_right)};
   }
@@ -331,9 +331,9 @@ class RadixClusterSort {
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_left_segments, null_rows_left, samples_left] =
-        left_column_materializer.materialize(_input_table_left, _left_column_id);
+        left_column_materializer.materialize(_left_input_table, _left_column_id);
     auto [materialized_right_segments, null_rows_right, samples_right] =
-        right_column_materializer.materialize(_input_table_right, _right_column_id);
+        right_column_materializer.materialize(_right_input_table, _right_column_id);
     output.null_rows_left = std::move(null_rows_left);
     output.null_rows_right = std::move(null_rows_right);
 
