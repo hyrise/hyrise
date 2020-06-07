@@ -148,8 +148,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 
   Timer timer;
-  auto duration_index_joining = std::chrono::nanoseconds{0};
-  auto duration_nested_loop_joining = std::chrono::nanoseconds{0};
+  auto index_joining_duration = std::chrono::nanoseconds{0};
+  auto nested_loop_joining_duration = std::chrono::nanoseconds{0};
   if (_mode == JoinMode::Inner && _index_input_table->type() == TableType::References &&
       _secondary_predicates.empty()) {  // INNER REFERENCE JOIN
     // Scan all chunks for index input
@@ -188,17 +188,17 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                                        reference_segment_pos_list);
             });
           }
-          duration_index_joining += timer.lap();
+          index_joining_duration += timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
-          duration_nested_loop_joining += timer.lap();
+          nested_loop_joining_duration += timer.lap();
         }
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        duration_nested_loop_joining += timer.lap();
+        nested_loop_joining_duration += timer.lap();
       }
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
@@ -227,12 +227,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
         }
-        duration_index_joining += timer.lap();
+        index_joining_duration += timer.lap();
         join_index_performance_data.chunks_scanned_with_index++;
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
-        duration_nested_loop_joining += timer.lap();
+        nested_loop_joining_duration += timer.lap();
       }
     }
 
@@ -256,8 +256,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   }
   join_index_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
-  join_index_performance_data.set_step_runtime(OperatorSteps::IndexJoining, duration_index_joining);
-  join_index_performance_data.set_step_runtime(OperatorSteps::NestedLoopJoining, duration_nested_loop_joining);
+  join_index_performance_data.set_step_runtime(OperatorSteps::IndexJoining, index_joining_duration);
+  join_index_performance_data.set_step_runtime(OperatorSteps::NestedLoopJoining, nested_loop_joining_duration);
 
   if (join_index_performance_data.chunks_scanned_with_index <
       join_index_performance_data.chunks_scanned_without_index) {
