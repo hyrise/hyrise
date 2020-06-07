@@ -266,7 +266,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Check, that we reduce using the shortest (in terms of number of columns) constraints.
+// Check that we reduce using the shortest constraints (in terms of the number of columns).
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
   auto lqp =

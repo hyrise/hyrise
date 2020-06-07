@@ -1,15 +1,11 @@
-#include <algorithm>
 #include <memory>
-#include <vector>
 
 #include "base_test.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -25,7 +21,7 @@ class ProjectionNodeTest : public BaseTest {
     _b = _mock_node->get_column("b");
     _c = _mock_node->get_column("c");
 
-    // SELECT c, a, b, b+c AS some_addition, a+c [...]
+    // SELECT c, a, b, b+c, a+c
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
   }
 

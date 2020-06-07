@@ -20,7 +20,7 @@ using namespace opossum;  // NOLINT
 /**
  * This function reduces the group-by columns of @param aggregate_node for a given functional dependency (@param fd).
  *
- * @returns Boolean value denoting whether at the group-by list of @param aggregate_node changed.
+ * @returns Boolean value, denoting whether the group-by list of @param aggregate_node has changed.
  */
 bool remove_dependent_group_by_columns(const FunctionalDependency& fd, AggregateNode& aggregate_node,
                                        const ExpressionUnorderedSet& group_by_columns) {

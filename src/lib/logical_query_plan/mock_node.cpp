@@ -133,8 +133,8 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
   return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&
-         mock_node.name == name && mock_node.soft_key_constraints() == _table_key_constraints
-          & mock_node.functional_dependencies() == _functional_dependencies;
+         mock_node.name == name && mock_node.soft_key_constraints() == _table_key_constraints &&
+         mock_node.functional_dependencies() == _functional_dependencies;
 }
 
 }  // namespace opossum
