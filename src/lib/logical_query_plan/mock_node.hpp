@@ -51,8 +51,11 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
-  void set_key_constraints(const TableKeyConstraints& key_constraints);
-  const TableKeyConstraints& get_key_constraints() const;
+  /**
+   * NOTE: Key constraints are NOT ENFORCED. We call them "soft" constraints to draw attention to that.
+   */
+  void set_soft_key_constraints(const TableKeyConstraints& key_constraints);
+  const TableKeyConstraints& soft_key_constraints() const;
 
   std::optional<std::string> name;
 
@@ -66,9 +69,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
-  TableKeyConstraints _table_key_constraints;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
   std::vector<FunctionalDependency> _functional_dependencies;
+  TableKeyConstraints _table_key_constraints;
 };
 }  // namespace opossum

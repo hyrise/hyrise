@@ -323,7 +323,7 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const TableKeyConstraints& Table::get_soft_key_constraints() const { return _soft_table_key_constraints; }
+const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
 
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
@@ -341,7 +341,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   {
     auto scoped_lock = acquire_append_mutex();
 
-    for (const auto& existing_constraint : _soft_table_key_constraints) {
+    for (const auto& existing_constraint : _table_key_constraints) {
       // Ensure that no other PRIMARY KEY is defined
       Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
                  table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
@@ -352,7 +352,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
              "Another key constraint for the same column set has already been defined.");
     }
 
-    _soft_table_key_constraints.push_back(table_key_constraint);
+    _table_key_constraints.push_back(table_key_constraint);
   }
 }
 

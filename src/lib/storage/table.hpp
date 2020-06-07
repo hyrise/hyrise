@@ -197,11 +197,11 @@ class Table : private Noncopyable {
   }
 
   /**
-   * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" key constraints to draw attention to that.
    */
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
-  const TableKeyConstraints& get_soft_key_constraints() const;
+  const TableKeyConstraints& soft_key_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -238,8 +238,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
-  // "Soft" table key constraints because we do not enforce them.
-  TableKeyConstraints _soft_table_key_constraints;
+  TableKeyConstraints _table_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
