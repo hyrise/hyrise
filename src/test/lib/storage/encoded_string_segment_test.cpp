@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cctype>
 #include <memory>
-#include <random>
 #include <sstream>
 
 #include "encoding_test.hpp"
@@ -76,11 +75,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto list = std::make_shared<RowIDPosList>();
     list->guarantee_single_chunk();
 
-    std::default_random_engine engine{};
-    std::bernoulli_distribution bernoulli_dist{0.5};
-
     for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count; ++offset_in_referenced_chunk) {
-      if (bernoulli_dist(engine)) {
+      if (!(offset_in_referenced_chunk % 2)) {
         list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
     }
@@ -91,11 +87,24 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<RowIDPosList> create_random_access_position_filter() {
     auto list = create_sequential_position_filter();
 
-    auto random_device = std::random_device{};
-    std::default_random_engine engine{random_device()};
-    std::shuffle(list->begin(), list->end(), engine);
+    auto skewed_list = std::make_shared<RowIDPosList>();
+    skewed_list->reserve(list->size());
+    // Let one iterator run from the beginning and one from the end of the list in each other's direction. Add the
+    // iterators' elements alternately to the skewed list.
+    auto front_iter = list->cbegin();
+    auto back_iter = list->cend() - 1;
+    const auto half_list_size = list->size() / 2;
+    for (auto counter = 0u; counter < half_list_size; ++counter) {
+      skewed_list->emplace_back(*front_iter);
+      skewed_list->emplace_back(*back_iter);
+      ++front_iter;
+      --back_iter;
+    }
+    if (front_iter == back_iter) {  // odd number of list elements
+      skewed_list->emplace_back(*front_iter);
+    }
 
-    return list;
+    return skewed_list;
   }
 
   std::shared_ptr<AbstractEncodedSegment> encode_segment(const std::shared_ptr<AbstractSegment>& abstract_segment,

@@ -1,7 +1,7 @@
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
-#include <random>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -44,28 +44,51 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
       pairs.emplace_back(std::make_pair(bc, values1[i]));
     }
     root = index1->_bulk_insert(pairs);
-
-    std::random_device rd;
-    _rng = std::mt19937(rd());
   }
 
   void _search_elements(std::vector<std::optional<int32_t>>& values) {
-    std::uniform_int_distribution<int32_t> uni_integer(0, std::numeric_limits<int32_t>::max());
-
     auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
     auto index =
         std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
     std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
 
-    // create search values from given values + randomly chosen ones
+    const auto delta = 1332;
+    const auto int32_max = std::numeric_limits<int32_t>::max();
+    auto additional_values = std::array<int32_t, 2>{0, int32_max};
+    auto reset_counts = std::array<int32_t, 2>{0, 0};
+
+    // Create search values from given values + additional ones. Add alternately the first value (additional_values[0])
+    // and the second value (additional_values[1]). The first value increases, the second value decreases over time.
     std::set<std::optional<int32_t>> search_values = distinct_values;
     while (search_values.size() < distinct_values.size() * 2) {
-      search_values.insert(uni_integer(_rng));
+      auto value_index = search_values.size() % 2;
+      auto& value = additional_values[value_index];
+      search_values.insert(value);
+
+      // update recently used value
+      auto& reset_count = reset_counts[value_index];
+      if (!value_index) {  // update increasing value
+        if ((int32_max - value) < delta) {
+          ++reset_count;
+          // reset_count shifts the generated value to avoid duplicates
+          value = 0 + reset_count;
+        } else {
+          value += delta;
+        }
+      } else {  // update decreasing value
+        if (value < delta) {
+          ++reset_count;
+          // reset_count shifts the generated value to avoid duplicates
+          value = int32_max - reset_count;
+        } else {
+          value -= delta;
+        }
+      }
     }
 
     for (const auto& search_value : search_values) {
-      if (distinct_values.find(search_value) != distinct_values.end()) {
+      if (distinct_values.contains(search_value)) {
         // match
         EXPECT_NE(index->lower_bound({*search_value}), index->upper_bound({*search_value}));
       } else {
@@ -91,8 +114,6 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
   std::vector<ValueID> keys1;
   std::vector<ChunkOffset> values1;
-
-  std::mt19937 _rng;
 };
 
 TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
@@ -157,16 +178,32 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
   EXPECT_FALSE(std::find(leaf02->begin(), leaf02->end(), static_cast<uint8_t>(0x00000006u)) == leaf02->end());
 }
 
-TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
+TEST_F(AdaptiveRadixTreeIndexTest, VectorOfInts) {
   size_t test_size = 10'001;
   std::vector<std::optional<int32_t>> ints(test_size);
-  for (auto i = 0u; i < test_size; ++i) {
-    ints[i] = i * 2;
+  for (auto index = 0u; index < test_size; ++index) {
+    ints[index] = index * 2;
   }
 
-  std::shuffle(ints.begin(), ints.end(), _rng);
+  std::vector<std::optional<int32_t>> skewed_ints;
+  skewed_ints.reserve(ints.size());
 
-  auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, ints);
+  // Let one iterator run from the beginning and one from the end of the list in each other's direction. Add the
+  // iterators' elements alternately to the skewed list.
+  auto front_iter = ints.cbegin();
+  auto back_iter = ints.cend() - 1;
+  const auto half_list_size = ints.size() / 2;
+  for (auto counter = 0u; counter < half_list_size; ++counter) {
+    skewed_ints.emplace_back(*front_iter);
+    skewed_ints.emplace_back(*back_iter);
+    ++front_iter;
+    --back_iter;
+  }
+  if (front_iter == back_iter) {  // odd number of list elements
+    skewed_ints.emplace_back(*front_iter);
+  }
+
+  auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, skewed_ints);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
   for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
@@ -219,24 +256,80 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
 * The following two cases try to test two rather extreme situations that both
 * test the node overflow handling of the ART implementation:
 *   - sparse vector: wide range of values (between 1 and MAX_INT) with large gaps
-*   - dense vector: expenential distribution, rounded to integer values
+*   - dense vector: exponential distribution, rounded to integer values
 **/
-TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
-  size_t test_size = 1'000;
-  std::uniform_int_distribution<int32_t> uni(1, std::numeric_limits<int32_t>::max() - 1);
+TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfInts) {
+  const auto test_size = 1'000u;
+  const auto cluster_number = 10u;  // 10 clusters with 9 gaps distributed over the range of [1, int32_max]
+  const auto cluster_size = test_size / cluster_number;
+  const auto gap_size = (std::numeric_limits<int32_t>::max() - cluster_number * cluster_size) / (cluster_number - 1);
 
-  std::vector<std::optional<int32_t>> values(test_size);
-  std::generate(values.begin(), values.end(), [this, &uni]() { return uni(_rng); });
+  std::vector<std::optional<int32_t>> values{};
+  values.reserve(test_size);
+
+  // generate values
+  std::array<std::array<int32_t, cluster_size>, cluster_number> clustered_values{};
+
+  for (auto cluster_index = 0u; cluster_index < cluster_number; ++cluster_index) {
+    for (auto cluster_value_index = 0u; cluster_value_index < cluster_size; ++cluster_value_index) {
+      const auto value = cluster_index * (cluster_size + gap_size) + cluster_value_index;
+      clustered_values[cluster_index][cluster_value_index] = value;
+    }
+  }
+
+  // add values alternately from the different clusters
+  for (auto cluster_value_index = 0u; cluster_value_index < cluster_size; ++cluster_value_index) {
+    for (auto cluster_index = 0u; cluster_index < cluster_number; ++cluster_index) {
+      values.emplace_back(clustered_values[cluster_index][cluster_value_index]);
+    }
+  }
 
   _search_elements(values);
 }
 
-TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfRandomInts) {
-  size_t test_size = 5'000;
-  std::exponential_distribution<double> exp(1.0);
+TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
+  auto cumulated_probability = [](const uint8_t value) { return 1 - std::exp(-value); };
 
-  std::vector<std::optional<int32_t>> values(test_size);
-  std::generate(values.begin(), values.end(), [this, &exp]() { return static_cast<int32_t>(exp(_rng)); });
+  // To create an approximated exponential distribution, the cumulated probabilities for the intervals (0,1], (1,2],
+  // (2,3], (3,4] are calculated. The cumulated probability of interval (i, i+1] is used for an integer value i.
+  auto interval_probability_for_value = [&](const uint8_t value) {
+    if (value == 0) {
+      return cumulated_probability(1);
+    } else {
+      return cumulated_probability(value + 1) - cumulated_probability(value);
+    }
+  };
+
+  const auto number_of_buckets = 5u;
+  // full_distribution_size is not the number of actually generated values since we limit the number of buckets. A
+  // bucket for value i covers data points of the interval (i,i+1].
+  const auto full_distribution_size = 5'000u;
+  auto value_counters = std::unordered_map<uint8_t, size_t>{};
+  value_counters.reserve(number_of_buckets);
+
+  auto overall_value_counter = 0u;
+  for (uint8_t value = 0u; value < number_of_buckets; ++value) {
+    const auto number_of_instances =
+        static_cast<uint32_t>(std::round(interval_probability_for_value(value) * full_distribution_size));
+    overall_value_counter += number_of_instances;
+    value_counters[value] = number_of_instances;
+  }
+
+  // fill value vector
+  std::vector<std::optional<int32_t>> values{};
+  values.reserve(overall_value_counter);
+
+  while (overall_value_counter > 0) {
+    // value equals the bucket index
+    for (uint8_t value = 0u; value < number_of_buckets; ++value) {
+      auto& value_counter = value_counters[value];
+      if (value_counter > 0) {
+        values.emplace_back(value);
+        --value_counter;
+        --overall_value_counter;
+      }
+    }
+  }
 
   _search_elements(values);
 }
