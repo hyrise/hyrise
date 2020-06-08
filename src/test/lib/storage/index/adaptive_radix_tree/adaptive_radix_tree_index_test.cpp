@@ -288,48 +288,31 @@ TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
-  auto cumulated_probability = [](const uint8_t value) { return 1 - std::exp(-value); };
-
-  // To create an approximated exponential distribution, the cumulated probabilities for the intervals (0,1], (1,2],
-  // (2,3], (3,4] are calculated. The cumulated probability of interval (i, i+1] is used for an integer value i.
-  auto interval_probability_for_value = [&](const uint8_t value) {
-    if (value == 0) {
-      return cumulated_probability(1);
-    } else {
-      return cumulated_probability(value + 1) - cumulated_probability(value);
-    }
-  };
-
-  const auto number_of_buckets = 5u;
-  // full_distribution_size is not the number of actually generated values since we limit the number of buckets. A
-  // bucket for value i covers data points of the interval (i,i+1].
-  const auto full_distribution_size = 5'000u;
-  auto value_counters = std::unordered_map<uint8_t, size_t>{};
-  value_counters.reserve(number_of_buckets);
+  // Value counters of an exemplary exponential distribution. The index of a counter represents the value.
+  auto value_counters = std::array<uint16_t, 8>{3243, 1118, 420, 143, 55, 14, 4, 3};
 
   auto overall_value_counter = 0u;
-  for (uint8_t value = 0u; value < number_of_buckets; ++value) {
-    const auto number_of_instances =
-        static_cast<uint32_t>(std::round(interval_probability_for_value(value) * full_distribution_size));
-    overall_value_counter += number_of_instances;
-    value_counters[value] = number_of_instances;
+  for (const auto counter : value_counters) {
+    overall_value_counter += counter;
   }
 
-  // fill value vector
   std::vector<std::optional<int32_t>> values{};
   values.reserve(overall_value_counter);
 
-  while (overall_value_counter > 0) {
-    // value equals the bucket index
-    for (uint8_t value = 0u; value < number_of_buckets; ++value) {
+  auto values_to_write = overall_value_counter;
+  while (values_to_write > 0) {
+    // value equals the value counter index
+    for (uint8_t value = 0u; value < value_counters.size(); ++value) {
       auto& value_counter = value_counters[value];
       if (value_counter > 0) {
         values.emplace_back(value);
         --value_counter;
-        --overall_value_counter;
+        --values_to_write;
       }
     }
   }
+
+  DebugAssert(values.size(), overall_value_counter);
 
   _search_elements(values);
 }
