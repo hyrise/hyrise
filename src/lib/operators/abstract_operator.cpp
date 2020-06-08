@@ -70,12 +70,12 @@ void AbstractOperator::execute() {
   // Verify that LQP (if set) and PQP match.
   if constexpr (HYRISE_DEBUG) {
     if (lqp_node) {
-      [[maybe_unused]] const auto& lqp_expressions = lqp_node->column_expressions();
+      [[maybe_unused]] const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
         DebugAssert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
       } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
                  std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
-        // AbstractNonQueryNodes do not have any consumable column_expressions, but the corresponding operators return
+        // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
         // 'OK' for better compatibility with the console and the server. We do not assert anything here.
         // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
         // need to be tested.

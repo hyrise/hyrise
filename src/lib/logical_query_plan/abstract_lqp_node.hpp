@@ -129,7 +129,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The Expressions defining each column that this node outputs
    */
-  virtual std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const;
+  virtual std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)

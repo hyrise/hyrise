@@ -43,8 +43,8 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
   _pruned_column_ids = pruned_column_ids;
 
-  // Rebuilding this lazily the next time `column_expressions()` is called
-  _column_expressions.reset();
+  // Rebuilding this lazily the next time `output_expressions()` is called
+  _output_expressions.reset();
 }
 
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
@@ -60,15 +60,15 @@ std::string StoredTableNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::output_expressions() const {
   // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
   // that in the constructor and (b) because we don't have column pruning information in the constructor
-  if (!_column_expressions) {
+  if (!_output_expressions) {
     const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
     // Build `_expression` with respect to the `_pruned_column_ids`
     const auto num_unpruned_columns = table->column_count() - _pruned_column_ids.size();
-    _column_expressions = std::vector<std::shared_ptr<AbstractExpression>>(num_unpruned_columns);
+    _output_expressions = std::vector<std::shared_ptr<AbstractExpression>>(num_unpruned_columns);
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
     auto output_column_id = ColumnID{0};
@@ -79,13 +79,13 @@ std::vector<std::shared_ptr<AbstractExpression>> StoredTableNode::column_express
         continue;
       }
 
-      (*_column_expressions)[output_column_id] =
+      (*_output_expressions)[output_column_id] =
           std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
       ++output_column_id;
     }
   }
 
-  return *_column_expressions;
+  return *_output_expressions;
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
@@ -98,7 +98,7 @@ std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() con
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& unique_constraints = table->get_soft_unique_constraints();
 
-  const auto expressions = column_expressions();
+  const auto expressions = output_expressions();
 
   for (const auto& constraint : unique_constraints) {
     // We build FDs from two column sets: LeftColumnSet => RightColumnSet

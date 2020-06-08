@@ -49,7 +49,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     if (lqp_node) {
       // LQP is available, use column name from there
       const auto& input_lqp_node = lqp_node->input(from_left ? LQPInputSide::Left : LQPInputSide::Right);
-      return input_lqp_node->column_expressions()[column_id]->as_column_name();
+      return input_lqp_node->output_expressions()[column_id]->as_column_name();
     }
 
     // Fallback - use column ID

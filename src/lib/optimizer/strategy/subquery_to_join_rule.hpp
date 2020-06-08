@@ -54,13 +54,13 @@ class SubqueryToJoinRule : public AbstractRule {
     size_t pulled_predicate_node_count = 0;
 
     /**
-     * Column expressions from the subquery required by the extracted join predicates.
+     * Expressions from the subquery required by the extracted join predicates.
      *
-     * This list contains every column expression only once, even if it is used required by multiple join predicates.
+     * This list contains every expression only once, even if it is used required by multiple join predicates.
      * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
      * low there shouldn't be much of a performance difference.
      */
-    std::vector<std::shared_ptr<AbstractExpression>> required_column_expressions = {};
+    std::vector<std::shared_ptr<AbstractExpression>> required_output_expressions = {};
   };
 
   /**
@@ -99,21 +99,21 @@ class SubqueryToJoinRule : public AbstractRule {
    */
   static std::shared_ptr<AggregateNode> adapt_aggregate_node(
       const std::shared_ptr<AggregateNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions);
+      const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions);
 
   /**
    * Copy an alias node and adapt it to keep all required columns.
    */
   static std::shared_ptr<AliasNode> adapt_alias_node(
       const std::shared_ptr<AliasNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions);
+      const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions);
 
   /**
    * Copy a projection node and adapt it to keep all required columns.
    */
   static std::shared_ptr<ProjectionNode> adapt_projection_node(
       const std::shared_ptr<ProjectionNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions);
+      const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions);
 
   /**
    * Walk the subquery LQP, removing all correlated predicate nodes and adapting other nodes as necessary.
