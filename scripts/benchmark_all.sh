@@ -17,7 +17,7 @@ num_mt_clients=50
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
 start_commit_reference=$1
 end_commit_reference=$2
-shift; shift
+
 start_commit=$(git rev-parse $start_commit_reference | head -n 1)
 end_commit=$(git rev-parse $end_commit_reference | head -n 1)
 
@@ -28,7 +28,7 @@ then
   exit 1
 fi
 
-# Ensure that this is run on a release build. Not really necessary, just a sanity check.
+# Ensure that this runs on a release build. Not really necessary, just a sanity check.
 output=$(grep 'CMAKE_BUILD_TYPE:STRING=Release' CMakeCache.txt || true)
 if [ -z "$output" ]
 then
@@ -40,9 +40,9 @@ fi
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
 if [ ! -z "$output" ]
 then
-  build='ninja'
+  build_system='ninja'
 else
-  build='make'
+  build_system='make'
 fi
 
 # Create the result folder if necessary
@@ -64,10 +64,10 @@ do
 
   # Checkout and build from scratch, tracking the compile time
   git checkout $commit
-  git submodule update --init
+  git submodule update --init --recursive
   echo "Building $commit..."
-  $build clean
-  /usr/bin/time -p sh -c "( $build -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
+  $build_system clean
+  /usr/bin/time -p sh -c "( $build_system -j $(nproc) ${benchmarks} 2>&1 ) | tee benchmark_all_results/build_${commit}.log" 2>"benchmark_all_results/build_time_${commit}.txt"
 
   # Run the benchmarks
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root 
@@ -100,7 +100,8 @@ echo "| property | value |"
 echo "| -- | -- |"
 echo "| Hostname | $(hostname) |"
 if [[ "$(uname)" == 'Darwin' ]]; then
-  echo "| Model | $(defaults read ~/Library/Preferences/com.apple.SystemProfiler.plist 'CPU Names' | cut -sd '"' -f 4) |"
+  # Retrieve the model name. Might be more than one line if the hardware has been updated.
+  echo "| Model | $(defaults read ~/Library/Preferences/com.apple.SystemProfiler.plist 'CPU Names' | cut -sd '"' -f 4 | tail -n 1) |"
   echo "| CPU | $(sysctl -n machdep.cpu.brand_string) |"
   echo "| Memory | $(system_profiler SPHardwareDataType | grep '  Memory:' | sed 's/Memory://') |"
 else
