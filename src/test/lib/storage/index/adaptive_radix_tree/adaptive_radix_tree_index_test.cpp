@@ -62,7 +62,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     // and the second value (additional_values[1]). The first value increases, the second value decreases over time.
     std::set<std::optional<int32_t>> search_values = distinct_values;
     while (search_values.size() < distinct_values.size() * 2) {
-      auto value_index = search_values.size() % 2;
+      const auto value_index = search_values.size() % 2;
       auto& value = additional_values[value_index];
       search_values.insert(value);
 
@@ -312,7 +312,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
     }
   }
 
-  DebugAssert(values.size(), overall_value_counter);
+  DebugAssert(values.size() == overall_value_counter, "Number of generated values is incorrect.");
 
   _search_elements(values);
 }
