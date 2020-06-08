@@ -10,13 +10,6 @@
 #include "utils/format_duration.hpp"
 
 namespace opossum {
-/**
-TODO
-  * General execution information is stored in OperatorPerformanceData through AbstractOperator::execute().
-  * Further, operators can store additional execution information by inheriting from OperatorPerformanceData (e.g.,
-  * JoinIndex) or StepOperatorPerformanceData (when operator steps shall be tracked, e.g., HashJoin).
-  * Only used in PQP Visualize and plugins right now (analyze PQP).
-  */
 struct AbstractOperatorPerformanceData : public Noncopyable {
   enum class NoSteps {
     Invalid  // Needed by magic_enum for enum_count
@@ -36,6 +29,15 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   uint64_t output_chunk_count{0};
 };
 
+
+/**
+ * General execution information is stored in OperatorPerformanceData through AbstractOperator::execute().
+ * The template parameter Steps allows operators to store runtimes for an operators exeuctions steps (e.g., see
+ * JoinHash). In case no steps are desired, OperatorPerformanceData should be instantiated with
+ * AbstractPerformanceData::NoSteps.
+ * Operators can further store additional execution information by inheriting from OperatorPerformanceData (e.g.,
+ * see JoinIndex).
+ */
 template <typename Steps>
 struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
   void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
