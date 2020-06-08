@@ -65,12 +65,12 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
 
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expressions.size();
        ++expression_idx) {
-    auto& column_expression = output_expressions[expression_idx];
-    DebugAssert(column_expression->type == ExpressionType::Aggregate,
+    auto& output_expression = output_expressions[expression_idx];
+    DebugAssert(output_expression->type == ExpressionType::Aggregate,
                 "Unexpected non-aggregate in list of aggregates.");
-    const auto& aggregate_expression = static_cast<AggregateExpression&>(*column_expression);
+    const auto& aggregate_expression = static_cast<AggregateExpression&>(*output_expression);
     if (aggregate_expression.aggregate_function == AggregateFunction::Any) {
-      column_expression = column_expression->arguments[0];
+      output_expression = output_expression->arguments[0];
     }
   }
 

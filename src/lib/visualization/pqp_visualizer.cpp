@@ -97,8 +97,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
   switch (op->type()) {
     case OperatorType::Projection: {
       const auto projection = std::dynamic_pointer_cast<const Projection>(op);
-      for (const auto& column_expression : projection->expressions) {
-        _visualize_subqueries(op, column_expression, visualized_ops);
+      for (const auto& expression : projection->expressions) {
+        _visualize_subqueries(op, expression, visualized_ops);
       }
     } break;
 

@@ -56,7 +56,7 @@ class SubqueryToJoinRule : public AbstractRule {
     /**
      * Expressions from the subquery required by the extracted join predicates.
      *
-     * This list contains every expression only once, even if it is used required by multiple join predicates.
+     * This list contains every expression only once, even if it is used (required) by multiple join predicates.
      * This is a vector instead of an unordered_set so that tests are reproducible. Since correlation is usually very
      * low there shouldn't be much of a performance difference.
      */

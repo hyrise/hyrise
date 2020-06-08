@@ -586,13 +586,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         // Add all named columns to the IdentifierContext
         const auto output_expressions = lqp_view->lqp->output_expressions();
         for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-          const auto column_expression = output_expressions[column_id];
+          const auto expression = output_expressions[column_id];
 
           const auto column_name_iter = lqp_view->column_names.find(column_id);
           if (column_name_iter != lqp_view->column_names.end()) {
-            sql_identifier_resolver->add_column_name(column_expression, column_name_iter->second);
+            sql_identifier_resolver->add_column_name(expression, column_name_iter->second);
           }
-          sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);
+          sql_identifier_resolver->set_table_name(expression, hsql_table_ref.name);
         }
 
       } else if (Hyrise::get().storage_manager.has_table(hsql_table_ref.name)) {
@@ -610,13 +610,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
          */
         const auto output_expressions = view->lqp->output_expressions();
         for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-          const auto column_expression = output_expressions[column_id];
+          const auto expression = output_expressions[column_id];
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
-            sql_identifier_resolver->add_column_name(column_expression, column_name_iter->second);
+            sql_identifier_resolver->add_column_name(expression, column_name_iter->second);
           }
-          sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);
+          sql_identifier_resolver->set_table_name(expression, hsql_table_ref.name);
         }
 
         AssertInput(_use_mvcc == (lqp_is_validated(view->lqp) ? UseMvcc::Yes : UseMvcc::No),
@@ -1160,10 +1160,10 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
               "Mismatching number of input columns for set operation");
 
   // Check to see if both input LQPs use the same data type for each column
-  for (auto column_expression_idx = size_t{0}; column_expression_idx < left_output_expressions.size();
-       ++column_expression_idx) {
-    const auto& left_expression = left_output_expressions[column_expression_idx];
-    const auto& right_expression = right_output_expressions[column_expression_idx];
+  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size();
+       ++expression_idx) {
+    const auto& left_expression = left_output_expressions[expression_idx];
+    const auto& right_expression = right_output_expressions[expression_idx];
 
     AssertInput(left_expression->data_type() == right_expression->data_type(),
                 "Mismatching input data types for left and right side of set operation");

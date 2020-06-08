@@ -110,11 +110,11 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     const auto& [right_result, right_cached] = pull_up_correlated_predicates_recursive(
         node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     right_input_adapted = right_result.adapted_lqp;
-    for (const auto& column_expression : right_result.required_output_expressions) {
+    for (const auto& expression : right_result.required_output_expressions) {
       const auto find_it = std::find(result.required_output_expressions.cbegin(),
-                                     result.required_output_expressions.cend(), column_expression);
+                                     result.required_output_expressions.cend(), expression);
       if (find_it == result.required_output_expressions.cend()) {
-        result.required_output_expressions.emplace_back(column_expression);
+        result.required_output_expressions.emplace_back(expression);
       }
     }
     if (!right_cached) {
@@ -139,11 +139,11 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.pulled_predicate_node_count++;
         result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
         for (const auto& join_predicate : join_predicates) {
-          const auto& column_expression = join_predicate->right_operand();
+          const auto& expression = join_predicate->right_operand();
           auto find_it = std::find(result.required_output_expressions.begin(), result.required_output_expressions.end(),
-                                   column_expression);
+                                   expression);
           if (find_it == result.required_output_expressions.end()) {
-            result.required_output_expressions.emplace_back(column_expression);
+            result.required_output_expressions.emplace_back(expression);
           }
         }
       }
