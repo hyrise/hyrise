@@ -638,7 +638,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::Aggregate, timer.lap());
+  step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
 
   /**
    * Write group-by columns.
@@ -658,7 +658,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
-  step_performance_data.set_step_runtime(OperatorSteps::WriteGroupByColumns, timer.lap());
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
 
   /*
   Write the aggregated columns to the output
@@ -679,7 +679,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::WriteAggregateColumns, timer.lap());
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);

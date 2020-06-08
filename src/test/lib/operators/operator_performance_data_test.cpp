@@ -1,10 +1,4 @@
-#include <algorithm>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
+#include <sstream>
 #include <vector>
 
 #include <magic_enum.hpp>

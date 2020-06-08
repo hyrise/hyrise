@@ -147,9 +147,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 
-  Timer timer;
   auto index_joining_duration = std::chrono::nanoseconds{0};
   auto nested_loop_joining_duration = std::chrono::nanoseconds{0};
+  Timer timer;
   if (_mode == JoinMode::Inner && _index_input_table->type() == TableType::References &&
       _secondary_predicates.empty()) {  // INNER REFERENCE JOIN
     // Scan all chunks for index input

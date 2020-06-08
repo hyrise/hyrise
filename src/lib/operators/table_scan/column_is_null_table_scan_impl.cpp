@@ -38,6 +38,7 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
       for (const auto& sorted_by : chunk_sorted_by) {
         if (sorted_by.column == _column_id) {
           _scan_generic_sorted_segment(*segment, chunk_id, *matches, sorted_by.sort_mode);
+          ++chunk_scans_sorted;
           return matches;
         }
       }

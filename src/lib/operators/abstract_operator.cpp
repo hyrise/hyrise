@@ -194,7 +194,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
 
       fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
       fn_stream << "/";
-      abstract_operator.performance_data->output_to_stream(fn_stream, DescriptionMode::SingleLine);
+      fn_stream << *abstract_operator.performance_data;
       fn_stream << ")";
     }
   };
