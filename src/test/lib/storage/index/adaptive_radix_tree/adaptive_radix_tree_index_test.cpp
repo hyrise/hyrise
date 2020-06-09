@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cmath>
 #include <limits>
 #include <memory>
 #include <set>
@@ -21,12 +20,12 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   void SetUp() override {
     // we want to custom-build the index, but we have to create an index with a non-empty segment.
     // Therefore we build an index and reset the root.
-    dict_segment1 = create_dict_segment_by_type<pmr_string>(DataType::String, {"test"});
-    index1 =
-        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment1}));
-    index1->_root = nullptr;
-    index1->_chunk_offsets.clear();
-    /* root   childx    childxx  childxxx  leaf->chunk offsets
+    _dict_segment1 = create_dict_segment_by_type<pmr_string>(DataType::String, {"test"});
+    _index1 =
+        std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({_dict_segment1}));
+    _index1->_root = nullptr;
+    _index1->_chunk_offsets.clear();
+    /* _root   childx    childxx  childxxx  leaf->chunk offsets
      * 01 --->  01 -----> 01 -----> 01 --> 0x00000001u, 0x00000007u
      * 02 -|    02 ---|   02 ---|   02 --> 0x00000002u
      *     |          |-> 01 --||-> 01 --> 0x00000003u
@@ -35,15 +34,15 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
      *     |----------------------> 01 --> 0x00000006u
      */
 
-    keys1 = {ValueID{0x01010101u}, ValueID{0x01010102u}, ValueID{0x01010201u}, ValueID{0x01020101u},
-             ValueID{0x01020102u}, ValueID{0x02010101u}, ValueID{0x01010101u}};
-    values1 = {0x00000001u, 0x00000002u, 0x00000003u, 0x00000004u, 0x00000005u, 0x00000006u, 0x00000007u};
+    _keys1 = {ValueID{0x01010101u}, ValueID{0x01010102u}, ValueID{0x01010201u}, ValueID{0x01020101u},
+              ValueID{0x01020102u}, ValueID{0x02010101u}, ValueID{0x01010101u}};
+    _values1 = {0x00000001u, 0x00000002u, 0x00000003u, 0x00000004u, 0x00000005u, 0x00000006u, 0x00000007u};
 
     for (size_t i = 0; i < 7; ++i) {
-      auto bc = AdaptiveRadixTreeIndex::BinaryComparable(keys1[i]);
-      pairs.emplace_back(std::make_pair(bc, values1[i]));
+      auto bc = AdaptiveRadixTreeIndex::BinaryComparable(_keys1[i]);
+      _pairs.emplace_back(std::make_pair(bc, _values1[i]));
     }
-    root = index1->_bulk_insert(pairs);
+    _root = _index1->_bulk_insert(_pairs);
   }
 
   void _search_elements(std::vector<std::optional<int32_t>>& values) {
@@ -53,16 +52,10 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
 
     std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
 
-    // 0, 1, the maximum int32_t value and 20 randomly generated positive int32_t values
-    const auto additional_value_pool = std::array<int32_t, 23>{
-        0,          1,          2147483647, 359982793,  2079147571, 386510393,  1762525179, 664094870,
-        1937011651, 784616030,  1000301793, 1891243447, 1654409109, 1476995155, 1110747240, 1726885375,
-        400463838,  2100392285, 308227485,  616812231,  997147072,  2121290667, 986682158};
-
     std::set<std::optional<int32_t>> search_values = distinct_values;
     // Add further values to search_values until the size is twice the size of distinct_values.
     for (auto counter = 0u; counter < distinct_values.size(); ++counter) {
-      search_values.insert(additional_value_pool[counter % additional_value_pool.size()]);
+      search_values.insert(_unindexed_value_pool[counter % _unindexed_value_pool.size()]);
     }
 
     for (const auto& search_value : search_values) {
@@ -86,12 +79,24 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
-  std::shared_ptr<AbstractSegment> dict_segment1 = nullptr;
-  std::shared_ptr<ARTNode> root = nullptr;
-  std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
-  std::vector<ValueID> keys1;
-  std::vector<ChunkOffset> values1;
+  // 0, 1, -1, the maximum int32_t value, the minimum int32_t value and 20 randomly generated int32_t values
+  const std::array<int32_t, 25> _indexed_value_pool{
+      0,           1,           -1,          2147483647, -2147483648, -354718155, -450451703, -125078514, 1173534911,
+      -1426766195, -1395715196, -1974007197, 1217037717, -369295213,  912804945,  -650700817, -987310781, 2019494295,
+      -142016072,  -547126853,  -1338076362, -474901211, 1039229181,  1059574590, -775950157};
+
+  // 20 randomly generated int32_t values, the intersection of _indexed_value_pool and _unindexed_value_pool is empty
+  const std::array<int32_t, 20> _unindexed_value_pool{24841977,    40823842,    -838897495,  717133222,   -2003779882,
+                                                      1567779104,  2055744676,  -1237803657, -2138857329, 665953096,
+                                                      1765592675,  -1347132114, -991516138,  -131391814,  1179314207,
+                                                      -1783302483, -1370034719, 1545498882,  742923039,   1989133269};
+
+  std::shared_ptr<AdaptiveRadixTreeIndex> _index1 = nullptr;
+  std::shared_ptr<AbstractSegment> _dict_segment1 = nullptr;
+  std::shared_ptr<ARTNode> _root = nullptr;
+  std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> _pairs;
+  std::vector<ValueID> _keys1;
+  std::vector<ChunkOffset> _values1;
 };
 
 TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
@@ -107,16 +112,16 @@ TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
 TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
   std::vector<ChunkOffset> expected_chunk_offsets = {0x00000001u, 0x00000007u, 0x00000002u, 0x00000003u,
                                                      0x00000004u, 0x00000005u, 0x00000006u};
-  EXPECT_FALSE(std::dynamic_pointer_cast<Leaf>(root));
-  EXPECT_EQ(index1->_chunk_offsets, expected_chunk_offsets);
+  EXPECT_FALSE(std::dynamic_pointer_cast<Leaf>(_root));
+  EXPECT_EQ(_index1->_chunk_offsets, expected_chunk_offsets);
 
-  auto root4 = std::dynamic_pointer_cast<ARTNode4>(root);
-  EXPECT_EQ(root4->_partial_keys[0], static_cast<uint8_t>(0x01u));
-  EXPECT_EQ(root4->_partial_keys[1], static_cast<uint8_t>(0x02u));
-  EXPECT_EQ(root4->_partial_keys[2], static_cast<uint8_t>(0xffu));
-  EXPECT_EQ(root4->_partial_keys[3], static_cast<uint8_t>(0xffu));
+  auto _root4 = std::dynamic_pointer_cast<ARTNode4>(_root);
+  EXPECT_EQ(_root4->_partial_keys[0], static_cast<uint8_t>(0x01u));
+  EXPECT_EQ(_root4->_partial_keys[1], static_cast<uint8_t>(0x02u));
+  EXPECT_EQ(_root4->_partial_keys[2], static_cast<uint8_t>(0xffu));
+  EXPECT_EQ(_root4->_partial_keys[3], static_cast<uint8_t>(0xffu));
 
-  auto child01 = std::dynamic_pointer_cast<ARTNode4>(root4->_children[0]);
+  auto child01 = std::dynamic_pointer_cast<ARTNode4>(_root4->_children[0]);
   EXPECT_EQ(child01->_partial_keys[0], static_cast<uint8_t>(0x01u));
   EXPECT_EQ(child01->_partial_keys[1], static_cast<uint8_t>(0x02u));
   EXPECT_EQ(child01->_partial_keys[2], static_cast<uint8_t>(0xffu));
@@ -150,7 +155,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
   EXPECT_FALSE(std::find(leaf01010102->begin(), leaf01010102->end(), static_cast<uint8_t>(0x00000002u)) ==
                leaf01010102->end());
 
-  auto leaf02 = std::dynamic_pointer_cast<Leaf>(root4->_children[1]);
+  auto leaf02 = std::dynamic_pointer_cast<Leaf>(_root4->_children[1]);
   EXPECT_EQ(std::distance(leaf02->begin(), leaf02->end()), 1);
   EXPECT_EQ(*(leaf02->begin()), 0x00000006u);
   EXPECT_FALSE(std::find(leaf02->begin(), leaf02->end(), static_cast<uint8_t>(0x00000006u)) == leaf02->end());
@@ -238,30 +243,11 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
 **/
 TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfInts) {
   const auto test_size = 1'000u;
-  const auto cluster_number = 10u;  // 10 clusters with 9 gaps distributed over the range of [0, int32_max]
-  const auto cluster_size = test_size / cluster_number;
-  const auto gap_size = (std::numeric_limits<int32_t>::max() - cluster_number * cluster_size) / (cluster_number - 1);
-
-  std::vector<std::optional<int32_t>> values{};
+  auto values = std::vector<std::optional<int32_t>>{};
   values.reserve(test_size);
 
-  std::array<std::array<int32_t, cluster_size>, cluster_number> clustered_values{};
-
-  // Create clusters of values within the range [0, int32_t::max]. Each cluster has a start value and subsequent values
-  // that are each one greater than the previous value. The start value v of a cluster is calculated with the formula
-  // v = cluster index * (size of a cluster + gap between clusters)
-  for (auto cluster_index = 0u; cluster_index < cluster_number; ++cluster_index) {
-    for (auto cluster_value_index = 0u; cluster_value_index < cluster_size; ++cluster_value_index) {
-      const auto value = cluster_index * (cluster_size + gap_size) + cluster_value_index;
-      clustered_values[cluster_index][cluster_value_index] = value;
-    }
-  }
-
-  // add values alternately from the different clusters
-  for (auto cluster_value_index = 0u; cluster_value_index < cluster_size; ++cluster_value_index) {
-    for (auto cluster_index = 0u; cluster_index < cluster_number; ++cluster_index) {
-      values.emplace_back(clustered_values[cluster_index][cluster_value_index]);
-    }
+  for (auto value_index = 0u; value_index < test_size; ++value_index) {
+    values[value_index] = _indexed_value_pool[value_index % _indexed_value_pool.size()];
   }
 
   _search_elements(values);

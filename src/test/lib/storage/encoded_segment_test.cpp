@@ -21,9 +21,11 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  protected:
   static constexpr auto _max_value = 1'024;
 
-  // 0, 1, the maximum value and 20 randomly generated int32_t values from the interval [0, _max_value]
-  const std::array<int32_t, 23> _generated_value_pool{0,   1,  _max_value, 600,  679, 212, 559, 439, 620, 910, 831, 662,
-                                                      389, 97, 530,        1013, 460, 138, 697, 861, 35,  329, 476};
+  // 0, 1, -1, _max_value, -_max_value and 20 randomly generated int32_t values from the interval
+  // [-_max_value, _max_value]
+  const std::array<int32_t, 25> _generated_value_pool{0,   1,    -1,   _max_value, -_max_value, 750, -978, -350, -885,
+                                                      738, -234, 582,  269,        -485,        893, -630, 528,  -122,
+                                                      551, 544,  -106, 194,        415,         954, -608};
 
  protected:
   size_t _row_count() {
