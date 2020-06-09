@@ -60,12 +60,12 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) {
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_cross_join_node->column_expressions().size(), 5u);
-  EXPECT_EQ(*_cross_join_node->column_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_cross_join_node->column_expressions().at(2), *_t_a_c);
-  EXPECT_EQ(*_cross_join_node->column_expressions().at(3), *_t_b_x);
-  EXPECT_EQ(*_cross_join_node->column_expressions().at(4), *_t_b_y);
-  EXPECT_EQ(*_cross_join_node->column_expressions().at(0), *_t_a_a);
+  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
@@ -98,17 +98,17 @@ TEST_F(JoinNodeTest, Copy) {
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {
-  ASSERT_EQ(_semi_join_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_semi_join_node->column_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_semi_join_node->column_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_semi_join_node->column_expressions().at(2), *_t_a_c);
+  ASSERT_EQ(_semi_join_node->output_expressions().size(), 3u);
+  EXPECT_EQ(*_semi_join_node->output_expressions().at(0), *_t_a_a);
+  EXPECT_EQ(*_semi_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_semi_join_node->output_expressions().at(2), *_t_a_c);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsAntiJoin) {
-  ASSERT_EQ(_anti_join_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_anti_join_node->column_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_anti_join_node->column_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_anti_join_node->column_expressions().at(2), *_t_a_c);
+  ASSERT_EQ(_anti_join_node->output_expressions().size(), 3u);
+  EXPECT_EQ(*_anti_join_node->output_expressions().at(0), *_t_a_a);
+  EXPECT_EQ(*_anti_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_anti_join_node->output_expressions().at(2), *_t_a_c);
 }
 
 TEST_F(JoinNodeTest, NodeExpressions) {

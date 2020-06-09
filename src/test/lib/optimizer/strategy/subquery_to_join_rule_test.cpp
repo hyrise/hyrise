@@ -202,51 +202,51 @@ TEST_F(SubqueryToJoinRuleTest, AssessCorrelatedParameterUsageReportsUnoptimizabl
 
 TEST_F(SubqueryToJoinRuleTest, AdaptAggregateNode) {
   const auto aggregate_node = AggregateNode::make(expression_vector(a_a), expression_vector());
-  const auto& original_expressions = aggregate_node->column_expressions();
+  const auto& original_expressions = aggregate_node->output_expressions();
 
   // a_a is already group by expression, check it is not added again
   const auto adapted_aggregate_node = SubqueryToJoinRule::adapt_aggregate_node(aggregate_node, {a_a});
-  EXPECT_EQ(adapted_aggregate_node->column_expressions().size(), size_t{1});
+  EXPECT_EQ(adapted_aggregate_node->output_expressions().size(), size_t{1});
 
   // a_b is an additional required group by expression, check it is added
   EXPECT_EQ(std::find(original_expressions.cbegin(), original_expressions.cend(), a_b), original_expressions.cend());
   const auto adapted_aggregate_node_2 = SubqueryToJoinRule::adapt_aggregate_node(aggregate_node, {a_b});
-  const auto& expressions = adapted_aggregate_node_2->column_expressions();
+  const auto& expressions = adapted_aggregate_node_2->output_expressions();
   EXPECT_NE(std::find(expressions.cbegin(), expressions.cend(), a_b), expressions.cend());
 }
 
 TEST_F(SubqueryToJoinRuleTest, AdaptAliasNode) {
   const auto alias_node =
       AliasNode::make(expression_vector(a_a, a_a, a_b), std::vector<std::string>{"a_a", "alias_a_a", "alias_a_b"});
-  const auto& original_expressions = alias_node->column_expressions();
+  const auto& original_expressions = alias_node->output_expressions();
 
   // no added duplicates, preserve multiple names for same column,
   const auto adapted_alias_node = SubqueryToJoinRule::adapt_alias_node(alias_node, {a_a});
-  EXPECT_EQ(adapted_alias_node->column_expressions().size(), size_t{3});
+  EXPECT_EQ(adapted_alias_node->output_expressions().size(), size_t{3});
 
   // no additional aliases
   const auto adapted_alias_node2 = SubqueryToJoinRule::adapt_alias_node(alias_node, {a_b});
-  EXPECT_EQ(adapted_alias_node2->column_expressions().size(), size_t{3});
+  EXPECT_EQ(adapted_alias_node2->output_expressions().size(), size_t{3});
 
   // add if necessary
   EXPECT_EQ(std::find(original_expressions.cbegin(), original_expressions.cend(), a_c), original_expressions.cend());
   const auto adapted_alias_node3 = SubqueryToJoinRule::adapt_alias_node(alias_node, {a_c});
-  const auto& expressions = adapted_alias_node3->column_expressions();
+  const auto& expressions = adapted_alias_node3->output_expressions();
   EXPECT_NE(std::find(expressions.cbegin(), expressions.cend(), a_c), expressions.cend());
 }
 
 TEST_F(SubqueryToJoinRuleTest, AdaptProjectionNode) {
   const auto projection_node = ProjectionNode::make(expression_vector(a_a, a_a));
-  const auto& original_expressions = projection_node->column_expressions();
+  const auto& original_expressions = projection_node->output_expressions();
 
   // no added duplicates, preserve original duplicates
   const auto adapted_projection_node = SubqueryToJoinRule::adapt_projection_node(projection_node, {a_a});
-  EXPECT_EQ(adapted_projection_node->column_expressions().size(), size_t{2});
+  EXPECT_EQ(adapted_projection_node->output_expressions().size(), size_t{2});
 
   // add if necessary
   EXPECT_EQ(std::find(original_expressions.cbegin(), original_expressions.cend(), a_b), original_expressions.cend());
   const auto adapted_projection_node2 = SubqueryToJoinRule::adapt_projection_node(projection_node, {a_b});
-  const auto& expressions = adapted_projection_node2->column_expressions();
+  const auto& expressions = adapted_projection_node2->output_expressions();
   EXPECT_NE(std::find(expressions.cbegin(), expressions.cend(), a_b), expressions.cend());
 }
 

@@ -97,7 +97,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
         }
       }
       if (has_count_star) {
-        for (const auto& input_expression : node->left_input()->column_expressions()) {
+        for (const auto& input_expression : node->left_input()->output_expressions()) {
           locally_required_expressions.emplace(input_expression);
         }
         break;
@@ -133,7 +133,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           continue;
         }
 
-        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->column_expressions(),
+        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->output_expressions(),
                                                                 locally_required_expressions);
       }
     } break;
@@ -171,11 +171,11 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Export:
     case LQPNodeType::Update:
     case LQPNodeType::ChangeMetaTable: {
-      const auto& left_input_expressions = node->left_input()->column_expressions();
+      const auto& left_input_expressions = node->left_input()->output_expressions();
       locally_required_expressions.insert(left_input_expressions.begin(), left_input_expressions.end());
 
       if (node->right_input()) {
-        const auto& right_input_expressions = node->right_input()->column_expressions();
+        const auto& right_input_expressions = node->right_input()->output_expressions();
         locally_required_expressions.insert(right_input_expressions.begin(), right_input_expressions.end());
       }
     } break;
@@ -326,8 +326,8 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
-  const auto column_expressions = lqp->column_expressions();
-  required_expressions_by_node[lqp].insert(column_expressions.cbegin(), column_expressions.cend());
+  const auto output_expressions = lqp->output_expressions();
+  required_expressions_by_node[lqp].insert(output_expressions.cbegin(), output_expressions.cend());
 
   // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss
@@ -345,7 +345,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
       case LQPNodeType::StoredTable: {
         // Prune all unused columns from a StoredTableNode
         auto pruned_column_ids = std::vector<ColumnID>{};
-        for (const auto& expression : node->column_expressions()) {
+        for (const auto& expression : node->output_expressions()) {
           if (required_expressions.find(expression) != required_expressions.end()) {
             continue;
           }
@@ -354,7 +354,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
           pruned_column_ids.emplace_back(column_expression->original_column_id);
         }
 
-        if (pruned_column_ids.size() == node->column_expressions().size()) {
+        if (pruned_column_ids.size() == node->output_expressions().size()) {
           // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
           // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
           // column from the pruning list. It does not matter which column it is.
