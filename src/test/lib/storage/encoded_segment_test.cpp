@@ -97,6 +97,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto list = _create_sequential_position_filter(row_count);
 
     auto skewed_list = std::make_shared<RowIDPosList>();
+    skewed_list->guarantee_single_chunk();
     skewed_list->reserve(list->size());
     // Let one iterator run from the beginning and one from the end of the list in each other's direction. Add the
     // iterators' elements alternately to the skewed list.
