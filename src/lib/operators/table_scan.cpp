@@ -42,7 +42,7 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<TableScanPerformanceData>()},
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {}
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
@@ -180,7 +180,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
-  auto& scan_performance_data = static_cast<TableScanPerformanceData&>(*performance_data);
+  auto& scan_performance_data = static_cast<PerformanceData&>(*performance_data);
   scan_performance_data.chunk_scans_skipped = _impl->chunk_scans_skipped;
   scan_performance_data.chunk_scans_sorted = _impl->chunk_scans_sorted;
 

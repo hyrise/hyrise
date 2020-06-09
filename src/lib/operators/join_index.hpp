@@ -41,7 +41,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   enum class OperatorSteps : uint8_t { IndexJoining, NestedLoopJoining, OutputWriting };
 
-  struct JoinIndexPerformanceData : public OperatorPerformanceData<OperatorSteps> {
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const;
 
     size_t chunks_scanned_with_index{0};

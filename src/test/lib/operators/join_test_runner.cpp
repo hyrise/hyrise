@@ -744,7 +744,7 @@ TEST_P(JoinTestRunner, TestJoin) {
         configuration.index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
 
     // verify correctness of index usage
-    const auto& performance_data = static_cast<const JoinIndex::JoinIndexPerformanceData&>(*join_op->performance_data);
+    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(*join_op->performance_data);
 
     auto indexed_used_count = indexed_input.indexed_chunk_range.second - indexed_input.indexed_chunk_range.first;
 
