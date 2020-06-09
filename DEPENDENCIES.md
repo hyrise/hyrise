@@ -7,6 +7,7 @@
 | clang                     | >= 9.0           |    All   |                 Yes, if gcc installed |
 | clang-format              | >= 9.0           |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 9.0           |    All   |                         Yes (linting) |
+| coreutils                 | any              |    Mac   |                         Yes (scripts) |
 | cmake                     | >= 3.9           |    All   |                                    No |
 | gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
