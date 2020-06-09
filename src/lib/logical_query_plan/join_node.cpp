@@ -71,14 +71,14 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   return output_expressions;
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> JoinNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> JoinNode::constraints() const {
   // Semi- and Anti-Joins act as mere filters for input_left().
   // Therefore, existing constraints are forwarded as they remain valid.
   if (join_mode == JoinMode::Semi | join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
     return forward_constraints();
   }
 
-  auto output_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+  auto output_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // No guarantees for Cross Joins and multi predicate joins
   const auto predicates = join_predicates();

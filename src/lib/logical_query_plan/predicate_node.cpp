@@ -28,7 +28,7 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> PredicateNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> PredicateNode::constraints() const {
   return forward_constraints();
 }
 

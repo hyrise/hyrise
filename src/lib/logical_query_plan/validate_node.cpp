@@ -8,7 +8,7 @@ ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
 std::string ValidateNode::description(const DescriptionMode mode) const { return "[Validate]"; }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> ValidateNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> ValidateNode::constraints() const {
   return forward_constraints();
 }
 

@@ -42,8 +42,8 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   return *_output_expressions;
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> StaticTableNode::constraints() const {
-  auto lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+const std::shared_ptr<LQPUniqueConstraints> StaticTableNode::constraints() const {
+  auto lqp_constraints = std::make_shared<LQPUniqueConstraints>();
 
   for (const auto& table_constraint : table->get_soft_unique_constraints()) {
     // Search for column expressions representing the table_constraint's ColumnIDs

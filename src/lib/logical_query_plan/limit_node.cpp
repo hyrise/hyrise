@@ -20,7 +20,7 @@ std::string LimitNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> LimitNode::constraints() const { return forward_constraints(); }
+const std::shared_ptr<LQPUniqueConstraints> LimitNode::constraints() const { return forward_constraints(); }
 
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const { return node_expressions[0]; }
 

@@ -45,7 +45,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> UnionNode::constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::Positions:
@@ -60,7 +60,7 @@ const std::shared_ptr<ExpressionsConstraintDefinitions> UnionNode::constraints()
       // To forward constraints from previous nodes, we would have to ensure that both input tables are completely
       // distinct in terms of rows. Currently, there is no strategy. Therefore, we discard constraints from previous
       // nodes.
-      return std::make_shared<ExpressionsConstraintDefinitions>();
+      return std::make_shared<LQPUniqueConstraints>();
   }
   Fail("Unhandled UnionMode");
 }

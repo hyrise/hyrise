@@ -259,11 +259,11 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::constraints() const {
-  return std::make_shared<ExpressionsConstraintDefinitions>();
+const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::constraints() const {
+  return std::make_shared<LQPUniqueConstraints>();
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> AbstractLQPNode::forward_constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_constraints() const {
   Assert(left_input(), "Not possible to forward constraints from empty node.");
   const auto input_constraints = left_input()->constraints();
   const auto& expressions = column_expressions();

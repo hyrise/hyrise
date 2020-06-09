@@ -29,8 +29,8 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-const std::shared_ptr<ExpressionsConstraintDefinitions> ProjectionNode::constraints() const {
-  auto projection_lqp_constraints = std::make_shared<ExpressionsConstraintDefinitions>();
+const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::constraints() const {
+  auto projection_lqp_constraints = std::make_shared<LQPUniqueConstraints>();
   projection_lqp_constraints->reserve(node_expressions.size());
 
   auto input_lqp_constraints = left_input()->constraints();

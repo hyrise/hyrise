@@ -12,10 +12,10 @@ namespace opossum {
  */
 static void check_table_constraint_representation(
     const TableConstraintDefinitions& table_constraints,
-    const std::shared_ptr<ExpressionsConstraintDefinitions> lqp_constraints) {
+    const std::shared_ptr<LQPUniqueConstraints> lqp_constraints) {
   for (const auto& table_constraint : table_constraints) {
     const auto matching_lqp_constraint = std::find_if(
-        lqp_constraints->cbegin(), lqp_constraints->cend(), [&](const ExpressionsConstraintDefinition& lqp_constraint) {
+        lqp_constraints->cbegin(), lqp_constraints->cend(), [&](const LQPUniqueConstraint& lqp_constraint) {
           // Basic comparison
           if (table_constraint.columns.size() != lqp_constraint.column_expressions.size()) return false;
 
