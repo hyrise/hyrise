@@ -26,7 +26,7 @@ class AbstractTableConstraint {
    * Compare two table constraints of the same type. Only additional fields have to be compared since column ids are
    * already compared by the caller.
    */
-  virtual bool _on_shallow_equals(const AbstractTableConstraint& table_constraint) const = 0;
+  virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
  private:
   std::unordered_set<ColumnID> _columns;

@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-enum class KeyConstraintType : bool { PRIMARY_KEY, UNIQUE };
+enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
 /**
  * Container class to define uniqueness constraints for tables.
@@ -17,7 +17,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType key_type() const;
 
  protected:
-  bool _on_shallow_equals(const AbstractTableConstraint& table_constraint) const override;
+  bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
 
  private:
   KeyConstraintType _key_type;
