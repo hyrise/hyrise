@@ -208,16 +208,32 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   if (value2_variant) right_values2.emplace_back(*value2_variant);
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+
+  DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
+    "Expected sorted vector of ColumnIDs");
+
   const auto table_name = stored_table_node->table_name;
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
+  auto pruned_table_chunk_id = ChunkID{0};
+  auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
+
+  // Create a vector of chunk ids that have a GroupKey index and are not pruned.
   const auto chunk_count = table->chunk_count();
-  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    // Check if chunk is pruned
+    if (pruned_chunk_ids_iter != pruned_chunk_ids.cend() && chunk_id == *pruned_chunk_ids_iter) {
+      ++pruned_chunk_ids_iter;
+      continue;
+    }
+    // Check if chunk has GroupKey index
     const auto chunk = table->get_chunk(chunk_id);
     if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-      indexed_chunks.emplace_back(chunk_id);
+      indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
+    ++pruned_table_chunk_id;
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
@@ -249,9 +265,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
   const auto input_operator = translate_node(input_node);
 
   auto column_ids = std::vector<ColumnID>();
-  column_ids.reserve(alias_node->column_expressions().size());
+  column_ids.reserve(alias_node->output_expressions().size());
 
-  for (const auto& expression : alias_node->column_expressions()) {
+  for (const auto& expression : alias_node->output_expressions()) {
     column_ids.emplace_back(input_node->get_column_id(*expression));
   }
 
@@ -545,7 +561,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     // Try to resolve the Expression to a column from the input node
     const auto column_id = node->find_column_id(*expression);
     if (column_id) {
-      const auto referenced_expression = node->column_expressions()[*column_id];
+      const auto referenced_expression = node->output_expressions()[*column_id];
       expression =
           std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
                                                 node->is_column_nullable(node->get_column_id(*referenced_expression)),
@@ -577,7 +593,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 
       // Only specify a type for the Subquery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
-      if (subquery_expression->lqp->column_expressions().size() == 1u) {
+      if (subquery_expression->lqp->output_expressions().size() == 1u) {
         const auto subquery_data_type = subquery_expression->data_type();
         const auto subquery_nullable = subquery_expression->lqp->is_column_nullable(ColumnID{0});
 

@@ -9,7 +9,7 @@
 #include "base_test.hpp"
 
 #include "statistics/statistics_objects/counting_quotient_filter.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

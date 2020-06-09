@@ -8,7 +8,7 @@
 #include "all_type_variant.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"

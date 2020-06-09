@@ -66,16 +66,16 @@ TEST_F(StoredTableNodeTest, GetColumn) {
 }
 
 TEST_F(StoredTableNodeTest, ColumnExpressions) {
-  EXPECT_EQ(_stored_table_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *_a);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *_b);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(2u), *_c);
+  EXPECT_EQ(_stored_table_node->output_expressions().size(), 3u);
+  EXPECT_EQ(*_stored_table_node->output_expressions().at(0u), *_a);
+  EXPECT_EQ(*_stored_table_node->output_expressions().at(1u), *_b);
+  EXPECT_EQ(*_stored_table_node->output_expressions().at(2u), *_c);
 
   // Column pruning does not interfere with get_column()
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-  EXPECT_EQ(_stored_table_node->column_expressions().size(), 2u);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *_b);
-  EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *_c);
+  EXPECT_EQ(_stored_table_node->output_expressions().size(), 2u);
+  EXPECT_EQ(*_stored_table_node->output_expressions().at(0u), *_b);
+  EXPECT_EQ(*_stored_table_node->output_expressions().at(1u), *_c);
 }
 
 TEST_F(StoredTableNodeTest, HashingAndEqualityCheck) {

@@ -32,7 +32,7 @@ TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
 
 TEST_F(ExportNodeTest, NodeExpressions) { EXPECT_TRUE(_export_node->node_expressions.empty()); }
 
-TEST_F(ExportNodeTest, ColumnExpressions) { EXPECT_TRUE(_export_node->column_expressions().empty()); }
+TEST_F(ExportNodeTest, ColumnExpressions) { EXPECT_TRUE(_export_node->output_expressions().empty()); }
 
 TEST_F(ExportNodeTest, Copy) { EXPECT_EQ(*_export_node, *_export_node->deep_copy()); }
 

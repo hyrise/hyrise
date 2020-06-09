@@ -129,9 +129,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const;
 
   /**
-   * @return The Expressions defining each column that this node outputs
+   * @return The Expressions defining each "column" that this node outputs. Note: When talking about LQPs, we use the
+   *         term expression, rather than column. A ProjectionNode might output `a + 5`, where a is an
+   *         LQPColumnExpression and `a + 5` is an ArithmeticExpression. Avoid "column expression" if you do not mean
+   *         a column that comes from an actual table.
    */
-  virtual std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const;
+  virtual std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)

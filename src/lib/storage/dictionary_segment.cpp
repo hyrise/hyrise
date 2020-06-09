@@ -52,7 +52,7 @@ ChunkOffset DictionarySegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
+std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
   auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc);

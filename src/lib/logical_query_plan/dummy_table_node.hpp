@@ -18,7 +18,7 @@ class DummyTableNode : public EnableMakeForLQPNode<DummyTableNode>, public Abstr
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
  protected:

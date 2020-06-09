@@ -22,10 +22,10 @@
 namespace opossum {
 
 class AbstractIndex;
-class BaseSegment;
+class AbstractSegment;
 class BaseAttributeStatistics;
 
-using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
+using Segments = pmr_vector<std::shared_ptr<AbstractSegment>>;
 using Indexes = pmr_vector<std::shared_ptr<AbstractIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
@@ -59,7 +59,7 @@ class Chunk : private Noncopyable {
   bool is_mutable() const;
 
   // Atomically replaces the current segment at column_id with the passed segment
-  void replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment);
+  void replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment);
 
   // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
   ColumnCount column_count() const;
@@ -81,24 +81,24 @@ class Chunk : private Noncopyable {
    *       However, if you call get_segment again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
+  std::shared_ptr<AbstractSegment> get_segment(ColumnID column_id) const;
 
   bool has_mvcc_data() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
   std::vector<std::shared_ptr<AbstractIndex>> get_indexes(
-      const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
+      const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
   std::vector<std::shared_ptr<AbstractIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
 
   std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
-                                           const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
+                                           const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
   std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
                                            const std::vector<ColumnID>& column_ids) const;
 
   template <typename Index>
   std::shared_ptr<AbstractIndex> create_index(
-      const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index) {
+      const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index) {
     DebugAssert(([&]() {
                   for (auto segment : segments_to_index) {
                     const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
@@ -187,7 +187,8 @@ class Chunk : private Noncopyable {
   void finalize();
 
  private:
-  std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_segments_for_ids(
+      const std::vector<ColumnID>& column_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;
