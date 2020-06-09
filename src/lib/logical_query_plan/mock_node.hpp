@@ -34,9 +34,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
-  std::vector<FunctionalDependency> functional_dependencies() const override;
-
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
@@ -51,11 +48,14 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
-  /**
-   * NOTE: Key constraints are NOT ENFORCED. We call them "soft" constraints to draw attention to that.
-   */
-  void set_soft_key_constraints(const TableKeyConstraints& key_constraints);
-  const TableKeyConstraints& soft_key_constraints() const;
+  // Pure container functionality for key constraints. MockNode does not use key constraints internally.
+  void set_key_constraints(const TableKeyConstraints& key_constraints);
+  const TableKeyConstraints& key_constraints() const;
+
+  // Pure container functionality for FDs. MockNode does not use FDs internally.
+  // Unlike StoredTableNode, FDs are not generated from key constraints in MockNode.
+  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  std::vector<FunctionalDependency> functional_dependencies() const override;
 
   std::optional<std::string> name;
 
