@@ -211,7 +211,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
 
   DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
-    "Expected sorted vector of ColumnIDs");
+              "Expected sorted vector of ColumnIDs");
 
   const auto table_name = stored_table_node->table_name;
   const auto table = Hyrise::get().storage_manager.get_table(table_name);

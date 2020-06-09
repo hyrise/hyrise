@@ -53,38 +53,16 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
 
     std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
 
-    const auto delta = 1332;
-    const auto int32_max = std::numeric_limits<int32_t>::max();
-    auto additional_values = std::array<int32_t, 2>{0, int32_max};
-    auto reset_counts = std::array<int32_t, 2>{0, 0};
+    // 0, 1, the maximum int32_t value and 20 randomly generated positive int32_t values
+    const auto additional_value_pool = std::array<int32_t, 23>{
+        0,          1,          2147483647, 359982793,  2079147571, 386510393,  1762525179, 664094870,
+        1937011651, 784616030,  1000301793, 1891243447, 1654409109, 1476995155, 1110747240, 1726885375,
+        400463838,  2100392285, 308227485,  616812231,  997147072,  2121290667, 986682158};
 
-    // Create search values from given values + additional ones. Add alternately the first value (additional_values[0])
-    // and the second value (additional_values[1]). The first value increases, the second value decreases over time.
     std::set<std::optional<int32_t>> search_values = distinct_values;
-    while (search_values.size() < distinct_values.size() * 2) {
-      const auto value_index = search_values.size() % 2;
-      auto& value = additional_values[value_index];
-      search_values.insert(value);
-
-      // update recently used value
-      auto& reset_count = reset_counts[value_index];
-      if (!value_index) {  // update increasing value
-        if ((int32_max - value) < delta) {
-          ++reset_count;
-          // reset_count shifts the generated value to avoid duplicates
-          value = 0 + reset_count;
-        } else {
-          value += delta;
-        }
-      } else {  // update decreasing value
-        if (value < delta) {
-          ++reset_count;
-          // reset_count shifts the generated value to avoid duplicates
-          value = int32_max - reset_count;
-        } else {
-          value -= delta;
-        }
-      }
+    // Add further values to search_values until the size is twice the size of distinct_values.
+    for (auto counter = 0u; counter < distinct_values.size(); ++counter) {
+      search_values.insert(additional_value_pool[counter % additional_value_pool.size()]);
     }
 
     for (const auto& search_value : search_values) {
@@ -260,16 +238,18 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
 **/
 TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfInts) {
   const auto test_size = 1'000u;
-  const auto cluster_number = 10u;  // 10 clusters with 9 gaps distributed over the range of [1, int32_max]
+  const auto cluster_number = 10u;  // 10 clusters with 9 gaps distributed over the range of [0, int32_max]
   const auto cluster_size = test_size / cluster_number;
   const auto gap_size = (std::numeric_limits<int32_t>::max() - cluster_number * cluster_size) / (cluster_number - 1);
 
   std::vector<std::optional<int32_t>> values{};
   values.reserve(test_size);
 
-  // generate values
   std::array<std::array<int32_t, cluster_size>, cluster_number> clustered_values{};
 
+  // Create clusters of values within the range [0, int32_t::max]. Each cluster has a start value and subsequent values
+  // that are each one greater than the previous value. The start value v of a cluster is calculated with the formula
+  // v = cluster index * (size of a cluster + gap between clusters)
   for (auto cluster_index = 0u; cluster_index < cluster_number; ++cluster_index) {
     for (auto cluster_value_index = 0u; cluster_value_index < cluster_size; ++cluster_value_index) {
       const auto value = cluster_index * (cluster_size + gap_size) + cluster_value_index;
