@@ -62,9 +62,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({2});
   table->append({3});
 
-  // Finalize last chunk
-  table->get_chunk(ChunkID{1})->finalize();
-
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table);
 
   {
@@ -275,7 +273,7 @@ TEST_F(OperatorPerformanceDataTest, OperatorPerformanceDataHasOutputMarkerSet) {
 
 TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   OperatorPerformanceData<JoinHash::OperatorSteps> performance_data;
-  performance_data.set_step_runtime(JoinHash::OperatorSteps::Materialization, std::chrono::nanoseconds{17});
+  performance_data.set_step_runtime(JoinHash::OperatorSteps::BuildSideMaterializing, std::chrono::nanoseconds{17});
   performance_data.set_step_runtime(JoinHash::OperatorSteps::Probing, std::chrono::nanoseconds{17});
   performance_data.executed = true;
   performance_data.has_output = true;
@@ -286,8 +284,9 @@ TEST_F(OperatorPerformanceDataTest, JoinHashPerformanceToOutputStream) {
   std::stringstream stringstream;
   stringstream << performance_data;
   EXPECT_TRUE(
-      stringstream.str().starts_with("Output: 1 row in 1 chunk, 2 ns. Operator step runtimes: Materialization 17 ns, "
-                                     "Clustering 0 ns, Building 0 ns, Probing 17 ns, OutputWriting 0 ns."));
+      stringstream.str().starts_with("Output: 1 row in 1 chunk, 2 ns. Operator step runtimes: BuildSideMaterializing"
+                                     " 17 ns, ProbeSideMaterializing 0 ns, Clustering 0 ns, Building 0 ns, Probing"
+                                     " 17 ns, OutputWriting 0 ns."));
 }
 
 TEST_F(OperatorPerformanceDataTest, OutputToStream) {

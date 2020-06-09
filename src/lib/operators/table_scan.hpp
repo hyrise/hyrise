@@ -53,20 +53,22 @@ class TableScan : public AbstractReadOnlyOperator {
     size_t chunk_scans_sorted{0};
 
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-      const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-      if (chunk_scans_skipped > 0 || chunk_scans_sorted > 0) {
-        stream << separator << "Chunks: ";
-        if (chunk_scans_skipped > 0) {
-          stream << chunk_scans_skipped << " skipped";
-        }
-        if (chunk_scans_skipped > 0 && chunk_scans_sorted > 0) {
-          stream << ", ";
-        }
-        if (chunk_scans_sorted > 0) {
-          stream << chunk_scans_sorted << " scanned sorted";
-        }
-        stream << ". ";
+      if (chunk_scans_skipped == 0 && chunk_scans_sorted == 0) {
+        return;
       }
+
+      const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+      stream << separator << "Chunks: ";
+      if (chunk_scans_skipped > 0) {
+        stream << chunk_scans_skipped << " skipped";
+      }
+      if (chunk_scans_skipped > 0 && chunk_scans_sorted > 0) {
+        stream << ", ";
+      }
+      if (chunk_scans_sorted > 0) {
+        stream << chunk_scans_sorted << " scanned using binary search";
+      }
+      stream << ". ";
     }
   };
 

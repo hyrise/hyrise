@@ -193,11 +193,13 @@ void AggregateHash::_aggregate() {
   // Check for invalid aggregates
   _validate_aggregates();
 
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
     /*
-    PARTITIONING PHASE
+    PARTITIONING STEP
     First we partition the input chunks by the given group key(s).
     This is done by creating a vector that contains the AggregateKey for each row.
     It is gradually built by visitors, one for each group segment.
@@ -439,9 +441,10 @@ void AggregateHash::_aggregate() {
 
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
   }
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
   /*
-  AGGREGATION PHASE
+  AGGREGATION STEP
   */
   _contexts_per_column = std::vector<std::shared_ptr<SegmentVisitorContext>>(_aggregates.size());
 
@@ -612,6 +615,7 @@ void AggregateHash::_aggregate() {
       }
     }
   }
+  step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
 }
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
@@ -638,7 +642,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
-  step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
 
   /**
    * Write group-by columns.

@@ -29,7 +29,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   uint64_t output_chunk_count{0};
 };
 
-
 /**
  * General execution information is stored in OperatorPerformanceData through AbstractOperator::execute().
  * The template parameter Steps allows operators to store runtimes for an operators exeuctions steps (e.g., see
@@ -55,19 +54,21 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
            << output_chunk_count << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", "
            << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime)) << ".";
 
-    if constexpr (!std::is_same_v<Steps, NoSteps>) {
-      static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");
-      stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n") << "Operator step runtimes:"
-             << (description_mode == DescriptionMode::SingleLine ? "" : "\n");
-      for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
-        if (step_index > 0) {
-          stream << (description_mode == DescriptionMode::SingleLine ? "," : "\n");
-        }
-        stream << " " << magic_enum::enum_name(static_cast<Steps>(step_index)) << " "
-               << format_duration(step_runtimes[step_index]);
-      }
-      stream << ".";
+    if constexpr (std::is_same_v<Steps, NoSteps>) {
+      return;
     }
+
+    static_assert(magic_enum::enum_count<Steps>() <= sizeof(step_runtimes), "Too many steps.");
+    stream << (description_mode == DescriptionMode::SingleLine ? " " : "\n")
+           << "Operator step runtimes:" << (description_mode == DescriptionMode::SingleLine ? "" : "\n");
+    for (auto step_index = size_t{0}; step_index < magic_enum::enum_count<Steps>(); ++step_index) {
+      if (step_index > 0) {
+        stream << (description_mode == DescriptionMode::SingleLine ? "," : "\n");
+      }
+      stream << " " << magic_enum::enum_name(static_cast<Steps>(step_index)) << " "
+             << format_duration(step_runtimes[step_index]);
+    }
+    stream << ".";
   }
 
   std::chrono::nanoseconds get_step_runtime(const Steps step) const {
@@ -76,6 +77,8 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
   }
 
   void set_step_runtime(const Steps step, const std::chrono::nanoseconds duration) {
+    DebugAssert(magic_enum::enum_integer(step) < magic_enum::enum_count<Steps>(), "Invalid step.");
+    DebugAssert(step_runtimes[static_cast<size_t>(step)] == std::chrono::nanoseconds{0}, "Overwriting step runtime.");
     step_runtimes[static_cast<size_t>(step)] = duration;
   }
 

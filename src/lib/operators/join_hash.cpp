@@ -331,6 +331,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       materialized_build_column = materialize_input<BuildColumnType, HashedType, false>(
           _build_input_table, _column_ids.first, histograms_build_column, _radix_bits, build_side_bloom_filter);
     }
+    _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
 
     /**
      * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
@@ -347,7 +348,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           _probe_input_table, _column_ids.second, histograms_probe_column, _radix_bits, probe_side_bloom_filter,
           build_side_bloom_filter);
     }
-    _performance.set_step_runtime(OperatorSteps::Materialization, timer_materialization.lap());
+    _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
