@@ -258,7 +258,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 
   // Take a copy of what the aggregate was originally supposed to do
-  const auto original_aggregate_expressions = aggregate_node->column_expressions();
+  const auto original_aggregate_expressions = aggregate_node->output_expressions();
 
   const auto& aggregate_input_node = aggregate_node->left_input();
   auto replacements = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{};
@@ -297,7 +297,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   if (replacements.empty()) return;
 
   // Back up the current column names
-  const auto& root_expressions = root_node->column_expressions();
+  const auto& root_expressions = root_node->output_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
   for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
     old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
@@ -331,7 +331,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
   // If there is no upward AliasNode, we need to add one that renames "SUM/COUNT" to "AVG"
   if (!updated_an_alias) {
-    auto root_expressions_replaced = root_node->column_expressions();
+    auto root_expressions_replaced = root_node->output_expressions();
 
     for (auto& expression : root_expressions_replaced) {
       expression_deep_replace(expression, replacements);

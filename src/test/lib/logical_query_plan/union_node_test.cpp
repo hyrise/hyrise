@@ -36,9 +36,9 @@ class UnionNodeTest : public BaseTest {
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: Positions"); }
 
 TEST_F(UnionNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(*_union_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
-  EXPECT_EQ(*_union_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
-  EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
+  EXPECT_EQ(*_union_node->output_expressions().at(0), *_mock_node1->output_expressions().at(0));
+  EXPECT_EQ(*_union_node->output_expressions().at(1), *_mock_node1->output_expressions().at(1));
+  EXPECT_EQ(*_union_node->output_expressions().at(2), *_mock_node1->output_expressions().at(2));
 }
 
 TEST_F(UnionNodeTest, HashingAndEqualityCheck) {

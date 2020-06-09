@@ -18,10 +18,10 @@ std::string UnionNode::description(const DescriptionMode mode) const {
   return "[UnionNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
-  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
+std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
+  Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
          "Input Expressions must match");
-  return left_input()->column_expressions();
+  return left_input()->output_expressions();
 }
 
 std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {

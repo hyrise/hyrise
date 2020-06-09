@@ -28,8 +28,8 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list
   if (!std::all_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& constraint_column_expression) {
-                     return group_by_columns.contains(constraint_column_expression);
+                   [&group_by_columns](const std::shared_ptr<AbstractExpression>& constraint_expression) {
+                     return group_by_columns.contains(constraint_expression);
                    })) {
     return false;
   }
@@ -80,10 +80,10 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     if (fds.empty()) return LQPVisitation::VisitInputs;
 
     // --- Preparation ---
-    // Store a copy of the root's column expressions before applying the rule
-    const auto root_column_expressions = root_lqp->column_expressions();
-    // Also store a copy of the aggregate's column expressions to verify the output column order later on.
-    const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
+    // Store a copy of the root's output expressions before applying the rule
+    const auto root_output_expressions = root_lqp->output_expressions();
+    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
+    const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
 
     // Gather group-by columns
     const auto fetch_group_by_columns = [&aggregate_node]() {
@@ -119,11 +119,11 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // In case the initial query plan root returned the same columns in the same column order and was not a projection,
     // it is likely that the result of the current aggregate was either the root itself or only operators followed that
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
-    // by adding a projection with the initial column expressions since we changed the column order by moving columns
+    // by adding a projection with the initial output expressions since we changed the column order by moving columns
     // from the group-by list to the aggregations.
-    if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
+    if (group_by_list_changed && initial_aggregate_output_expressions == root_output_expressions &&
         root_lqp->type != LQPNodeType::Projection) {
-      const auto projection_node = std::make_shared<ProjectionNode>(root_column_expressions);
+      const auto projection_node = std::make_shared<ProjectionNode>(root_output_expressions);
       lqp_insert_node(root_lqp, LQPInputSide::Left, projection_node);
     }
 

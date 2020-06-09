@@ -28,11 +28,11 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
 
-std::vector<std::shared_ptr<AbstractExpression>> MockNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> MockNode::output_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
-  if (!_column_expressions) {
-    _column_expressions.emplace(_column_definitions.size() - _pruned_column_ids.size());
+  if (!_output_expressions) {
+    _output_expressions.emplace(_column_definitions.size() - _pruned_column_ids.size());
 
     auto pruned_column_ids_iter = _pruned_column_ids.begin();
 
@@ -44,13 +44,13 @@ std::vector<std::shared_ptr<AbstractExpression>> MockNode::column_expressions() 
         continue;
       }
 
-      (*_column_expressions)[output_column_id] =
+      (*_output_expressions)[output_column_id] =
           std::make_shared<LQPColumnExpression>(shared_from_this(), stored_column_id);
       ++output_column_id;
     }
   }
 
-  return *_column_expressions;
+  return *_output_expressions;
 }
 
 bool MockNode::is_column_nullable(const ColumnID column_id) const {
@@ -66,8 +66,8 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
 
   _pruned_column_ids = pruned_column_ids;
 
-  // Rebuilding this lazily the next time `column_expressions()` is called
-  _column_expressions.reset();
+  // Rebuilding this lazily the next time `output_expressions()` is called
+  _output_expressions.reset();
 }
 
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }

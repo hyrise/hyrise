@@ -26,7 +26,7 @@ TEST_F(ImportNodeTest, HashingAndEqualityCheck) {
 
 TEST_F(ImportNodeTest, NodeExpressions) { EXPECT_TRUE(_import_node->node_expressions.empty()); }
 
-TEST_F(ImportNodeTest, ColumnExpressions) { EXPECT_TRUE(_import_node->column_expressions().empty()); }
+TEST_F(ImportNodeTest, ColumnExpressions) { EXPECT_TRUE(_import_node->output_expressions().empty()); }
 
 TEST_F(ImportNodeTest, Copy) { EXPECT_EQ(*_import_node, *_import_node->deep_copy()); }
 

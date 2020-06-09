@@ -35,7 +35,7 @@ TEST_F(ChangeMetaTableNodeTest, HashingAndEqualityCheck) {
 TEST_F(ChangeMetaTableNodeTest, NodeExpressions) { EXPECT_TRUE(_change_meta_table_node->node_expressions.empty()); }
 
 TEST_F(ChangeMetaTableNodeTest, ColumnExpressions) {
-  EXPECT_TRUE(_change_meta_table_node->column_expressions().empty());
+  EXPECT_TRUE(_change_meta_table_node->output_expressions().empty());
 }
 
 TEST_F(ChangeMetaTableNodeTest, Copy) { EXPECT_EQ(*_change_meta_table_node, *_change_meta_table_node->deep_copy()); }
