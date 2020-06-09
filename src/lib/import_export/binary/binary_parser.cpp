@@ -224,20 +224,12 @@ template <typename T>
 std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
   const auto num_elements = _read_value<uint32_t>(file);
   const auto block_count = _read_value<uint32_t>(file);
-
-  uint32_t block_size;
-  uint32_t last_block_size;
-  if (block_count > 1) {
-    block_size = _read_value<uint32_t>(file);
-    last_block_size = _read_value<uint32_t>(file);
-  } else {
-    last_block_size = _read_value<uint32_t>(file);
-    block_size = last_block_size;
-  }
-
-  const size_t compressed_size = (block_count - 1) * block_size + last_block_size;
+  const auto block_size = _read_value<uint32_t>(file);
+  const auto last_block_size = _read_value<uint32_t>(file);
 
   pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
+
+  const auto compressed_size = std::accumulate(lz4_block_sizes.begin(), lz4_block_sizes.end(), size_t{0});
 
   pmr_vector<pmr_vector<char>> lz4_blocks(block_count);
   for (uint32_t block_index = 0; block_index < block_count; ++block_index) {

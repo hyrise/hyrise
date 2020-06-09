@@ -136,6 +136,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
       BenchmarkTableInfo table_info;
       table_info.table = BinaryParser::parse(table_file);
       table_info.loaded_from_binary = true;
+      table_info.binary_file_path = table_file;
       table_info_by_name[table_name] = table_info;
 
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
