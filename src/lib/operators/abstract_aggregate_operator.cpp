@@ -29,7 +29,7 @@ const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperat
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
 std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const auto *const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
 
   std::stringstream desc;
   desc << name() << separator << "GroupBy ColumnIDs: ";
