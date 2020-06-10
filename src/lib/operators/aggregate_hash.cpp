@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <magic_enum.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
@@ -22,6 +23,7 @@
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 using namespace opossum;  // NOLINT
@@ -80,7 +82,8 @@ namespace opossum {
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
+                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {}
 
 const std::string& AggregateHash::name() const {
   static const auto name = std::string{"AggregateHash"};
@@ -169,37 +172,26 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   });
 }
 
+/**
+ * Partition the input chunks by the given group key(s). This is done by creating a vector that contains the
+ * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
+ */
 template <typename AggregateKey>
-void AggregateHash::_aggregate() {
-  // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
-  // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
-  // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
-  // This is suitable here because the amount of memory needed is known from the start. In other places with frequent
-  // reallocations, this might make less sense.
-  // We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
-  // https://libcxx.llvm.org/ts1z_status.html
-  using AggregateKeysAllocator =
-      boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
-
-  auto input_table = left_input_table();
-
-  for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
-    DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
-  }
-
-  // Check for invalid aggregates
-  _validate_aggregates();
-
+KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
   KeysPerChunk<AggregateKey> keys_per_chunk;
 
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
-    /*
-    PARTITIONING PHASE
-    First we partition the input chunks by the given group key(s).
-    This is done by creating a vector that contains the AggregateKey for each row.
-    It is gradually built by visitors, one for each group segment.
-    */
+    // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
+    // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
+    // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
+    // This is suitable here because the amount of memory needed is known from the start. In other places with frequent
+    // reallocations, this might make less sense.
+    // We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
+    // https://libcxx.llvm.org/ts1z_status.html
+    using AggregateKeysAllocator =
+        boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
 
+    const auto& input_table = left_input_table();
     const auto chunk_count = input_table->chunk_count();
 
     {
@@ -437,9 +429,32 @@ void AggregateHash::_aggregate() {
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
   }
 
-  /*
-  AGGREGATION PHASE
-  */
+  return keys_per_chunk;
+}
+
+template <typename AggregateKey>
+void AggregateHash::_aggregate() {
+  const auto& input_table = left_input_table();
+
+  for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
+    DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+  }
+
+  // Check for invalid aggregates
+  _validate_aggregates();
+
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;
+
+  /**
+   * PARTITIONING STEP
+   */
+  const auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
+
+  /**
+   * AGGREGATION STEP
+   */
   _contexts_per_column = std::vector<std::shared_ptr<SegmentVisitorContext>>(_aggregates.size());
 
   if (_aggregates.empty()) {
@@ -472,7 +487,7 @@ void AggregateHash::_aggregate() {
       _contexts_per_column[aggregate_idx] = context;
       continue;
     }
-    auto data_type = input_table->column_data_type(input_column_id);
+    const auto data_type = input_table->column_data_type(input_column_id);
     _contexts_per_column[aggregate_idx] =
         _create_aggregate_context<AggregateKey>(data_type, aggregate->aggregate_function);
   }
@@ -560,8 +575,8 @@ void AggregateHash::_aggregate() {
           continue;
         }
 
-        auto abstract_segment = chunk_in->get_segment(input_column_id);
-        auto data_type = input_table->column_data_type(input_column_id);
+        const auto abstract_segment = chunk_in->get_segment(input_column_id);
+        const auto data_type = input_table->column_data_type(input_column_id);
 
         /*
         Invoke correct aggregator for each segment
@@ -609,9 +624,13 @@ void AggregateHash::_aggregate() {
       }
     }
   }
-}
+  step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
+}  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
+  auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
+  Timer timer;
+
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
@@ -633,8 +652,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       break;
   }
 
-  const auto& input_table = left_input_table();
-
   /**
    * Write group-by columns.
    *
@@ -653,10 +670,12 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
+  step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
 
   /*
   Write the aggregated columns to the output
   */
+  const auto& input_table = left_input_table();
   ColumnID aggregate_idx{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -672,12 +691,15 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
+  step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
   }
+
+  step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
 
   return output;
 }

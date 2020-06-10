@@ -642,10 +642,10 @@ set(
 
 set(
     LIBRARIES
-    sqlparser
     cqf
-    uninitialized_vector
     lz4
+    sqlparser
+    uninitialized_vector
     zstd
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}

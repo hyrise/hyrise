@@ -27,12 +27,12 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
   AbstractDereferencedColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                           const PredicateCondition init_predicate_condition);
 
-  std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) const override;
+  std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) override;
 
   const PredicateCondition predicate_condition;
 
  protected:
-  void _scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
+  void _scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id, RowIDPosList& matches);
 
   // Implemented by the separate Impls. They do not need to deal with ReferenceSegments anymore, as this class
   // takes care of that. We take `matches` as an in/out parameter instead of returning it because scans on multiple
@@ -40,7 +40,7 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
   // no option because it would break multithreading.
   virtual void _scan_non_reference_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                            RowIDPosList& matches,
-                                           const std::shared_ptr<const AbstractPosList>& position_filter) const = 0;
+                                           const std::shared_ptr<const AbstractPosList>& position_filter) = 0;
 
   const std::shared_ptr<const Table> _in_table;
   const ColumnID _column_id;
