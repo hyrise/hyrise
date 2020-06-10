@@ -25,10 +25,10 @@ class AbstractTableScanImpl {
 
   virtual std::string description() const = 0;
 
-  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) const = 0;
+  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) = 0;
 
-  mutable std::atomic<size_t> chunk_scans_skipped{0};
-  mutable std::atomic<size_t> chunk_scans_sorted{0};
+  std::atomic<size_t> chunk_scans_skipped{0};
+  std::atomic<size_t> chunk_scans_sorted{0};
 
  protected:
   /**

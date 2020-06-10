@@ -30,7 +30,7 @@ std::string ColumnLikeTableScanImpl::description() const { return "ColumnLike"; 
 
 void ColumnLikeTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   // For dictionary segments where the number of unique values is not higher than the number of (potentially filtered)
   // input rows, use an optimized implementation.
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
@@ -67,7 +67,7 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
 
 void ColumnLikeTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
   // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
   // position_filter), this optimization is detrimental. See caller for that case.

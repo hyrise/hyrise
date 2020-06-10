@@ -36,7 +36,7 @@ std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetw
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
   // Check if a sorted scan is possible for the current predicate. Do not use the sorted search for predicates on
@@ -91,7 +91,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   ValueID lower_bound_value_id;
   if (is_lower_inclusive_between(predicate_condition)) {
     lower_bound_value_id = segment.lower_bound(left_value);

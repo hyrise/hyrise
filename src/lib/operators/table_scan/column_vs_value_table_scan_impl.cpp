@@ -32,13 +32,14 @@ std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsVa
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   const auto& chunk_sorted_by = _in_table->get_chunk(chunk_id)->sorted_by();
 
   if (!chunk_sorted_by.empty()) {
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
+        ++chunk_scans_sorted;
         return;
       }
     }
@@ -78,7 +79,7 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(
 
 void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
     const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-    const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    const std::shared_ptr<const AbstractPosList>& position_filter) {
   /**
    * ValueID search_vid;              // left value id
    * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
@@ -150,7 +151,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
                                                       const SortMode sort_mode) const {
-  ++chunk_scans_sorted;
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 
