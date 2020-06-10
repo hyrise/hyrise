@@ -177,7 +177,13 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
  * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
  */
 template <typename AggregateKey>
-void AggregateHash::_partition_by_group_by_keys(KeysPerChunk<AggregateKey>& keys_per_chunk) {
+KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() const {
+  KeysPerChunk<AggregateKey> keys_per_chunk;
+
+  if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
+    return keys_per_chunk;
+  }
+
   // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
   // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
   // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
@@ -424,6 +430,8 @@ void AggregateHash::_partition_by_group_by_keys(KeysPerChunk<AggregateKey>& keys
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
+
+  return keys_per_chunk;
 }
 
 template <typename AggregateKey>
@@ -439,16 +447,16 @@ void AggregateHash::_aggregate() {
 
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;
-  KeysPerChunk<AggregateKey> keys_per_chunk;
-  if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
-    // Partition the input chunks by the given group key(s).
-    _partition_by_group_by_keys(keys_per_chunk);
-  }
+
+  /**
+   * PARTITIONING STEP
+   */
+  const auto keys_per_chunk = _partition_by_groupby_keys<AggregateKey>();
   step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
-  /*
-  AGGREGATION STEP
-  */
+  /**
+   * AGGREGATION STEP
+   */
   _contexts_per_column = std::vector<std::shared_ptr<SegmentVisitorContext>>(_aggregates.size());
 
   if (_aggregates.empty()) {
