@@ -45,6 +45,7 @@ EXPLICITLY_INSTANTIATE_DATA_TYPES(HistogramGetter);
 } // namespace detail
 
 void AbstractClusteringAlgo::_run_assertions() const {
+  std::cout << "[" << description() << "] Running assertions" << std::endl;
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
     if (VERBOSE) std::cout << "[" << description() << "] " << "- Running assertions for table " << table_name << std::endl;
 
@@ -179,6 +180,8 @@ void AbstractClusteringAlgo::_run_assertions() const {
       }
     }
   }
+
+  std::cout << "[" << description() << "] Running assertions done" << std::endl;
 }
 
 void AbstractClusteringAlgo::run() {

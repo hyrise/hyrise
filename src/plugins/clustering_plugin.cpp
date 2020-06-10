@@ -51,6 +51,7 @@ std::pair<ColumnDataType,ColumnDataType> _get_min_max(const std::shared_ptr<Chun
 
 void _export_chunk_pruning_statistics() {
   const std::string table_name{"lineitem"};
+  if (!Hyrise::get().storage_manager.has_table(table_name)) return;
   std::cout << "[ClusteringPlugin] Exporting " <<  table_name << " chunk pruning stats...";
 
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
@@ -79,6 +80,7 @@ void _export_chunk_pruning_statistics() {
 
 void _export_chunk_size_statistics() {
   const std::string table_name = "lineitem";
+  if (!Hyrise::get().storage_manager.has_table(table_name)) return;
   std::cout << "[ClusteringPlugin] Exporting " <<  table_name << " chunk size stats...";
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<size_t> chunk_sizes;
@@ -102,8 +104,8 @@ void _export_chunk_size_statistics() {
 
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
-  //_clustering_algo = std::make_shared<SimpleClusteringAlgo>(SimpleClusteringAlgo(_clustering_config));
-  _clustering_algo = std::make_shared<DisjointClustersAlgo>(DisjointClustersAlgo(_clustering_config));
+  //_clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
+  _clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 
