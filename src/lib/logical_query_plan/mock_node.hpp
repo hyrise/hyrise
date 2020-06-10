@@ -7,6 +7,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 namespace opossum {
 
@@ -33,9 +34,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
-  std::vector<FunctionalDependency> functional_dependencies() const override;
-
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
@@ -49,6 +47,15 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
+
+  // Pure container functionality: MockNode does not use key constraints internally.
+  void set_key_constraints(const TableKeyConstraints& key_constraints);
+  const TableKeyConstraints& key_constraints() const;
+
+  // Pure container functionality: MockNode does not use FDs internally.
+  // Also, unlike StoredTableNode, FDs are not generated from key constraints.
+  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  std::vector<FunctionalDependency> functional_dependencies() const override;
 
   std::optional<std::string> name;
 
@@ -65,5 +72,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
   std::vector<FunctionalDependency> _functional_dependencies;
+  TableKeyConstraints _table_key_constraints;
 };
 }  // namespace opossum
