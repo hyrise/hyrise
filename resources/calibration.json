@@ -1,7 +1,7 @@
 {
   "table_generation": {
     "table_name_prefix": "calibration_table_",
-    "table_sizes": [1000, 10000, 100000, 1000000]
+    "table_sizes": [1000, 10000]
   },
   "tpch_output_path": "./resources/calibration_results/scan/tpch_results.csv",
   "output_path": "./resources/calibration_results/scan/calibration_results.csv",

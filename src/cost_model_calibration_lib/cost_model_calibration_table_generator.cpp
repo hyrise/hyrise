@@ -86,7 +86,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
         table->create_index<GroupKeyIndex>(column_ids);
       }
     }
-    std::cout << " done." << std::endl;
+    std::cout << "done." << std::endl;
   }
 }
 

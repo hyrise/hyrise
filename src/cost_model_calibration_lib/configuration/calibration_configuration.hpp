@@ -135,6 +135,12 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   for (const auto& data_type : configuration.data_types) {
     for (const auto& encoding_spec : segments_encodings) {
       if (encoding_supports_data_type(encoding_spec.encoding_type, data_type)) {
+	// Due to a lack of functionality, LZ4 needs to be manually cleaned. In the long run, LZ4 shall no longer use vetor
+	// compression.
+	if (encoding_spec.encoding_type == EncodingType::LZ4 && encoding_spec.vector_compression_type &&
+            *encoding_spec.vector_compression_type == VectorCompressionType::FixedSizeByteAligned) {
+		continue;
+	}
         // for every encoding, we create three columns that allow calibrating the query
         // `WHERE a between b and c` with a,b,c being columns encoded in the requested encoding type.
         for (const size_t distinct_value_count : configuration.distinct_value_counts) {

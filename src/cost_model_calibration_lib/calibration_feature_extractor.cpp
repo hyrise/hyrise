@@ -61,7 +61,7 @@ const std::optional<CostModelFeatures> CalibrationFeatureExtractor::extract_feat
 const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     const std::shared_ptr<const AbstractOperator>& op) {
   CostModelFeatures operator_features{};
-  const auto time = op->performance_data().walltime;
+  const auto time = op->performance_data->walltime;
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
   operator_features.execution_time_ns = execution_time_ns;
@@ -84,22 +84,22 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     if (left_parent_op->type() == OperatorType::GetTable) {
       // If we found a GetTable node, get the size of the table.
       const auto get_table_op = std::static_pointer_cast<const GetTable>(left_parent_op);
-      operator_features.left_input_data_table_row_count = get_table_op->get_output()->row_count();
+      operator_features.left_input_data_table_row_count = op->performance_data->output_row_count;
     }
 
     const auto left_input = op->input_left()->get_output();
-    operator_features.left_input_row_count = left_input->row_count();
-    operator_features.left_input_chunk_count = left_input->chunk_count();
-    operator_features.left_input_memory_usage_bytes = left_input->memory_usage(MemoryUsageCalculationMode::Full);
-    operator_features.left_input_chunk_size = left_input->target_chunk_size();
+    operator_features.left_input_row_count = op->input_left()->performance_data->output_row_count;
+    operator_features.left_input_chunk_count = op->input_left()->performance_data->output_chunk_count;
+    operator_features.left_input_memory_usage_bytes = -1;
+    operator_features.left_input_chunk_size = -1;
   }
 
   if (op->input_right()) {
     const auto right_input = op->input_right()->get_output();
-    operator_features.right_input_row_count = right_input->row_count();
-    operator_features.right_input_chunk_count = right_input->chunk_count();
-    operator_features.right_input_memory_usage_bytes = right_input->memory_usage(MemoryUsageCalculationMode::Full);
-    operator_features.right_input_chunk_size = right_input->target_chunk_size();
+    operator_features.right_input_row_count = op->input_right()->performance_data->output_row_count;
+    operator_features.right_input_chunk_count = op->input_right()->performance_data->output_chunk_count;
+    operator_features.right_input_memory_usage_bytes = -1;
+    operator_features.right_input_chunk_size = -1;
   }
 
   const auto left_input_row_count = operator_features.left_input_row_count;
@@ -108,7 +108,7 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
   // Output
   if (const auto& output = op->get_output()) {
     // Output selectivity seems to be off
-    const auto output_row_count = output->row_count();
+    const auto output_row_count = op->performance_data->output_row_count;
     // Calculate cross-join cardinality.
     // Use 1 for cases, in which one side is empty to avoid divisions by zero in the next step
     const auto total_input_row_count =
@@ -117,7 +117,7 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
 
     operator_features.selectivity = output_selectivity;
     operator_features.output_row_count = output_row_count;
-    operator_features.output_chunk_count = output->chunk_count();
+    operator_features.output_chunk_count = op->performance_data->output_chunk_count;
     operator_features.output_memory_usage_bytes = output->memory_usage(MemoryUsageCalculationMode::Full);
 
     const auto output_chunk_size = output->target_chunk_size();
@@ -190,10 +190,10 @@ const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_fea
   TableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
-  if (left_input_table->row_count() == 0 || left_input_table->chunk_count() == 0)
+  if (left_input_table->performance_data->output_row_count == 0 || left_input_table->performance_data->output_chunk_count == 0)
     return std::nullopt;
 
-  features.effective_chunk_count = left_input_table->chunk_count();
+  features.effective_chunk_count = left_input_table->performance_data->output_chunk_count;
   return features;
 }
 
