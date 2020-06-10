@@ -29,24 +29,24 @@ std::shared_ptr<const Table> Export::_on_execute() {
 
   switch (_file_type) {
     case FileType::Csv:
-      CsvWriter::write(*input_table_left(), _filename);
+      CsvWriter::write(*left_input_table(), _filename);
       break;
     case FileType::Binary:
-      BinaryWriter::write(*input_table_left(), _filename);
+      BinaryWriter::write(*left_input_table(), _filename);
       break;
     case FileType::Auto:
     case FileType::Tbl:
       Fail("Export: Exporting file type is not supported.");
   }
 
-  // must match ExportNode::column_expressions
+  // must match ExportNode::output_expressions
   return nullptr;
 }
 
 std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Export>(copied_input_left, _filename, _file_type);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Export>(copied_left_input, _filename, _file_type);
 }
 
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

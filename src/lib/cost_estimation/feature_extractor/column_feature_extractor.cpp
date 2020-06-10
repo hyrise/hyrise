@@ -4,7 +4,7 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "resolve_type.hpp"
-#include "statistics/base_attribute_statistics.hpp"
+#include "statistics/abstract_attribute_statistics.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"

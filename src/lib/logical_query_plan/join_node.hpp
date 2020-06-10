@@ -10,7 +10,6 @@
 
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
@@ -34,7 +33,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
            const std::optional<JoinType> init_join_type = std::nullopt);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;

@@ -17,7 +17,7 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void add_segment_to_value_distribution(const BaseSegment& segment,
+void add_segment_to_value_distribution(const AbstractSegment& segment,
                                        std::unordered_map<T, HistogramCountType>& value_distribution,
                                        const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
@@ -83,8 +83,8 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
   AbstractHistogram<T>::_assert_bin_validity();
 
   _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
-  _total_distinct_count =
-      static_cast<HistogramCountType>(_distinct_count_per_bin * bin_count() + _bin_count_with_extra_value);
+  _total_distinct_count = _distinct_count_per_bin * static_cast<HistogramCountType>(bin_count()) +
+                          static_cast<HistogramCountType>(_bin_count_with_extra_value);
 }
 
 template <typename T>

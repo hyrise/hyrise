@@ -38,7 +38,8 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   // Runs either an EXECUTE query or fills the "?" placeholders with values and returns the resulting SQL string,
   // depending on _use_prepared_statements
-  std::string _substitute_placeholders(const BenchmarkItemID item_id, const std::vector<std::string>& parameter_values);
+  std::string _substitute_placeholders(const BenchmarkItemID item_id,
+                                       const std::vector<std::string>& parameter_values) const;
 
   // Should we use prepared statements or generate "regular" SQL queries?
   const bool _use_prepared_statements;

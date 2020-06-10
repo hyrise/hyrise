@@ -9,7 +9,7 @@
 
 #include "histogram_domain.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {

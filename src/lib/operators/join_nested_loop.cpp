@@ -88,9 +88,9 @@ const std::string& JoinNestedLoop::name() const {
 }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinNestedLoop>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                           _secondary_predicates);
 }
 
@@ -98,15 +98,15 @@ void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, Al
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   Assert(supports({_mode, _primary_predicate.predicate_condition,
-                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+                   left_input_table()->column_data_type(_primary_predicate.column_ids.first),
+                   right_input_table()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinNestedLoop doesn't support these parameters");
 
   PerformanceWarning("Nested Loop Join used");
 
-  auto left_table = input_table_left();
-  auto right_table = input_table_right();
+  auto left_table = left_input_table();
+  auto right_table = right_input_table();
 
   auto left_column_id = _primary_predicate.column_ids.first;
   auto right_column_id = _primary_predicate.column_ids.second;
@@ -245,17 +245,22 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  return _build_output_table({std::make_shared<Chunk>(std::move(segments))});
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{};
+  if (segments.at(0)->size() > 0) {
+    chunks.emplace_back(std::make_shared<Chunk>(std::move(segments)));
+  }
+  return _build_output_table(std::move(chunks));
 }
 
-void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,
-                                                const BaseSegment& base_segment_right, const ChunkID chunk_id_left,
-                                                const ChunkID chunk_id_right, JoinNestedLoop::JoinParams& params) {
+void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_segment_left,
+                                                const AbstractSegment& abstract_segment_right,
+                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
+                                                JoinNestedLoop::JoinParams& params) {
   /**
    * This function dispatches `join_two_typed_segments()`.
    *
    * To reduce compile time, we erase the types of Segments and the PredicateCondition/comparator if
-   * `base_segment_left.data_type() != base_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
+   * `abstract_segment_left.data_type() != abstract_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
    * the "SLOW PATH".
    * If data types and segment types are the same, we take the "FAST PATH", where only the SegmentType of left segment
    * is erased and inlining optimization can be performed by the compiler for the inner loop.
@@ -267,14 +272,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
   /**
    * FAST PATH
    */
-  if (base_segment_left.data_type() == base_segment_right.data_type()) {
+  if (abstract_segment_left.data_type() == abstract_segment_right.data_type()) {
     auto fast_path_taken = false;
 
-    resolve_data_and_segment_type(base_segment_left, [&](const auto data_type_t, const auto& segment_left) {
+    resolve_data_and_segment_type(abstract_segment_left, [&](const auto data_type_t, const auto& segment_left) {
       using ColumnDataType = typename decltype(data_type_t)::type;
       using LeftSegmentType = std::decay_t<decltype(segment_left)>;
 
-      if (const auto* segment_right = dynamic_cast<const LeftSegmentType*>(&base_segment_right)) {
+      if (const auto* segment_right = dynamic_cast<const LeftSegmentType*>(&abstract_segment_right)) {
         const auto iterable_left = create_any_segment_iterable<ColumnDataType>(segment_left);
         const auto iterable_right = create_iterable_from_segment<ColumnDataType>(*segment_right);
 
@@ -300,8 +305,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
    * SLOW PATH
    */
   // clang-format off
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
-    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(abstract_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
       using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
       using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 
@@ -329,7 +334,7 @@ void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_p
                                          const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    std::shared_ptr<BaseSegment> segment;
+    std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {

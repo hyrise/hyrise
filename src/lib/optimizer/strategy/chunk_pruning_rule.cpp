@@ -68,7 +68,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 
   // wanted side effect of using sets: pruned_chunk_ids vector is sorted
-  auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
+  const auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
   if (!already_pruned_chunk_ids.empty()) {
     std::vector<ChunkID> intersection;
     std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), pruned_chunk_ids.begin(),
@@ -106,7 +106,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
     }
 
     const auto column_data_type =
-        stored_table_node_without_column_pruning->column_expressions()[operator_predicate.column_id]->data_type();
+        stored_table_node_without_column_pruning->output_expressions()[operator_predicate.column_id]->data_type();
 
     // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
     // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
@@ -223,7 +223,7 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
 
-  const auto scale = 1 - (num_rows_pruned / old_statistics.row_count);
+  const auto scale = 1 - (static_cast<float>(num_rows_pruned) / old_statistics.row_count);
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (column_id == predicate.column_id) {
       column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(
@@ -235,7 +235,8 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
     }
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics.row_count - num_rows_pruned);
+  return std::make_shared<TableStatistics>(std::move(column_statistics),
+                                           old_statistics.row_count - static_cast<float>(num_rows_pruned));
 }
 
 }  // namespace opossum

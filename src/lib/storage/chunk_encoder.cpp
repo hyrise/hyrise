@@ -8,7 +8,7 @@
 #include "chunk.hpp"
 #include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_segment_encoder.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -25,12 +25,12 @@ namespace opossum {
  * an encoded segment is being recreated as an uncompressed segment (created on the fly via
  * an AnySegmentIterable) or that another encoding is applied (via the segment encoding utils).
  */
-std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<BaseSegment>& segment,
-                                                          const DataType data_type,
-                                                          const SegmentEncodingSpec& encoding_spec) {
+std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_ptr<AbstractSegment>& segment,
+                                                              const DataType data_type,
+                                                              const SegmentEncodingSpec& encoding_spec) {
   Assert(!std::dynamic_pointer_cast<const ReferenceSegment>(segment), "Reference segments cannot be encoded.");
 
-  std::shared_ptr<BaseSegment> result;
+  std::shared_ptr<AbstractSegment> result;
   resolve_data_type(data_type, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -98,9 +98,9 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     const auto spec = chunk_encoding_spec[column_id];
 
     const auto data_type = column_data_types[column_id];
-    const auto base_segment = chunk->get_segment(column_id);
+    const auto abstract_segment = chunk->get_segment(column_id);
 
-    const auto encoded_segment = encode_segment(base_segment, data_type, spec);
+    const auto encoded_segment = encode_segment(abstract_segment, data_type, spec);
     chunk->replace_segment(column_id, encoded_segment);
   }
 

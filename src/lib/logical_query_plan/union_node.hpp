@@ -9,16 +9,24 @@
 
 namespace opossum {
 
+/**
+ * This node type is used to (1) represent the intersect set operation with the modes Unique and All, and (2) to
+ * intersect disjuncitve PosLists (using the Positions mode). For example, `a = 1 OR b = 2` can be split up into
+ * and later united by a UnionNode in the Positions mode.
+ *
+ */
+
 class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode {
  public:
-  explicit UnionNode(const UnionMode init_union_mode);
+  explicit UnionNode(const SetOperationMode init_set_operation_mode);
 
   OperatorType operator_type() const override;
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+  std::vector<FunctionalDependency> functional_dependencies() const override;
 
-  const UnionMode union_mode;
+  const SetOperationMode set_operation_mode;
 
  protected:
   size_t _on_shallow_hash() const override;

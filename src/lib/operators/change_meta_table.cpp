@@ -26,13 +26,13 @@ std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<Transa
 
   switch (_change_type) {
     case MetaTableChangeType::Insert:
-      Hyrise::get().meta_table_manager.insert_into(_meta_table_name, input_table_right());
+      Hyrise::get().meta_table_manager.insert_into(_meta_table_name, right_input_table());
       break;
     case MetaTableChangeType::Update:
-      Hyrise::get().meta_table_manager.update(_meta_table_name, input_table_left(), input_table_right());
+      Hyrise::get().meta_table_manager.update(_meta_table_name, left_input_table(), right_input_table());
       break;
     case MetaTableChangeType::Delete:
-      Hyrise::get().meta_table_manager.delete_from(_meta_table_name, input_table_left());
+      Hyrise::get().meta_table_manager.delete_from(_meta_table_name, left_input_table());
       break;
   }
 
@@ -40,9 +40,9 @@ std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<Transa
 }
 
 std::shared_ptr<AbstractOperator> ChangeMetaTable::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<ChangeMetaTable>(_meta_table_name, _change_type, copied_input_left, copied_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<ChangeMetaTable>(_meta_table_name, _change_type, copied_left_input, copied_right_input);
 }
 
 void ChangeMetaTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

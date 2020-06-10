@@ -1,5 +1,6 @@
 #include "aggregate_sort.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -8,9 +9,34 @@
 #include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/sort.hpp"
+#include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/segment_iterate.hpp"
 #include "table_wrapper.hpp"
 #include "types.hpp"
+
+namespace {
+
+using namespace opossum;  // NOLINT
+
+std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<const Table>& table_to_sort,
+                                                      const std::vector<ColumnID>& column_ids) {
+  // Create sort definition vector from group by list for sort operator
+  auto sort_definitions = std::vector<SortColumnDefinition>{};
+  sort_definitions.reserve(column_ids.size());
+  for (const auto& column_id : column_ids) {
+    sort_definitions.emplace_back(SortColumnDefinition{column_id, SortMode::Ascending});
+  }
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_to_sort);
+  table_wrapper->execute();
+
+  const auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions);
+  sort->execute();
+
+  return sort->get_output();
+}
+
+}  // namespace
 
 namespace opossum {
 
@@ -232,7 +258,7 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = std::optional<AggregateType>();
     } else {
       // normal average calculation
-      current_primary_aggregate = *current_primary_aggregate / value_count;
+      current_primary_aggregate = *current_primary_aggregate / static_cast<AggregateType>(value_count);
     }
   }
   if constexpr (function == AggregateFunction::StandardDeviationSample &&
@@ -256,42 +282,105 @@ void AggregateSort::_set_and_write_aggregate_value(
   }
 }
 
+Segments AggregateSort::_get_segments_of_chunk(const std::shared_ptr<const Table>& input_table,
+                                               const ChunkID chunk_id) {
+  Segments segments{};
+  const auto column_count = input_table->column_count();
+  segments.reserve(column_count);
+  const auto chunk = input_table->get_chunk(chunk_id);
+
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    segments.emplace_back(chunk->get_segment(column_id));
+  }
+  return segments;
+}
+
+std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
+                                                             const std::vector<ColumnID>& groupby_column_ids) {
+  auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+
+  const auto chunk_count = input_table->chunk_count();
+  const auto column_count = input_table->column_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input_table->get_chunk(chunk_id);
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+    const auto& chunk_sorted_by = input_table->get_chunk(chunk_id)->sorted_by();
+
+    // We can skip sorting the chunk only if we group by a single column and the chunk is sorted by that column. We do
+    // not store information about cascadingly sorted chunks, which we would need for skipping the sort step with
+    // multiple group by columns. The sort mode can be neglected as the aggregate only requires consecutiveness of
+    // values.
+    const auto single_column_group_by = groupby_column_ids.size() == 1;
+    const auto chunk_sorted_by_first_group_by_column =
+        std::find_if(chunk_sorted_by.cbegin(), chunk_sorted_by.cend(), [&](const auto& sort_definition) {
+          return groupby_column_ids[0] == sort_definition.column;
+        }) != chunk_sorted_by.cend();
+
+    if (single_column_group_by && chunk_sorted_by_first_group_by_column) {
+      if (input_table->type() == TableType::Data) {
+        // Since the chunks that actually have to be sorted will be returned as referencing chunks, we need to forward
+        // the already sorted input chunks as such too, using an EntireChunkPosList.
+        const auto pos_list = std::make_shared<EntireChunkPosList>(chunk_id, chunk->size());
+        auto reference_segments = Segments{};
+        reference_segments.reserve(column_count);
+
+        // Create actual ReferenceSegment objects.
+        for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
+          reference_segments.push_back(ref_segment_out);
+        }
+
+        output_table->append_chunk(reference_segments);
+      } else {
+        // In case of a reference segment, we can directly forward it.
+        output_table->append_chunk(_get_segments_of_chunk(input_table, chunk_id));
+      }
+    } else {
+      // Creating a new table holding only the current chunk and pass it to the sort operator.
+      auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), input_table->type());
+      Segments segments;
+      segments.reserve(column_count);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        segments.emplace_back(chunk->get_segment(column_id));
+      }
+      single_chunk_table->append_chunk(segments);
+      const auto sorted_single_chunk_table = sort_table_by_column_ids(single_chunk_table, groupby_column_ids);
+
+      output_table->append_chunk(_get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
+    }
+  }
+
+  return output_table;
+}
+
 /**
- * Executes the aggregation.
+ * Executes the sort-based aggregation.
+ *
  * High-level overview:
- *
- * Make sure the aggregates are valid
- * Build the output table definition
- * if empty
- *   return (empty) result table
- *
- * Sort the input table after all group by columns.
- *  Currently, this is done using multiple passes of the Sort operator (which is stable)
- *  For future implementations, the fact that the input table is already sorted could be used to skip this step.
- *    See https://github.com/hyrise/hyrise/issues/1519 for a discussion about operators using sortedness.
- *
- * Find the group boundaries
- *  Our table is now sorted after all group by columns.
- *  As a result, all rows that fall into the same group are consecutive within that table.
- *  Thus, we can easily find all group boundaries (specifically their first element)
- *  by iterating over the group by columns and storing RowIDs of rows where the value of any group by column changes.
- *  The result is a (ordered) set, its entries marking the beginning of a new group-by-combination.
- *
- * Write the values of group by columns for each group into a ValueSegment
- *  For each group by column
- *   Iterate over the group boundaries (RowIDs) and output the value
- *    Note: This cannot be merged with the first iteration (finding group boundaries).
- *          This is because we have to output values for all RowIDs where ANY group by column changes,
- *          not only the one we currently iterate over.
- *
- * Call _aggregate_values for each aggregate, which performs the aggregation and writes the output into ValueSegments
- *
- * return result table
- *
- * @return the result table
+ * 1. Make sure the aggregates are valid.
+ * 2. Build the output table definition.
+ *    - If empty, return (empty) result table.
+ * 3. Sort the input table by group by columns using the sort operator.
+ *    - depending on characteristics of the input table, sorting can either be skipped (input already sorted by group
+ *      by column) or sorting can be limited to chunks instead of sorting the whole table (input table is clustered)
+ * 4. Find the group boundaries.
+ *    - The unit of aggregation (either chunks or the whole table, depending on the table's value clustering) is now
+ *      sorted by all group by columns.
+ *    - As a result, all rows that fall into the same group are consecutive within that unit.
+ *    - Thus, we can find all group boundaries (specifically their first element) by iterating over the group by
+ *      columns and storing RowIDs of rows where the value of any group by column changes.
+ *    - The result is a (sorted) vector of RowIDs, its entries marking the beginning of a new group-by-combination.
+ * 5. Write the values of group by columns for each group into a ValueSegment.
+ *    - For each group by column, iterate over the group boundaries (RowIDs) and output the value.
+ *    - Note: This cannot be merged with the first iteration (finding group boundaries). This is because we have to
+ *            output values for all RowIDs where ANY group by column changes, not only the one we currently iterate
+ *            over.
+ * 6. Call _aggregate_values for each aggregate, which performs the aggregation and writes the output into
+ *    ValueSegments.
  */
 std::shared_ptr<const Table> AggregateSort::_on_execute() {
-  const auto input_table = input_table_left();
+  const auto input_table = left_input_table();
 
   // Check for invalid aggregates
   _validate_aggregates();
@@ -356,26 +445,36 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     return result_table;
   }
 
-  /*
-   * NOTE: There are some cases in the TPCH-Queries, where we get tables with more columns than required.
-   * Required columns are all columns that we group by, as well as all columns we aggregate on.
-   * All other columns are superfluous, as they will not be part of the result table (and thus not accessible for later operators).
-   *
-   * This could lead to performance issues as the Sort operator needs to materialize more data.
-   * We believe this to be a minor issue:
-   * It seems that in most cases the optimizer puts a projection before the aggregate operator,
-   * and in cases where it does not, the table size is small.
-   * However, we did not benchmark it, so we cannot prove it.
-   */
+  std::shared_ptr<const Table> sorted_table = input_table;
+  if (!_groupby_column_ids.empty()) {
+    /**
+    * If there is a value clustering for a column, it means that all tuples with the same value in that column are in
+    * the same chunk. Therefore, if one of the value clustering columns is part of the group by vector, we can skip
+    * sorting the whole table and sort on a per-chunk basis instead. Values that would end up in the same cluster are
+    * already in the same chunk. In the current definition of value clustering, NULL values must not occur.
+    *
+    * If the value clustering doesn't match the columns we group by, we need to sort the whole table to achieve the
+    * consecutiveness of equal values we need (table-wide sort information is not tracked yet).
+    */
+    const auto& table_value_clustered_by = input_table->value_clustered_by();
+    auto is_value_clustered_by_groupby_column = false;
 
-  // Sort input table consecutively by the group by columns (stable sort)
-  auto sorted_table = input_table;
-  for (const auto& column_id : _groupby_column_ids) {
-    const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
-    sorted_wrapper->execute();
-    Sort sort = Sort(sorted_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{column_id}});
-    sort.execute();
-    sorted_table = sort.get_output();
+    if (!table_value_clustered_by.empty()) {
+      for (const auto& value_clustered_by : table_value_clustered_by) {
+        if (std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), value_clustered_by) !=
+            _groupby_column_ids.end()) {
+          is_value_clustered_by_groupby_column = true;
+          break;
+        }
+      }
+    }
+
+    if (is_value_clustered_by_groupby_column) {
+      // Sort input table chunk-wise as the group by values are clustered.
+      sorted_table = _sort_table_chunk_wise(input_table, _groupby_column_ids);
+    } else {
+      sorted_table = sort_table_by_column_ids(input_table, _groupby_column_ids);
+    }
   }
 
   _output_segments.resize(_aggregates.size() + _groupby_column_ids.size());
@@ -430,7 +529,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
 
       // Iterate over all chunks and insert RowIDs when values change
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
+        const auto chunk = sorted_table->get_chunk(chunk_id);
+        Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+        const auto& segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value.has_value() == position.is_null() ||
               (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
@@ -583,15 +684,20 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   // Append output to result table
-  result_table->append_chunk(_output_segments);
+  if (_output_segments.at(0)->size() > 0) {
+    result_table->append_chunk(_output_segments);
+  }
 
+  // We do not set sort information on the output table as we can only guarantee it in certain situations (e.g., when
+  // the whole input table needed to be sorted). As this aggregate case is the fall back solution and should be rather
+  // be calculated with the hash aggregate, we neglect the sort information for now and keep it simple.
   return result_table;
 }
 
 std::shared_ptr<AbstractOperator> AggregateSort::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<AggregateSort>(copied_input_left, _aggregates, _groupby_column_ids);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<AggregateSort>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
 void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -656,7 +762,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(input_column_id);
+    aggregate_data_type = left_input_table()->column_data_type(input_column_id);
   }
 
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);

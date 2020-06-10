@@ -11,7 +11,7 @@ namespace opossum {
 template <typename ValueType>
 class AnySegmentIterable;
 
-class BaseSegment;
+class AbstractSegment;
 
 /**
  * @brief Wraps passed segment iterable in an AnySegmentIterable
@@ -21,14 +21,14 @@ class BaseSegment;
  *
  * Returns iterable if it has already been wrapped
  */
-template <typename IterableT>
-auto erase_type_from_iterable(const IterableT& iterable);
+template <typename UnerasedIterable>
+auto erase_type_from_iterable(const UnerasedIterable& iterable);
 
 /**
  * @brief Wraps passed segment iterable in an AnySegmentIterable in debug mode
  */
-template <typename IterableT>
-decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable);
+template <typename UnerasedIterable>
+decltype(auto) erase_type_from_iterable_if_debug(const UnerasedIterable& iterable);
 
 /**
  * @defgroup AnySegmentIterable Traits
@@ -41,8 +41,8 @@ struct is_any_segment_iterable : std::false_type {};
 template <typename T>
 struct is_any_segment_iterable<AnySegmentIterable<T>> : std::true_type {};
 
-template <typename IterableT>
-constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<IterableT>::value;
+template <typename UnerasedIterable>
+constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<UnerasedIterable>::value;
 /**@}*/
 
 template <typename ValueType>
@@ -59,10 +59,10 @@ class BaseAnySegmentIterableWrapper {
   virtual size_t size() const = 0;
 };
 
-template <typename ValueType, typename IterableT>
+template <typename ValueType, typename UnerasedIterable>
 class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType> {
  public:
-  explicit AnySegmentIterableWrapper(const IterableT& init_iterable) : iterable(init_iterable) {}
+  explicit AnySegmentIterableWrapper(const UnerasedIterable& init_iterable) : iterable(init_iterable) {}
 
   void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     iterable.with_iterators([&](auto begin, const auto end) {
@@ -75,8 +75,11 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
   void with_iterators(const std::shared_ptr<const AbstractPosList>& position_filter,
                       const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     if (position_filter) {
-      if constexpr (is_point_accessible_segment_iterable_v<IterableT>) {
-        iterable.with_iterators(position_filter, [&](auto begin, const auto end) {
+      if constexpr (is_point_accessible_segment_iterable_v<UnerasedIterable>) {
+        // Since we are in AnySegmentIterable, where we erase the segment types as far as possible, there is no reason
+        // to resolve the PosList. This further reduces the compile time at the cost of run time performance (which we
+        // have already sacrificed when we chose the AnySegmentIterable in the first place).
+        iterable.template with_iterators<ErasePosListType::Always>(position_filter, [&](auto begin, const auto end) {
           const auto any_segment_iterator_begin = AnySegmentIterator<ValueType>(begin);
           const auto any_segment_iterator_end = AnySegmentIterator<ValueType>(end);
           functor_wrapper(any_segment_iterator_begin, any_segment_iterator_end);
@@ -91,7 +94,7 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
 
   size_t size() const override { return iterable._on_size(); }
 
-  IterableT iterable;
+  UnerasedIterable iterable;
 };
 
 /**
@@ -111,10 +114,10 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
  public:
   using ValueType = T;
 
-  template <typename IterableT>
-  explicit AnySegmentIterable(const IterableT& iterable)
-      : _iterable_wrapper{std::make_shared<AnySegmentIterableWrapper<T, IterableT>>(iterable)} {
-    static_assert(!is_any_segment_iterable_v<IterableT>, "Iterables should not be wrapped twice.");
+  template <typename UnerasedIterable>
+  explicit AnySegmentIterable(const UnerasedIterable& iterable)
+      : _iterable_wrapper{std::make_shared<AnySegmentIterableWrapper<T, UnerasedIterable>>(iterable)} {
+    static_assert(!is_any_segment_iterable_v<UnerasedIterable>, "Iterables should not be wrapped twice.");
   }
 
   AnySegmentIterable(const AnySegmentIterable&) = default;
@@ -138,19 +141,19 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   std::shared_ptr<BaseAnySegmentIterableWrapper<ValueType>> _iterable_wrapper;
 };
 
-template <typename IterableT>
-auto erase_type_from_iterable(const IterableT& iterable) {
+template <typename UnerasedIterable>
+auto erase_type_from_iterable(const UnerasedIterable& iterable) {
   // clang-format off
-  if constexpr(is_any_segment_iterable_v<IterableT>) {
+  if constexpr(is_any_segment_iterable_v<UnerasedIterable>) {
     return iterable;
   } else {
-    return AnySegmentIterable<typename IterableT::ValueType>{iterable};
+    return AnySegmentIterable<typename UnerasedIterable::ValueType>{iterable};
   }
   // clang-format on
 }
 
-template <typename IterableT>
-decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable) {
+template <typename UnerasedIterable>
+decltype(auto) erase_type_from_iterable_if_debug(const UnerasedIterable& iterable) {
 #if HYRISE_DEBUG
   return erase_type_from_iterable(iterable);
 #else
@@ -166,13 +169,13 @@ namespace detail {
 template <typename T>
 class CreateAnySegmentIterable {
  public:
-  static AnySegmentIterable<T> create(const BaseSegment& base_segment);
+  static AnySegmentIterable<T> create(const AbstractSegment& abstract_segment);
 };
 }  // namespace detail
 
 template <typename T>
-AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment& base_segment) {
-  return opossum::detail::CreateAnySegmentIterable<T>::create(base_segment);
+AnySegmentIterable<T> create_any_segment_iterable(const AbstractSegment& abstract_segment) {
+  return opossum::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
 }
 
 }  // namespace opossum

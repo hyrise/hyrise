@@ -8,7 +8,7 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/index_scan.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstracct_encoded_segment.hpp"
 #include "storage/reference_segment.hpp"
 
 namespace opossum {

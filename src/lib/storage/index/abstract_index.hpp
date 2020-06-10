@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-class BaseSegment;
+class AbstractSegment;
 
 /**
  * AbstractIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
@@ -30,7 +30,7 @@ class BaseSegment;
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractIndex and
- *                                               https://github.com/hyrise/hyrise/wiki/Indexes
+ *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
  **/
 
 class AbstractIndex : private Noncopyable {
@@ -73,12 +73,12 @@ class AbstractIndex : private Noncopyable {
    * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
+  bool is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
-   * The number of given values has to be less or equal to number of indexed segments. Additionally
-   * the order of values and segments has to match. If less values are provided the search is performed
+   * The number of given values has to be less or equal to the number of indexed segments. Additionally,
+   * the order of values and segments has to match. If less values are provided, the search is performed
    * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _lower_bound() of the most derived class.
@@ -90,8 +90,8 @@ class AbstractIndex : private Noncopyable {
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
-   * The number of given values has to be less or equal to number of indexed segments. Additionally
-   * the order of values and segments has to match. If less values are provided the search is performed
+   * The number of given values has to be less or equal to number of indexed segments. Additionally,
+   * the order of values and segments has to match. If less values are provided, the search is performed
    * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _upper_bound() of the most derived class.
@@ -155,7 +155,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
+  virtual std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
   std::vector<ChunkOffset> _null_positions;
 

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "base_non_query_node.hpp"
+#include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/lqp_view.hpp"
 
@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * This node type represents the CREATE VIEW management command.
  */
-class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public BaseNonQueryNode {
+class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public AbstractNonQueryNode {
  public:
   CreateViewNode(const std::string& init_view_name, const std::shared_ptr<LQPView>& init_view, bool init_if_not_exists);
 

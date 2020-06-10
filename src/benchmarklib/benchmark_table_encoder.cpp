@@ -7,7 +7,7 @@
 #include "encoding_config.hpp"
 #include "resolve_type.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -22,8 +22,8 @@ ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
 
   for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
-    const auto& base_segment = chunk.get_segment(column_id);
-    chunk_encoding_spec[column_id] = get_segment_encoding_spec(base_segment);
+    const auto& abstract_segment = chunk.get_segment(column_id);
+    chunk_encoding_spec[column_id] = get_segment_encoding_spec(abstract_segment);
   }
 
   return chunk_encoding_spec;

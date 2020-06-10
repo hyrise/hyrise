@@ -5,8 +5,10 @@
 #endif
 
 #include <array>
+#include <atomic>
 
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "operators/operator_performance_data.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
 #include "types.hpp"
@@ -23,7 +25,10 @@ class AbstractTableScanImpl {
 
   virtual std::string description() const = 0;
 
-  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) const = 0;
+  virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) = 0;
+
+  std::atomic<size_t> chunk_scans_skipped{0};
+  std::atomic<size_t> chunk_scans_sorted{0};
 
  protected:
   /**
@@ -48,9 +53,14 @@ class AbstractTableScanImpl {
                        const ChunkID chunk_id, RowIDPosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
-    _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
+    // To reduce compile time, SIMD scanning is not used for for ColumnVsColumnScans. Also, string comparisons are more
+    // expensive than the scan itself, so we disable SIMD for these, too.
+    if constexpr (std::is_same_v<RightIterator, std::false_type> &&
+                  !std::is_same_v<std::decay_t<decltype(left_it->value())>, pmr_string>) {
+      _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
+    }
 
-    // Do the remainder the easy way. If we did not use the optimization above, left_it was not yet touched, so we
+    // Do the remainder the easy way. If we did not use the SIMD optimization above, left_it was not yet touched, so we
     // iterate over the entire input data.
     for (; left_it != left_end; ++left_it) {
       const auto left = *left_it;
@@ -146,9 +156,9 @@ class AbstractTableScanImpl {
       // Next, write *all* offsets in the block into `offsets`
       auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
 
-      if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
-                                                                      std::decay_t<decltype(*left_it)>,
-                                                                      std::decay_t<decltype(left_it)>>,
+      if constexpr (!std::is_base_of_v<AbstractPointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
+                                                                          std::decay_t<decltype(*left_it)>,
+                                                                          std::decay_t<decltype(left_it)>>,
                                        std::decay_t<decltype(left_it)>>) {
         // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
         // save us the memory lookup

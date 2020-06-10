@@ -8,8 +8,8 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "base_encoded_segment.hpp"
-#include "storage/pos_lists/rowid_pos_list.hpp"
+#include "abstract_encoded_segment.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
@@ -19,7 +19,7 @@ namespace opossum {
 class BaseCompressedVector;
 
 template <typename T>
-class LZ4Segment : public BaseEncodedSegment {
+class LZ4Segment : public AbstractEncodedSegment {
  public:
   /**
    * This is a container for an LZ4 compressed segment. It contains the compressed data in blocks, the necessary
@@ -104,7 +104,7 @@ class LZ4Segment : public BaseEncodedSegment {
   const std::optional<std::unique_ptr<const BaseCompressedVector>>& string_offsets() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -153,14 +153,14 @@ class LZ4Segment : public BaseEncodedSegment {
   std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> cached_block_index,
                                   std::vector<char>& cached_block) const;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
 

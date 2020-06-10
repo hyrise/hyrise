@@ -23,7 +23,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {

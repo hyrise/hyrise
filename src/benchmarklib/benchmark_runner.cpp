@@ -224,7 +224,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
     const auto num_successful_runs = result.successful_runs.size();
     const auto duration_per_item =
-        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
+        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / static_cast<float>(num_successful_runs) : NAN;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
@@ -361,17 +361,18 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
     // want to touch this and potentially break the comparability across commits.
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item =
-        !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
+    const auto time_per_item = !result.successful_runs.empty()
+                                   ? reported_item_duration_ns / static_cast<float>(result.successful_runs.size())
+                                   : std::nanf("");
     benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }
 
-  // Gather information on the (estimated) table size
+  // Gather information on the table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Sampled);
+    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   nlohmann::json summary{
@@ -399,10 +400,10 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // some point. The way this is solved here is not really nice, but as the TPC-C benchmark binary has just a main
   // method and not a class, retrieving this default value properly would require some major refactoring of how
   // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
-  const auto default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
+  const auto* const default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
 
   // TPC-C does not support binary caching
-  const auto default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
+  const auto* const default_dont_cache_binary_tables = (benchmark_name == "TPC-C Benchmark" ? "true" : "false");
 
   // clang-format off
   cli_options.add_options()

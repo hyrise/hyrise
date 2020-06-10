@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class BaseSegment;
+class AbstractSegment;
 class BaseDictionarySegment;
 class GroupKeyIndexTest;
 
@@ -48,7 +48,7 @@ class GroupKeyIndexTest;
  * x¹: Mark for the ending position.
  * x²: NULL positions are stored in `_null_positions` of the AbstractIndex
  *
- * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
+ * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey
  */
 class GroupKeyIndex : public AbstractIndex {
   friend class GroupKeyIndexTest;
@@ -67,7 +67,7 @@ class GroupKeyIndex : public AbstractIndex {
 
   GroupKeyIndex(GroupKeyIndex&&) = default;
 
-  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
+  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
@@ -85,7 +85,7 @@ class GroupKeyIndex : public AbstractIndex {
    */
   Iterator _get_positions_iterator_at(ValueID value_id) const;
 
-  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
+  std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const;
 
   size_t _memory_consumption() const final;
 

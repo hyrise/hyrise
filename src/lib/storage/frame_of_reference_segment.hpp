@@ -8,7 +8,7 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include "base_encoded_segment.hpp"
+#include "abstract_encoded_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -42,7 +42,7 @@ class BaseCompressedVector;
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
-class FrameOfReferenceSegment : public BaseEncodedSegment {
+class FrameOfReferenceSegment : public AbstractEncodedSegment {
  public:
   /**
    * The segment is divided into fixed-size blocks.
@@ -54,15 +54,15 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
    */
   static constexpr auto block_size = 2048u;
 
-  explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
+  explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, std::optional<pmr_vector<bool>> null_values,
                                    std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
-  const pmr_vector<bool>& null_values() const;
+  const std::optional<pmr_vector<bool>>& null_values() const;
   const BaseCompressedVector& offset_values() const;
 
   /**
-   * @defgroup BaseSegment interface
+   * @defgroup AbstractSegment interface
    * @{
    */
 
@@ -70,7 +70,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
-    if (_null_values[chunk_offset]) {
+    if (_null_values && (*_null_values)[chunk_offset]) {
       return std::nullopt;
     }
     const auto minimum = _block_minima[chunk_offset / block_size];
@@ -80,14 +80,14 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
   ChunkOffset size() const final;
 
-  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t memory_usage(const MemoryUsageCalculationMode) const final;
 
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedSegment interface
+   * @defgroup AbstractEncodedSegment interface
    * @{
    */
 
@@ -98,7 +98,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
  private:
   const pmr_vector<T> _block_minima;
-  const pmr_vector<bool> _null_values;
+  const std::optional<pmr_vector<bool>> _null_values;
   const std::unique_ptr<const BaseCompressedVector> _offset_values;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };

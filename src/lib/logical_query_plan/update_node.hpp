@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "base_non_query_node.hpp"
+#include "abstract_non_query_node.hpp"
 
 namespace opossum {
 
@@ -13,14 +13,14 @@ class AbstractExpression;
 /**
  * Node type to represent updates (i.e., invalidation and inserts) in a table.
  */
-class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public BaseNonQueryNode {
+class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractNonQueryNode {
  public:
   explicit UpdateNode(const std::string& init_table_name);
 
   OperatorType operator_type() const override;
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
 
   const std::string table_name;
 

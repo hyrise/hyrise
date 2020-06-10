@@ -80,26 +80,26 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() 
    * of feeble code.
    */
 
-  const auto& left_expressions = left_input()->column_expressions();
-  const auto& right_expressions = right_input()->column_expressions();
+  const auto& left_expressions = left_input()->output_expressions();
+  const auto& right_expressions = right_input()->output_expressions();
 
   const auto output_both_inputs =
       join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
 
-  auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
+  auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  output_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 
-  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), column_expressions.begin());
+  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), output_expressions.begin());
 
   if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
-  return column_expressions;
+  return output_expressions;
 }
 
 bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
 
-  const auto left_input_column_count = left_input()->column_expressions().size();
+  const auto left_input_column_count = left_input()->output_expressions().size();
   const auto column_is_from_left_input = column_id < left_input_column_count;
 
   if (join_mode == JoinMode::Left && !column_is_from_left_input) {

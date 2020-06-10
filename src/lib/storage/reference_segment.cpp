@@ -12,7 +12,7 @@ namespace opossum {
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
                                    const ColumnID referenced_column_id,
                                    const std::shared_ptr<const AbstractPosList>& pos)
-    : BaseSegment(referenced_table->column_data_type(referenced_column_id)),
+    : AbstractSegment(referenced_table->column_data_type(referenced_column_id)),
       _referenced_table(referenced_table),
       _referenced_column_id(referenced_column_id),
       _pos_list(pos) {
@@ -45,8 +45,9 @@ ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_col
 
 ChunkOffset ReferenceSegment::size() const { return static_cast<ChunkOffset>(_pos_list->size()); }
 
-std::shared_ptr<BaseSegment> ReferenceSegment::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  // ReferenceSegments are considered as intermediate datastructures and are
+std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
+  // ReferenceSegments are considered as intermediate data structures and are
   // therefore not subject to NUMA-aware chunk migrations.
   Fail("Cannot migrate a ReferenceSegment");
 }
