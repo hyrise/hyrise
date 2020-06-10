@@ -172,8 +172,12 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
   });
 }
 
+/**
+ * Partition the input chunks by the given group key(s). This is done by creating a vector that contains the
+ * AggregateKey for each row. It is gradually built by visitors, one for each group segment.
+ */
 template <typename AggregateKey>
-void AggregateHash::_aggregate() {
+void AggregateHash::_partition_by_group_by_keys(KeysPerChunk<AggregateKey>& keys_per_chunk) {
   // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
   // save time when allocating and we can throw away everything in this temporary structure at once (once the resource
   // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
@@ -184,6 +188,246 @@ void AggregateHash::_aggregate() {
   using AggregateKeysAllocator =
       boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys<AggregateKey>>>;
 
+  const auto& input_table = left_input_table();
+  const auto chunk_count = input_table->chunk_count();
+
+  {
+    // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
+    // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
+    // that is fine
+    size_t needed_size_per_aggregate_key =
+        aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
+    size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
+                         chunk_count * aligned_size<AggregateKeys<AggregateKey>>() +
+                         input_table->row_count() * needed_size_per_aggregate_key;
+    needed_size =
+        static_cast<size_t>(static_cast<double>(needed_size) * 1.1);  // Give it a little bit more, just in case
+
+    auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
+    auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
+    allocator.allocate(1);  // Make sure that the buffer is initialized
+    const auto start_next_buffer_size = temp_buffer.next_buffer_size();
+
+    // Create the actual data structure
+    keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
+    keys_per_chunk.reserve(chunk_count);
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
+      } else {
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
+      }
+    }
+
+    // Make sure that we did not have to allocate more memory than originally computed
+    if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
+      // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we
+      // allocated enough space from the beginning on. It would be more intuitive to compare current_buffer(), but
+      // this seems to be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
+      PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
+                         " was not enough and a second buffer was needed");
+    }
+  }
+
+  // Now that we have the data structures in place, we can start the actual work. We want to fill
+  // keys_per_chunk[chunk_id][chunk_offset] with something that uniquely identifies the group into which that
+  // position belongs. There are a couple of options here (cf. AggregateHash::_on_execute):
+  //
+  // 0 GROUP BY columns:   No partitioning needed; we don't reach this point because of the check for
+  //                       EmptyAggregateKey above
+  // 1 GROUP BY column:    The AggregateKey is one dimensional, i.e., the same as AggregateKeyEntry
+  // > 1 GROUP BY columns: The AggregateKey is multi-dimensional. The value in
+  //                       keys_per_chunk[chunk_id][chunk_offset] is subscripted with the index of the GROUP BY
+  //                       columns (not the same as the GROUP BY column_id)
+  //
+  // To generate a unique identifier, we create a map from the value found in the respective GROUP BY column to
+  // a unique uint64_t. The value 0 is reserved for NULL.
+  //
+  // This has the cost of a hashmap lookup and potential insert for each row and each GROUP BY column. There are
+  // some cases in which we can avoid this. These make use of the fact that we can only have 2^64 - 2*2^32 values
+  // in a table (due to INVALID_VALUE_ID and INVALID_CHUNK_OFFSET limiting the range of RowIDs).
+  //
+  // (1) For types smaller than AggregateKeyEntry, such as int32_t, their value range can be immediately mapped into
+  //     uint64_t. We cannot do the same for int64_t because we need to account for NULL values.
+  // (2) For strings not longer than five characters, there are 1+2^(1*8)+2^(2*8)+2^(3*8)+2^(4*8) potential values.
+  //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
+  //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
+  //     require all strings in the given column to be that short.
+
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  jobs.reserve(_groupby_column_ids.size());
+
+  for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
+    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
+                                                 this]() {
+      const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
+      const auto data_type = input_table->column_data_type(groupby_column_id);
+
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+
+        if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
+          // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an
+          // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
+          // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
+          for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto chunk_in = input_table->get_chunk(chunk_id);
+            const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
+            ChunkOffset chunk_offset{0};
+            segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+              const auto int_to_uint = [](const int32_t value) {
+                // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
+                // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
+                // negative itself) to get a positive number.
+                const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
+                DebugAssert(shifted_value >= 0, "Type conversion failed");
+                return static_cast<uint64_t>(shifted_value);
+              };
+
+              if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                if (position.is_null()) {
+                  keys_per_chunk[chunk_id][chunk_offset] = 0;
+                } else {
+                  keys_per_chunk[chunk_id][chunk_offset] = int_to_uint(position.value()) + 1;
+                }
+              } else {
+                if (position.is_null()) {
+                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
+                } else {
+                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
+                }
+              }
+              ++chunk_offset;
+            });
+          }
+        } else {
+          /*
+          Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
+          The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
+          */
+
+          // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
+          // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
+          // allocate a bit too much.
+          auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
+          auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
+
+          auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+                                           std::equal_to<>, decltype(allocator)>(allocator);
+          AggregateKeyEntry id_counter = 1u;
+
+          if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+            // We store strings shorter than five characters without using the id_map. For that, we need to reserve
+            // the IDs used for short strings (see below).
+            id_counter = 5'000'000'000;
+          }
+
+          for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+            const auto chunk_in = input_table->get_chunk(chunk_id);
+            if (!chunk_in) continue;
+
+            const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
+            ChunkOffset chunk_offset{0};
+            segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
+              if (position.is_null()) {
+                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                  keys_per_chunk[chunk_id][chunk_offset] = 0u;
+                } else {
+                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+                }
+              } else {
+                // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
+                // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
+                // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
+                // ID generation was applied and we need to generate the ID using the value->ID map.
+                auto id = std::numeric_limits<AggregateKeyEntry>::max();
+
+                if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
+                  const auto& string = position.value();
+                  if (string.size() < 5) {
+                    static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
+
+                    const auto char_to_uint = [](const char in, const uint bits) {
+                      // chars may be signed or unsigned. For the calculation as described below, we need signed
+                      // chars.
+                      return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
+                    };
+
+                    switch (string.size()) {
+                        // Optimization for short strings (see above):
+                        //
+                        // NULL:              0
+                        // str.length() == 0: 1
+                        // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
+                        // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
+                        // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
+                        // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
+                        // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
+                        //
+                        // This could be extended to longer strings if the size of the input table (and thus the
+                        // maximum number of distinct strings) is taken into account. For now, let's not make it even
+                        // more complicated.
+
+                      case 0: {
+                        id = uint64_t{1};
+                      } break;
+
+                      case 1: {
+                        id = uint64_t{2} + char_to_uint(string[0], 0);
+                      } break;
+
+                      case 2: {
+                        id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                      } break;
+
+                      case 3: {
+                        id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
+                             char_to_uint(string[0], 0);
+                      } break;
+
+                      case 4: {
+                        id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
+                             char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                      } break;
+                    }
+                  }
+                }
+
+                if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
+                  // Could not take the shortcut above, either because we don't have a string or because it is too
+                  // long
+                  auto inserted = id_map.try_emplace(position.value(), id_counter);
+
+                  id = inserted.first->second;
+
+                  // if the id_map didn't have the value as a key and a new element was inserted
+                  if (inserted.second) ++id_counter;
+                }
+
+                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                  keys_per_chunk[chunk_id][chunk_offset] = id;
+                } else {
+                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
+                }
+              }
+
+              ++chunk_offset;
+            });
+          }
+        }
+      });
+    }));
+    jobs.back()->schedule();
+  }
+
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
+}
+
+template <typename AggregateKey>
+void AggregateHash::_aggregate() {
   const auto& input_table = left_input_table();
 
   for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
@@ -196,250 +440,9 @@ void AggregateHash::_aggregate() {
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   Timer timer;
   KeysPerChunk<AggregateKey> keys_per_chunk;
-
   if constexpr (!std::is_same_v<AggregateKey, EmptyAggregateKey>) {  // NOLINT
-    /*
-    PARTITIONING STEP
-    First we partition the input chunks by the given group key(s).
-    This is done by creating a vector that contains the AggregateKey for each row.
-    It is gradually built by visitors, one for each group segment.
-    */
-
-    const auto chunk_count = input_table->chunk_count();
-
-    {
-      // Allocate a temporary memory buffer, for more details see aggregate_hash.hpp
-      // This calculation assumes that we use std::vector<AggregateKeyEntry> - other data structures use less space, but
-      // that is fine
-      size_t needed_size_per_aggregate_key =
-          aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
-      size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
-                           chunk_count * aligned_size<AggregateKeys<AggregateKey>>() +
-                           input_table->row_count() * needed_size_per_aggregate_key;
-      needed_size =
-          static_cast<size_t>(static_cast<double>(needed_size) * 1.1);  // Give it a little bit more, just in case
-
-      auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
-      auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
-      allocator.allocate(1);  // Make sure that the buffer is initialized
-      const auto start_next_buffer_size = temp_buffer.next_buffer_size();
-
-      // Create the actual data structure
-      keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
-      keys_per_chunk.reserve(chunk_count);
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk = input_table->get_chunk(chunk_id);
-        if (!chunk) continue;
-
-        if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
-          keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
-        } else {
-          keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
-        }
-      }
-
-      // Make sure that we did not have to allocate more memory than originally computed
-      if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
-        // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we
-        // allocated enough space from the beginning on. It would be more intuitive to compare current_buffer(), but
-        // this seems to be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
-        PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
-                           " was not enough and a second buffer was needed");
-      }
-    }
-
-    // Now that we have the data structures in place, we can start the actual work. We want to fill
-    // keys_per_chunk[chunk_id][chunk_offset] with something that uniquely identifies the group into which that
-    // position belongs. There are a couple of options here (cf. AggregateHash::_on_execute):
-    //
-    // 0 GROUP BY columns:   No partitioning needed; we don't reach this point because of the check for
-    //                       EmptyAggregateKey above
-    // 1 GROUP BY column:    The AggregateKey is one dimensional, i.e., the same as AggregateKeyEntry
-    // > 1 GROUP BY columns: The AggregateKey is multi-dimensional. The value in
-    //                       keys_per_chunk[chunk_id][chunk_offset] is subscripted with the index of the GROUP BY
-    //                       columns (not the same as the GROUP BY column_id)
-    //
-    // To generate a unique identifier, we create a map from the value found in the respective GROUP BY column to
-    // a unique uint64_t. The value 0 is reserved for NULL.
-    //
-    // This has the cost of a hashmap lookup and potential insert for each row and each GROUP BY column. There are
-    // some cases in which we can avoid this. These make use of the fact that we can only have 2^64 - 2*2^32 values
-    // in a table (due to INVALID_VALUE_ID and INVALID_CHUNK_OFFSET limiting the range of RowIDs).
-    //
-    // (1) For types smaller than AggregateKeyEntry, such as int32_t, their value range can be immediately mapped into
-    //     uint64_t. We cannot do the same for int64_t because we need to account for NULL values.
-    // (2) For strings not longer than five characters, there are 1+2^(1*8)+2^(2*8)+2^(3*8)+2^(4*8) potential values.
-    //     We can immediately map these into a numerical representation by reinterpreting their byte storage as an
-    //     integer. The calculation is described below. Note that this is done on a per-string basis and does not
-    //     require all strings in the given column to be that short.
-
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
-    jobs.reserve(_groupby_column_ids.size());
-
-    for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
-      jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, chunk_count,
-                                                   this]() {
-        const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
-        const auto data_type = input_table->column_data_type(groupby_column_id);
-
-        resolve_data_type(data_type, [&](auto type) {
-          using ColumnDataType = typename decltype(type)::type;
-
-          if constexpr (std::is_same_v<ColumnDataType, int32_t>) {
-            // For values with a smaller type than AggregateKeyEntry, we can use the value itself as an
-            // AggregateKeyEntry. We cannot do this for types with the same size as AggregateKeyEntry as we need to have
-            // a special NULL value. By using the value itself, we can save us the effort of building the id_map.
-            for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-              const auto chunk_in = input_table->get_chunk(chunk_id);
-              const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
-              ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
-                const auto int_to_uint = [](const int32_t value) {
-                  // We need to convert a potentially negative int32_t value into the uint64_t space. We do not care
-                  // about preserving the value, just its uniqueness. Subtract the minimum value in int32_t (which is
-                  // negative itself) to get a positive number.
-                  const auto shifted_value = static_cast<int64_t>(value) - std::numeric_limits<int32_t>::min();
-                  DebugAssert(shifted_value >= 0, "Type conversion failed");
-                  return static_cast<uint64_t>(shifted_value);
-                };
-
-                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                  if (position.is_null()) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset] = int_to_uint(position.value()) + 1;
-                  }
-                } else {
-                  if (position.is_null()) {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = int_to_uint(position.value()) + 1;
-                  }
-                }
-                ++chunk_offset;
-              });
-            }
-          } else {
-            /*
-            Store unique IDs for equal values in the groupby column (similar to dictionary encoding).
-            The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
-            */
-
-            // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
-            // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
-            // allocate a bit too much.
-            auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
-            auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
-
-            auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
-                                             std::equal_to<>, decltype(allocator)>(allocator);
-            AggregateKeyEntry id_counter = 1u;
-
-            if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
-              // We store strings shorter than five characters without using the id_map. For that, we need to reserve
-              // the IDs used for short strings (see below).
-              id_counter = 5'000'000'000;
-            }
-
-            for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-              const auto chunk_in = input_table->get_chunk(chunk_id);
-              if (!chunk_in) continue;
-
-              const auto abstract_segment = chunk_in->get_segment(groupby_column_id);
-              ChunkOffset chunk_offset{0};
-              segment_iterate<ColumnDataType>(*abstract_segment, [&](const auto& position) {
-                if (position.is_null()) {
-                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = 0u;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
-                  }
-                } else {
-                  // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
-                  // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
-                  // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
-                  // ID generation was applied and we need to generate the ID using the value->ID map.
-                  auto id = std::numeric_limits<AggregateKeyEntry>::max();
-
-                  if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {  // NOLINT
-                    const auto& string = position.value();
-                    if (string.size() < 5) {
-                      static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
-
-                      const auto char_to_uint = [](const char in, const uint bits) {
-                        // chars may be signed or unsigned. For the calculation as described below, we need signed
-                        // chars.
-                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
-                      };
-
-                      switch (string.size()) {
-                          // Optimization for short strings (see above):
-                          //
-                          // NULL:              0
-                          // str.length() == 0: 1
-                          // str.length() == 1: 2 + (uint8_t) str            // maximum: 257 (2 + 0xff)
-                          // str.length() == 2: 258 + (uint16_t) str         // maximum: 65'793 (258 + 0xffff)
-                          // str.length() == 3: 65'794 + (uint24_t) str      // maximum: 16'843'009
-                          // str.length() == 4: 16'843'010 + (uint32_t) str  // maximum: 4'311'810'305
-                          // str.length() >= 5: map-based identifiers, starting at 5'000'000'000 for better distinction
-                          //
-                          // This could be extended to longer strings if the size of the input table (and thus the
-                          // maximum number of distinct strings) is taken into account. For now, let's not make it even
-                          // more complicated.
-
-                        case 0: {
-                          id = uint64_t{1};
-                        } break;
-
-                        case 1: {
-                          id = uint64_t{2} + char_to_uint(string[0], 0);
-                        } break;
-
-                        case 2: {
-                          id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
-                        } break;
-
-                        case 3: {
-                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
-                               char_to_uint(string[0], 0);
-                        } break;
-
-                        case 4: {
-                          id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
-                               char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
-                        } break;
-                      }
-                    }
-                  }
-
-                  if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
-                    // Could not take the shortcut above, either because we don't have a string or because it is too
-                    // long
-                    auto inserted = id_map.try_emplace(position.value(), id_counter);
-
-                    id = inserted.first->second;
-
-                    // if the id_map didn't have the value as a key and a new element was inserted
-                    if (inserted.second) ++id_counter;
-                  }
-
-                  if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys_per_chunk[chunk_id][chunk_offset] = id;
-                  } else {
-                    keys_per_chunk[chunk_id][chunk_offset][group_column_index] = id;
-                  }
-                }
-
-                ++chunk_offset;
-              });
-            }
-          }
-        });
-      }));
-      jobs.back()->schedule();
-    }
-
-    Hyrise::get().scheduler()->wait_for_tasks(jobs);
+    // Partition the input chunks by the given group key(s).
+    _partition_by_group_by_keys(keys_per_chunk);
   }
   step_performance_data.set_step_runtime(OperatorSteps::GroupByKeyPartitioning, timer.lap());
 
@@ -616,7 +619,7 @@ void AggregateHash::_aggregate() {
     }
   }
   step_performance_data.set_step_runtime(OperatorSteps::Aggregating, timer.lap());
-}
+}  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);

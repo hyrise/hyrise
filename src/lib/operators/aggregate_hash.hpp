@@ -118,6 +118,9 @@ class AggregateHash : public AbstractAggregateOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   template <typename AggregateKey>
+  void _partition_by_group_by_keys(KeysPerChunk<AggregateKey>& keys_per_chunk);
+
+  template <typename AggregateKey>
   void _aggregate();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
