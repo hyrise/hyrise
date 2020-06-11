@@ -628,11 +628,7 @@ void AggregateHash::_aggregate() {
 }  // NOLINT(readability/fn_size)
 
 std::shared_ptr<const Table> AggregateHash::_on_execute() {
-<<<<<<< HEAD
-  auto& step_performance_data = static_cast<StepOperatorPerformanceData&>(*performance_data);
-=======
   auto& step_performance_data = static_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
->>>>>>> master
   Timer timer;
 
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
@@ -655,10 +651,6 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
       _aggregate<std::vector<AggregateKeyEntry>>();
       break;
   }
-<<<<<<< HEAD
-  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::Aggregate)] = timer.lap();
-=======
->>>>>>> master
 
   /**
    * Write group-by columns.
@@ -678,20 +670,12 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
     _write_groupby_output(pos_list);
   }
-<<<<<<< HEAD
-  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::WriteGroupByColumns)] = timer.lap();
-=======
   step_performance_data.set_step_runtime(OperatorSteps::GroupByColumnsWriting, timer.lap());
->>>>>>> master
 
   /*
   Write the aggregated columns to the output
   */
-<<<<<<< HEAD
-  const auto& input_table = input_table_left();
-=======
   const auto& input_table = left_input_table();
->>>>>>> master
   ColumnID aggregate_idx{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -707,23 +691,14 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
     ++aggregate_idx;
   }
-<<<<<<< HEAD
-  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::WriteAggregateColumns)] = timer.lap();
-=======
   step_performance_data.set_step_runtime(OperatorSteps::AggregateColumnsWriting, timer.lap());
->>>>>>> master
 
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   if (_output_segments.at(0)->size() > 0) {
     output->append_chunk(_output_segments);
   }
-
-<<<<<<< HEAD
-  step_performance_data.step_runtimes[static_cast<size_t>(OperatorSteps::OutputWriting)] = timer.lap();
-=======
   step_performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer.lap());
->>>>>>> master
 
   return output;
 }

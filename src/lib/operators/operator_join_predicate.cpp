@@ -57,13 +57,6 @@ void OperatorJoinPredicate::flip() {
   std::swap(column_ids.first, column_ids.second);
   predicate_condition = flip_predicate_condition(predicate_condition);
   flipped = true;
-<<<<<<< HEAD
-}
-
-bool OperatorJoinPredicate::is_flipped() const {
-  return flipped;
-=======
->>>>>>> master
 }
 
 bool OperatorJoinPredicate::is_flipped() const { return flipped; }

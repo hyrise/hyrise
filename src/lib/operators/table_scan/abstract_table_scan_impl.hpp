@@ -30,9 +30,6 @@ class AbstractTableScanImpl {
   std::atomic<size_t> chunk_scans_skipped{0};
   std::atomic<size_t> chunk_scans_sorted{0};
 
-  mutable std::atomic<size_t> chunk_scans_skipped{0};
-  mutable std::atomic<size_t> chunk_scans_sorted{0};
-
  protected:
   /**
    * @defgroup The hot loop of the table scan

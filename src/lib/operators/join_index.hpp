@@ -48,8 +48,6 @@ class JoinIndex : public AbstractJoinOperator {
     size_t chunks_scanned_without_index{0};
   };
 
-  enum class OperatorSteps : uint8_t { IndexJoining, NestedLoopJoining, OutputWriting };
-
   std::string description(DescriptionMode description_mode) const override;
 
  protected:

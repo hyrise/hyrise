@@ -644,13 +644,8 @@ set(
     LIBRARIES
     cqf
     lz4
-<<<<<<< HEAD
-    uninitialized_vector
-    sqlparser
-=======
     sqlparser
     uninitialized_vector
->>>>>>> master
     zstd
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
