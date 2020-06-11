@@ -29,7 +29,7 @@ class SimdBp128Compressor : public BaseVectorCompressor {
   void _append(uint32_t value);
   void _finish();
 
-  bool _meta_block_complete();
+  bool _meta_block_complete() const;
   void _pack_meta_block();
   void _pack_incomplete_meta_block();
 

@@ -15,18 +15,6 @@
 namespace opossum {
 
 /**
- * Defines in which order a certain column should be sorted.
- */
-struct SortColumnDefinition final {
-  explicit SortColumnDefinition(const ColumnID& init_column,
-                                const OrderByMode init_order_by_mode = OrderByMode::Ascending)
-      : column(init_column), order_by_mode(init_order_by_mode) {}
-
-  const ColumnID column;
-  const OrderByMode order_by_mode;
-};
-
-/**
  * Operator to sort a table by one or multiple columns. This implements a stable sort, i.e., rows that share the same
  * value will maintain their relative order.
  * By passing multiple sort column definitions it is possible to sort multiple columns with one operator run.
@@ -46,8 +34,8 @@ class Sort : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   template <typename SortColumnType>

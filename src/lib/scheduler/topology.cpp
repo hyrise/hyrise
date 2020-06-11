@@ -72,10 +72,10 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 
   // We take the CPU affinity (set, e.g., by numactl) of our process into account.
   // Otherwise, we would always start with the first CPU, even if a specific NUMA node was selected.
-  auto affinity_cpu_bitmask = numa_allocate_cpumask();
+  auto* affinity_cpu_bitmask = numa_allocate_cpumask();
   numa_sched_getaffinity(0, affinity_cpu_bitmask);
 
-  auto this_node_cpu_bitmask = numa_allocate_cpumask();
+  auto* this_node_cpu_bitmask = numa_allocate_cpumask();
   auto core_count = uint32_t{0};
 
   for (auto node_id = 0; node_id <= max_node; node_id++) {

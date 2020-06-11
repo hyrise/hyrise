@@ -21,7 +21,7 @@ const std::string& Delete::name() const {
 }
 
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
-  _referencing_table = input_table_left();
+  _referencing_table = left_input_table();
 
   DebugAssert(_referencing_table->type() == TableType::References,
               "_referencing_table needs to reference another table");
@@ -131,9 +131,9 @@ void Delete::_on_rollback_records() {
 }
 
 std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Delete>(copied_input_left);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Delete>(copied_left_input);
 }
 
 void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

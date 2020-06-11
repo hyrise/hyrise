@@ -4,7 +4,7 @@ namespace opossum {
 
 ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,
                                          const MetaTableChangeType& init_change_type)
-    : BaseNonQueryNode(LQPNodeType::ChangeMetaTable), table_name(init_table_name), change_type(init_change_type) {}
+    : AbstractNonQueryNode(LQPNodeType::ChangeMetaTable), table_name(init_table_name), change_type(init_change_type) {}
 
 std::string ChangeMetaTableNode::description(const DescriptionMode mode) const {
   std::ostringstream desc;

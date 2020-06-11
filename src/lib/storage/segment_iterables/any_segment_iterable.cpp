@@ -5,10 +5,10 @@
 
 namespace opossum::detail {
 template <typename T>
-AnySegmentIterable<T> CreateAnySegmentIterable<T>::create(const BaseSegment& base_segment) {
+AnySegmentIterable<T> CreateAnySegmentIterable<T>::create(const AbstractSegment& abstract_segment) {
   auto any_segment_iterable = std::optional<AnySegmentIterable<T>>{};
 
-  resolve_segment_type<T>(base_segment, [&](const auto& segment) {
+  resolve_segment_type<T>(abstract_segment, [&](const auto& segment) {
     if constexpr (std::is_same_v<std::decay_t<decltype(segment)>, ReferenceSegment>) {
       const auto actual_iterable = create_iterable_from_segment<T, false, EraseReferencedSegmentType::Yes>(segment);
       any_segment_iterable.emplace(erase_type_from_iterable(actual_iterable));

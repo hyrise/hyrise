@@ -26,6 +26,9 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
 
   Assert(abstract_predicate_expression->arguments.size() == 2u, "Expected two arguments");
 
+  // It is possible that a join with left input A and right input B has a join predicate in the form of B.x = A.x. To
+  // avoid having the join implementations handle such situations we check if the predicate sides match. If not, the
+  // column IDs and the predicates are flipped.
   const auto left_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[0]);
   const auto left_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[0]);
   const auto right_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[1]);
@@ -37,9 +40,7 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   }
 
   if (right_in_left && left_in_right) {
-    std::cout << "Flipped" << std::endl;
-    // Use the left column in found in the right table and vice versa. Flip after construction to avoid code
-    //duplication.
+    // Use the left column found in the right table and vice versa. Flip after construction to avoid code duplication.
     auto join_predicate = OperatorJoinPredicate{{*left_in_right, *right_in_left}, predicate_condition};
     join_predicate.flip();
     return join_predicate;
@@ -56,11 +57,16 @@ void OperatorJoinPredicate::flip() {
   std::swap(column_ids.first, column_ids.second);
   predicate_condition = flip_predicate_condition(predicate_condition);
   flipped = true;
+<<<<<<< HEAD
 }
 
 bool OperatorJoinPredicate::is_flipped() const {
   return flipped;
+=======
+>>>>>>> master
 }
+
+bool OperatorJoinPredicate::is_flipped() const { return flipped; }
 
 bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
   return std::tie(l.column_ids, l.predicate_condition) < std::tie(r.column_ids, r.predicate_condition);

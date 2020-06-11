@@ -12,7 +12,7 @@
 #include "types.hpp"
 
 #include "abstract_statistics_object.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 
 namespace opossum {
 
@@ -38,7 +38,7 @@ class CountingQuotientFilter : public AbstractStatisticsObject {
   ~CountingQuotientFilter() override;
 
   void insert(ElementType value, size_t count = 1);
-  void populate(const std::shared_ptr<const BaseSegment>& segment);
+  void populate(const std::shared_ptr<const AbstractSegment>& segment);
 
   size_t count(const ElementType& value) const;
   size_t count(const AllTypeVariant& value) const;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_segment.hpp"
+#include "abstract_segment.hpp"
 
 namespace opossum {
 
@@ -9,9 +9,9 @@ namespace opossum {
  *
  * Exposes all methods of value segments that do not rely on its specific data type.
  */
-class BaseValueSegment : public BaseSegment {
+class BaseValueSegment : public AbstractSegment {
  public:
-  using BaseSegment::BaseSegment;
+  using AbstractSegment::AbstractSegment;
 
   // returns true if segment supports null values
   virtual bool is_nullable() const = 0;

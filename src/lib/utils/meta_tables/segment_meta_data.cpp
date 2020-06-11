@@ -2,7 +2,7 @@
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -21,7 +21,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         const auto estimated_size = segment->memory_usage(mode);
         AllTypeVariant encoding = NULL_VALUE;
         AllTypeVariant vector_compression = NULL_VALUE;
-        if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
+        if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
           encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
 
           if (encoded_segment->compressed_vector_type()) {
@@ -56,7 +56,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
   }
 }
 
-size_t get_distinct_value_count(const std::shared_ptr<BaseSegment>& segment) {
+size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment) {
   auto distinct_value_count = size_t{0};
   resolve_data_type(segment->data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;

@@ -68,7 +68,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 
   // wanted side effect of using sets: pruned_chunk_ids vector is sorted
-  auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
+  const auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
   if (!already_pruned_chunk_ids.empty()) {
     std::vector<ChunkID> intersection;
     std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), pruned_chunk_ids.begin(),
@@ -106,7 +106,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, co
     }
 
     const auto column_data_type =
-        stored_table_node_without_column_pruning->column_expressions()[operator_predicate.column_id]->data_type();
+        stored_table_node_without_column_pruning->output_expressions()[operator_predicate.column_id]->data_type();
 
     // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
     // errors with lossful casting and pruning Chunks that we shouldn't have pruned.

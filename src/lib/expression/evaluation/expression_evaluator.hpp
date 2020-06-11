@@ -17,7 +17,7 @@ namespace opossum {
 class AbstractOperator;
 class AbstractPredicateExpression;
 class ArithmeticExpression;
-class BaseSegment;
+class AbstractSegment;
 class BinaryPredicateExpression;
 class CaseExpression;
 class CastExpression;

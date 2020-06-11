@@ -29,8 +29,8 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
       error_msg << std::string(num_tabs, '\t');
 
       // Use some color to highlight the error
-      const auto color_red = "\x1B[31m";
-      const auto color_reset = "\x1B[0m";
+      const auto* const color_red = "\x1B[31m";
+      const auto* const color_reset = "\x1B[0m";
       error_msg << std::string(error_column - num_tabs, ' ') << color_red << "^=== ERROR HERE!" << color_reset << "\n";
     }
   }

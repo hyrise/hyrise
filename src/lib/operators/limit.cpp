@@ -25,13 +25,13 @@ const std::string& Limit::name() const {
 std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
 std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Limit>(copied_input_left, _row_count_expression->deep_copy());
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Limit>(copied_left_input, _row_count_expression->deep_copy());
 }
 
 std::shared_ptr<const Table> Limit::_on_execute() {
-  const auto input_table = input_table_left();
+  const auto input_table = left_input_table();
 
   /**
    * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to
@@ -72,12 +72,12 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
 
     for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
-      const auto input_base_segment = input_chunk->get_segment(column_id);
+      const auto input_abstract_segment = input_chunk->get_segment(column_id);
       auto output_pos_list = std::make_shared<RowIDPosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
       ColumnID output_column_id = column_id;
 
-      if (auto input_ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_base_segment)) {
+      if (auto input_ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_abstract_segment)) {
         output_column_id = input_ref_segment->referenced_column_id();
         referenced_table = input_ref_segment->referenced_table();
         // TODO(all): optimize using whole chunk whenever possible
@@ -96,7 +96,15 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     }
 
     i += output_chunk_row_count;
-    output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
+    auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
+    output_chunk->finalize();
+    // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit
+    // operator.
+    const auto& sorted_by = input_chunk->sorted_by();
+    if (!sorted_by.empty()) {
+      output_chunk->set_sorted_by(sorted_by);
+    }
+    output_chunks.emplace_back(output_chunk);
   }
 
   return std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));

@@ -9,7 +9,8 @@ namespace opossum {
 
 AbstractAggregateOperator::AbstractAggregateOperator(
     const std::shared_ptr<AbstractOperator>& in, const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
-    const std::vector<ColumnID>& groupby_column_ids, std::unique_ptr<OperatorPerformanceData> init_performance_data)
+    const std::vector<ColumnID>& groupby_column_ids,
+    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in, nullptr, std::move(init_performance_data)),
       _aggregates{aggregates},
       _groupby_column_ids{groupby_column_ids} {
@@ -28,7 +29,7 @@ const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperat
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
 std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const auto *const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
 
   std::stringstream desc;
   desc << name() << separator << "GroupBy ColumnIDs: ";
@@ -55,7 +56,7 @@ std::string AbstractAggregateOperator::description(DescriptionMode description_m
  * Invalid aggregates are e.g. MAX(*) or AVG(<string column>).
  */
 void AbstractAggregateOperator::_validate_aggregates() const {
-  const auto input_table = input_table_left();
+  const auto input_table = left_input_table();
   for (const auto& aggregate : _aggregates) {
     const auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate->argument());
     DebugAssert(pqp_column,

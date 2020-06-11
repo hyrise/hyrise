@@ -33,7 +33,7 @@ std::string plugin_name_from_path(const std::filesystem::path& path) {
   const auto filename = path.stem().string();
 
   // Remove "lib" prefix of shared library file
-  const auto plugin_name = filename.substr(3);
+  auto plugin_name = filename.substr(3);
 
   return plugin_name;
 }

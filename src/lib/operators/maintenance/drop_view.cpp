@@ -18,8 +18,8 @@ const std::string& DropView::name() const {
 }
 
 std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
   return std::make_shared<DropView>(view_name, if_exists);
 }
 
