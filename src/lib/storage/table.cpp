@@ -153,6 +153,13 @@ void Table::append_mutable_chunk() {
 }
 
 uint64_t Table::row_count() const {
+  std::cout << "1" << std::endl;
+  std::cout << (_type == TableType::References) << std::endl;
+  std::cout << "2" << std::endl;
+  std::cout << static_cast<bool>(_cached_row_count) << std::endl;
+  if (_cached_row_count) {
+    std::cout << *_cached_row_count << std::endl;
+  }
   if (_type == TableType::References && _cached_row_count && !HYRISE_DEBUG) {
     return *_cached_row_count;
   }

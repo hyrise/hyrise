@@ -21,8 +21,8 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-JoinAlgorithmRule::JoinAlgorithmRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
-    : _cost_estimator(cost_estimator) {}
+JoinAlgorithmRule::JoinAlgorithmRule(const std::shared_ptr<AbstractCostEstimator>& init_cost_estimator)
+    : _cost_estimator(init_cost_estimator) {}
 
 void JoinAlgorithmRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type == LQPNodeType::Join) {

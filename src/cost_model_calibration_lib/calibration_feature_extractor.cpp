@@ -8,7 +8,7 @@
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/index_scan.hpp"
-#include "storage/abstracct_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/reference_segment.hpp"
 
 namespace opossum {
@@ -69,8 +69,8 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
   operator_features.operator_description = op->description(DescriptionMode::SingleLine);
 
   // Inputs
-  if (op->input_left()) {
-    auto left_parent_op = op->input_left();
+  if (op->left_input()) {
+    auto left_parent_op = op->left_input();
 
     const auto max_iterations = size_t{1'000};
     auto iterations = size_t{0};
@@ -78,7 +78,7 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     while (left_parent_op->type() != OperatorType::GetTable && iterations < max_iterations) {
       // Get left inputs until we find a GetTable operator.
       // TODO(anyone): ensure we will always end up at a GetTable have covered all corner cases.
-      left_parent_op = left_parent_op->input_left();
+      left_parent_op = left_parent_op->left_input();
       ++iterations;
     } 
     if (left_parent_op->type() == OperatorType::GetTable) {
@@ -87,17 +87,17 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
       operator_features.left_input_data_table_row_count = op->performance_data->output_row_count;
     }
 
-    const auto left_input = op->input_left()->get_output();
-    operator_features.left_input_row_count = op->input_left()->performance_data->output_row_count;
-    operator_features.left_input_chunk_count = op->input_left()->performance_data->output_chunk_count;
+    const auto left_input = op->left_input()->get_output();
+    operator_features.left_input_row_count = op->left_input()->performance_data->output_row_count;
+    operator_features.left_input_chunk_count = op->left_input()->performance_data->output_chunk_count;
     operator_features.left_input_memory_usage_bytes = -1;
     operator_features.left_input_chunk_size = -1;
   }
 
-  if (op->input_right()) {
-    const auto right_input = op->input_right()->get_output();
-    operator_features.right_input_row_count = op->input_right()->performance_data->output_row_count;
-    operator_features.right_input_chunk_count = op->input_right()->performance_data->output_chunk_count;
+  if (op->right_input()) {
+    const auto right_input = op->right_input()->get_output();
+    operator_features.right_input_row_count = op->right_input()->performance_data->output_row_count;
+    operator_features.right_input_chunk_count = op->right_input()->performance_data->output_chunk_count;
     operator_features.right_input_memory_usage_bytes = -1;
     operator_features.right_input_chunk_size = -1;
   }
@@ -113,7 +113,7 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     // Use 1 for cases, in which one side is empty to avoid divisions by zero in the next step
     const auto total_input_row_count =
         std::max<uint64_t>(1, left_input_row_count) * std::max<uint64_t>(1, right_input_row_count);
-    const auto output_selectivity = std::min<float>(1.0, output_row_count / static_cast<float>(total_input_row_count));
+    const auto output_selectivity = std::min<float>(1.0f, static_cast<float>(output_row_count) / static_cast<float>(total_input_row_count));
 
     operator_features.selectivity = output_selectivity;
     operator_features.output_row_count = output_row_count;
@@ -135,12 +135,13 @@ const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_fea
     const std::shared_ptr<const TableScan>& op) {
   TableScanFeatures features{};
 
-  auto left_input_table = op->input_table_left();
+  const auto lqp = op->lqp_node;
 
-  if (left_input_table->row_count() == 0)
+  const auto row_count = op->left_input()->performance_data->output_row_count;
+  const auto chunk_count = op->left_input()->performance_data->output_chunk_count;
+
+  if (row_count == 0)
     return std::nullopt;
-
-  auto chunk_count = left_input_table->chunk_count();
 
   const auto& table_condition = op->predicate();
   features.computable_or_column_expression_count = count_expensive_child_expressions(table_condition);
@@ -170,7 +171,7 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
     const std::shared_ptr<const IndexScan>& op) {
   TableScanFeatures features{};
 
-  auto left_input_table = op->input_table_left();
+  auto left_input_table = op->left_input_table();
   const auto left_column_ids = op->left_columns_ids();
   const auto& predicate_condition = op->predicate_condition();
   const auto predicate_condition_pointer = std::make_shared<PredicateCondition>(predicate_condition);
@@ -189,11 +190,11 @@ const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_fea
     const std::shared_ptr<const Validate>& op) {
   TableScanFeatures features{};
 
-  auto left_input_table = op->input_table_left();
-  if (left_input_table->performance_data->output_row_count == 0 || left_input_table->performance_data->output_chunk_count == 0)
+  const auto left_input = op->left_input();
+  if (left_input->performance_data->output_row_count == 0 || left_input->performance_data->output_chunk_count == 0)
     return std::nullopt;
 
-  features.effective_chunk_count = left_input_table->performance_data->output_chunk_count;
+  features.effective_chunk_count = left_input->performance_data->output_chunk_count;
   return features;
 }
 
@@ -260,7 +261,7 @@ const ProjectionFeatures CalibrationFeatureExtractor::_extract_features_for_oper
     const std::shared_ptr<const Projection>& op) {
   ProjectionFeatures features{};
   // TODO(Sven): Add features that signal whether subselects need to be executed
-  features.input_column_count = op->input_table_left()->column_count();
+  features.input_column_count = op->left_input_table()->column_count();
   features.output_column_count = op->get_output()->column_count();
 
   return features;
@@ -269,8 +270,8 @@ const ProjectionFeatures CalibrationFeatureExtractor::_extract_features_for_oper
 const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
     const std::shared_ptr<const AbstractJoinOperator>& op) {
   JoinFeatures features{};
-  const auto& left_table = op->input_table_left();
-  const auto& right_table = op->input_table_right();
+  const auto& left_table = op->left_input_table();
+  const auto& right_table = op->right_input_table();
 
   const auto& column_ids = op->primary_predicate().column_ids;
 

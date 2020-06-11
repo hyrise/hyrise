@@ -11,7 +11,6 @@
 #include "calibration_query_generator_predicate.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
@@ -43,7 +42,7 @@ class CalibrationQueryGenerator {
       const CalibrationQueryGeneratorJoinConfiguration& configuration) const;
 
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_projection(
-      const std::vector<LQPColumnReference>& columns) const;
+      const std::vector<std::shared_ptr<LQPColumnExpression>>& columns) const;
 
   const std::vector<CalibrationColumnSpecification> _column_specifications;
   const CalibrationConfiguration _configuration;

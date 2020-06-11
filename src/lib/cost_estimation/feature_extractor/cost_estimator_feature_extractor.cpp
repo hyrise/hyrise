@@ -70,20 +70,20 @@ const CostModelFeatures CostEstimatorFeatureExtractor::_extract_general_features
 
   if (left_input_row_count > 0 && right_input_row_count > 0) {
     if (left_input_row_count > right_input_row_count) {
-      operator_features.input_table_size_ratio = left_input_row_count / static_cast<float>(right_input_row_count);
+      operator_features.input_table_size_ratio = static_cast<float>(left_input_row_count) / static_cast<float>(right_input_row_count);
     } else {
-      operator_features.input_table_size_ratio = right_input_row_count / static_cast<float>(left_input_row_count);
+      operator_features.input_table_size_ratio = static_cast<float>(right_input_row_count) / static_cast<float>(left_input_row_count);
     }
   }
 
-  operator_features.logical_cost_sort_merge = left_input_row_count * static_cast<float>(std::log(left_input_row_count));
+  operator_features.logical_cost_sort_merge = static_cast<float>(left_input_row_count) * static_cast<float>(std::log(left_input_row_count));
   // DISABLED UNTIL NECESSARY FOR JOIN operator_features.logical_cost_hash = left_input_row_count + left_input_row_count;
 
   // Calculate cross-join cardinality.
   // Use 1 for cases, in which one side is empty to avoid divisions by zero in the next step
   const auto total_input_row_count =
       std::max<uint64_t>(1, left_input_row_count) * std::max<uint64_t>(1, right_input_row_count);
-  const auto selectivity = std::min<float>(1.0, output_row_count / static_cast<float>(total_input_row_count));
+  const auto selectivity = std::min<float>(1.0f, static_cast<float>(output_row_count) / static_cast<float>(total_input_row_count));
 
   operator_features.total_row_count = total_input_row_count;
   operator_features.selectivity = selectivity;

@@ -312,9 +312,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto value = _generate_value_expression(column_specification, selectivity, string_predicate_type);
 
   if (string_predicate_type != StringPredicateType::Equality)
-    return like_(lqp_column_(lqp_column_reference), value);
+    return like_(lqp_column_reference, value);
 
-  return less_than_equals_(lqp_column_(lqp_column_reference), value);
+  return less_than_equals_(lqp_column_reference, value);
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_column_column(
@@ -392,7 +392,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   }
 
   const auto filter_column = _generate_column_expression(table, *filter_column_configuration);
-  const auto column_id = filter_column->column_reference.original_column_id();
+  const auto column_id = filter_column->original_column_id;
 
   // Get an existing value from column and filter by that
   static std::mt19937 engine((std::random_device()()));
@@ -448,13 +448,12 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorPre
 const std::shared_ptr<LQPColumnExpression> CalibrationQueryGeneratorPredicate::_generate_column_expression(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column) {
   const auto column_name = filter_column.column_name;
-  const auto lqp_column_reference = table->get_column(column_name);
-  return lqp_column_(lqp_column_reference);
+  return table->get_column(column_name);
 }
 
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
     const DataType& data_type, const float selectivity, const size_t int_value_upper_limit, const bool trailing_like) {
-  const auto int_value = static_cast<int32_t>(int_value_upper_limit * selectivity);
+  const auto int_value = static_cast<int32_t>(static_cast<float>(int_value_upper_limit) * selectivity);
   const auto long_value = static_cast<int64_t>(int_value);
   const auto float_value = selectivity;
   const auto double_value = static_cast<double>(selectivity);
@@ -488,9 +487,9 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
     const StringPredicateType string_predicate_type) {
   const auto distinct_value_count = column_specification.distinct_value_count;
 
-  const auto int_value = static_cast<int32_t>(selectivity * distinct_value_count);
-  const auto long_value = static_cast<int64_t>(selectivity * distinct_value_count);
-  const auto float_value = selectivity * distinct_value_count;
+  const auto int_value = static_cast<int32_t>(selectivity * static_cast<float>(distinct_value_count));
+  const auto long_value = static_cast<int64_t>(selectivity * static_cast<float>(distinct_value_count));
+  const auto float_value = selectivity * static_cast<float>(distinct_value_count);
   const auto double_value = static_cast<double>(selectivity);
 
   switch (column_specification.data_type) {

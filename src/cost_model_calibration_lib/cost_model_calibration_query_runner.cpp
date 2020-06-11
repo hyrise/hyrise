@@ -14,7 +14,7 @@ CostModelCalibrationQueryRunner::CostModelCalibrationQueryRunner(const Calibrati
 const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // lqp->print();
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
 
   LQPTranslator lqp_translator{};
   const auto pqp = lqp_translator.translate_node(lqp);
@@ -55,12 +55,12 @@ const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner
 
 void CostModelCalibrationQueryRunner::_traverse(const std::shared_ptr<const AbstractOperator>& op,
                                                 std::vector<cost_model::CostModelFeatures>& features) const {
-  if (op->input_left() != nullptr) {
-    _traverse(op->input_left(), features);
+  if (op->left_input() != nullptr) {
+    _traverse(op->left_input(), features);
   }
 
-  if (op->input_right() != nullptr) {
-    _traverse(op->input_right(), features);
+  if (op->right_input() != nullptr) {
+    _traverse(op->right_input(), features);
   }
 
 

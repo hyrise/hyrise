@@ -44,8 +44,8 @@ Cost CostEstimatorAdaptive::estimate_node_cost(const std::shared_ptr<AbstractLQP
     case LQPNodeType::Union: {
       const auto union_node = std::static_pointer_cast<UnionNode>(node);
 
-      switch (union_node->union_mode) {
-        case UnionMode::Positions:
+      switch (union_node->set_operation_mode) {
+        case SetOperationMode::Positions:
           return left_input_row_count * std::log(left_input_row_count) +
                  right_input_row_count * std::log(right_input_row_count);
         default:

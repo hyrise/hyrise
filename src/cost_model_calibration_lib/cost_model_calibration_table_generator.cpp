@@ -63,7 +63,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
   for (const auto& column_spec : _configuration.columns) {
     //column_specifications.emplace_back(ColumnSpecification(ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count),
 //		                        column_spec.data_type, column_spec.encoding, column_spec.column_name));
-    column_specifications.emplace_back(ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count),
+    column_specifications.emplace_back(ColumnDataDistribution::make_uniform_config(0.0, static_cast<double>(column_spec.distinct_value_count)),
 		                       column_spec.data_type, column_spec.encoding, column_spec.column_name);
   }
 

@@ -44,8 +44,7 @@ JoinProxy::JoinProxy(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinProxy::PerformanceData>()) {
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates) {
   _cost_model = std::make_shared<CostEstimatorAdaptive>(std::make_shared<CardinalityEstimator>());
   auto cost_estimator_adaptive = std::dynamic_pointer_cast<CostEstimatorAdaptive>(_cost_model);
   cost_estimator_adaptive->initialize(CostEstimatorCoefficientReader::default_coefficients());
@@ -57,9 +56,9 @@ const std::string& JoinProxy::name() const {
 }
 
 std::shared_ptr<AbstractOperator> JoinProxy::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinProxy>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<JoinProxy>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates);
 }
 
@@ -70,8 +69,8 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   // return std::shared_ptr<const Table>();
 
   // Get inputs
-  const auto& left_input_table = _input_left->get_output();
-  const auto& right_input_table = _input_right->get_output();
+  const auto& left_input_table = _left_input->get_output();
+  const auto& right_input_table = _right_input->get_output();
   const auto& left_input_size = left_input_table->row_count();
   const auto& right_input_size = right_input_table->row_count();
 
@@ -80,16 +79,16 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   CostModelFeatures cost_model_features{};
   if (left_input_size > 0 && right_input_size > 0) {
     if (left_input_size > right_input_size) {
-      cost_model_features.input_table_size_ratio = left_input_size / static_cast<float>(right_input_size);
+      cost_model_features.input_table_size_ratio = static_cast<float>(left_input_size) / static_cast<float>(right_input_size);
     } else {
-      cost_model_features.input_table_size_ratio = right_input_size / static_cast<float>(left_input_size);
+      cost_model_features.input_table_size_ratio = static_cast<float>(right_input_size) / static_cast<float>(left_input_size);
     }
   }
 
   cost_model_features.left_input_row_count = left_input_size;
   cost_model_features.right_input_row_count = right_input_size;
   cost_model_features.total_row_count =
-      std::max<uint64_t>(1, left_input_size) * std::max<uint64_t>(1, right_input_size);
+      std::max<uint64_t>(1ul, left_input_size) * std::max<uint64_t>(1ul, right_input_size);
   // cost_model_features.logical_cost_sort_merge = left_input_size * static_cast<float>(std::log(right_input_size));
   // cost_model_features.logical_cost_hash = left_input_size + right_input_size;
 
@@ -188,13 +187,13 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   // Execute Join
   const auto join_impl = _instantiate_join(minimal_costs_join_type);
   join_impl->execute();
-  const auto execution_time = join_impl->performance_data().walltime;
+  const auto execution_time = join_impl->performance_data->walltime;
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time).count();
 
   //  const auto execution_time_ns_log = log(execution_time_ns);
 
-  const auto mape = abs(execution_time_ns - minimal_costs) / static_cast<float>(execution_time_ns) * 100.0f;
-  std::cout << "Error: " << execution_time_ns - minimal_costs << " [actual: " << execution_time_ns << ", " << mape
+  const auto mape = static_cast<double>(abs(static_cast<double>(execution_time_ns) - static_cast<double>(minimal_costs))) / static_cast<double>(execution_time_ns) * 100.0f;
+  std::cout << "Error: " << static_cast<double>(execution_time_ns) - static_cast<double>(minimal_costs) << " [actual: " << execution_time_ns << ", " << mape
             << "%]" << std::endl;
   return join_impl->get_output();
 }
@@ -204,22 +203,18 @@ const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const O
   _operator_type = operator_type;
   switch (operator_type) {
     case OperatorType::JoinHash:
-      return std::make_shared<JoinHash>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
+      return std::make_shared<JoinHash>(_left_input, _right_input, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinIndex:
-      return std::make_shared<JoinIndex>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
+      return std::make_shared<JoinIndex>(_left_input, _right_input, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinNestedLoop:
-      return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _primary_predicate,
+      return std::make_shared<JoinNestedLoop>(_left_input, _right_input, _mode, _primary_predicate,
                                               _secondary_predicates);
     case OperatorType::JoinSortMerge:
-      return std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _primary_predicate,
+      return std::make_shared<JoinSortMerge>(_left_input, _right_input, _mode, _primary_predicate,
                                              _secondary_predicates);
     default:
       Fail("Unexpected operator type in JoinProxy. Can only handle Join operators");
   }
-}
-
-void JoinProxy::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
-  OperatorPerformanceData::output_to_stream(stream, description_mode);
 }
 
 const std::vector<OperatorType> JoinProxy::_valid_join_types() const {

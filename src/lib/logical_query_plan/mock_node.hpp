@@ -29,8 +29,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& column_name) const;
 
-  const std::vector<LQPColumnReference> get_columns() const;
-
   const ColumnDefinitions& column_definitions() const;
 
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;

@@ -36,11 +36,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   const auto quantity_column = lineitem->get_column("l_quantity");
 
   const auto shipdate_gte =
-      PredicateNode::make(greater_than_equals_(lqp_column_(shipdate_column), value_("1994-01-01")));
-  const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(shipdate_column), value_("1995-01-01")));
+      PredicateNode::make(greater_than_equals_(shipdate_column, value_("1994-01-01")));
+  const auto shipdate_lt = PredicateNode::make(less_than_(shipdate_column, value_("1995-01-01")));
   const auto discount =
-      PredicateNode::make(between_inclusive_(lqp_column_(discount_column), value_(0.05), value_(0.07001)));
-  const auto quantity = PredicateNode::make(less_than_(lqp_column_(quantity_column), value_(24)));
+      PredicateNode::make(between_inclusive_(discount_column, value_(0.05), value_(0.07001)));
+  const auto quantity = PredicateNode::make(less_than_(quantity_column, value_(24)));
 
   std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
       {shipdate_gte, shipdate_lt, discount, quantity}, {shipdate_gte, shipdate_lt, quantity, discount},
@@ -83,11 +83,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   const auto shipdate_column = lineitem->get_column("l_shipdate");
 
   const auto shipdate_gte =
-      PredicateNode::make(greater_than_equals_(lqp_column_(receiptdate_column), value_("1994-01-01")));
-  const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(receiptdate_column), value_("1995-01-01")));
+      PredicateNode::make(greater_than_equals_(receiptdate_column, value_("1994-01-01")));
+  const auto shipdate_lt = PredicateNode::make(less_than_(receiptdate_column, value_("1995-01-01")));
   const auto discount =
-      PredicateNode::make(less_than_(lqp_column_(commitdate_column), lqp_column_(receiptdate_column)));
-  const auto quantity = PredicateNode::make(less_than_(lqp_column_(shipdate_column), lqp_column_(commitdate_column)));
+      PredicateNode::make(less_than_(commitdate_column, receiptdate_column));
+  const auto quantity = PredicateNode::make(less_than_(shipdate_column, commitdate_column));
 
   std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
       {shipdate_gte, shipdate_lt, discount, quantity}, {shipdate_gte, shipdate_lt, quantity, discount},
@@ -362,7 +362,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_projection(
-    const std::vector<LQPColumnReference>& columns) const {
+    const std::vector<std::shared_ptr<LQPColumnExpression>>& columns) const {
   return {CalibrationQueryGeneratorProjection::generate_projection(columns)};
 }
 }  // namespace opossum

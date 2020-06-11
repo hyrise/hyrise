@@ -344,22 +344,22 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   if (join_node->join_type) {
     switch (*(join_node->join_type)) {
       case JoinType::Hash:
-        return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+        return std::make_shared<JoinHash>(left_input_operator, right_input_operator, join_node->join_mode,
                                           primary_join_predicate, std::move(secondary_join_predicates));
       case JoinType::Index:
-        return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
+        return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
                                            primary_join_predicate, std::move(secondary_join_predicates));
       case JoinType::NestedLoop:
-        return std::make_shared<JoinNestedLoop>(input_left_operator, input_right_operator, join_node->join_mode,
+        return std::make_shared<JoinNestedLoop>(left_input_operator, right_input_operator, join_node->join_mode,
                                                 primary_join_predicate, std::move(secondary_join_predicates));
       case JoinType::SortMerge:
-        return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+        return std::make_shared<JoinSortMerge>(left_input_operator, right_input_operator, join_node->join_mode,
                                                primary_join_predicate, std::move(secondary_join_predicates));
     }
   }
 
   // Default fallback -> Choose Join Implementation at runtime
-  //return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
+  //return std::make_shared<JoinProxy>(left_input_operator, right_input_operator, join_node->join_mode,
   //                                   operator_join_predicate->column_ids, primary_join_predicate, std::move(secondary_join_predicates));
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};

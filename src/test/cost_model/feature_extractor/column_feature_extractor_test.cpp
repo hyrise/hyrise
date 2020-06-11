@@ -19,7 +19,7 @@ TEST_F(DISABLED_ColumnFeatureExtractorTest, UnencodedColumn) {
   const auto node = MockNode::make(MockNode::ColumnDefinitions{
       {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
 
-  const auto column_expression = lqp_column_({node, ColumnID{0}});
+  const auto column_expression = lqp_column_(node, ColumnID{0});
   const auto column_features = cost_model::ColumnFeatureExtractor::extract_features(node, column_expression, "");
 
   // TODO(anyone): refactoring removed those members. Update.

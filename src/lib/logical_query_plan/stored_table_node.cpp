@@ -20,17 +20,6 @@ std::shared_ptr<LQPColumnExpression> StoredTableNode::get_column(const std::stri
   return std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
 }
 
-// TODO(Sven): Write test
-const std::vector<LQPColumnReference> StoredTableNode::get_columns() const {
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
-
-  std::vector<LQPColumnReference> lqp_column_references;
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    lqp_column_references.push_back({shared_from_this(), column_id});
-  }
-  return lqp_column_references;
-}
-
 void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
   DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
   DebugAssert(std::adjacent_find(pruned_chunk_ids.begin(), pruned_chunk_ids.end()) == pruned_chunk_ids.end(),

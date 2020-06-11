@@ -365,11 +365,11 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
   EXPECT_EQ(join_sort_merge->primary_predicate().column_ids.second, ColumnID{0});
   EXPECT_EQ(join_sort_merge->primary_predicate().predicate_condition, PredicateCondition::GreaterThan);
 
-  const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_left());
+  const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->left_input());
   ASSERT_TRUE(get_table_int_float2);
   EXPECT_EQ(get_table_int_float2->table_name(), "table_int_float2");
 
-  const auto get_table_int_float = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_right());
+  const auto get_table_int_float = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->right_input());
   ASSERT_TRUE(get_table_int_float);
   EXPECT_EQ(get_table_int_float->table_name(), "table_int_float");
 }

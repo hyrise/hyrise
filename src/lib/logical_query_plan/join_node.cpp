@@ -71,7 +71,7 @@ OperatorType JoinNode::operator_type() const {
 
 bool JoinNode::creates_reference_segments() const { return true; }
 
-std::vector<std::shared_ptr<AbstractExpression>> JoinNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**

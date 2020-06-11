@@ -4,12 +4,11 @@
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "resolve_type.hpp"
-#include "statistics/abstract_attribute_statistics.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
@@ -21,9 +20,8 @@ namespace cost_model {
 const ColumnFeatures ColumnFeatureExtractor::extract_features(
     const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<LQPColumnExpression>& column_expression,
     const std::string& prefix) {
-  const auto column_reference = column_expression->column_reference;
-  const auto original_node = column_reference.original_node();
-  const auto column_id = column_reference.original_column_id();
+  const auto original_node = column_expression->original_node.lock();
+  const auto column_id = column_expression->original_column_id;
 
   Assert(original_node->type == LQPNodeType::StoredTable, "Can only extract column features for StoredTable");
   const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
@@ -122,7 +120,7 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
 }
 
 std::pair<SegmentEncodingSpec, bool> ColumnFeatureExtractor::_get_encoding_type_for_segment(
-    const std::shared_ptr<BaseSegment>& segment) {
+    const std::shared_ptr<AbstractSegment>& segment) {
   const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
 
   // Dereference ReferenceSegment for encoding feature
@@ -138,7 +136,7 @@ std::pair<SegmentEncodingSpec, bool> ColumnFeatureExtractor::_get_encoding_type_
     segment_to_encode = underlying_segment;
   }
 
-  auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment_to_encode);
+  auto encoded_scan_segment = std::dynamic_pointer_cast<const AbstractEncodedSegment>(segment_to_encode);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
   if (encoded_scan_segment) {

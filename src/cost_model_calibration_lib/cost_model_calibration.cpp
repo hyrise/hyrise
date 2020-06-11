@@ -16,6 +16,7 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
@@ -152,6 +153,7 @@ void CostModelCalibration::_write_csv_header(const std::string& output_path) {
 
   std::ofstream stream;
   stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+  std::cout << output_path << std::endl;
   stream.open(output_path, std::ios::out);
 
   const auto header = boost::algorithm::join(columns, ",");
@@ -208,7 +210,7 @@ void CostModelCalibration::_export_segment_size_information() {
         const auto& chunk = table->get_chunk(chunk_id);
         const auto& segment = chunk->get_segment(column_id);
 
-        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+        const auto encoded_segment = std::dynamic_pointer_cast<const AbstractEncodedSegment>(segment);
         if (encoded_segment) {
           const auto encoding_type = encoded_segment->encoding_type();
           segment_size_csv_file << encoding_type_to_string.left.at(encoding_type) << ",";

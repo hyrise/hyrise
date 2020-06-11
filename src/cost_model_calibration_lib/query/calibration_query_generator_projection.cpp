@@ -8,18 +8,18 @@
 namespace opossum {
 
 const std::shared_ptr<ProjectionNode> CalibrationQueryGeneratorProjection::generate_projection(
-    const std::vector<LQPColumnReference>& columns) {
+    const std::vector<std::shared_ptr<LQPColumnExpression>>& columns) {
   static std::mt19937 engine((std::random_device()()));
 
   std::uniform_int_distribution<u_int64_t> dist(1, columns.size());
 
-  std::vector<LQPColumnReference> sampled;
+  std::vector<std::shared_ptr<LQPColumnExpression>> sampled;
   std::sample(columns.begin(), columns.end(), std::back_inserter(sampled), dist(engine), engine);
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions{};
   column_expressions.reserve(sampled.size());
   for (const auto& column_ref : sampled) {
-    column_expressions.push_back(expression_functional::lqp_column_(column_ref));
+    column_expressions.push_back(column_ref);
   }
 
   return ProjectionNode::make(column_expressions);

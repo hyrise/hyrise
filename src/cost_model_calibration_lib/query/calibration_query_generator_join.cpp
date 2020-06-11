@@ -27,7 +27,7 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
       for (const auto& right_encoding : configuration.encodings) {
         for (const auto& left_table : tables) {
           for (const auto& right_table : tables) {
-            const auto table_ratio = right_table.second / static_cast<double>(left_table.second);
+            const auto table_ratio = static_cast<double>(right_table.second) / static_cast<double>(left_table.second);
             for (const auto ratio : {0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0}) {
               if (table_ratio == ratio) {
                 // With and without ReferenceSegments
@@ -82,26 +82,22 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_genera
     const auto left_column_definition = _find_primary_key();
     if (!left_column_definition) return {};
 
-    const auto left_column = left_table->get_column(left_column_definition->column_name);
-    const auto left_column_expression = lqp_column_(left_column);
+    const auto left_column_expression = left_table->get_column(left_column_definition->column_name);
 
     const auto right_column_definition = _find_foreign_key(ratio);
     if (!right_column_definition) return {};
-    const auto right_column = right_table->get_column(right_column_definition->column_name);
-    const auto right_column_expression = lqp_column_(right_column);
+    const auto right_column_expression = right_table->get_column(right_column_definition->column_name);
 
     return expression_functional::equals_(left_column_expression, right_column_expression);
   } else {
     const auto left_column_definition = _find_foreign_key(_configuration.table_ratio);
     if (!left_column_definition) return {};
 
-    const auto left_column = left_table->get_column(left_column_definition->column_name);
-    const auto left_column_expression = lqp_column_(left_column);
+    const auto left_column_expression = left_table->get_column(left_column_definition->column_name);
 
     const auto right_column_definition = _find_primary_key();
     if (!right_column_definition) return {};
-    const auto right_column = right_table->get_column(right_column_definition->column_name);
-    const auto right_column_expression = lqp_column_(right_column);
+    const auto right_column_expression = right_table->get_column(right_column_definition->column_name);
 
     return expression_functional::equals_(left_column_expression, right_column_expression);
   }
@@ -124,7 +120,7 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoi
   for (const auto& definition : _column_definitions) {
     // In case of _configuration.table_ratio == 1, this will select the primary key
     if (definition.data_type == _configuration.data_type &&
-        definition.encoding.encoding_type == _configuration.right_encoding_type && definition.fraction == table_ratio) {
+        definition.encoding.encoding_type == _configuration.right_encoding_type && static_cast<double>(definition.fraction) == table_ratio) {
       return definition;
     }
   }

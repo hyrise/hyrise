@@ -23,8 +23,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   std::shared_ptr<LQPColumnExpression> get_column(const std::string& name) const;
 
-  const std::vector<LQPColumnReference> get_columns() const;
-
   /**
    * @defgroup ColumnIDs and ChunkIDs to be pruned from the stored Table.
    * Both vectors need to be sorted and must no contain duplicates when passed to `set_pruned_{chunk/column}_ids()`
