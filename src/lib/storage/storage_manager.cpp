@@ -14,6 +14,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export.hpp"
 #include "operators/print.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
@@ -257,6 +258,7 @@ void StorageManager::apply_partitioning() {
       if (dimension["mode"] == "size") {
         partition_by_values = false;
       } else if (dimension["mode"] == "values") {
+        std::cout << "WARNING: use 'values' clustering with care. It's not supposed to be used for the TuK exercise." << std::endl;
         partition_by_values = true;
       } else {
         Fail("Unknown mode");
@@ -294,6 +296,10 @@ void StorageManager::apply_partitioning() {
         std::sort(materialized.begin(), materialized.end());
 
         auto distinct_values = std::vector<ColumnDataType>{};
+
+        if (partition_count == 1) {
+          std::cout << "WARNING: be cautious when using a cluster split count of 1" << std::endl;
+        }
 
         if (partition_by_values) {
           distinct_values.resize(materialized.size());
@@ -383,7 +389,7 @@ void StorageManager::apply_partitioning() {
 
             auto values_by_partition = std::vector<pmr_vector<ColumnDataType>>(total_num_partitions);
             for (auto& values : values_by_partition) {
-              values.reserve(table->row_count() / (total_num_partitions - 1));
+              values.reserve(table->row_count() / std::max(1ul, (total_num_partitions - 1)));
             }
 
             const auto row_count = table->row_count();
@@ -422,6 +428,55 @@ void StorageManager::apply_partitioning() {
     }
 
     {
+      /**
+       * SORTING each cluster by the last cluster column
+       */
+      std::cout << "Sorting each chunk individually by " << dimensions[dimensions.size() - 1]["column_name"] << std::flush;
+      Timer timer;
+
+      const auto sort_column_id = table->column_id_by_name(dimensions[dimensions.size() - 1]["column_name"]);
+
+      auto get_segments_of_chunk = [&](const std::shared_ptr<const Table>& input_table, ChunkID chunk_id){
+        Segments segments{};
+        for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+          segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+        }
+        return segments;
+      };
+
+      auto sorted_table = std::make_shared<Table>(new_table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE * 17, UseMvcc::Yes);
+      const auto chunk_count = new_table->chunk_count();
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        // create new single chunk and create a new table with that chunk
+        auto new_chunk = std::make_shared<Chunk>(get_segments_of_chunk(new_table, chunk_id));
+        std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
+        auto single_chunk_table = std::make_shared<Table>(new_table->column_definitions(), TableType::Data,
+                                                          std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+
+        // call sort operator on single-chunk table
+        auto table_sort_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+        table_sort_wrapper->execute();
+        auto single_chunk_table_sort = std::make_shared<Sort>(table_sort_wrapper,
+                                  std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id,
+                                  SortMode::Ascending}}, single_chunk_table->row_count(), Sort::ForceMaterialization::Yes);
+        single_chunk_table_sort->execute();
+        const auto immutable_single_chunk_sorted_table = single_chunk_table_sort->get_output();
+
+        // add sorted chunk to output table
+        auto mvcc_data = std::make_shared<MvccData>(immutable_single_chunk_sorted_table->row_count(), CommitID{0});
+        sorted_table->append_chunk(get_segments_of_chunk(immutable_single_chunk_sorted_table, ChunkID{0}), mvcc_data);
+        const auto& added_chunk = sorted_table->get_chunk(chunk_id);
+        added_chunk->finalize();
+        added_chunk->set_sorted_by(SortColumnDefinition(sort_column_id, SortMode::Ascending));
+      }
+
+      new_table = sorted_table;
+
+      std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    {
       std::cout << "Applying dictionary encoding to new table" << std::flush;
       Timer timer;
 
@@ -450,6 +505,8 @@ void StorageManager::apply_partitioning() {
 
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
+
+    // Print::print(new_table);
 
     {
       std::cout << "Generating statistics" << std::flush;
