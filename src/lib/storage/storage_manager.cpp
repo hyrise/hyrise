@@ -270,52 +270,55 @@ void StorageManager::apply_partitioning() {
     }
 
     auto sorted_table = std::make_shared<Table>(new_table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-    const auto sort_column_name = cluster_definition["sort_column"];
+    
     {
-      /**
-       * SORTING each cluster by the last cluster column
-       */
-      std::cout << "Sorting each chunk individually by " << sort_column_name << std::flush;
-      Timer timer;
+      if (cluster_definition.contains("sort_column")) {
+        const auto sort_column_name = cluster_definition["sort_column"];
+        /**
+         * SORTING each cluster by the last cluster column
+         */
+        std::cout << "Sorting each chunk individually by " << sort_column_name << std::flush;
+        Timer timer;
 
-      const auto sort_column_id = table->column_id_by_name(sort_column_name);
+        const auto sort_column_id = table->column_id_by_name(sort_column_name);
 
-      auto get_segments_of_chunk = [&](const std::shared_ptr<const Table>& input_table, ChunkID chunk_id){
-        Segments segments{};
-        for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
-          segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+        auto get_segments_of_chunk = [&](const std::shared_ptr<const Table>& input_table, ChunkID chunk_id){
+          Segments segments{};
+          for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+            segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+          }
+          return segments;
+        };
+
+        
+        const auto chunk_count = new_table->chunk_count();
+
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          // create new single chunk and create a new table with that chunk
+          auto new_chunk = std::make_shared<Chunk>(get_segments_of_chunk(new_table, chunk_id));
+          std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
+          auto single_chunk_table = std::make_shared<Table>(new_table->column_definitions(), TableType::Data,
+                                                            std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
+
+          // call sort operator on single-chunk table
+          auto table_sort_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+          table_sort_wrapper->execute();
+          auto single_chunk_table_sort = std::make_shared<Sort>(table_sort_wrapper,
+                                    std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id,
+                                    SortMode::Ascending}}, single_chunk_table->row_count(), Sort::ForceMaterialization::Yes);
+          single_chunk_table_sort->execute();
+          const auto immutable_single_chunk_sorted_table = single_chunk_table_sort->get_output();
+
+          // add sorted chunk to output table
+          auto mvcc_data = std::make_shared<MvccData>(immutable_single_chunk_sorted_table->row_count(), CommitID{0});
+          sorted_table->append_chunk(get_segments_of_chunk(immutable_single_chunk_sorted_table, ChunkID{0}), mvcc_data);
+          const auto& added_chunk = sorted_table->get_chunk(chunk_id);
+          added_chunk->finalize();
+          added_chunk->set_sorted_by(SortColumnDefinition(sort_column_id, SortMode::Ascending));
         }
-        return segments;
-      };
 
-      
-      const auto chunk_count = new_table->chunk_count();
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        // create new single chunk and create a new table with that chunk
-        auto new_chunk = std::make_shared<Chunk>(get_segments_of_chunk(new_table, chunk_id));
-        std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
-        auto single_chunk_table = std::make_shared<Table>(new_table->column_definitions(), TableType::Data,
-                                                          std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
-
-        // call sort operator on single-chunk table
-        auto table_sort_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
-        table_sort_wrapper->execute();
-        auto single_chunk_table_sort = std::make_shared<Sort>(table_sort_wrapper,
-                                  std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id,
-                                  SortMode::Ascending}}, single_chunk_table->row_count(), Sort::ForceMaterialization::Yes);
-        single_chunk_table_sort->execute();
-        const auto immutable_single_chunk_sorted_table = single_chunk_table_sort->get_output();
-
-        // add sorted chunk to output table
-        auto mvcc_data = std::make_shared<MvccData>(immutable_single_chunk_sorted_table->row_count(), CommitID{0});
-        sorted_table->append_chunk(get_segments_of_chunk(immutable_single_chunk_sorted_table, ChunkID{0}), mvcc_data);
-        const auto& added_chunk = sorted_table->get_chunk(chunk_id);
-        added_chunk->finalize();
-        added_chunk->set_sorted_by(SortColumnDefinition(sort_column_id, SortMode::Ascending));
+        std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
       }
-
-      std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
 
     {
