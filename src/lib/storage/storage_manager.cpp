@@ -362,6 +362,12 @@ void StorageManager::apply_partitioning() {
       });
 
       std::cout << "\t\tdone (" << timer.lap_formatted() << ")" << std::endl;
+
+      std::cout << "################" << std::endl;
+      for (const auto& t : partition_by_row_idx) {
+        std::cout << t << std::endl;
+      }
+      std::cout << "################" << std::endl;
     }
 
     // Write segments
@@ -415,6 +421,14 @@ void StorageManager::apply_partitioning() {
 
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
+
+    std::cout << "$$$$$$$$$$$$$$$$$$$" << std::endl;
+    for (const auto& t : partition_by_row_idx) {
+      std::cout << t << std::endl;
+    }
+    std::cout << "$$$$$$$$$$$$$$$$$$$" << std::endl;
+
+    Print::print(table);
 
     // Write new table
     auto new_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -506,7 +520,7 @@ void StorageManager::apply_partitioning() {
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
 
-    // Print::print(new_table);
+    Print::print(new_table);
 
     {
       std::cout << "Generating statistics" << std::flush;
