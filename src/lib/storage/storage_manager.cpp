@@ -17,6 +17,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -251,6 +252,8 @@ void StorageManager::apply_partitioning() {
       sort_column_definitions.emplace_back(SortColumnDefinition{column_id, SortMode::Ascending});
     }
 
+
+
     auto new_table = std::shared_ptr<const Table>{};
     {
       /**
@@ -272,6 +275,15 @@ void StorageManager::apply_partitioning() {
     auto sorted_table = std::make_shared<Table>(new_table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     
     {
+      auto get_segments_of_chunk = [&](const std::shared_ptr<const Table>& input_table, ChunkID chunk_id){
+        Segments segments{};
+        for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+          segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+        }
+        return segments;
+      };
+
+      const auto chunk_count = new_table->chunk_count();
       if (cluster_definition.contains("sort_column")) {
         const auto sort_column_name = cluster_definition["sort_column"];
         /**
@@ -281,18 +293,6 @@ void StorageManager::apply_partitioning() {
         Timer timer;
 
         const auto sort_column_id = table->column_id_by_name(sort_column_name);
-
-        auto get_segments_of_chunk = [&](const std::shared_ptr<const Table>& input_table, ChunkID chunk_id){
-          Segments segments{};
-          for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
-            segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
-          }
-          return segments;
-        };
-
-        
-        const auto chunk_count = new_table->chunk_count();
-
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
           // create new single chunk and create a new table with that chunk
           auto new_chunk = std::make_shared<Chunk>(get_segments_of_chunk(new_table, chunk_id));
@@ -318,6 +318,13 @@ void StorageManager::apply_partitioning() {
         }
 
         std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
+      } else {
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto chunk_size = new_table->get_chunk(chunk_id)->size();
+          auto mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
+          sorted_table->append_chunk(get_segments_of_chunk(new_table, chunk_id), mvcc_data);
+          sorted_table->last_chunk()->finalize();
+        }
       }
     }
 
@@ -359,6 +366,11 @@ void StorageManager::apply_partitioning() {
       std::cout << " - done (" << timer.lap_formatted() << ")" << std::endl;
     }
   }
+
+  // const auto clustered_data_overview = "SELECT * from meta_chunks";
+  // auto clustered_data_overview_pipeline = SQLPipelineBuilder{clustered_data_overview}.create_pipeline();
+  // const auto [overview_status, overview_table] = clustered_data_overview_pipeline.get_result_table();
+  // Print::print(overview_table);
 }
 
 }  // namespace opossum
