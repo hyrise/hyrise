@@ -12,6 +12,7 @@ extern "C" {
 #include "benchmark_config.hpp"
 #include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "table_builder.hpp"
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
@@ -332,45 +333,45 @@ AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_tabl
 void TPCHTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   const auto& customer_table = table_info_by_name.at("customer").table;
-  customer_table->add_soft_unique_constraint(
-      TableConstraintDefinition{{customer_table->column_id_by_name("c_custkey")}, IsPrimaryKey::Yes});
+  customer_table->add_soft_key_constraint(
+      {{customer_table->column_id_by_name("c_custkey")}, KeyConstraintType::PRIMARY_KEY});
 
   const auto& orders_table = table_info_by_name.at("orders").table;
   const auto orders_pk_constraint =
-      TableConstraintDefinition{{orders_table->column_id_by_name("o_orderkey")}, IsPrimaryKey::Yes};
-  orders_table->add_soft_unique_constraint(orders_pk_constraint);
+      TableKeyConstraint{{orders_table->column_id_by_name("o_orderkey")}, KeyConstraintType::PRIMARY_KEY};
+  orders_table->add_soft_key_constraint(orders_pk_constraint);
 
   const auto& lineitem_table = table_info_by_name.at("lineitem").table;
-  const auto lineitem_pk_constraint = TableConstraintDefinition{
+  const auto lineitem_pk_constraint = TableKeyConstraint{
       {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
-      IsPrimaryKey::Yes};
-  lineitem_table->add_soft_unique_constraint(lineitem_pk_constraint);
+      KeyConstraintType::PRIMARY_KEY};
+  lineitem_table->add_soft_key_constraint(lineitem_pk_constraint);
 
   const auto& part_table = table_info_by_name.at("part").table;
   const auto part_table_pk_constraint =
-      TableConstraintDefinition{{part_table->column_id_by_name("p_partkey")}, IsPrimaryKey::Yes};
-  part_table->add_soft_unique_constraint(part_table_pk_constraint);
+      TableKeyConstraint{{part_table->column_id_by_name("p_partkey")}, KeyConstraintType::PRIMARY_KEY};
+  part_table->add_soft_key_constraint(part_table_pk_constraint);
 
   const auto& partsupp_table = table_info_by_name.at("partsupp").table;
-  const auto partsupp_pk_constraint = TableConstraintDefinition{
+  const auto partsupp_pk_constraint = TableKeyConstraint{
       {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
-      IsPrimaryKey::Yes};
-  partsupp_table->add_soft_unique_constraint(partsupp_pk_constraint);
+      KeyConstraintType::PRIMARY_KEY};
+  partsupp_table->add_soft_key_constraint(partsupp_pk_constraint);
 
   const auto& supplier_table = table_info_by_name.at("supplier").table;
   const auto supplier_pk_constraint =
-      TableConstraintDefinition{{supplier_table->column_id_by_name("s_suppkey")}, IsPrimaryKey::Yes};
-  supplier_table->add_soft_unique_constraint(supplier_pk_constraint);
+      TableKeyConstraint{{supplier_table->column_id_by_name("s_suppkey")}, KeyConstraintType::PRIMARY_KEY};
+  supplier_table->add_soft_key_constraint(supplier_pk_constraint);
 
   const auto& nation_table = table_info_by_name.at("nation").table;
   const auto nation_pk_constraint =
-      TableConstraintDefinition{{nation_table->column_id_by_name("n_nationkey")}, IsPrimaryKey::Yes};
-  nation_table->add_soft_unique_constraint(nation_pk_constraint);
+      TableKeyConstraint{{nation_table->column_id_by_name("n_nationkey")}, KeyConstraintType::PRIMARY_KEY};
+  nation_table->add_soft_key_constraint(nation_pk_constraint);
 
   const auto& region_table = table_info_by_name.at("region").table;
   const auto region_pk_constraint =
-      TableConstraintDefinition{{region_table->column_id_by_name("r_regionkey")}, IsPrimaryKey::Yes};
-  region_table->add_soft_unique_constraint(region_pk_constraint);
+      TableKeyConstraint{{region_table->column_id_by_name("r_regionkey")}, KeyConstraintType::PRIMARY_KEY};
+  region_table->add_soft_key_constraint(region_pk_constraint);
 }
 
 }  // namespace opossum

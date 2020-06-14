@@ -18,14 +18,12 @@ namespace {
 using namespace opossum;  // NOLINT
 
 /**
- * This function reduces the group-by columns of @param aggregate_node for the inputs @param stored_table_node and
- * @param table_constraint. @param group_by_columns is passed as it already stores the ColumnID's which are used for
- * intersection instead of retrieving them from @param aggregate_node again.
+ * This function reduces the group-by columns of @param aggregate_node for a given functional dependency (@param fd).
  *
- * @returns   Boolean value denoting whether at the group-by list of @param aggregate_node changed.
+ * @returns Boolean value, denoting whether the group-by list of @param aggregate_node has changed.
  */
-bool remove_dependent_group_by_columns(const FunctionalDependency& fd, const ExpressionUnorderedSet& group_by_columns,
-                                       AggregateNode& aggregate_node) {
+bool remove_dependent_group_by_columns(const FunctionalDependency& fd, AggregateNode& aggregate_node,
+                                       const ExpressionUnorderedSet& group_by_columns) {
   auto group_by_list_changed = false;
 
   // To benefit from this rule, the FD's columns have to be part of the group-by list
@@ -109,7 +107,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       // Early exit: The FD's left column set has to be a subset of the group-by columns
       if (group_by_columns.size() < fd.determinants.size()) continue;
 
-      bool success = remove_dependent_group_by_columns(fd, group_by_columns, aggregate_node);
+      bool success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
         // Refresh data structures correspondingly
         group_by_list_changed = true;

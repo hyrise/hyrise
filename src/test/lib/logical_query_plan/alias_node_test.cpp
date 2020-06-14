@@ -1,17 +1,10 @@
 #include "base_test.hpp"
 
-#include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "operators/table_wrapper.hpp"
-#include "testing_assert.hpp"
 #include "utils/constraint_test_utils.hpp"
-#include "utils/load_table.hpp"
-
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

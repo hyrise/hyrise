@@ -1,6 +1,5 @@
 #include "base_test.hpp"
 
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"

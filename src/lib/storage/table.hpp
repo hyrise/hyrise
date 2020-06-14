@@ -9,7 +9,7 @@
 #include "abstract_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/constraints/table_constraint_definition.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -197,11 +197,11 @@ class Table : private Noncopyable {
   }
 
   /**
-   * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" constraints to draw attention to that.
+   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" key constraints to draw attention to that.
    */
-  void add_soft_unique_constraint(const TableConstraintDefinition& table_constraint);
-  const TableConstraintDefinitions& get_soft_unique_constraints() const;
+  void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
+  const TableKeyConstraints& soft_key_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -238,7 +238,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
-  TableConstraintDefinitions _constraint_definitions;
+  TableKeyConstraints _table_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;

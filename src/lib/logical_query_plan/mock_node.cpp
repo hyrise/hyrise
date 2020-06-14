@@ -11,14 +11,8 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name,
-                   const TableConstraintDefinitions& constraints)
-    : AbstractLQPNode(LQPNodeType::Mock),
-      name(init_name),
-      _column_definitions(column_definitions),
-      _table_constraints(constraints) {
-  // Maybe TODO(Julian) Check the validity of given constraints
-}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
+    : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
 
 std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& column_name) const {
   const auto& column_definitions = this->column_definitions();
@@ -63,12 +57,6 @@ bool MockNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < _column_definitions.size(), "ColumnID out of range");
   return false;
 }
-
-void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
-  _functional_dependencies = fds;
-}
-
-std::vector<FunctionalDependency> MockNode::functional_dependencies() const { return _functional_dependencies; }
 
 void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
@@ -152,8 +140,21 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-void MockNode::set_table_constraints(const TableConstraintDefinitions& table_constraints) {
-  _table_constraints = table_constraints;
+void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
+  _table_key_constraints = key_constraints;
+}
+
+const TableKeyConstraints& MockNode::key_constraints() const { return _table_key_constraints; }
+
+void MockNode::set_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+  _functional_dependencies = fds;
+}
+
+std::vector<FunctionalDependency> MockNode::functional_dependencies() const {
+  Assert(_table_key_constraints.empty() || !_functional_dependencies.empty(),
+         "There might be a misconception: Unlike StoredTableNode, MockNode does not generate FDs from table "
+         "constraints. FDs have to be set up manually.");
+  return _functional_dependencies;
 }
 
 size_t MockNode::_on_shallow_hash() const {
@@ -171,6 +172,8 @@ size_t MockNode::_on_shallow_hash() const {
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
+  mock_node->set_key_constraints(_table_key_constraints);
+  mock_node->set_functional_dependencies(_functional_dependencies);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;
 }
@@ -178,7 +181,8 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
   return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&
-         mock_node.name == name;
+         mock_node.name == name && mock_node.key_constraints() == _table_key_constraints &&
+         mock_node.functional_dependencies() == _functional_dependencies;
 }
 
 }  // namespace opossum
