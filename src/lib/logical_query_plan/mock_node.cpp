@@ -73,10 +73,10 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
 const std::shared_ptr<LQPUniqueConstraints> MockNode::constraints() const {
   auto lqp_constraints = std::make_shared<LQPUniqueConstraints>();
 
-  for (const TableConstraintDefinition& table_constraint : _table_constraints) {
+  for (const TableKeyConstraint& table_key_constraint : _table_key_constraints) {
     // Discard constraints which involve pruned column(s)
     const auto discard_constraint = [&]() {
-      for (const auto& column_id : table_constraint.columns) {
+      for (const auto& column_id : table_key_constraint.columns()) {
         //  Check whether constraint involves pruned column id(s).
         if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
           return true;
@@ -87,7 +87,7 @@ const std::shared_ptr<LQPUniqueConstraints> MockNode::constraints() const {
 
     if (!discard_constraint) {
       const auto get_column_expression = [this](ColumnID column_id) {
-        for (auto expr : this->column_expressions()) {
+        for (auto expr : this->output_expressions()) {
           const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
           Assert(column_expr, "Unexpected expression type in column_expression()");
           if (column_expr->original_column_id == column_id) {
@@ -97,9 +97,9 @@ const std::shared_ptr<LQPUniqueConstraints> MockNode::constraints() const {
         return std::shared_ptr<LQPColumnExpression>(nullptr);
       };
 
-      // Search for column expressions that represent the TableConstraintDefinitions's ColumnIDs
+      // Search for column expressions that represent the TableKeyConstraint's ColumnIDs
       auto constraint_column_expressions = ExpressionUnorderedSet{};
-      for (const auto& column_id : table_constraint.columns) {
+      for (const auto& column_id : table_key_constraint.columns()) {
         const auto column_expr = get_column_expression(column_id);
         Assert(column_expr, "Did not find column expression for ColumnID in LQPNode");
         constraint_column_expressions.emplace(column_expr);

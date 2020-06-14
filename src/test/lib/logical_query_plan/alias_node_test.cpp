@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 
+#include "constraints/table_key_constraint.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -78,11 +79,11 @@ TEST_F(AliasNodeTest, ConstraintsEmpty) {
 TEST_F(AliasNodeTest, ConstraintsForwarding) {
   // Add constraints to MockNode
   //  Primary Key: a, b
-  const auto table_constraint_1 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}};
+  const auto table_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   //  Unique: b
-  const auto table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}};
-  const auto table_constraints = TableConstraintDefinitions{table_constraint_1, table_constraint_2};
-  mock_node->set_table_constraints(table_constraints);
+  const auto table_constraint_2 = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto table_constraints = TableKeyConstraints{table_constraint_1, table_constraint_2};
+  mock_node->set_key_constraints(table_constraints);
 
   // Basic check
   const auto lqp_constraints = alias_node->constraints();

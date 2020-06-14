@@ -96,14 +96,14 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::constraints() const {
   auto lqp_constraints = std::make_shared<LQPUniqueConstraints>();
 
-  // Extract relevant constraints from table
-  const auto& table_constraints =
-      Hyrise::get().storage_manager.get_table(table_name).get()->get_soft_unique_constraints();
+  // Extract relevant key constraints from table
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& key_constraints = table->soft_key_constraints();
 
-  for (const TableConstraintDefinition& table_constraint : table_constraints) {
+  for (const TableKeyConstraint& key_constraint : key_constraints) {
     // Discard constraints which involve pruned column(s)
     const auto discard_constraint = [&]() {
-      for (const auto& column_id : table_constraint.columns) {
+      for (const auto& column_id : key_constraint.columns()) {
         //  Check whether constraint involves pruned column id(s).
         if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
           return true;
@@ -113,10 +113,10 @@ const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::constraints() const
     }();
 
     if (!discard_constraint) {
-      // Search for column expressions representing the table_constraint's ColumnIDs
+      // Search for column expressions representing the key constraint's ColumnIDs
       auto constraint_column_expressions = ExpressionUnorderedSet{};
 
-      for (const auto& column_id : table_constraint.columns) {
+      for (const auto& column_id : key_constraint.columns()) {
         const auto column_expr_opt = find_column_expression(column_id);
         Assert(column_expr_opt, "Did not find column expression in LQPNode");
 

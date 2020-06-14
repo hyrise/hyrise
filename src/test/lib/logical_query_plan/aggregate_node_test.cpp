@@ -118,9 +118,9 @@ TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
 
 TEST_F(AggregateNodeTest, ConstraintsForwarding) {
   // Prepare Test
-  const auto table_constraint_1 = TableConstraintDefinition{{_b->original_column_id}};
-  const auto table_constraint_2 = TableConstraintDefinition{{_c->original_column_id}};
-  _mock_node->set_table_constraints({table_constraint_1, table_constraint_2});
+  const auto table_constraint_1 = TableKeyConstraint{{_b->original_column_id}};
+  const auto table_constraint_2 = TableKeyConstraint{{_c->original_column_id}};
+  _mock_node->set_key_constraints({table_constraint_1, table_constraint_2});
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   const auto aggregate = sum_(_c);
@@ -134,8 +134,8 @@ TEST_F(AggregateNodeTest, ConstraintsForwarding) {
 
 TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
   // Prepare Test
-  const auto table_constraint = TableConstraintDefinition{{_a->original_column_id}};
-  _mock_node->set_table_constraints({table_constraint});
+  const auto table_constraint = TableKeyConstraint{{_a->original_column_id}};
+  _mock_node->set_key_constraints({table_constraint});
   EXPECT_EQ(_mock_node->constraints()->size(), 1);
 
   const auto aggregate = sum_(_b);

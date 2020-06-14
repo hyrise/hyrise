@@ -285,10 +285,10 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 TEST_F(StoredTableNodeTest, Constraints) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes});
-  table->add_soft_unique_constraint(TableConstraintDefinition{{ColumnID{2}}, IsPrimaryKey::No});
+  table->add_soft_key_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
+  table->add_soft_key_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
 
-  const auto table_constraints = table->get_soft_unique_constraints();
+  const auto table_constraints = table->soft_key_constraints();
   const auto lqp_constraints = _stored_table_node->constraints();
 
   // Basic check
@@ -311,15 +311,15 @@ TEST_F(StoredTableNodeTest, Constraints) {
 TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  const auto table_constraint_1 = TableConstraintDefinition{{ColumnID{0}}};
-  const auto table_constraint_2 = TableConstraintDefinition{{ColumnID{0}, ColumnID{1}}};
-  const auto table_constraint_3 = TableConstraintDefinition{{ColumnID{2}}};
-  table->add_soft_unique_constraint(table_constraint_1);
-  table->add_soft_unique_constraint(table_constraint_2);
-  table->add_soft_unique_constraint(table_constraint_3);
+  const auto table_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto table_constraint_2 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto table_constraint_3 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(table_constraint_1);
+  table->add_soft_key_constraint(table_constraint_2);
+  table->add_soft_key_constraint(table_constraint_3);
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  const auto& table_constraints = table->get_soft_unique_constraints();
+  const auto& table_constraints = table->soft_key_constraints();
   EXPECT_EQ(table_constraints.size(), 3);
 
   // After column pruning, only the third table constraint should remain valid (the one based on ColumnID 2)
@@ -329,12 +329,12 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
 
   // In-depth check
   const auto& valid_table_constraint = table_constraint_3;
-  check_table_constraint_representation(TableConstraintDefinitions{valid_table_constraint}, lqp_constraints);
+  check_table_constraint_representation(TableKeyConstraints{valid_table_constraint}, lqp_constraints);
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(
-      Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->get_soft_unique_constraints().empty());
+      Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
   EXPECT_TRUE(_stored_table_node->constraints()->empty());
 }
 

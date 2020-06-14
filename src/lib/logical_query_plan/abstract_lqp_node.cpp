@@ -243,7 +243,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 
 std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_column_expression(
     const ColumnID column_id) const {
-  for (auto expr : this->column_expressions()) {
+  for (auto expr : this->output_expressions()) {
     const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
     if (column_expr && column_expr->original_column_id == column_id) {
       return column_expr;
@@ -266,7 +266,7 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::constraints() const
 const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_constraints() const {
   Assert(left_input(), "Not possible to forward constraints from empty node.");
   const auto input_constraints = left_input()->constraints();
-  const auto& expressions = column_expressions();
+  const auto& expressions = output_expressions();
   if constexpr (HYRISE_DEBUG) {
     ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
     for (const auto& constraint : *input_constraints) {

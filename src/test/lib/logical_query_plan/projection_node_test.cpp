@@ -2,6 +2,7 @@
 
 #include "base_test.hpp"
 
+#include "constraints/table_key_constraint.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -28,13 +29,13 @@ class ProjectionNodeTest : public BaseTest {
     // Constraints for later use
     // Primary Key: a, b
     _table_constraint_1 =
-        TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+        TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
     // Unique: b
-    _table_constraint_2 = TableConstraintDefinition{std::unordered_set<ColumnID>{ColumnID{1}}, IsPrimaryKey::No};
+    _table_constraint_2 = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }
 
-  TableConstraintDefinition _table_constraint_1;
-  TableConstraintDefinition _table_constraint_2;
+  std::optional<TableKeyConstraint> _table_constraint_1;
+  std::optional<TableKeyConstraint> _table_constraint_2;
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
@@ -76,8 +77,8 @@ TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
 
 TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
   // Add constraints to MockNode
-  const auto table_constraints = TableConstraintDefinitions{_table_constraint_1, _table_constraint_2};
-  _mock_node->set_table_constraints(table_constraints);
+  const auto table_constraints = TableKeyConstraints{*_table_constraint_1, *_table_constraint_2};
+  _mock_node->set_key_constraints(table_constraints);
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   {  // Reorder columns: (a, b, c) -> (c, a, b)
@@ -103,8 +104,8 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
 
 TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
   // Add constraints to MockNode
-  const auto table_constraints = TableConstraintDefinitions{_table_constraint_1, _table_constraint_2};
-  _mock_node->set_table_constraints(table_constraints);
+  const auto table_constraints = TableKeyConstraints{*_table_constraint_1, *_table_constraint_2};
+  _mock_node->set_key_constraints(table_constraints);
   EXPECT_EQ(_mock_node->constraints()->size(), 2);
 
   // Test (a, b, c) -> (a, c) - no more constraints valid
@@ -132,8 +133,8 @@ TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
     const auto lqp_constraints = _projection_node->constraints();
     EXPECT_EQ(lqp_constraints->size(), 1);
     // In-depth check
-    const auto& valid_table_constraint = _table_constraint_2;
-    check_table_constraint_representation(TableConstraintDefinitions{valid_table_constraint}, lqp_constraints);
+    const auto& valid_table_constraint = *_table_constraint_2;
+    check_table_constraint_representation(TableKeyConstraints{valid_table_constraint}, lqp_constraints);
   }
 }
 
