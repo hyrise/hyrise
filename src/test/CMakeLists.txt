@@ -21,6 +21,7 @@ set(
     lib/concurrency/commit_context_test.cpp
     lib/concurrency/transaction_context_test.cpp
     lib/concurrency/transaction_manager_test.cpp
+    lib/constraints/table_key_constraint_test.cpp
     lib/cost_estimation/abstract_cost_estimator_test.cpp
     lib/expression/evaluation/expression_result_test.cpp
     lib/expression/evaluation/like_matcher_test.cpp
@@ -168,7 +169,6 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
-    lib/storage/table_key_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
