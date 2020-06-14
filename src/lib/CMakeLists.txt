@@ -19,7 +19,11 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    constraints/abstract_table_constraint.cpp
+    constraints/abstract_table_constraint.hpp
     constraints/lqp_unique_constraint.hpp
+    constraints/table_key_constraint.cpp
+    constraints/table_key_constraint.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
@@ -423,10 +427,6 @@ set(
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/constraints/abstract_table_constraint.cpp
-    storage/constraints/abstract_table_constraint.hpp
-    storage/constraints/table_key_constraint.cpp
-    storage/constraints/table_key_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp

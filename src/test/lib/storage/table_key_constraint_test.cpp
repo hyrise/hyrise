@@ -2,8 +2,8 @@
 
 #include "base_test.hpp"
 
+#include "constraints/table_key_constraint.hpp"
 #include "hyrise.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

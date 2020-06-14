@@ -9,7 +9,7 @@
 #include "abstract_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
+#include "constraints/table_key_constraint.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"

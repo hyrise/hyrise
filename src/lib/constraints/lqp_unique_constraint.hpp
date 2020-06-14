@@ -3,7 +3,6 @@
 #include <functional>
 #include <vector>
 #include "expression/abstract_expression.hpp"
-#include "storage/constraints/table_constraint_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
