@@ -92,11 +92,11 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::constraints() const {
   // TODO(anyone) We also have a functional dependency here. Use it? (group_by_columns) => (aggregate_columns)
 
   // (2) Check incoming constraints for validity and forward if applicable
-  // We call column_expressions() to avoid the (intermediate) ANY() aggregates
+  // We call output_expressions() to avoid the (intermediate) ANY() aggregates
   // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
-  const auto column_expressions_vec = column_expressions();
-  const auto column_expressions_set =
-      ExpressionUnorderedSet{column_expressions_vec.cbegin(), column_expressions_vec.cend()};
+  const auto output_expressions_vec = output_expressions();
+  const auto output_expressions_set =
+      ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
   // Check each constraint for applicability
   auto input_lqp_constraints = left_input()->constraints();
@@ -110,8 +110,8 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::constraints() const {
     // Check, whether involved column expressions are part of the AggregateNode's output expressions
     bool found_all_column_expressions =
         std::all_of(input_constraint.column_expressions.cbegin(), input_constraint.column_expressions.cend(),
-                    [&column_expressions_set](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-                      return column_expressions_set.contains(constraint_column_expr);
+                    [&output_expressions_set](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
+                      return output_expressions_set.contains(constraint_column_expr);
                     });
 
     if (found_all_column_expressions) {

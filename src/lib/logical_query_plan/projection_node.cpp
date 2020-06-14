@@ -36,7 +36,7 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::constraints() const 
   auto input_lqp_constraints = left_input()->constraints();
 
   // Check each input constraint for applicability in this projection node
-  const auto& expressions = column_expressions();
+  const auto& expressions = output_expressions();
   const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for (const auto& constraint : *input_lqp_constraints) {

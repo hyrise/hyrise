@@ -294,7 +294,7 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
   for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     // clang-format off
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
-                                          _mock_node_a,*
+                                          _mock_node_a,
                                           _mock_node_b);
     // clang-format on
 
