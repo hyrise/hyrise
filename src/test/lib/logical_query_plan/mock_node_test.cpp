@@ -102,7 +102,7 @@ TEST_F(MockNodeTest, Constraints) {
     for (const auto& expr : lqp_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
       EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
-      EXPECT_TRUE( column_expr->original_node.lock()== _mock_node_a);
+      EXPECT_TRUE(column_expr->original_node.lock() == _mock_node_a);
     }
   }
 }

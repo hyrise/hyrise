@@ -162,14 +162,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-   [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> constraints() const;
+  [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> constraints() const;
 
   /**
    * TODO(Julian)
    * @return
    */
   [[nodiscard]] bool has_unique_constraint(ExpressionUnorderedSet column_expressions) const;
-
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.

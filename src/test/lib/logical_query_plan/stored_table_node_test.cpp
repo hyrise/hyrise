@@ -303,7 +303,7 @@ TEST_F(StoredTableNodeTest, Constraints) {
     for (const auto& expr : lqp_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
       EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
-      EXPECT_TRUE( column_expr->original_node.lock()== _stored_table_node);
+      EXPECT_TRUE(column_expr->original_node.lock() == _stored_table_node);
     }
   }
 }
@@ -333,8 +333,7 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
-  EXPECT_TRUE(
-      Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
+  EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
   EXPECT_TRUE(_stored_table_node->constraints()->empty());
 }
 

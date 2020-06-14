@@ -28,8 +28,7 @@ class ProjectionNodeTest : public BaseTest {
 
     // Constraints for later use
     // Primary Key: a, b
-    _table_constraint_1 =
-        TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+    _table_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
     // Unique: b
     _table_constraint_2 = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   }

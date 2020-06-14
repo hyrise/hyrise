@@ -1,17 +1,16 @@
 #pragma once
 
 #include "../base_test.hpp"
-#include "gtest/gtest.h"
 #include "constraints/table_key_constraint.hpp"
+#include "gtest/gtest.h"
 
 namespace opossum {
 
 /**
  * Checks whether all given TableKeyConstraint objects are represented in ExpressionsConstraintDefinitions.
  */
-static void check_table_constraint_representation(
-    const TableKeyConstraints& table_key_constraints,
-    const std::shared_ptr<LQPUniqueConstraints> lqp_constraints) {
+static void check_table_constraint_representation(const TableKeyConstraints& table_key_constraints,
+                                                  const std::shared_ptr<LQPUniqueConstraints> lqp_constraints) {
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto matching_lqp_constraint = std::find_if(
         lqp_constraints->cbegin(), lqp_constraints->cend(), [&](const LQPUniqueConstraint& lqp_constraint) {
