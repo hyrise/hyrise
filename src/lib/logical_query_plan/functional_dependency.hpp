@@ -31,6 +31,7 @@ struct FunctionalDependency {
   FunctionalDependency(ExpressionUnorderedSet init_determinants, ExpressionUnorderedSet init_dependents);
 
   bool operator==(const FunctionalDependency& other) const;
+  bool operator!=(const FunctionalDependency& other) const;
 
   ExpressionUnorderedSet determinants;
   ExpressionUnorderedSet dependents;
