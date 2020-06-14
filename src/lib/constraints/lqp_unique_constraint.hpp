@@ -7,18 +7,12 @@
 
 namespace opossum {
 
-// Defines a unique constraint on a set of abstract expressions.
+// Container to define a unique constraint on a set of abstract expressions.
 struct LQPUniqueConstraint final {
-  explicit LQPUniqueConstraint(ExpressionUnorderedSet init_column_expressions)
-      : column_expressions(std::move(init_column_expressions)) {}
+  explicit LQPUniqueConstraint(ExpressionUnorderedSet init_column_expressions);
 
-  bool operator==(const LQPUniqueConstraint& rhs) const {
-    if (column_expressions.size() != rhs.column_expressions.size()) return false;
-    return std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&rhs](const auto column_expression) {
-      return rhs.column_expressions.contains(column_expression);
-    });
-  }
-  bool operator!=(const LQPUniqueConstraint& rhs) const { return !(rhs == *this); }
+  bool operator==(const LQPUniqueConstraint& rhs) const;
+  bool operator!=(const LQPUniqueConstraint& rhs) const;
 
   ExpressionUnorderedSet column_expressions;
 };
@@ -29,6 +23,7 @@ using LQPUniqueConstraints = std::unordered_set<LQPUniqueConstraint>;
 
 namespace std {
 
+// TODO(Julian) Doc: why do we need this?
 template <>
 struct hash<opossum::LQPUniqueConstraint> {
   size_t operator()(const opossum::LQPUniqueConstraint& constraint) const {
