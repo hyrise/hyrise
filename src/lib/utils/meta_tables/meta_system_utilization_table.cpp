@@ -267,7 +267,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     // Check that jemalloc was built with statistics support
 
     bool stats_enabled;
-    size_t stats_enabled_size{1};
+    size_t stats_enabled_size{sizeof(stats_enabled)};
 
     auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
     Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled");
@@ -280,7 +280,8 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     static uint64_t epoch = 1;
     epoch++;
     auto epoch_size = sizeof(epoch);
-    mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    Assert(!error_code, "Setting epoch failed");
   }
 
   size_t allocated;
