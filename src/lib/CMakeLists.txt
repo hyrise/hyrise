@@ -712,6 +712,10 @@ if(NOT "${ENABLE_THREAD_SANITIZATION}")
     # -rdynamic tells the linker to export the library's symbols so that plugins can use them. Do not use it for
     # thread sanitization as tsan on Mac works better with its own allocator.
     target_link_libraries(hyrise_impl INTERFACE custom_jemalloc -rdynamic)
+    target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
+
+    # Still, add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions
+    target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR}/third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
