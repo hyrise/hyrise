@@ -410,7 +410,6 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     system_utilization.emplace_back(std::move(entry));
   }
-  // TODO check how much longer this takes, make it dependent on --metrics?
 
   // Gather information on the table size
   auto table_size = size_t{0};
