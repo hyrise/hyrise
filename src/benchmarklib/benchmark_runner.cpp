@@ -86,7 +86,6 @@ void BenchmarkRunner::run() {
 
       auto sql_builder = std::stringstream{};
       sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT 999999999999 - 999999999999 + " << timestamp << ", * FROM meta_system_utilization";
-      // TODO check performance implications
 
       SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 
