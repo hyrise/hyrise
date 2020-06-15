@@ -280,7 +280,8 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     static uint64_t epoch = 1;
     epoch++;
     auto epoch_size = sizeof(epoch);
-    mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    Assert(!error_code, "Setting epoch failed");
   }
 
   size_t allocated;
