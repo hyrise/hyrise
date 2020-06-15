@@ -76,6 +76,26 @@ void BenchmarkRunner::run() {
 
   _benchmark_start = std::chrono::steady_clock::now();
 
+  // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet supported
+  SQLPipelineBuilder{"CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM meta_system_utilization"}.create_pipeline().get_result_table();
+
+  auto track_system_utilization = std::atomic_bool{true};
+  auto system_utilization_tracker = std::thread{[&] {
+    while (track_system_utilization) {
+      const auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - _benchmark_start).count();
+
+      auto sql_builder = std::stringstream{};
+      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT 999999999999 - 999999999999 + " << timestamp << ", * FROM meta_system_utilization";
+      // TODO check performance implications
+
+      SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(SYSTEM_UTILIZATION_TRACKING_INTERVAL));
+    }
+  }};
+
+  // Retrieve the items to be executed and prepare the result vector
+
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
     _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
@@ -135,6 +155,10 @@ void BenchmarkRunner::run() {
     Hyrise::get().scheduler()->finish();
     Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
   }
+
+  // Stop the thread that tracks the system utilization
+  track_system_utilization = false;
+  system_utilization_tracker.join();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -369,6 +393,27 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     benchmarks.push_back(benchmark);
   }
 
+  // Convert benchmark_system_utilization_log into JSON
+  auto system_utilization = nlohmann::json::array();
+  const auto system_utilization_log = Hyrise::get().storage_manager.get_table("benchmark_system_utilization_log");
+  for (auto row_nr = uint64_t{0}; row_nr < system_utilization_log->row_count(); ++row_nr) {
+    auto row = system_utilization_log->get_row(row_nr);
+    auto entry = nlohmann::json{};
+
+    for (auto column_id = ColumnID{0}; column_id < system_utilization_log->column_count(); ++column_id) {
+      boost::apply_visitor([&](const auto value) {
+        if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
+          entry[system_utilization_log->column_name(column_id)] = value;
+        } else {
+          entry[system_utilization_log->column_name(column_id)] = nullptr;
+        }
+      }, row[column_id]);
+    }
+
+    system_utilization.emplace_back(std::move(entry));
+  }
+  // TODO check how much longer this takes, make it dependent on --metrics?
+
   // Gather information on the table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
@@ -381,6 +426,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},
+                        {"system_utilization", system_utilization},
                         {"summary", summary},
                         {"table_generation", _table_generator->metrics}};
 
