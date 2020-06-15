@@ -85,4 +85,14 @@ for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provide
     fi
 done
 
+# Check for Windows-style line endings
+output=$(find src -type f -exec dos2unix -ic {} +)
+if [[ ${output} ]]; then
+	for file in ${output}
+	do
+		echo "Windows-style file ending: $file"
+	done
+	exitcode=1
+fi
+
 exit $exitcode
