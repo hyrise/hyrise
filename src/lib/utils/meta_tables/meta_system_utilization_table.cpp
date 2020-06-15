@@ -43,7 +43,8 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   const auto system_memory_usage = _get_system_memory_usage();
   const auto process_memory_usage = _get_process_memory_usage();
   const auto allocated_memory = _get_allocated_memory();
-  const auto allocated_memory_variant = allocated_memory ? AllTypeVariant{static_cast<int64_t>(*allocated_memory)} : AllTypeVariant{NULL_VALUE};
+  const auto allocated_memory_variant =
+      allocated_memory ? AllTypeVariant{static_cast<int64_t>(*allocated_memory)} : AllTypeVariant{NULL_VALUE};
   const auto cpu_affinity_count = Hyrise::get().topology.num_cpus();
 
   output_table->append({static_cast<int64_t>(system_cpu_ticks), static_cast<int64_t>(process_cpu_ticks),
@@ -51,8 +52,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
                         load_avg.load_15_min, static_cast<int64_t>(system_memory_usage.free_memory),
                         static_cast<int64_t>(system_memory_usage.available_memory),
                         static_cast<int64_t>(process_memory_usage.virtual_memory),
-                        static_cast<int64_t>(process_memory_usage.physical_memory),
-                        allocated_memory_variant,
+                        static_cast<int64_t>(process_memory_usage.physical_memory), allocated_memory_variant,
                         static_cast<int32_t>(cpu_affinity_count)});
 
   return output_table;
