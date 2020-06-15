@@ -7,7 +7,9 @@
 
 namespace opossum {
 
-// Container to define a unique constraint on a set of abstract expressions.
+/**
+ * Container that allows the definition of LQP unique constraints based on a set of column expressions.
+ */
 struct LQPUniqueConstraint final {
   explicit LQPUniqueConstraint(ExpressionUnorderedSet init_column_expressions);
 
