@@ -8,7 +8,7 @@
 | clang-format              | >= 9.0           |    All   |                      Yes (formatting) |
 | clang-tidy                | >= 9.0           |    All   |                         Yes (linting) |
 | cmake                     | >= 3.9           |    All   |                                    No |
-| dos2uniz                  | any              |    All   |                         Yes (linting) |
+| dos2unix                  | any              |    All   |                         Yes (linting) |
 | gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
