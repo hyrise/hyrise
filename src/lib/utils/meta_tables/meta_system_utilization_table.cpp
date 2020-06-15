@@ -267,7 +267,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     // Check that jemalloc was built with statistics support
 
     bool stats_enabled;
-    size_t stats_enabled_size{1};
+    size_t stats_enabled_size{sizeof(stats_enabled)};
 
     auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
     Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled");
