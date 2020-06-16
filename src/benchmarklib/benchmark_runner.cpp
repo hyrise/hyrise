@@ -74,18 +74,25 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
-  _benchmark_start = std::chrono::steady_clock::now();
+  _benchmark_start = std::chrono::system_clock::now();
 
   // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet supported
-  SQLPipelineBuilder{"CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM meta_system_utilization"}.create_pipeline().get_result_table();
+  SQLPipelineBuilder{
+      "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
+      "meta_system_utilization"}
+      .create_pipeline()
+      .get_result_table();
 
   auto track_system_utilization = std::atomic_bool{true};
   auto system_utilization_tracker = std::thread{[&] {
     while (track_system_utilization) {
-      const auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - _benchmark_start).count();
+      const auto timestamp =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
+              .count();
 
       auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT 999999999999 - 999999999999 + " << timestamp << ", * FROM meta_system_utilization";
+      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT 999999999999 - 999999999999 + " << timestamp
+                  << ", * FROM meta_system_utilization";
 
       SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 
@@ -110,7 +117,7 @@ void BenchmarkRunner::run() {
     }
   }
 
-  auto benchmark_end = std::chrono::steady_clock::now();
+  auto benchmark_end = std::chrono::system_clock::now();
   _total_run_duration = benchmark_end - _benchmark_start;
 
   // Create report
@@ -268,9 +275,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
-        const auto run_start = std::chrono::steady_clock::now();
+        const auto run_start = std::chrono::system_clock::now();
         auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
-        const auto run_end = std::chrono::steady_clock::now();
+        const auto run_end = std::chrono::system_clock::now();
 
         --_currently_running_clients;
         ++_total_finished_runs;
@@ -391,26 +398,6 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     benchmarks.push_back(benchmark);
   }
 
-  // Convert benchmark_system_utilization_log into JSON
-  auto system_utilization = nlohmann::json::array();
-  const auto system_utilization_log = Hyrise::get().storage_manager.get_table("benchmark_system_utilization_log");
-  for (auto row_nr = uint64_t{0}; row_nr < system_utilization_log->row_count(); ++row_nr) {
-    auto row = system_utilization_log->get_row(row_nr);
-    auto entry = nlohmann::json{};
-
-    for (auto column_id = ColumnID{0}; column_id < system_utilization_log->column_count(); ++column_id) {
-      boost::apply_visitor([&](const auto value) {
-        if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
-          entry[system_utilization_log->column_name(column_id)] = value;
-        } else {
-          entry[system_utilization_log->column_name(column_id)] = nullptr;
-        }
-      }, row[column_id]);
-    }
-
-    system_utilization.emplace_back(std::move(entry));
-  }
-
   // Gather information on the table size
   auto table_size = size_t{0};
   for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
@@ -421,10 +408,19 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       {"table_size_in_bytes", table_size},
       {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
+  const auto benchmark_start_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(_benchmark_start.time_since_epoch()).count();
+  std::cout << std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
+                   " AS \"timestamp\", log_level, reporter, message FROM meta_log"
+            << std::endl;
+  auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
+                               " AS \"timestamp\", log_level, reporter, message FROM meta_log");
+
   nlohmann::json report{{"context", _context},
-                        {"benchmarks", benchmarks},
-                        {"system_utilization", system_utilization},
-                        {"summary", summary},
+                        {"benchmarks", std::move(benchmarks)},
+                        {"system_utilization", _sql_to_json("SELECT * FROM benchmark_system_utilization_log")},
+                        {"log", std::move(log_json)},
+                        {"summary", std::move(summary)},
                         {"table_generation", _table_generator->metrics}};
 
   stream << std::setw(2) << report << std::endl;
@@ -508,6 +504,34 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"verify", config.verify},
       {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+}
+
+nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
+  auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  const auto& [pipeline_status, table] = pipeline.get_result_table();
+  Assert(pipeline_status == SQLPipelineStatus::Success, "_sql_to_json failed");
+
+  auto output = nlohmann::json::array();
+  for (auto row_nr = uint64_t{0}; row_nr < table->row_count(); ++row_nr) {
+    auto row = table->get_row(row_nr);
+    auto entry = nlohmann::json{};
+
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      boost::apply_visitor(
+          [&](const auto value) {
+            if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
+              entry[table->column_name(column_id)] = value;
+            } else {
+              entry[table->column_name(column_id)] = nullptr;
+            }
+          },
+          row[column_id]);
+    }
+
+    output.emplace_back(std::move(entry));
+  }
+
+  return output;
 }
 
 }  // namespace opossum

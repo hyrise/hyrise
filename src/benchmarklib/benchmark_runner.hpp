@@ -68,6 +68,9 @@ class BenchmarkRunner : Noncopyable {
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
+  // Converts the result of a SQL query into a JSON object
+  static nlohmann::json _sql_to_json(const std::string& sql);
+
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
@@ -82,7 +85,7 @@ class BenchmarkRunner : Noncopyable {
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
-  std::chrono::steady_clock::time_point _benchmark_start;
+  std::chrono::system_clock::time_point _benchmark_start;
   Duration _total_run_duration{};
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
