@@ -215,7 +215,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
-  const std::shared_ptr<LQPUniqueConstraints> forward_constraints() const;
+  const std::shared_ptr<LQPUniqueConstraints> forward_unique_constraints() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

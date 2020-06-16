@@ -263,7 +263,7 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints(
   return std::make_shared<LQPUniqueConstraints>();
 }
 
-const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_unique_constraints() const {
   Assert(left_input(), "Not possible to forward constraints from empty node.");
   const auto input_unique_constraints = left_input()->unique_constraints();
   const auto& expressions = output_expressions();
