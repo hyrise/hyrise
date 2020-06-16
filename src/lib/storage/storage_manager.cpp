@@ -182,8 +182,7 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
   _prepared_plans[name] = nullptr;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::prepared_plans()
-    const {
+const std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::prepared_plans() const {
   std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> result;
 
   for (const auto& [prepared_plan_name, prepared_plan] : _prepared_plans) {
