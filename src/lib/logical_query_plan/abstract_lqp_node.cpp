@@ -259,13 +259,13 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints() const {
   return std::make_shared<LQPUniqueConstraints>();
 }
 
 const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_constraints() const {
   Assert(left_input(), "Not possible to forward constraints from empty node.");
-  const auto input_constraints = left_input()->constraints();
+  const auto input_constraints = left_input()->unique_constraints();
   const auto& expressions = output_expressions();
   if constexpr (HYRISE_DEBUG) {
     ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
@@ -279,7 +279,7 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_constraints
 }
 
 bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
-  const auto lqp_constraints = constraints();
+  const auto lqp_constraints = unique_constraints();
   if (lqp_constraints->empty()) return false;
 
   // Look for a constraint that is solely based on the given column expressions

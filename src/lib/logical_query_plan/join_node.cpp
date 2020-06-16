@@ -71,7 +71,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   return output_expressions;
 }
 
-const std::shared_ptr<LQPUniqueConstraints> JoinNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
   // Semi- and Anti-Joins act as mere filters for input_left().
   // Therefore, existing constraints are forwarded as they remain valid.
   if (join_mode == JoinMode::Semi | join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
@@ -96,8 +96,8 @@ const std::shared_ptr<LQPUniqueConstraints> JoinNode::constraints() const {
     bool right_operand_unique = right_input()->has_unique_constraint({join_predicate->right_operand()});
     if (left_operand_unique && right_operand_unique) {
       // Due to the one-to-one relationship, the constraints of both sides remain valid.
-      auto left_constraints = left_input()->constraints();
-      auto right_constraints = right_input()->constraints();
+      auto left_constraints = left_input()->unique_constraints();
+      auto right_constraints = right_input()->unique_constraints();
 
       for (auto it = left_constraints->begin(); it != left_constraints->end();) {
         output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
@@ -109,11 +109,11 @@ const std::shared_ptr<LQPUniqueConstraints> JoinNode::constraints() const {
 
     } else if (left_operand_unique) {
       // Uniqueness on the left prevents duplication of records on the right
-      return right_input()->constraints();
+      return right_input()->unique_constraints();
 
     } else if (right_operand_unique) {
       // Uniqueness on the right prevents duplication of records on the left
-      return left_input()->constraints();
+      return left_input()->unique_constraints();
 
     } else {
       // No constraints to return.

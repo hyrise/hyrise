@@ -162,7 +162,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> constraints() const;
+  [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> unique_constraints() const;
 
   /**
    * TODO(Julian)

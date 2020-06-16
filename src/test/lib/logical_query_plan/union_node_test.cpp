@@ -106,17 +106,17 @@ TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
   // Unique: c
   const auto table_constraint_2 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints(TableKeyConstraints{table_constraint_1, table_constraint_2});
-  EXPECT_EQ(_mock_node1->constraints()->size(), 2);
+  EXPECT_EQ(_mock_node1->unique_constraints()->size(), 2);
 
   // Test constraint forwarding
   EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
-  EXPECT_EQ(*_union_node->constraints(), *_mock_node1->constraints());
+  EXPECT_EQ(*_union_node->unique_constraints(), *_mock_node1->unique_constraints());
 
   // Negative test - input nodes with differing constraints should lead to failure
   auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
   mock_node1_changed->set_key_constraints(TableKeyConstraints{table_constraint_1});
   _union_node->set_right_input(mock_node1_changed);
-  EXPECT_THROW(_union_node->constraints(), std::logic_error);
+  EXPECT_THROW(_union_node->unique_constraints(), std::logic_error);
 
   // TODO(Julian) Check whether something got lost while merging
 }

@@ -45,13 +45,13 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-const std::shared_ptr<LQPUniqueConstraints> UnionNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() const {
   switch (set_operation_mode) {
     case SetOperationMode::Unique:
     case SetOperationMode::Positions:
       // UnionPositions merges two reference tables with the same original table(s). Any duplicate RowIDs are
       // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
-      Assert(*left_input()->constraints() == *right_input()->constraints(),
+      Assert(*left_input()->unique_constraints() == *right_input()->unique_constraints(),
              "Input tables should have the same constraints.");
       return forward_constraints();
 

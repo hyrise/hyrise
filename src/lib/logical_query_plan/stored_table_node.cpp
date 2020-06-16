@@ -93,7 +93,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::constraints() const {
+const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
   auto lqp_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // Extract relevant key constraints from table

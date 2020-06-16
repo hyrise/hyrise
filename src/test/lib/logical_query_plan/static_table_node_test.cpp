@@ -50,7 +50,7 @@ TEST_F(StaticTableNodeTest, Copy) { EXPECT_EQ(*static_table_node, *static_table_
 
 TEST_F(StaticTableNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());
-  EXPECT_TRUE(static_table_node->constraints()->empty());
+  EXPECT_TRUE(static_table_node->unique_constraints()->empty());
 }
 
 TEST_F(StaticTableNodeTest, Constraints) {
@@ -61,7 +61,7 @@ TEST_F(StaticTableNodeTest, Constraints) {
   dummy_table->add_soft_key_constraint(constraint2);
   // Verify
   check_table_constraint_representation(TableKeyConstraints{constraint1, constraint2},
-                                        static_table_node->constraints());
+                                        static_table_node->unique_constraints());
 }
 
 }  // namespace opossum

@@ -90,9 +90,9 @@ TEST_F(MockNodeTest, Constraints) {
   _mock_node_a->set_key_constraints(table_constraints);
 
   // Basic checks
-  const auto lqp_constraints_mock_node_a = _mock_node_a->constraints();
+  const auto lqp_constraints_mock_node_a = _mock_node_a->unique_constraints();
   EXPECT_EQ(lqp_constraints_mock_node_a->size(), 2);
-  EXPECT_TRUE(_mock_node_b->constraints()->empty());
+  EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 
   // In-depth verification
   check_table_constraint_representation(table_constraints, lqp_constraints_mock_node_a);

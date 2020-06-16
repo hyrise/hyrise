@@ -289,7 +289,7 @@ TEST_F(StoredTableNodeTest, Constraints) {
   table->add_soft_key_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
 
   const auto table_constraints = table->soft_key_constraints();
-  const auto lqp_constraints = _stored_table_node->constraints();
+  const auto lqp_constraints = _stored_table_node->unique_constraints();
 
   // Basic check
   EXPECT_EQ(table_constraints.size(), 2);
@@ -324,7 +324,7 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
 
   // After column pruning, only the third table constraint should remain valid (the one based on ColumnID 2)
   // Basic check
-  const auto lqp_constraints = _stored_table_node->constraints();
+  const auto lqp_constraints = _stored_table_node->unique_constraints();
   EXPECT_EQ(lqp_constraints->size(), 1);
 
   // In-depth check
@@ -334,7 +334,7 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
   EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
-  EXPECT_TRUE(_stored_table_node->constraints()->empty());
+  EXPECT_TRUE(_stored_table_node->unique_constraints()->empty());
 }
 
 }  // namespace opossum

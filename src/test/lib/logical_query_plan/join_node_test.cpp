@@ -284,7 +284,7 @@ TEST_F(JoinNodeTest, ConstraintsSemiAndAntiJoins) {
                                           _mock_node_b);
     // clang-format on
 
-    EXPECT_TRUE(*join_node->constraints() == *_mock_node_a->constraints());
+    EXPECT_TRUE(*join_node->unique_constraints() == *_mock_node_a->unique_constraints());
   }
 }
 
@@ -302,32 +302,32 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
     // Case 1 - Join columns of both, LEFT and RIGHT tables are not unique
     _mock_node_a->set_key_constraints({});
     _mock_node_b->set_key_constraints({});
-    EXPECT_TRUE(join_node->constraints()->empty());
+    EXPECT_TRUE(join_node->unique_constraints()->empty());
 
     // Case 2 - Join column of LEFT table (a) is unique whereas join column of RIGHT table (y) is not
     _mock_node_a->set_key_constraints({*_unique_constraint_a, *_unique_constraint_b_c});
     _mock_node_b->set_key_constraints({*_unique_constraint_x});
 
     // Expect unique constraints of RIGHT table (x) to be forwarded
-    auto join_constraints = join_node->constraints();
+    auto join_constraints = join_node->unique_constraints();
     EXPECT_EQ(join_constraints->size(), 1);
-    EXPECT_TRUE(*join_constraints == *_mock_node_b->constraints());
+    EXPECT_TRUE(*join_constraints == *_mock_node_b->unique_constraints());
 
     // Case 3 - Join column of LEFT table (a) is not(!) unique whereas join column of RIGHT table (y) is
     _mock_node_a->set_key_constraints({*_unique_constraint_b_c});
     _mock_node_b->set_key_constraints({*_unique_constraint_x, *_unique_constraint_y});
 
     // Expect unique constraints of LEFT table (b_c) to be forwarded
-    join_constraints = join_node->constraints();
+    join_constraints = join_node->unique_constraints();
     EXPECT_EQ(join_constraints->size(), 1);
-    EXPECT_TRUE(*join_constraints == *_mock_node_a->constraints());
+    EXPECT_TRUE(*join_constraints == *_mock_node_a->unique_constraints());
 
     // Case 4 - Join column of both, LEFT (a) and RIGHT (y) table are unique
     _mock_node_a->set_key_constraints({*_unique_constraint_a, *_unique_constraint_b_c});
     _mock_node_b->set_key_constraints({*_unique_constraint_x, *_unique_constraint_y});
 
     // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
-    join_constraints = join_node->constraints();
+    join_constraints = join_node->unique_constraints();
     EXPECT_EQ(join_constraints->size(), 4);
     check_table_constraint_representation(
         {*_unique_constraint_a, *_unique_constraint_b_c, *_unique_constraint_x, *_unique_constraint_y},
@@ -345,7 +345,7 @@ TEST_F(JoinNodeTest, ConstraintsNonEquiJoin) {
                                               _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(theta_join_node->constraints()->empty());
+  EXPECT_TRUE(theta_join_node->unique_constraints()->empty());
 }
 
 TEST_F(JoinNodeTest, ConstraintsNonSemiNonAntiMultiPredicateJoin) {
@@ -359,14 +359,14 @@ TEST_F(JoinNodeTest, ConstraintsNonSemiNonAntiMultiPredicateJoin) {
                                         _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(join_node->constraints()->empty());
+  EXPECT_TRUE(join_node->unique_constraints()->empty());
 }
 
 TEST_F(JoinNodeTest, ConstraintsCrossJoin) {
   _mock_node_a->set_key_constraints({*_unique_constraint_a, *_unique_constraint_b_c});
   _mock_node_b->set_key_constraints({*_unique_constraint_x, *_unique_constraint_y});
 
-  EXPECT_TRUE(_cross_join_node->constraints()->empty());
+  EXPECT_TRUE(_cross_join_node->unique_constraints()->empty());
 }
 
 }  // namespace opossum
