@@ -78,7 +78,7 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<Table>> StorageManager::tables() const {
+std::unordered_map<std::string, std::shared_ptr<Table>> StorageManager::tables() const {
   std::unordered_map<std::string, std::shared_ptr<Table>> result;
 
   for (const auto& [table_name, table] : _tables) {
@@ -138,7 +138,7 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<LQPView>> StorageManager::views() const {
+std::unordered_map<std::string, std::shared_ptr<LQPView>> StorageManager::views() const {
   std::unordered_map<std::string, std::shared_ptr<LQPView>> result;
 
   for (const auto& [view_name, view] : _views) {
@@ -182,7 +182,7 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
   _prepared_plans[name] = nullptr;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::prepared_plans() const {
+std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::prepared_plans() const {
   std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> result;
 
   for (const auto& [prepared_plan_name, prepared_plan] : _prepared_plans) {
