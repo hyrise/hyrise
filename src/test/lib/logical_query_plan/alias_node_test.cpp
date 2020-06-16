@@ -86,10 +86,10 @@ TEST_F(AliasNodeTest, ConstraintsForwarding) {
   mock_node->set_key_constraints(table_constraints);
 
   // Basic check
-  const auto lqp_constraints = alias_node->unique_constraints();
-  EXPECT_EQ(lqp_constraints->size(), 2);
+  const auto unique_constraints = alias_node->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
-  check_table_constraint_representation(table_constraints, lqp_constraints);
+  check_table_constraint_representation(table_constraints, unique_constraints);
 }
 
 }  // namespace opossum

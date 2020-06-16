@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-#include <vector>
 #include "expression/abstract_expression.hpp"
 #include "types.hpp"
 

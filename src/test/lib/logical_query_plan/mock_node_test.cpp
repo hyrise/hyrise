@@ -90,16 +90,16 @@ TEST_F(MockNodeTest, Constraints) {
   _mock_node_a->set_key_constraints(table_constraints);
 
   // Basic checks
-  const auto lqp_constraints_mock_node_a = _mock_node_a->unique_constraints();
-  EXPECT_EQ(lqp_constraints_mock_node_a->size(), 2);
+  const auto unique_constraints_mock_node_a = _mock_node_a->unique_constraints();
+  EXPECT_EQ(unique_constraints_mock_node_a->size(), 2);
   EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 
   // In-depth verification
-  check_table_constraint_representation(table_constraints, lqp_constraints_mock_node_a);
+  check_table_constraint_representation(table_constraints, unique_constraints_mock_node_a);
 
   // Also check whether StoredTableNode is referenced correctly by column expressions
-  for (const auto& lqp_constraint : *lqp_constraints_mock_node_a) {
-    for (const auto& expr : lqp_constraint.column_expressions) {
+  for (const auto& unique_constraint : *unique_constraints_mock_node_a) {
+    for (const auto& expr : unique_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
       EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
       EXPECT_TRUE(column_expr->original_node.lock() == _mock_node_a);

@@ -94,7 +94,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
-  auto lqp_constraints = std::make_shared<LQPUniqueConstraints>();
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // Extract relevant key constraints from table
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
@@ -124,11 +124,11 @@ const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints(
       }
 
       // Create ExpressionsConstraintDefinition
-      lqp_constraints->emplace(constraint_column_expressions);
+      unique_constraints->emplace(constraint_column_expressions);
     }
   }
 
-  return lqp_constraints;
+  return unique_constraints;
 }
 
 std::vector<FunctionalDependency> StoredTableNode::functional_dependencies() const {

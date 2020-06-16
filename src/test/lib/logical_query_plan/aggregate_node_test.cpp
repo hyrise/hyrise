@@ -107,13 +107,13 @@ TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
   // Check, whether AggregateNode adds a new constraint for its group-by column(s)
   EXPECT_EQ(agg_node_a->unique_constraints()->size(), 1);
   EXPECT_EQ(agg_node_b->unique_constraints()->size(), 1);
-  const auto lqp_constraint_a = *agg_node_a->unique_constraints()->cbegin();
-  const auto lqp_constraint_b = *agg_node_b->unique_constraints()->cbegin();
-  EXPECT_EQ(lqp_constraint_a.column_expressions.size(), 1);
-  EXPECT_EQ(lqp_constraint_b.column_expressions.size(), 2);
-  EXPECT_TRUE((lqp_constraint_a.column_expressions.contains(_a)));
-  EXPECT_TRUE((lqp_constraint_b.column_expressions.contains(_a)));
-  EXPECT_TRUE((lqp_constraint_b.column_expressions.contains(_b)));
+  const auto unique_constraint_a = *agg_node_a->unique_constraints()->cbegin();
+  const auto unique_constraint_b = *agg_node_b->unique_constraints()->cbegin();
+  EXPECT_EQ(unique_constraint_a.column_expressions.size(), 1);
+  EXPECT_EQ(unique_constraint_b.column_expressions.size(), 2);
+  EXPECT_TRUE((unique_constraint_a.column_expressions.contains(_a)));
+  EXPECT_TRUE((unique_constraint_b.column_expressions.contains(_a)));
+  EXPECT_TRUE((unique_constraint_b.column_expressions.contains(_b)));
 }
 
 TEST_F(AggregateNodeTest, ConstraintsForwarding) {

@@ -265,28 +265,28 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints(
 
 const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_constraints() const {
   Assert(left_input(), "Not possible to forward constraints from empty node.");
-  const auto input_constraints = left_input()->unique_constraints();
+  const auto input_unique_constraints = left_input()->unique_constraints();
   const auto& expressions = output_expressions();
   if constexpr (HYRISE_DEBUG) {
     ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
-    for (const auto& constraint : *input_constraints) {
-      for (const auto& expr : constraint.column_expressions) {
+    for (const auto& unique_constraint : *input_unique_constraints) {
+      for (const auto& expr : unique_constraint.column_expressions) {
         Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses column expressions.");
       }
     }
   }
-  return input_constraints;
+  return input_unique_constraints;
 }
 
 bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
-  const auto lqp_constraints = unique_constraints();
-  if (lqp_constraints->empty()) return false;
+  const auto unique_constraints = unique_constraints();
+  if (unique_constraints->empty()) return false;
 
-  // Look for a constraint that is solely based on the given column expressions
-  for (const auto& constraint : *lqp_constraints) {
-    if (constraint.column_expressions.size() == column_expressions.size() &&
+  // Look for a unique constraint that is solely based on the given column expressions
+  for (const auto& unique_constraint : *unique_constraints) {
+    if (unique_constraint.column_expressions.size() == column_expressions.size() &&
         std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&](const auto column_expression) {
-          return constraint.column_expressions.contains(column_expression);
+          return unique_constraint.column_expressions.contains(column_expression);
         })) {
       // Found match
       return true;

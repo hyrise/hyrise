@@ -30,25 +30,26 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const {
-  auto projection_lqp_constraints = std::make_shared<LQPUniqueConstraints>();
-  projection_lqp_constraints->reserve(node_expressions.size());
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+  unique_constraints->reserve(node_expressions.size());
 
-  auto input_lqp_constraints = left_input()->unique_constraints();
+  auto input_unique_constraints = left_input()->unique_constraints();
 
   // Check each input constraint for applicability in this projection node
   const auto& expressions = output_expressions();
   const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
-  for (const auto& constraint : *input_lqp_constraints) {
+  for (const auto& input_unique_constraint : *input_unique_constraints) {
     // Check whether column expressions have been filtered out with this node.
     bool found_all_column_expressions =
-        std::all_of(constraint.column_expressions.cbegin(), constraint.column_expressions.cend(),
+        std::all_of(
+        input_unique_constraint.column_expressions.cbegin(), input_unique_constraint.column_expressions.cend(),
                     [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
                       return expressions_set.contains(constraint_column_expr);
                     });
 
     if (found_all_column_expressions) {
-      projection_lqp_constraints->insert(constraint);
+      unique_constraints->insert(input_unique_constraint);
     }  // else { save constraint for the next block - derived constraints }
   }
 
@@ -57,7 +58,7 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
   //  However, in case of derived column expressions we also have to create new, derived constraints.
   // { ... }
 
-  return projection_lqp_constraints;
+  return unique_constraints;
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

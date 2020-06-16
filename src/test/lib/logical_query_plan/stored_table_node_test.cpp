@@ -289,18 +289,18 @@ TEST_F(StoredTableNodeTest, Constraints) {
   table->add_soft_key_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
 
   const auto table_constraints = table->soft_key_constraints();
-  const auto lqp_constraints = _stored_table_node->unique_constraints();
+  const auto unique_constraints = _stored_table_node->unique_constraints();
 
   // Basic check
   EXPECT_EQ(table_constraints.size(), 2);
-  EXPECT_EQ(lqp_constraints->size(), 2);
+  EXPECT_EQ(unique_constraints->size(), 2);
 
   // In-depth - check whether all table constraints are represented in StoredTableNode
-  check_table_constraint_representation(table_constraints, lqp_constraints);
+  check_table_constraint_representation(table_constraints, unique_constraints);
 
   // Also check whether StoredTableNode is referenced correctly by column expressions
-  for (const auto& lqp_constraint : *lqp_constraints) {
-    for (const auto& expr : lqp_constraint.column_expressions) {
+  for (const auto& unique_constraint : *unique_constraints) {
+    for (const auto& expr : unique_constraint.column_expressions) {
       const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
       EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
       EXPECT_TRUE(column_expr->original_node.lock() == _stored_table_node);
@@ -324,12 +324,12 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
 
   // After column pruning, only the third table constraint should remain valid (the one based on ColumnID 2)
   // Basic check
-  const auto lqp_constraints = _stored_table_node->unique_constraints();
-  EXPECT_EQ(lqp_constraints->size(), 1);
+  const auto unique_constraints = _stored_table_node->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 1);
 
   // In-depth check
   const auto& valid_table_constraint = table_constraint_3;
-  check_table_constraint_representation(TableKeyConstraints{valid_table_constraint}, lqp_constraints);
+  check_table_constraint_representation(TableKeyConstraints{valid_table_constraint}, unique_constraints);
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {

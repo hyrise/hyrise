@@ -336,7 +336,7 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
 }
 
 TEST_F(JoinNodeTest, ConstraintsNonEquiJoin) {
-  // Currently, we do not support constraint forwarding for Non-Equi- or Theta-Joins
+  // Currently, we do not support unique constraint forwarding for Non-Equi- or Theta-Joins
   _mock_node_a->set_key_constraints({*_unique_constraint_a, *_unique_constraint_b_c});
   _mock_node_b->set_key_constraints({*_unique_constraint_x, *_unique_constraint_y});
   // clang-format off
@@ -349,7 +349,8 @@ TEST_F(JoinNodeTest, ConstraintsNonEquiJoin) {
 }
 
 TEST_F(JoinNodeTest, ConstraintsNonSemiNonAntiMultiPredicateJoin) {
-  // Except for Semi- and Anti-Joins, we currently do not support constraint forwarding for multi predicate joins.
+  // Except for Semi- and Anti-Joins, we currently do not support unique constraint forwarding for multi predicate
+  // joins.
   _mock_node_a->set_key_constraints({*_unique_constraint_a, *_unique_constraint_b_c});
   _mock_node_b->set_key_constraints({*_unique_constraint_x, *_unique_constraint_y});
   // clang-format off

@@ -78,7 +78,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
 }
 
 const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
-  auto aggregate_lqp_constraints = std::make_shared<LQPUniqueConstraints>();
+  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
   // (1) Create a unique constraint covering the group-by column(s).
   // The set of group-by columns forms a candidate key for the output relation.
@@ -88,7 +88,7 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
               std::inserter(group_by_columns, group_by_columns.begin()));
 
   // Create ExpressionsConstraintDefinition from column expressions
-  aggregate_lqp_constraints->emplace(group_by_columns);
+  unique_constraints->emplace(group_by_columns);
   // TODO(anyone) We also have a functional dependency here. Use it? (group_by_columns) => (aggregate_columns)
 
   // (2) Check incoming constraints for validity and forward if applicable
@@ -99,11 +99,11 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
       ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
   // Check each constraint for applicability
-  auto input_lqp_constraints = left_input()->unique_constraints();
-  for (const auto& input_constraint : *input_lqp_constraints) {
+  auto input_unique_constraints = left_input()->unique_constraints();
+  for (const auto& input_constraint : *input_unique_constraints) {
     // Ensure that we do not produce any duplicate constraints
     bool constraint_already_exists = std::any_of(
-        aggregate_lqp_constraints->cbegin(), aggregate_lqp_constraints->cend(),
+        unique_constraints->cbegin(), unique_constraints->cend(),
         [&input_constraint](const auto& existing_constraint) { return input_constraint == existing_constraint; });
     if (constraint_already_exists) continue;
 
@@ -116,11 +116,11 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
 
     if (found_all_column_expressions) {
       // Forward constraint
-      aggregate_lqp_constraints->insert(input_constraint);
+      unique_constraints->insert(input_constraint);
     }
   }
 
-  return aggregate_lqp_constraints;
+  return unique_constraints;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {

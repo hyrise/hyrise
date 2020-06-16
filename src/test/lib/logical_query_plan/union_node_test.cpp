@@ -108,7 +108,7 @@ TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
   _mock_node1->set_key_constraints(TableKeyConstraints{table_constraint_1, table_constraint_2});
   EXPECT_EQ(_mock_node1->unique_constraints()->size(), 2);
 
-  // Test constraint forwarding
+  // Test unique constraint forwarding
   EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
   EXPECT_EQ(*_union_node->unique_constraints(), *_mock_node1->unique_constraints());
 
