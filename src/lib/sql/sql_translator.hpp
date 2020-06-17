@@ -203,12 +203,13 @@ class SQLTranslator final {
 
   static std::string _trim_meta_table_name(const std::string& name);
 
+  // The current LQP might not be cacheable if it involves a meta table
+  bool cacheable{true};
+
  private:
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;
-  // The current LQP might not be cacheable if it involves a meta table
-  bool _cacheable{true};
   std::shared_ptr<SQLIdentifierResolver> _sql_identifier_resolver;
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
