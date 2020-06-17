@@ -640,9 +640,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
                                         _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
-      // If a statement of the subquery is not cacheable (e.g., for meta tables),
-      // this statement should not be cacheable either.
-      cacheable = subquery_translator.cacheable;
+      // If this statement or any of the subquery's statements is not cacheable (because of meta tables),
+      // this statement should not be cacheable.
+      _cacheable &= subquery_translator._cacheable;
 
       std::vector<std::vector<SQLIdentifier>> identifiers;
       for (const auto& element : subquery_translator._inflated_select_list_elements) {
@@ -1729,6 +1729,10 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
       SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
+
+  // If this statement or any of the subquery's statements is not cacheable (because of meta tables),
+  // this statement should not be cacheable.
+  _cacheable &= subquery_translator._cacheable;
 
   auto parameter_ids = std::vector<ParameterID>{};
   parameter_ids.reserve(parameter_count);
