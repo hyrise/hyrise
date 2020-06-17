@@ -1227,6 +1227,8 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+  cacheable = false;
+
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables: {
       const auto tables_meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
