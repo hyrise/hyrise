@@ -7,7 +7,7 @@
 namespace opossum {
 
 /**
- * Checks whether all given TableKeyConstraint objects are represented in ExpressionsConstraintDefinitions.
+ * Checks whether all given TableKeyConstraint objects are represented in LQPUniqueConstraints.
  */
 static void check_table_constraint_representation(const TableKeyConstraints& table_key_constraints,
                                                   const std::shared_ptr<LQPUniqueConstraints> unique_constraints) {

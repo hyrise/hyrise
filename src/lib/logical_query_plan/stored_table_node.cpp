@@ -123,7 +123,7 @@ const std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints(
         constraint_column_expressions.insert(*column_expr_opt);
       }
 
-      // Create ExpressionsConstraintDefinition
+      // Create LQPUniqueConstraint
       unique_constraints->emplace(constraint_column_expressions);
     }
   }

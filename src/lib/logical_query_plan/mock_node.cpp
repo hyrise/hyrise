@@ -105,7 +105,7 @@ const std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const
         constraint_column_expressions.emplace(column_expr);
       }
 
-      // Create ExpressionsConstraintDefinition
+      // Create LQPUniqueConstraint
       unique_constraints->emplace(constraint_column_expressions);
     }
   }
