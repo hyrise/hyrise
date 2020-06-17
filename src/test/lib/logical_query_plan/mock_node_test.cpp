@@ -83,11 +83,11 @@ TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions
 TEST_F(MockNodeTest, Constraints) {
   // Add constraints to MockNode
   // Primary Key: a, b
-  const auto table_constraint1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   // Unique: c
-  const auto table_constraint2 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto table_constraints = TableKeyConstraints{table_constraint1, table_constraint2};
-  _mock_node_a->set_key_constraints(table_constraints);
+  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraints = TableKeyConstraints{key_constraint_1, key_constraint_2};
+  _mock_node_a->set_key_constraints(key_constraints);
 
   // Basic checks
   const auto unique_constraints_mock_node_a = _mock_node_a->unique_constraints();
@@ -95,7 +95,7 @@ TEST_F(MockNodeTest, Constraints) {
   EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 
   // In-depth verification
-  check_table_constraint_representation(table_constraints, unique_constraints_mock_node_a);
+  check_unique_constraint_mapping(key_constraints, unique_constraints_mock_node_a);
 
   // Also check whether StoredTableNode is referenced correctly by column expressions
   for (const auto& unique_constraint : *unique_constraints_mock_node_a) {

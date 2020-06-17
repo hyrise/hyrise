@@ -28,7 +28,9 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const { return forward_unique_constraints(); }
+const std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const {
+  return forward_unique_constraints();
+}
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
 

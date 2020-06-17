@@ -329,9 +329,8 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
     // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
     join_constraints = join_node->unique_constraints();
     EXPECT_EQ(join_constraints->size(), 4);
-    check_table_constraint_representation(
-        {*_key_constraint_a, *_key_constraint_b_c, *_key_constraint_x, *_key_constraint_y},
-        join_constraints);
+    check_unique_constraint_mapping({*_key_constraint_a, *_key_constraint_b_c, *_key_constraint_x, *_key_constraint_y},
+                                    join_constraints);
   }
 }
 

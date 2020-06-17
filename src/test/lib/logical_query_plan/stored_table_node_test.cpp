@@ -285,18 +285,18 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 TEST_F(StoredTableNodeTest, Constraints) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  table->add_soft_key_constraint(TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
-  table->add_soft_key_constraint(TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE});
+  table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
+  table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE});
 
-  const auto table_constraints = table->soft_key_constraints();
+  const auto key_constraints = table->soft_key_constraints();
   const auto unique_constraints = _stored_table_node->unique_constraints();
 
   // Basic check
-  EXPECT_EQ(table_constraints.size(), 2);
+  EXPECT_EQ(key_constraints.size(), 2);
   EXPECT_EQ(unique_constraints->size(), 2);
 
   // In-depth - check whether all table constraints are represented in StoredTableNode
-  check_table_constraint_representation(table_constraints, unique_constraints);
+  check_unique_constraint_mapping(key_constraints, unique_constraints);
 
   // Also check whether StoredTableNode is referenced correctly by column expressions
   for (const auto& unique_constraint : *unique_constraints) {
@@ -311,16 +311,16 @@ TEST_F(StoredTableNodeTest, Constraints) {
 TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  const auto table_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  const auto table_constraint_2 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
-  const auto table_constraint_3 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  table->add_soft_key_constraint(table_constraint_1);
-  table->add_soft_key_constraint(table_constraint_2);
-  table->add_soft_key_constraint(table_constraint_3);
+  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_3 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(key_constraint_1);
+  table->add_soft_key_constraint(key_constraint_2);
+  table->add_soft_key_constraint(key_constraint_3);
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  const auto& table_constraints = table->soft_key_constraints();
-  EXPECT_EQ(table_constraints.size(), 3);
+  const auto& key_constraints = table->soft_key_constraints();
+  EXPECT_EQ(key_constraints.size(), 3);
 
   // After column pruning, only the third table constraint should remain valid (the one based on ColumnID 2)
   // Basic check
@@ -328,8 +328,8 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   EXPECT_EQ(unique_constraints->size(), 1);
 
   // In-depth check
-  const auto& valid_table_constraint = table_constraint_3;
-  check_table_constraint_representation(TableKeyConstraints{valid_table_constraint}, unique_constraints);
+  const auto& valid_table_constraint = key_constraint_3;
+  check_unique_constraint_mapping(TableKeyConstraints{valid_table_constraint}, unique_constraints);
 }
 
 TEST_F(StoredTableNodeTest, ConstraintsEmpty) {

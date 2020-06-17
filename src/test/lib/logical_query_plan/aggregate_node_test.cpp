@@ -118,16 +118,16 @@ TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
 
 TEST_F(AggregateNodeTest, ConstraintsForwarding) {
   // Prepare Test
-  const auto table_constraint_1 = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
-  const auto table_constraint_2 = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
-  _mock_node->set_key_constraints({table_constraint_1, table_constraint_2});
+  const auto key_constraint_1 = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_2 = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node->set_key_constraints({key_constraint_1, key_constraint_2});
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
 
   const auto aggregate = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate), _mock_node);
 
-  // Since _b is part of the group-by columns, table_constraint1 remains valid.
-  // As _c becomes aggregated, table_constraint2 has to be discarded
+  // Since _b is part of the group-by columns, key_constraint_1 remains valid.
+  // As _c becomes aggregated, key_constraint_2 has to be discarded
   // In addition, a new table constraint is created covering all group-by columns (_a, _b)
   EXPECT_EQ(_aggregate_node->unique_constraints()->size(), 2);
 }

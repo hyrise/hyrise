@@ -3,7 +3,7 @@
 namespace opossum {
 
 LQPUniqueConstraint::LQPUniqueConstraint(ExpressionUnorderedSet init_column_expressions)
-                                                : column_expressions(std::move(init_column_expressions)) {
+    : column_expressions(std::move(init_column_expressions)) {
   DebugAssert(!init_column_expressions.empty(), "LQPUniqueConstraint cannot be empty");
 }
 

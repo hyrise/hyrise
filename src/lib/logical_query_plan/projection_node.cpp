@@ -41,12 +41,11 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
 
   for (const auto& input_unique_constraint : *input_unique_constraints) {
     // Check whether column expressions have been filtered out with this node.
-    bool found_all_column_expressions =
-        std::all_of(
+    bool found_all_column_expressions = std::all_of(
         input_unique_constraint.column_expressions.cbegin(), input_unique_constraint.column_expressions.cend(),
-                    [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-                      return expressions_set.contains(constraint_column_expr);
-                    });
+        [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
+          return expressions_set.contains(constraint_column_expr);
+        });
 
     if (found_all_column_expressions) {
       unique_constraints->insert(input_unique_constraint);

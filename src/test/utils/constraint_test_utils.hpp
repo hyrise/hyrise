@@ -7,10 +7,10 @@
 namespace opossum {
 
 /**
- * Checks whether all given TableKeyConstraint objects are represented in LQPUniqueConstraints.
+ * Checks whether a given set of TableKeyConstraints is represented in a given set of LQPUniqueConstraints.
  */
-static void check_table_constraint_representation(const TableKeyConstraints& table_key_constraints,
-                                                  const std::shared_ptr<LQPUniqueConstraints> unique_constraints) {
+static void check_unique_constraint_mapping(const TableKeyConstraints& table_key_constraints,
+                                            const std::shared_ptr<LQPUniqueConstraints> unique_constraints) {
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto matching_unique_constraint = std::find_if(
         unique_constraints->cbegin(), unique_constraints->cend(), [&](const LQPUniqueConstraint& unique_constraint) {
