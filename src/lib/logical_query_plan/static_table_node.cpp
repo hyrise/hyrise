@@ -57,7 +57,7 @@ const std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints(
     }
 
     // Create LQPUniqueConstraint
-    unique_constraints->emplace(constraint_column_expressions);
+    unique_constraints->emplace_back(constraint_column_expressions);
   }
 
   return unique_constraints;

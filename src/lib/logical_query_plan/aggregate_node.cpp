@@ -88,7 +88,7 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
               std::inserter(group_by_columns, group_by_columns.begin()));
 
   // Create LQPUniqueConstraint from column expressions
-  unique_constraints->emplace(group_by_columns);
+  unique_constraints->emplace_back(group_by_columns);
   // TODO(anyone) We also have a functional dependency here. Use it? (group_by_columns) => (aggregate_columns)
 
   // (2) Check incoming constraints for validity and forward if applicable
@@ -116,7 +116,7 @@ const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() 
 
     if (found_all_column_expressions) {
       // Forward constraint
-      unique_constraints->insert(input_constraint);
+      unique_constraints->push_back(input_constraint);
     }
   }
 

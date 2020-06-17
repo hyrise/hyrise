@@ -48,7 +48,7 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
         });
 
     if (found_all_column_expressions) {
-      unique_constraints->insert(input_unique_constraint);
+      unique_constraints->push_back(input_unique_constraint);
     }  // else { save constraint for the next block - derived constraints }
   }
 

@@ -17,7 +17,7 @@ struct LQPUniqueConstraint final {
   ExpressionUnorderedSet column_expressions;
 };
 
-using LQPUniqueConstraints = std::unordered_set<LQPUniqueConstraint>;
+using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
 
 }  // namespace opossum
 

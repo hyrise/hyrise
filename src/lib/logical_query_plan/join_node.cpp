@@ -99,11 +99,11 @@ const std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const
       auto left_constraints = left_input()->unique_constraints();
       auto right_constraints = right_input()->unique_constraints();
 
-      for (auto it = left_constraints->begin(); it != left_constraints->end();) {
-        output_constraints->emplace(std::move(left_constraints->extract(it++).value()));
+      for (auto it = left_constraints->begin(); it != left_constraints->end(); it++) {
+        output_constraints->emplace_back(std::move(*it));
       }
-      for (auto it = right_constraints->begin(); it != right_constraints->end();) {
-        output_constraints->emplace(std::move(right_constraints->extract(it++).value()));
+      for (auto it = right_constraints->begin(); it != right_constraints->end(); it++) {
+        output_constraints->emplace_back(std::move(*it));
       }
       return output_constraints;
 
