@@ -79,9 +79,9 @@ class SQLTranslatorTest : public BaseTest {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
-                                                          const UseMvcc use_mvcc = UseMvcc::No,
-                                                          const std::shared_ptr<SQLTranslationInfo>& translation_info = nullptr) {
+  std::shared_ptr<opossum::AbstractLQPNode> compile_query(
+      const std::string& query, const UseMvcc use_mvcc = UseMvcc::No,
+      const std::shared_ptr<SQLTranslationInfo>& translation_info = nullptr) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
@@ -91,7 +91,8 @@ class SQLTranslatorTest : public BaseTest {
 
     if (translation_info) {
       translation_info->cacheable = translation_result.translation_info.cacheable;
-      translation_info->parameter_ids_of_value_placeholders = translation_result.translation_info.parameter_ids_of_value_placeholders;
+      translation_info->parameter_ids_of_value_placeholders =
+          translation_result.translation_info.parameter_ids_of_value_placeholders;
     }
 
     Assert(lqps.size() == 1, "Expected just one LQP");
@@ -1916,7 +1917,8 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
 
 TEST_F(SQLTranslatorTest, SelectMetaTable) {
   std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables", UseMvcc::No, translation_info);
+  const auto actual_lqp =
+      compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables", UseMvcc::No, translation_info);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
@@ -1928,7 +1930,8 @@ TEST_F(SQLTranslatorTest, SelectMetaTable) {
 TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
   std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
   const auto actual_lqp = compile_query("SELECT table_name FROM (SELECT table_name, column_count FROM " +
-                                        MetaTableManager::META_PREFIX + "tables) as subquery", UseMvcc::No, translation_info);
+                                            MetaTableManager::META_PREFIX + "tables) as subquery",
+                                        UseMvcc::No, translation_info);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -1948,8 +1951,10 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
 
 TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
   std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
-                                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name", UseMvcc::No, translation_info);
+  const auto actual_lqp =
+      compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
+                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name",
+                    UseMvcc::No, translation_info);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -2178,7 +2183,8 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
 
 TEST_F(SQLTranslatorTest, UpdateMetaTable) {
   std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes, translation_info);
+  const auto actual_lqp =
+      compile_query("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes, translation_info);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("settings");
   const auto select_node = StaticTableNode::make(meta_table);

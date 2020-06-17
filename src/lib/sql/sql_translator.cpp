@@ -640,7 +640,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
                                         _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
-      // If a statement of the subquery is not cacheable (e.g., for meta tables), this statement should not be cacheable either.
+      // If a statement of the subquery is not cacheable (e.g., for meta tables),
+      // this statement should not be cacheable either.
       cacheable = subquery_translator.cacheable;
 
       std::vector<std::vector<SQLIdentifier>> identifiers;
@@ -1163,8 +1164,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
               "Mismatching number of input columns for set operation");
 
   // Check to see if both input LQPs use the same data type for each column
-  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size();
-       ++expression_idx) {
+  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size(); ++expression_idx) {
     const auto& left_expression = left_output_expressions[expression_idx];
     const auto& right_expression = right_output_expressions[expression_idx];
 
