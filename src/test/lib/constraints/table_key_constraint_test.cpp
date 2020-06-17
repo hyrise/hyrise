@@ -11,64 +11,89 @@ namespace opossum {
 class TableKeyConstraintTest : public BaseTest {
  protected:
   void SetUp() override {
+    auto& sm = Hyrise::get().storage_manager;
     {
       TableColumnDefinitions column_definitions;
       column_definitions.emplace_back("column0", DataType::Int, false);
       column_definitions.emplace_back("column1", DataType::Int, false);
       column_definitions.emplace_back("column2", DataType::Int, false);
       column_definitions.emplace_back("column3", DataType::Int, false);
-      auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+      _table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-      auto& sm = Hyrise::get().storage_manager;
-      sm.add_table("table", table);
+      sm.add_table("table", _table);
 
-      table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+
     }
 
     {
       TableColumnDefinitions column_definitions;
       column_definitions.emplace_back("column0", DataType::Int, false);
       column_definitions.emplace_back("column1", DataType::Int, true);
-      auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+      _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-      auto& sm = Hyrise::get().storage_manager;
-      sm.add_table("table_nullable", table);
+      sm.add_table("table_nullable", _table_nullable);
 
-      table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
     }
   }
+
+  std::shared_ptr<Table> _table;
+  std::shared_ptr<Table> _table_nullable;
 };
 
+TEST_F(TableKeyConstraintTest, AddKeyConstraints) {
+  EXPECT_EQ(_table->soft_key_constraints().size(), 0);
+  _table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(_table->soft_key_constraints().size(), 1);
+  _table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(_table->soft_key_constraints().size(), 2);
+
+  const auto& key_constraint_1 = *_table->soft_key_constraints().cbegin();
+  EXPECT_EQ(key_constraint_1.columns().size(), 1);
+  EXPECT_EQ(*key_constraint_1.columns().begin(), ColumnID{1});
+
+  const auto& key_constraint_2 = *(++_table->soft_key_constraints().cbegin());
+  EXPECT_EQ(key_constraint_2.columns().size(), 2);
+  EXPECT_TRUE(key_constraint_2.columns().contains(ColumnID{1}) && key_constraint_2.columns().contains(ColumnID{2}));
+}
+
+TEST_F(TableKeyConstraintTest, DuplicateColumnIDs) {
+  // Column Ids should be distinct
+  _table->add_soft_key_constraint({{ColumnID{1}, ColumnID{1}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(_table->soft_key_constraints().size(), 1);
+  const auto& key_constraint = *_table->soft_key_constraints().begin();
+  EXPECT_EQ(key_constraint.columns().size(), 1);
+  EXPECT_EQ(*key_constraint.columns().begin(), ColumnID{1});
+}
+
 TEST_F(TableKeyConstraintTest, InvalidConstraintAdd) {
-  auto& sm = Hyrise::get().storage_manager;
-  auto table = sm.get_table("table");
-  auto table_nullable = sm.get_table("table_nullable");
+  _table_nullable->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  _table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
 
   // Invalid because the column id is out of range
-  EXPECT_THROW(table->add_soft_key_constraint({{ColumnID{5}}, KeyConstraintType::UNIQUE}), std::logic_error);
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{5}}, KeyConstraintType::UNIQUE}), std::logic_error);
 
   // Invalid because the column must be non nullable for a primary key.
-  EXPECT_THROW(table_nullable->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
+  EXPECT_THROW(_table_nullable->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
 
   // Invalid because there is still a nullable column.
-  EXPECT_THROW(table_nullable->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
+  EXPECT_THROW(_table_nullable->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
 
-  table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
+  _table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
 
   // Invalid because another primary key already exists.
-  EXPECT_THROW(table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}), std::logic_error);
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}), std::logic_error);
 
   // Invalid because a constraint on the same column already exists.
-  EXPECT_THROW(table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE}), std::logic_error);
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE}), std::logic_error);
 
-  table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
+  _table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
 
   // Invalid because a concatenated constraint on the same columns already exists.
-  EXPECT_THROW(table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
                std::logic_error);
-  EXPECT_THROW(table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
                std::logic_error);
 }
 
