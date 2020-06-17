@@ -32,7 +32,9 @@ class Optimizer final {
    */
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
-  std::shared_ptr<AbstractLQPNode> optimize(std::shared_ptr<AbstractLQPNode> input) const;
+  std::shared_ptr<AbstractLQPNode> optimize(
+      std::shared_ptr<AbstractLQPNode> input,
+      std::shared_ptr<std::vector<std::pair<std::string, std::chrono::nanoseconds>>> rule_durations = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 

@@ -24,6 +24,10 @@
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 
+#include <fstream>
+#include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
+
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
  *
@@ -160,7 +164,9 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
   _rules.emplace_back(std::move(rule));
 }
 
-std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQPNode> input) const {
+std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
+    std::shared_ptr<AbstractLQPNode> input,
+    std::shared_ptr<std::vector<std::pair<std::string, std::chrono::nanoseconds>>> rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -174,8 +180,20 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(std::shared_ptr<AbstractLQP
 
   if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
+  Timer rule_timer{};
   for (const auto& rule : _rules) {
     _apply_rule(*rule, root_node);
+    auto rule_duration = rule_timer.lap();
+
+    auto rule_name = std::string(typeid(*rule).name());
+    rule_name = rule_name.substr(
+        rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }),
+        rule_name.find("Rule") + 4);
+
+    if (rule_durations) {
+      rule_durations->push_back(std::make_pair(rule_name, rule_duration));
+    }
+
     if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
   }
 

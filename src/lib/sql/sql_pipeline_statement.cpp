@@ -136,10 +136,13 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
 
-  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp));
+  auto optimizer_rule_durations = std::make_shared<std::vector<std::pair<std::string, std::chrono::nanoseconds>>>();
+
+  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache && _translation_info.cacheable) {
