@@ -640,6 +640,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
                                         _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
+      // If a statement of the subquery is not cacheable (e.g., for meta tables), this statement should not be cacheable either.
+      cacheable = subquery_translator.cacheable;
+
       std::vector<std::vector<SQLIdentifier>> identifiers;
       for (const auto& element : subquery_translator._inflated_select_list_elements) {
         identifiers.emplace_back(element.identifiers);
