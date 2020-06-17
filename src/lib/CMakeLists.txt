@@ -21,6 +21,7 @@ set(
     constant_mappings.hpp
     constraints/abstract_table_constraint.cpp
     constraints/abstract_table_constraint.hpp
+    constraints/lqp_unique_constraint.cpp
     constraints/lqp_unique_constraint.hpp
     constraints/table_key_constraint.cpp
     constraints/table_key_constraint.hpp

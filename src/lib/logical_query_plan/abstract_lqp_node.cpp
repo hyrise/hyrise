@@ -279,11 +279,11 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_unique_cons
 }
 
 bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
-  const auto unique_constraints = unique_constraints();
-  if (unique_constraints->empty()) return false;
+  const auto constraints = unique_constraints();
+  if (constraints->empty()) return false;
 
   // Look for a unique constraint that is solely based on the given column expressions
-  for (const auto& unique_constraint : *unique_constraints) {
+  for (const auto& unique_constraint : *constraints) {
     if (unique_constraint.column_expressions.size() == column_expressions.size() &&
         std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&](const auto column_expression) {
           return unique_constraint.column_expressions.contains(column_expression);
