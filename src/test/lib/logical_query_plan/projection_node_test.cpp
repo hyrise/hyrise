@@ -69,12 +69,12 @@ TEST_F(ProjectionNodeTest, NodeExpressions) {
   EXPECT_EQ(*_projection_node->node_expressions.at(4), *add_(_a, _c));
 }
 
-TEST_F(ProjectionNodeTest, ConstraintsEmpty) {
+TEST_F(ProjectionNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(_mock_node->unique_constraints()->empty());
   EXPECT_TRUE(_projection_node->unique_constraints()->empty());
 }
 
-TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
+TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
   // Add constraints to MockNode
   const auto key_constraints = TableKeyConstraints{*_key_constraint_1, *_key_constraint_2};
   _mock_node->set_key_constraints(key_constraints);
@@ -101,7 +101,7 @@ TEST_F(ProjectionNodeTest, ConstraintsReorderedColumns) {
   }
 }
 
-TEST_F(ProjectionNodeTest, ConstraintsRemovedColumns) {
+TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
   // Add constraints to MockNode
   const auto key_constraints = TableKeyConstraints{*_key_constraint_1, *_key_constraint_2};
   _mock_node->set_key_constraints(key_constraints);

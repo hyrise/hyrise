@@ -48,12 +48,12 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
 
 TEST_F(StaticTableNodeTest, Copy) { EXPECT_EQ(*static_table_node, *static_table_node->deep_copy()); }
 
-TEST_F(StaticTableNodeTest, ConstraintsEmpty) {
+TEST_F(StaticTableNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());
   EXPECT_TRUE(static_table_node->unique_constraints()->empty());
 }
 
-TEST_F(StaticTableNodeTest, Constraints) {
+TEST_F(StaticTableNodeTest, UniqueConstraints) {
   // Add two constraints
   const auto constraint1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto constraint2 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};

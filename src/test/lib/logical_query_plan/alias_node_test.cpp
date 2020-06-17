@@ -71,12 +71,12 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(b->hash(), expr_b->hash());
 }
 
-TEST_F(AliasNodeTest, ConstraintsEmpty) {
+TEST_F(AliasNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(mock_node->unique_constraints()->empty());
   EXPECT_TRUE(alias_node->unique_constraints()->empty());
 }
 
-TEST_F(AliasNodeTest, ConstraintsForwarding) {
+TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
   // Add constraints to MockNode
   //  Primary Key: a, b
   const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};

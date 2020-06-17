@@ -80,7 +80,7 @@ TEST_F(MockNodeTest, Copy) {
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 
-TEST_F(MockNodeTest, Constraints) {
+TEST_F(MockNodeTest, UniqueConstraints) {
   // Add constraints to MockNode
   // Primary Key: a, b
   const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
@@ -107,6 +107,6 @@ TEST_F(MockNodeTest, Constraints) {
   }
 }
 
-// TEST_F(MockNodeTest, ConstraintsPrunedColumns) {} // TODO(Julian)
+// TEST_F(MockNodeTest, UniqueConstraintsPrunedColumns) {} // TODO(Julian)
 
 }  // namespace opossum

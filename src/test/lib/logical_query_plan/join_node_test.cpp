@@ -273,7 +273,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesNullabilityFilter) {
   EXPECT_EQ(full_outer_join_node->functional_dependencies().size(), 0);
 }
 
-TEST_F(JoinNodeTest, ConstraintsSemiAndAntiJoins) {
+TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
 
@@ -288,7 +288,7 @@ TEST_F(JoinNodeTest, ConstraintsSemiAndAntiJoins) {
   }
 }
 
-TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
+TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
   // TODO(Julian) Test that...
 
   // Prepare join nodes
@@ -334,7 +334,7 @@ TEST_F(JoinNodeTest, ConstraintsInnerAndOuterJoins) {
   }
 }
 
-TEST_F(JoinNodeTest, ConstraintsNonEquiJoin) {
+TEST_F(JoinNodeTest, UniqueConstraintsNonEquiJoin) {
   // Currently, we do not support unique constraint forwarding for Non-Equi- or Theta-Joins
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
@@ -347,7 +347,7 @@ TEST_F(JoinNodeTest, ConstraintsNonEquiJoin) {
   EXPECT_TRUE(theta_join_node->unique_constraints()->empty());
 }
 
-TEST_F(JoinNodeTest, ConstraintsNonSemiNonAntiMultiPredicateJoin) {
+TEST_F(JoinNodeTest, UniqueConstraintsNonSemiNonAntiMultiPredicateJoin) {
   // Except for Semi- and Anti-Joins, we currently do not support unique constraint forwarding for multi predicate
   // joins.
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
@@ -362,7 +362,7 @@ TEST_F(JoinNodeTest, ConstraintsNonSemiNonAntiMultiPredicateJoin) {
   EXPECT_TRUE(join_node->unique_constraints()->empty());
 }
 
-TEST_F(JoinNodeTest, ConstraintsCrossJoin) {
+TEST_F(JoinNodeTest, UniqueConstraintsCrossJoin) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 

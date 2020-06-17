@@ -282,7 +282,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
   }
 }
 
-TEST_F(StoredTableNodeTest, Constraints) {
+TEST_F(StoredTableNodeTest, UniqueConstraints) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
   table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
@@ -308,7 +308,7 @@ TEST_F(StoredTableNodeTest, Constraints) {
   }
 }
 
-TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
+TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
   const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
@@ -332,7 +332,7 @@ TEST_F(StoredTableNodeTest, ConstraintsPrunedColumns) {
   check_unique_constraint_mapping(TableKeyConstraints{valid_table_constraint}, unique_constraints);
 }
 
-TEST_F(StoredTableNodeTest, ConstraintsEmpty) {
+TEST_F(StoredTableNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
   EXPECT_TRUE(_stored_table_node->unique_constraints()->empty());
 }

@@ -99,7 +99,7 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
   Hyrise::get().reset();
 }
 
-TEST_F(UnionNodeTest, ConstraintsUnionPositions) {
+TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
   // Add two unique constraints to _mock_node1
   // Primary Key: a, b
   const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};

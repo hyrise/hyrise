@@ -94,7 +94,7 @@ TEST_F(AggregateNodeTest, Copy) {
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 
-TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
+TEST_F(AggregateNodeTest, UniqueConstraintsAdd) {
   EXPECT_TRUE(_mock_node->unique_constraints()->empty());
 
   const auto aggregate1 = sum_(add_(_a, _b));
@@ -116,7 +116,7 @@ TEST_F(AggregateNodeTest, ConstraintsAddNewConstraint) {
   EXPECT_TRUE((unique_constraint_b.column_expressions.contains(_b)));
 }
 
-TEST_F(AggregateNodeTest, ConstraintsForwarding) {
+TEST_F(AggregateNodeTest, UniqueConstraintsForwarding) {
   // Prepare Test
   const auto key_constraint_1 = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
   const auto key_constraint_2 = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
@@ -132,7 +132,7 @@ TEST_F(AggregateNodeTest, ConstraintsForwarding) {
   EXPECT_EQ(_aggregate_node->unique_constraints()->size(), 2);
 }
 
-TEST_F(AggregateNodeTest, ConstraintsNoDuplicates) {
+TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   // Prepare Test
   const auto table_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_constraint});
