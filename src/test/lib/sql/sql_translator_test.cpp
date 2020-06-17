@@ -92,19 +92,6 @@ class SQLTranslatorTest : public BaseTest {
     return {lqps.at(0), translation_result.translation_info};
   }
 
-  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, std::vector<ParameterID>> compile_prepared_query(
-      const std::string& query) {
-    hsql::SQLParserResult parser_result;
-    hsql::SQLParser::parseSQLString(query, &parser_result);
-    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
-
-    SQLTranslator sql_translator{UseMvcc::No};
-    const auto translation_result = sql_translator.translate_parser_result(parser_result);
-    const auto lqps = translation_result.lqp_nodes;
-    Assert(lqps.size() == 1, "Expected just one LQP");
-    return {lqps.at(0), translation_result.translation_info.parameter_ids_of_value_placeholders};
-  }
-
   static inline std::shared_ptr<Table> int_float, int_string, int_float2, int_float5, int_int_int;
   static inline std::shared_ptr<StoredTableNode> stored_table_node_int_float, stored_table_node_int_string,
       stored_table_node_int_float2, stored_table_node_int_float5, stored_table_node_int_int_int;
@@ -1656,12 +1643,13 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
 TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
   // clang-format off
-  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT ? + (SELECT a + ? "
                   "FROM int_float2) "
       "FROM (SELECT a "
             "FROM int_float WHERE ? > (SELECT a + ? "
                                       "FROM int_string)) s1");
+  const auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 4u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
@@ -1747,7 +1735,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
                                           "FROM int_string)";
 
   // NOLINTNEXTLINE
-  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(query);
+  const auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
+
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{1});
@@ -2736,12 +2726,13 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
 
 TEST_F(SQLTranslatorTest, WithClausePlaceholders) {
   // clang-format off
-  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "WITH "
       "wq AS (SELECT ?, a, b "
              "FROM int_int_int WHERE a > ?) "
       "SELECT ?, a "
       "FROM (SELECT * FROM wq WHERE b = ?) AS t WHERE a = ?;");
+  const auto parameter_ids_of_value_placeholders = translation_info.parameter_ids_of_value_placeholders;
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{0});
