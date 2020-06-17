@@ -1949,6 +1949,50 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectMetaTableTwoSubqueries) {
+  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
+  const auto actual_lqp = compile_query("SELECT * from meta_tables, (SELECT 1) as subquery",
+                                        UseMvcc::No, translation_info);
+
+  EXPECT_EQ(translation_info->cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableInClauseNotCacheable) {
+  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a in (SELECT column_count FROM " +
+                                            MetaTableManager::META_PREFIX + "tables)",
+                                        UseMvcc::No, translation_info);
+
+  EXPECT_EQ(translation_info->cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableOuterWithInClauseNotCacheable) {
+  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
+  const auto actual_lqp = compile_query("SELECT * FROM " +
+                                            MetaTableManager::META_PREFIX + "tables WHERE column_count in (SELECT * FROM int_float2)",
+                                        UseMvcc::No, translation_info);
+
+  EXPECT_EQ(translation_info->cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableExistsClauseNotCacheable) {
+  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
+  const auto actual_lqp = compile_query("SELECT 1 WHERE EXISTS (SELECT * FROM " +
+                                            MetaTableManager::META_PREFIX + "tables)",
+                                        UseMvcc::No, translation_info);
+
+  EXPECT_EQ(translation_info->cacheable, false);
+}
+
+TEST_F(SQLTranslatorTest, SelectMetaTableOuterExistsClauseNotCacheable) {
+  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
+  const auto actual_lqp = compile_query("SELECT * FROM  " +
+                                            MetaTableManager::META_PREFIX + "tables WHERE EXISTS (SELECT 1)",
+                                        UseMvcc::No, translation_info);
+
+  EXPECT_EQ(translation_info->cacheable, false);
+}
+
 TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
   std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
   const auto actual_lqp =
