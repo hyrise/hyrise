@@ -79,9 +79,8 @@ class SQLTranslatorTest : public BaseTest {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  std::shared_ptr<opossum::AbstractLQPNode> compile_query(
-      const std::string& query, const UseMvcc use_mvcc = UseMvcc::No,
-      const std::shared_ptr<SQLTranslationInfo>& translation_info = nullptr) {
+  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
+      const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
@@ -89,11 +88,18 @@ class SQLTranslatorTest : public BaseTest {
     const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     const auto lqps = translation_result.lqp_nodes;
 
-    if (translation_info) {
-      translation_info->cacheable = translation_result.translation_info.cacheable;
-      translation_info->parameter_ids_of_value_placeholders =
-          translation_result.translation_info.parameter_ids_of_value_placeholders;
-    }
+    Assert(lqps.size() == 1, "Expected just one LQP");
+    return {lqps.at(0), translation_result.translation_info};
+  }
+
+  std::shared_ptr<opossum::AbstractLQPNode> compile_query(
+      const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
+    hsql::SQLParserResult parser_result;
+    hsql::SQLParser::parseSQLString(query, &parser_result);
+    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+    const auto translation_result = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+    const auto lqps = translation_result.lqp_nodes;
 
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
@@ -1886,19 +1892,17 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 }
 
 TEST_F(SQLTranslatorTest, ShowTables) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SHOW TABLES", UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SHOW TABLES");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, ShowColumns) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SHOW COLUMNS int_float", UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SHOW COLUMNS int_float");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("columns");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -1911,27 +1915,24 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
         static_table_node);
   // clang-format on
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp =
-      compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables", UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT table_name FROM (SELECT table_name, column_count FROM " +
-                                            MetaTableManager::META_PREFIX + "tables) as subquery",
-                                        UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT table_name FROM (SELECT table_name, column_count FROM " +
+                                            MetaTableManager::META_PREFIX + "tables) as subquery");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -1945,60 +1946,48 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
       ProjectionNode::make(expression_vector(table_name_column, column_count_column), static_table_node);
   const auto expected_lqp = ProjectionNode::make(expression_vector(table_name_column), expected_subquery_lqp);
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableTwoSubqueries) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT * from meta_tables, (SELECT 1) as subquery",
-                                        UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * from meta_tables, (SELECT 1) as subquery");
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableInClauseNotCacheable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a in (SELECT column_count FROM " +
-                                            MetaTableManager::META_PREFIX + "tables)",
-                                        UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM int_float WHERE a in (SELECT column_count FROM " +
+                                            MetaTableManager::META_PREFIX + "tables)");
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableOuterWithInClauseNotCacheable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT * FROM " +
-                                            MetaTableManager::META_PREFIX + "tables WHERE column_count in (SELECT * FROM int_float2)",
-                                        UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM " +
+                                            MetaTableManager::META_PREFIX + "tables WHERE column_count in (SELECT * FROM int_float2)");
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableExistsClauseNotCacheable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT 1 WHERE EXISTS (SELECT * FROM " +
-                                            MetaTableManager::META_PREFIX + "tables)",
-                                        UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT 1 WHERE EXISTS (SELECT * FROM " +
+                                            MetaTableManager::META_PREFIX + "tables)");
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableOuterExistsClauseNotCacheable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("SELECT * FROM  " +
-                                            MetaTableManager::META_PREFIX + "tables WHERE EXISTS (SELECT 1)",
-                                        UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * FROM  " +
+                                            MetaTableManager::META_PREFIX + "tables WHERE EXISTS (SELECT 1)");
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp =
-      compile_query("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
-                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name",
-                    UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("SELECT * FROM " + MetaTableManager::META_PREFIX + "tables AS a JOIN " +
+                        MetaTableManager::META_PREFIX + "tables AS b ON a.table_name = b.table_name");
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto static_table_node = StaticTableNode::make(meta_table);
@@ -2012,7 +2001,7 @@ TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
   const auto table_2 = std::static_pointer_cast<StaticTableNode>(actual_lqp->right_input())->table;
   EXPECT_EQ(table_1, table_2);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
 }
 
 TEST_F(SQLTranslatorTest, DMLOnImmutableMetatables) {
@@ -2100,8 +2089,7 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
 }
 
 TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("INSERT INTO meta_plugins VALUES ('foo');", UseMvcc::No, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("INSERT INTO meta_plugins VALUES ('foo');");
 
   // clang-format off
   const auto expected_lqp =
@@ -2111,7 +2099,7 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
       DummyTableNode::make()));
   // clang-format on
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -2147,8 +2135,7 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
 }
 
 TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp = compile_query("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes, translation_info);
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("DELETE FROM meta_plugins WHERE name = 'foo'", UseMvcc::Yes);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("plugins");
   const auto select_node = StaticTableNode::make(meta_table);
@@ -2161,7 +2148,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
     DummyTableNode::make());
   // clang-format on
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -2226,9 +2213,8 @@ TEST_F(SQLTranslatorTest, UpdateCast) {
 }
 
 TEST_F(SQLTranslatorTest, UpdateMetaTable) {
-  std::shared_ptr<SQLTranslationInfo> translation_info = std::make_shared<SQLTranslationInfo>();
-  const auto actual_lqp =
-      compile_query("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes, translation_info);
+  const auto [actual_lqp, translation_info] =
+      sql_to_lqp_helper("UPDATE meta_settings SET value = 'foo' WHERE name = 'bar';", UseMvcc::Yes);
 
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("settings");
   const auto select_node = StaticTableNode::make(meta_table);
@@ -2250,7 +2236,7 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
       row_subquery_lqp));
   // clang-format on
 
-  EXPECT_EQ(translation_info->cacheable, false);
+  EXPECT_EQ(translation_info.cacheable, false);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
