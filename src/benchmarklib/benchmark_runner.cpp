@@ -359,7 +359,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
     // want to touch this and potentially break the comparability across commits. Note that items_per_second only
-    // includes succesfull iterations.
+    // includes successful iterations.
     benchmark["items_per_second"] = items_per_second;
 
     benchmarks.push_back(benchmark);
