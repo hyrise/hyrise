@@ -142,7 +142,7 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
                     std::make_shared<std::unordered_map<std::string, std::shared_ptr<Table>>>()) {}
 
 SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParserResult& result) {
-  cacheable = true;
+  _cacheable = true;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
@@ -159,7 +159,7 @@ SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParse
     parameter_ids[value_placeholder_id] = parameter_id;
   }
 
-  return {result_nodes, {cacheable, parameter_ids}};
+  return {result_nodes, {_cacheable, parameter_ids}};
 }
 
 SQLTranslator::SQLTranslator(
@@ -740,7 +740,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_meta_table(
 
   // MetaTables are non-cacheable because they might contain information about the general system state
   // that can change at any time
-  cacheable = false;
+  _cacheable = false;
 
   const auto meta_table_name = _trim_meta_table_name(name);
 
