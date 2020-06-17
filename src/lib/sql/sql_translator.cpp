@@ -1227,7 +1227,7 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
-  cacheable = false;
+  _cacheable = false;
 
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables: {
