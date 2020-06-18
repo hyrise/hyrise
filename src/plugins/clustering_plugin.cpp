@@ -104,8 +104,8 @@ void _export_chunk_size_statistics() {
 
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
-  //_clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
-  _clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
+  _clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
+  //_clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 

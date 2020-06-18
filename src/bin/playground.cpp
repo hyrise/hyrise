@@ -75,8 +75,8 @@ int main(int argc, char* argv[]) {
   if (BENCHMARK == "tpch") {
     const auto scale_factor = cli_parse_result["scale"].as<float>();
     std::cout << "- Scale factor is " << scale_factor << std::endl;
-    //for (auto query_id = 0u; query_id < 22; query_id++) {
-    for (auto query_id = 21u; query_id < 22; query_id++) {
+    for (auto query_id = 0u; query_id < 22; query_id++) {
+    //for (auto query_id = 5u; query_id < 6; query_id++) {
       if (config->verify && query_id == 14) continue;
 
       if (plugin_loaded) Assert(Hyrise::get().storage_manager.has_table("lineitem"), "lineitem disappeared");
@@ -119,6 +119,8 @@ int main(int argc, char* argv[]) {
     const auto scale_factor = cli_parse_result["scale"].as<float>();
     std::cout << "- Scale factor is " << scale_factor << std::endl;
     auto query_files = tpcds_filename_whitelist();
+    // TODO
+    query_files = {"93.sql"};
     std::vector<std::string> result_file_names{};
 
 

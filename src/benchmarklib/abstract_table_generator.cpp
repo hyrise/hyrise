@@ -46,8 +46,8 @@ void AbstractTableGenerator::generate_and_store() {
    */
 
   std::cout << "- Skipping sorting, ClusteringPlugin will take care of that" << std::endl;
-  const auto sort_order_by_table = SortOrderByTable{};
-  //const auto& sort_order_by_table = _sort_order_by_table();
+  //const auto sort_order_by_table = SortOrderByTable{};
+  const auto& sort_order_by_table = _sort_order_by_table();
   if (!sort_order_by_table.empty()) {
     std::cout << "- Sorting tables" << std::endl;
 
