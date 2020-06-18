@@ -11,7 +11,7 @@ namespace opossum {
 template <typename ValueType>
 class AnySegmentIterable;
 
-class BaseSegment;
+class AbstractSegment;
 
 /**
  * @brief Wraps passed segment iterable in an AnySegmentIterable
@@ -169,13 +169,13 @@ namespace detail {
 template <typename T>
 class CreateAnySegmentIterable {
  public:
-  static AnySegmentIterable<T> create(const BaseSegment& base_segment);
+  static AnySegmentIterable<T> create(const AbstractSegment& abstract_segment);
 };
 }  // namespace detail
 
 template <typename T>
-AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment& base_segment) {
-  return opossum::detail::CreateAnySegmentIterable<T>::create(base_segment);
+AnySegmentIterable<T> create_any_segment_iterable(const AbstractSegment& abstract_segment) {
+  return opossum::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
 }
 
 }  // namespace opossum

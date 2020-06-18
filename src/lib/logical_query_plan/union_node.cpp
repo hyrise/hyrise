@@ -18,10 +18,25 @@ std::string UnionNode::description(const DescriptionMode mode) const {
   return "[UnionNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> UnionNode::column_expressions() const {
-  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
+std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
+  Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
          "Input Expressions must match");
-  return left_input()->column_expressions();
+  return left_input()->output_expressions();
+}
+
+std::vector<FunctionalDependency> UnionNode::functional_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Unique:
+    case SetOperationMode::All:
+      Fail("Handling of functional dependencies is not yet specified for UNION (ALL)");
+    case SetOperationMode::Positions:
+      // By definition, UnionPositions requires both input tables to have the same table origin and structure.
+      // Therefore, we can forward the FDs of either the left or right input node.
+      DebugAssert(left_input()->functional_dependencies() == right_input()->functional_dependencies(),
+                  "Expected both input nodes to have the same FDs.");
+      return left_input()->functional_dependencies();
+  }
+  Fail("Unhandled UnionMode");
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {

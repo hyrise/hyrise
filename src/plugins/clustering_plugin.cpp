@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-const std::string ClusteringPlugin::description() const { return "This is the Hyrise ClusteringPlugin"; }
+std::string ClusteringPlugin::description() const { return "This is the Hyrise ClusteringPlugin"; }
 
 template <typename ColumnDataType>
 std::pair<ColumnDataType,ColumnDataType> _get_min_max(const std::shared_ptr<BaseAttributeStatistics>& base_attribute_statistics) {
@@ -104,8 +104,8 @@ void _export_chunk_size_statistics() {
 
 void ClusteringPlugin::start() {
   _clustering_config = read_clustering_config();
-  _clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
-  //_clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
+  //_clustering_algo = std::make_shared<SimpleClusteringAlgo>(_clustering_config);
+  _clustering_algo = std::make_shared<DisjointClustersAlgo>(_clustering_config);
 
   std::cout << "[ClusteringPlugin] Starting clustering, using " << _clustering_algo->description() << std::endl;
 

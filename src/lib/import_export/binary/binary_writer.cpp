@@ -265,17 +265,11 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
   // Write number of blocks
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().size()));
 
-  if (lz4_segment.lz4_blocks().empty()) {
-    // No blocks at all: write just last block size = 0
-    export_value(ofstream, uint32_t{0});
-  } else {
-    // if more than one block, write decompressed block size
-    if (lz4_segment.lz4_blocks().size() > 1) {
-      export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
-    }
-    // Write last decompressed block size
-    export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
-  }
+  // Write block size
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
+
+  // Write last block size
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
 
   // Write compressed size for each LZ4 Block
   for (const auto& lz4_block : lz4_segment.lz4_blocks()) {
@@ -319,9 +313,9 @@ void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 }
 
 template <typename T>
-uint32_t BinaryWriter::_compressed_vector_width(const BaseEncodedSegment& base_encoded_segment) {
+uint32_t BinaryWriter::_compressed_vector_width(const AbstractEncodedSegment& abstract_encoded_segment) {
   uint32_t vector_width = 0u;
-  resolve_encoded_segment_type<T>(base_encoded_segment, [&vector_width](auto& typed_segment) {
+  resolve_encoded_segment_type<T>(abstract_encoded_segment, [&vector_width](auto& typed_segment) {
     Assert(typed_segment.compressed_vector_type(), "Expected Segment to use vector compression");
     switch (*typed_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:

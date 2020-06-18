@@ -53,7 +53,7 @@ void AbstractTableGenerator::generate_and_store() {
 
     for (const auto& [table_name, column_name] : sort_order_by_table) {
       auto& table = table_info_by_name[table_name].table;
-      const auto order_by_mode = OrderByMode::Ascending;  // currently fixed to ascending
+      const auto sort_mode = SortMode::Ascending;  // currently fixed to ascending
       const auto sort_column_id = table->column_id_by_name(column_name);
       const auto chunk_count = table->chunk_count();
 
@@ -95,7 +95,7 @@ void AbstractTableGenerator::generate_and_store() {
         std::cout << "-  Table '" << table_name << "' is already sorted by '" << column_name << "' " << std::endl;
 
         for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-          table->get_chunk(chunk_id)->set_ordered_by({sort_column_id, order_by_mode});
+          table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
         }
 
         continue;
@@ -111,7 +111,7 @@ void AbstractTableGenerator::generate_and_store() {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
       auto sort = std::make_shared<Sort>(
-          table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, order_by_mode}},
+          table_wrapper, std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id, sort_mode}},
           _benchmark_config->chunk_size, Sort::ForceMaterialization::Yes);
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
@@ -129,7 +129,8 @@ void AbstractTableGenerator::generate_and_store() {
           segments.emplace_back(chunk->get_segment(column_id));
         }
         table->append_chunk(segments, mvcc_data);
-        table->get_chunk(chunk_id)->set_ordered_by({sort_column_id, order_by_mode});
+        table->get_chunk(chunk_id)->finalize();
+        table->get_chunk(chunk_id)->set_sorted_by(SortColumnDefinition(sort_column_id, sort_mode));
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;

@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "base_non_query_node.hpp"
+#include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table_column_definition.hpp"
 
@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * This node type represents the CREATE TABLE management command.
  */
-class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public BaseNonQueryNode {
+class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public AbstractNonQueryNode {
  public:
   CreateTableNode(const std::string& init_table_name, const bool init_if_not_exists);
 

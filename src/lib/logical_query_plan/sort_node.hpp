@@ -14,11 +14,11 @@ namespace opossum {
 class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
  public:
   explicit SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                    const std::vector<OrderByMode>& init_order_by_modes);
+                    const std::vector<SortMode>& init_sort_modes);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  const std::vector<OrderByMode> order_by_modes;
+  const std::vector<SortMode> sort_modes;
 
  protected:
   size_t _on_shallow_hash() const override;

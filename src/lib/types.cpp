@@ -153,11 +153,9 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
-const boost::bimap<OrderByMode, std::string> order_by_mode_to_string = make_bimap<OrderByMode, std::string>({
-    {OrderByMode::Ascending, "Ascending"},
-    {OrderByMode::Descending, "Descending"},
-    {OrderByMode::AscendingNullsLast, "AscendingNullsLast"},
-    {OrderByMode::DescendingNullsLast, "DescendingNullsLast"},
+const boost::bimap<SortMode, std::string> sort_mode_to_string = make_bimap<SortMode, std::string>({
+    {SortMode::Ascending, "Ascending"},
+    {SortMode::Descending, "Descending"},
 });
 
 const boost::bimap<JoinMode, std::string> join_mode_to_string = make_bimap<JoinMode, std::string>({
@@ -183,8 +181,8 @@ std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_cond
   return stream << predicate_condition_to_string.left.at(predicate_condition);
 }
 
-std::ostream& operator<<(std::ostream& stream, OrderByMode order_by_mode) {
-  return stream << order_by_mode_to_string.left.at(order_by_mode);
+std::ostream& operator<<(std::ostream& stream, SortMode sort_mode) {
+  return stream << sort_mode_to_string.left.at(sort_mode);
 }
 
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode) {

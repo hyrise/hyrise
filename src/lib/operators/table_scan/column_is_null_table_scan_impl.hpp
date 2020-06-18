@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 
@@ -23,13 +24,15 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
   std::string description() const override;
 
-  std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) const override;
+  std::shared_ptr<RowIDPosList> scan_chunk(const ChunkID chunk_id) override;
 
  protected:
-  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
+  void _scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
+  void _scan_generic_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+                                    const SortMode sorted_by) const;
 
   // Optimized scan on ValueSegments
-  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches) const;
+  void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, RowIDPosList& matches);
 
   /**
    * @defgroup Methods used for handling value segments

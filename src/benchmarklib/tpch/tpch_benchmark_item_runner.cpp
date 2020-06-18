@@ -74,13 +74,15 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that sort order, indexes, and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
   const auto first_chunk = orders_table->get_chunk(ChunkID{0});
-  // when experimenting with different clusterings, there might not always be ordering information for orders
-  // Assert(first_chunk->ordered_by(), "Ordering information was lost");
+
+  // When experimenting with different clusterings, there might not always be sorting information for orders
+  // Assert(!first_chunk->sorted_by().empty(), "Sorting information was lost");
+
   if (_config->indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
   }
-  Assert(!orders_table->get_soft_unique_constraints().empty(), "Constraints were lost");
+  Assert(!orders_table->soft_key_constraints().empty(), "Constraints were lost");
 
   if (_use_prepared_statements) {
     std::cout << " - Preparing queries" << std::endl;
@@ -157,8 +159,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     case 2 - 1: {
       std::uniform_int_distribution<> size_dist{1, 50};
       const auto size = size_dist(random_engine);
-      const auto material = materials[material_dist(random_engine)];
-      const auto region = regions.list[region_dist(random_engine)].text;
+      const auto* const material = materials[material_dist(random_engine)];
+      const auto* const region = regions.list[region_dist(random_engine)].text;
 
       parameters.emplace_back(std::to_string(size));
       parameters.emplace_back("'%"s + material + "'");
@@ -168,7 +170,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 3 - 1: {
-      const auto segment = c_mseg_set.list[segment_dist(random_engine)].text;
+      const auto* const segment = c_mseg_set.list[segment_dist(random_engine)].text;
       std::uniform_int_distribution<> date_diff_dist{0, 30};
       const auto date = calculate_date(boost::gregorian::date{1995, 03, 01}, 0, date_diff_dist(random_engine));
 
@@ -190,7 +192,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 5 - 1: {
-      const auto region = regions.list[region_dist(random_engine)].text;
+      const auto* const region = regions.list[region_dist(random_engine)].text;
 
       std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
@@ -224,7 +226,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 7 - 1: {
-      const auto nation1 = nations.list[nation_dist(random_engine)].text;
+      const auto* const nation1 = nations.list[nation_dist(random_engine)].text;
       auto nation2 = std::string{};
       do {
         nation2 = nations.list[nation_dist(random_engine)].text;
@@ -239,12 +241,12 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 8 - 1: {
       const auto nation_id = nation_dist(random_engine);
-      const auto nation = nations.list[nation_id].text;
+      const auto* const nation = nations.list[nation_id].text;
 
       // No idea why the field is called "weight", but it corresponds to the region of a given nation
-      const auto region = regions.list[nations.list[nation_id].weight].text;
+      const auto* const region = regions.list[nations.list[nation_id].weight].text;
 
-      const auto type = p_types_set.list[type_dist(random_engine)].text;
+      const auto* const type = p_types_set.list[type_dist(random_engine)].text;
 
       parameters.emplace_back("'"s + nation + "'");
       parameters.emplace_back("'"s + region + "'");
@@ -253,7 +255,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 9 - 1: {
-      const auto color = colors.list[color_dist(random_engine)].text;
+      const auto* const color = colors.list[color_dist(random_engine)].text;
 
       parameters.emplace_back("'%"s + color + "%'");
       break;
@@ -271,7 +273,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 11 - 1: {
-      const auto nation = nations.list[nation_dist(random_engine)].text;
+      const auto* const nation = nations.list[nation_dist(random_engine)].text;
       const auto fraction = 0.0001 / (_scale_factor > 0 ? _scale_factor : 1);
 
       parameters.emplace_back("'"s + nation + "'");
@@ -281,7 +283,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 12 - 1: {
-      const auto shipmode1 = l_smode_set.list[shipmode_dist(random_engine)].text;
+      const auto* const shipmode1 = l_smode_set.list[shipmode_dist(random_engine)].text;
       std::string shipmode2;
       do {
         shipmode2 = l_smode_set.list[shipmode_dist(random_engine)].text;
@@ -363,7 +365,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
     case 17 - 1: {
       const auto brand = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
-      const auto container = p_cntr_set.list[container_dist(random_engine)].text;
+      const auto* const container = p_cntr_set.list[container_dist(random_engine)].text;
 
       parameters.emplace_back("'Brand#"s + std::to_string(brand) + "'");
       parameters.emplace_back("'"s + container + "'");
@@ -403,12 +405,12 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 20 - 1: {
-      const auto color = colors.list[color_dist(random_engine)].text;
+      const auto* const color = colors.list[color_dist(random_engine)].text;
       std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
-      const auto nation = nations.list[nation_dist(random_engine)].text;
+      const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
       parameters.emplace_back("'"s + color + "%'");
       parameters.emplace_back("'"s + begin_date + "'");
@@ -418,7 +420,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 21 - 1: {
-      const auto nation = nations.list[nation_dist(random_engine)].text;
+      const auto* const nation = nations.list[nation_dist(random_engine)].text;
 
       parameters.emplace_back("'"s + nation + "'");
       break;
@@ -491,7 +493,7 @@ std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
 }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,
-                                                              const std::vector<std::string>& parameter_values) {
+                                                              const std::vector<std::string>& parameter_values) const {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
     std::stringstream sql;

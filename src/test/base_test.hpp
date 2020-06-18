@@ -7,7 +7,7 @@
 
 #include "gtest/gtest.h"
 
-#include "cache/cache.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -87,6 +87,11 @@ std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(const Da
 bool file_exists(const std::string& name);
 
 bool compare_files(const std::string& original_file, const std::string& created_file);
+
+// Converts a data table to a reference table. Note that this does not cover all variations of ReferenceSegments.
+// Single-chunk guarantees (and the lack thereof), ordered and unordered PosLists, etc. should be tested individually
+// where necessary.
+std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<const Table>& table);
 
 const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},

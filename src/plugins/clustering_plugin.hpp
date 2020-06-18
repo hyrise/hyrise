@@ -15,7 +15,7 @@ class ClusteringPlugin : public AbstractPlugin {
  public:
   ClusteringPlugin() {}
 
-  const std::string description() const final;
+  std::string description() const final;
 
   void start() final;
 

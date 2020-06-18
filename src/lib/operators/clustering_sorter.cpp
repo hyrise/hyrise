@@ -134,11 +134,11 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     const auto table_chunk = _table->get_chunk(chunk_count);
 
     Assert(table_chunk, "Chunk disappeared");
-    Assert(chunk->ordered_by(), "chunk has no ordering information");
-    table_chunk->set_ordered_by(*chunk->ordered_by());
+    Assert(!chunk->sorted_by().empty(), "chunk has no sorting information");
 
-    // TODO (maybe): move encoding to disjoint_clusters_algo
     table_chunk->finalize();
+    table_chunk->set_sorted_by(chunk->sorted_by());
+    // TODO (maybe): move encoding to disjoint_clusters_algo
     ChunkEncoder::encode_chunk(table_chunk, _table->column_data_types(), EncodingType::Dictionary);
     //Assert(chunk->pruning_statistics(), "chunk has no pruning statistics");
     //table_chunk->set_pruning_statistics(*chunk->pruning_statistics());

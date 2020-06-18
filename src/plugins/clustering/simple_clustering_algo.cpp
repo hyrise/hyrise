@@ -29,10 +29,10 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_mutable(const std::shar
   // For this, we use the sort operator. Because it returns a `const Table`, we need to recreate the table and
   // migrate the sorted chunks to that table.
 
-  const auto order_by_mode = OrderByMode::Ascending;
+  const auto sort_mode = SortMode::Ascending;
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), order_by_mode) };
+  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), sort_mode) };
   auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, chunk_size, Sort::ForceMaterialization::Yes);
   sort->execute();
   const auto immutable_sorted_table = sort->get_output();
@@ -60,10 +60,10 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::sh
 
 
     // We could simply use _sort_table_mutable(), but that would create another copy of the table to get rid of immutability
-    const auto order_by_mode = OrderByMode::Ascending;
+    const auto sort_mode = SortMode::Ascending;
     auto table_wrapper = std::make_shared<TableWrapper>(new_table);
     table_wrapper->execute();
-    const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), order_by_mode) };
+    const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(table->column_id_by_name(column_name), sort_mode) };
     auto sort = std::make_shared<Sort>(table_wrapper, sort_column_definitions, sort_chunk_size, Sort::ForceMaterialization::Yes);
     sort->execute();
     const auto sorted_table = sort->get_output();
@@ -75,7 +75,7 @@ std::shared_ptr<Table> SimpleClusteringAlgo::_sort_table_chunkwise(const std::sh
 }
 
 void SimpleClusteringAlgo::_append_chunks(const std::shared_ptr<const Table> from, std::shared_ptr<Table> to) {
-  Assert(from->get_chunk(ChunkID{0})->ordered_by(), "from table needs to be sorted");
+  Assert(!from->get_chunk(ChunkID{0})->sorted_by().empty(), "from table needs to be sorted");
 
   const auto chunk_count = from->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -85,10 +85,10 @@ void SimpleClusteringAlgo::_append_chunks(const std::shared_ptr<const Table> fro
 }
 
 void SimpleClusteringAlgo::_append_chunk(const std::shared_ptr<const Chunk> chunk, std::shared_ptr<Table> to) {
-  Assert(chunk->ordered_by(), "chunk needs to be sorted");
+  Assert(!chunk->sorted_by().empty(), "chunk needs to be sorted");
 
   const auto column_count = chunk->column_count();
-  const auto& ordered_by = *(chunk->ordered_by());
+  const auto& sorted_by = chunk->sorted_by();
 
   auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
   Segments segments{};
@@ -96,7 +96,9 @@ void SimpleClusteringAlgo::_append_chunk(const std::shared_ptr<const Chunk> chun
     segments.emplace_back(chunk->get_segment(column_id));
   }
   to->append_chunk(segments, mvcc_data);
-  to->last_chunk()->set_ordered_by(ordered_by);
+  // TODO: make threadsafe
+  to->last_chunk()->finalize();
+  to->last_chunk()->set_sorted_by(sorted_by);
 }
 
 void SimpleClusteringAlgo::_perform_clustering() {
@@ -158,8 +160,8 @@ void SimpleClusteringAlgo::_perform_clustering() {
 
       // copy constraints, TPCHBenchmarkItemRunner complains otherwise
       std::cout << "[" << description() << "] " << "  Adding unique constraints to " << table_name << " " << std::flush;
-      for (const auto &constraint : original_table->get_soft_unique_constraints()) {
-        mutable_sorted_table->add_soft_unique_constraint(constraint.columns, constraint.is_primary_key);
+      for (const auto &constraint : original_table->soft_key_constraints()) {
+        mutable_sorted_table->add_soft_key_constraint(constraint);
       }
       std::cout << "(" << per_clustering_timer.lap_formatted() << ")" << std::endl;
 

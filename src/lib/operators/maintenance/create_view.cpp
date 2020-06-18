@@ -25,8 +25,8 @@ const std::string& CreateView::view_name() const { return _view_name; }
 bool CreateView::if_not_exists() const { return _if_not_exists; }
 
 std::shared_ptr<AbstractOperator> CreateView::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
   return std::make_shared<CreateView>(_view_name, _view->deep_copy(), _if_not_exists);
 }
 

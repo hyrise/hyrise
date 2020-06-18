@@ -46,30 +46,27 @@ void _extract_get_tables(const std::shared_ptr<const AbstractOperator> pqp_node,
     Assert(get_table_op, "could not cast to GetTable");
     get_table_operators.insert(get_table_op);
   } else {
-    if (pqp_node->input_left()) _extract_get_tables(pqp_node->input_left(), get_table_operators);
-    if (pqp_node->input_right()) _extract_get_tables(pqp_node->input_right(), get_table_operators);
+    if (pqp_node->left_input()) _extract_get_tables(pqp_node->left_input(), get_table_operators);
+    if (pqp_node->right_input()) _extract_get_tables(pqp_node->right_input(), get_table_operators);
   }
 }
 
 const nlohmann::json _compute_pruned_chunks_per_table() {
   std::map<std::string, std::vector<size_t>> pruned_chunks_per_table;
 
-  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin(); iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
-    const auto& [query_string, physical_query_plan] = *iter;
+  const auto cache_snapshot = Hyrise::get().default_pqp_cache->snapshot();
+  for (const auto& [query_string, snapshot_entry] : cache_snapshot) {
+    const auto& physical_query_plan = snapshot_entry.value;
+    const auto& frequency = snapshot_entry.frequency;
+    Assert(frequency, "Optional frequency is unexpectedly not set.");
 
     std::set<std::shared_ptr<const GetTable>> get_table_operators;
     _extract_get_tables(physical_query_plan, get_table_operators);
 
-    // Queries are cached just once (per parameter combination).
-    // Thus, we need to check how often the concrete queries were executed.
-    auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(Hyrise::get().default_pqp_cache->unsafe_cache());
-    const size_t frequency = gdfs_cache.frequency(query_string);
-    Assert(frequency > 0, "found a pqp for a query that was not cached");
-
     for (const auto& get_table : get_table_operators) {
       const auto& table_name = get_table->table_name();
       const auto& number_of_pruned_chunks = get_table->pruned_chunk_ids().size();
-      for (size_t run{0}; run < frequency; run++) {
+      for (size_t run{0}; run < *frequency; run++) {
         pruned_chunks_per_table[table_name].push_back(number_of_pruned_chunks);
       }
     }
@@ -86,8 +83,8 @@ bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node
   bool left_input_ignores = false;
   bool right_input_ignores = false;
 
-  if (pqp_node->input_left()) left_input_ignores = _extract_table_scans(pqp_node->input_left(), table_scans);
-  if (pqp_node->input_right()) right_input_ignores = _extract_table_scans(pqp_node->input_right(), table_scans);
+  if (pqp_node->left_input()) left_input_ignores = _extract_table_scans(pqp_node->left_input(), table_scans);
+  if (pqp_node->right_input()) right_input_ignores = _extract_table_scans(pqp_node->right_input(), table_scans);
 
   // some input below could already be "illegal"
   if (left_input_ignores || right_input_ignores) return true;
@@ -106,7 +103,7 @@ bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node
   if (pqp_node->type() == OperatorType::TableScan) {
     auto op = pqp_node;
     while (op->type() != OperatorType::GetTable) {
-      op = op->input_left();
+      op = op->left_input();
       Assert(op, "reached a node with no input, without reaching a GetTable");
     }
     auto get_table = std::dynamic_pointer_cast<const GetTable>(op);
@@ -125,25 +122,21 @@ bool _extract_table_scans(const std::shared_ptr<const AbstractOperator> pqp_node
 const nlohmann::json _compute_skipped_chunks_per_table() {
   std::map<std::string, std::vector<size_t>> skipped_chunks_per_table;
 
-  for (auto iter = Hyrise::get().default_pqp_cache->unsafe_begin(); iter != Hyrise::get().default_pqp_cache->unsafe_end(); ++iter) {
-    const auto& [query_string, physical_query_plan] = *iter;
+  const auto cache_snapshot = Hyrise::get().default_pqp_cache->snapshot();
+  for (const auto& [query_string, snapshot_entry] : cache_snapshot) {
+    const auto& physical_query_plan = snapshot_entry.value;
+    const auto& frequency = snapshot_entry.frequency;
+    Assert(frequency, "Optional frequency is unexpectedly not set.");
 
     std::map<std::string, std::vector<std::shared_ptr<const TableScan>>> table_scans;
     _extract_table_scans(physical_query_plan, table_scans);
 
-    // Queries are cached just once (per parameter combination).
-    // Thus, we need to check how often the concrete queries were executed.
-    auto& gdfs_cache = dynamic_cast<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>&>(Hyrise::get().default_pqp_cache->unsafe_cache());
-    const size_t frequency = gdfs_cache.frequency(query_string);
-    Assert(frequency > 0, "found a pqp for a query that was not cached");
+    for (const auto& [table_name, table_scans] : table_scans) {
+      for (const auto& table_scan : table_scans) {
+        Assert(dynamic_cast<TableScan::PerformanceData*>(table_scan->performance_data.get()), "performance data was not of type TableScanPerformanceData");
+        const auto& table_scan_performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
 
-    for (const auto& table_name_table_scans : table_scans) {
-      const auto& table_name = table_name_table_scans.first;
-      for (const auto& table_scan : table_name_table_scans.second) {
-        Assert(dynamic_cast<TableScan::TableScanPerformanceData*>(table_scan->performance_data.get()), "performance data was not of type TableScanPerformanceData");
-        const auto& table_scan_performance_data = dynamic_cast<TableScan::TableScanPerformanceData&>(*table_scan->performance_data);
-
-        for (size_t run{0}; run < frequency; run++) {
+        for (size_t run{0}; run < *frequency; run++) {
           skipped_chunks_per_table[table_name].push_back(table_scan_performance_data.chunk_scans_skipped);
         }
       }

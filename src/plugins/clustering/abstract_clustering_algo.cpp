@@ -90,19 +90,6 @@ void AbstractClusteringAlgo::_run_assertions() const {
     }
     if (VERBOSE) std::cout << "[" << description() << "] " << "-  Chunk count is correct" << " for table " << table_name << std::endl;
 
-    // Determine the target chunk size.
-    // TODO this is hacky, but this class does not know about benchmark_config->chunk_size, and not sure if it should
-    /*
-    ChunkOffset target_chunk_size;
-    if (Hyrise::get().storage_manager.has_table("lineitem")) {
-      target_chunk_size = 25'100;
-    } else if (Hyrise::get().storage_manager.has_table("customer_demographics")) {
-      target_chunk_size = Chunk::DEFAULT_SIZE;
-    } else {
-      Fail("Please provide a default chunk size for this benchmark");
-    }
-    */
-
     // Iterate over all chunks, and check that ...
     for (ChunkID chunk_id{0};chunk_id < table->chunk_count();chunk_id++) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -117,11 +104,12 @@ void AbstractClusteringAlgo::_run_assertions() const {
         Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
         if (ordered_by_column_id) {
-          Assert(chunk->ordered_by(), "chunk " + std::to_string(chunk_id) + " should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
-          Assert((*chunk->ordered_by()).first == *ordered_by_column_id, "chunk should be ordered by " + table->column_name(*ordered_by_column_id) 
-            + ", but is ordered by " + table->column_name((*chunk->ordered_by()).first));
+          Assert(!chunk->sorted_by().empty(), "chunk " + std::to_string(chunk_id) + " should be ordered by " + table->column_name(*ordered_by_column_id) + ", but is unordered");
+          const auto sorted_column_id = chunk->sorted_by()[0].column;
+          Assert(sorted_column_id == *ordered_by_column_id, "chunk should be ordered by " + table->column_name(*ordered_by_column_id)
+            + ", but is ordered by " + table->column_name(sorted_column_id));
         } else {
-          Assert(!chunk->ordered_by(), "chunk should be unordered, but is ordered by " + table->column_name((*chunk->ordered_by()).first));
+          Assert(chunk->sorted_by().empty(), "chunk should be unordered, but is ordered by " + table->column_name(chunk->sorted_by()[0].column));
         }
         if (VERBOSE) std::cout << "[" << description() << "] " << "-  Ordering information is correct" << " for table " << table_name << std::endl;
 
@@ -236,9 +224,9 @@ void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk>
   table->append_chunk(segments, chunk->mvcc_data());
   Assert(table->last_chunk()->mvcc_data(), "MVCC data disappeared");
 
-  if (chunk->ordered_by()) {
-    const auto ordered_by = *chunk->ordered_by();
-    table->last_chunk()->set_ordered_by(ordered_by);
+  if (!chunk->sorted_by().empty()) {
+    const auto sorted_by = chunk->sorted_by();
+    table->last_chunk()->set_sorted_by(sorted_by);
   }
 
   if (!chunk->is_mutable()) {
@@ -249,7 +237,7 @@ void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk>
 
 void AbstractClusteringAlgo::_append_sorted_chunk_to_table(const std::shared_ptr<Chunk> chunk, const std::shared_ptr<Table> table, bool allow_mutable) const {
   Assert(chunk, "chunk is nullptr");
-  Assert(chunk->ordered_by(), "chunk has no ordering information");
+  Assert(!chunk->sorted_by().empty(), "chunk has no ordering information");
   _append_chunk_to_table(chunk, table, allow_mutable);
 }
 
@@ -278,7 +266,7 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   auto wrapper = std::make_shared<TableWrapper>(table);
   wrapper->execute();
   Assert(wrapper->get_output()->get_chunk(ChunkID{0})->mvcc_data(), "wrapper result has no mvcc data");
-  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column, OrderByMode::Ascending) };
+  const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column, SortMode::Ascending) };
   auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, size_before_sort, Sort::ForceMaterialization::Yes);
   sort->execute();
 
@@ -292,7 +280,7 @@ std::shared_ptr<Chunk> AbstractClusteringAlgo::_sort_chunk(std::shared_ptr<Chunk
   const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
 
   auto sorted_chunk_with_mvcc = std::make_shared<Chunk>(_get_segments(sorted_const_chunk), mvcc_data);
-  sorted_chunk_with_mvcc->set_ordered_by(*sorted_const_chunk->ordered_by());
+  sorted_chunk_with_mvcc->set_sorted_by(sorted_const_chunk->sorted_by());
   return sorted_chunk_with_mvcc;
 }
 

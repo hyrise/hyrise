@@ -95,8 +95,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
   if (cardinality_estimation_cache.join_graph_statistics_cache) {
     join_graph_bitmask = cardinality_estimation_cache.join_graph_statistics_cache->bitmask(lqp);
     if (join_graph_bitmask) {
-      const auto cached_statistics =
-          cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->column_expressions());
+      auto cached_statistics =
+          cardinality_estimation_cache.join_graph_statistics_cache->get(*join_graph_bitmask, lqp->output_expressions());
       if (cached_statistics) {
         return cached_statistics;
       }
@@ -230,7 +230,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
    * 3. Store output_table_statistics in cache
    */
   if (join_graph_bitmask) {
-    cardinality_estimation_cache.join_graph_statistics_cache->set(*join_graph_bitmask, lqp->column_expressions(),
+    cardinality_estimation_cache.join_graph_statistics_cache->set(*join_graph_bitmask, lqp->output_expressions(),
                                                                   output_table_statistics);
   }
 
@@ -246,10 +246,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
   // For AliasNodes, just reorder/remove AttributeStatistics from the input
 
   auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{alias_node.column_expressions().size()};
+      std::vector<std::shared_ptr<BaseAttributeStatistics>>{alias_node.output_expressions().size()};
 
-  for (size_t expression_idx{0}; expression_idx < alias_node.column_expressions().size(); ++expression_idx) {
-    const auto& expression = *alias_node.column_expressions()[expression_idx];
+  for (size_t expression_idx{0}; expression_idx < alias_node.output_expressions().size(); ++expression_idx) {
+    const auto& expression = *alias_node.output_expressions()[expression_idx];
     const auto input_column_id = alias_node.left_input()->get_column_id(expression);
     column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
   }
@@ -265,10 +265,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
   //               empty AttributeStatistics object is created.
 
   auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{projection_node.column_expressions().size()};
+      std::vector<std::shared_ptr<BaseAttributeStatistics>>{projection_node.output_expressions().size()};
 
-  for (size_t expression_idx{0}; expression_idx < projection_node.column_expressions().size(); ++expression_idx) {
-    const auto& expression = *projection_node.column_expressions()[expression_idx];
+  for (size_t expression_idx{0}; expression_idx < projection_node.output_expressions().size(); ++expression_idx) {
+    const auto& expression = *projection_node.output_expressions()[expression_idx];
     const auto input_column_id = projection_node.left_input()->find_column_id(expression);
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
@@ -289,10 +289,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
   // dummy statistics are created for now.
 
   auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{aggregate_node.column_expressions().size()};
+      std::vector<std::shared_ptr<BaseAttributeStatistics>>{aggregate_node.output_expressions().size()};
 
-  for (size_t expression_idx{0}; expression_idx < aggregate_node.column_expressions().size(); ++expression_idx) {
-    const auto& expression = *aggregate_node.column_expressions()[expression_idx];
+  for (size_t expression_idx{0}; expression_idx < aggregate_node.output_expressions().size(); ++expression_idx) {
+    const auto& expression = *aggregate_node.output_expressions()[expression_idx];
     const auto input_column_id = aggregate_node.left_input()->find_column_id(expression);
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
@@ -344,8 +344,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
       }
 
-      const auto output_table_statistics =
-          std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+      auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
       return output_table_statistics;
     } else if (logical_expression->logical_operator == LogicalOperator::And) {
@@ -356,8 +355,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto first_predicate_statistics = estimate_predicate_node(*first_predicate_node, input_table_statistics);
 
       const auto second_predicate_node = PredicateNode::make(logical_expression->right_operand(), first_predicate_node);
-      const auto second_predicate_statistics =
-          estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
+      auto second_predicate_statistics = estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
 
       return second_predicate_statistics;
     }
@@ -506,7 +504,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 
   const auto row_count = Cardinality{left_input_table_statistics->row_count + right_input_table_statistics->row_count};
 
-  const auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
+  auto output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), row_count);
 
   return output_table_statistics;
 }
@@ -528,7 +526,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     const auto clamped_row_count = std::min(*row_count, input_table_statistics->row_count);
 
     auto column_statistics =
-        std::vector<std::shared_ptr<BaseAttributeStatistics>>{limit_node.column_expressions().size()};
+        std::vector<std::shared_ptr<BaseAttributeStatistics>>{limit_node.output_expressions().size()};
 
     for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
       resolve_data_type(input_table_statistics->column_data_type(column_id), [&](const auto data_type_t) {

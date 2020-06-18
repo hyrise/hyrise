@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "base_non_query_node.hpp"
+#include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "import_export/file_type.hpp"
 #include "storage/table_column_definition.hpp"
@@ -12,7 +12,7 @@ namespace opossum {
 /**
  * This node type represents the IMPORT / COPY FROM management command.
  */
-class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
+class ImportNode : public EnableMakeForLQPNode<ImportNode>, public AbstractNonQueryNode {
  public:
   ImportNode(const std::string& init_table_name, const std::string& init_file_name, const FileType init_file_type);
 

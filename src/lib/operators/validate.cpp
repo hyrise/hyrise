@@ -62,9 +62,9 @@ const std::string& Validate::name() const {
 }
 
 std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Validate>(copied_input_left);
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Validate>(copied_left_input);
 }
 
 void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -77,7 +77,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context, "Validate requires a valid TransactionContext.");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
-  const auto in_table = input_table_left();
+  const auto in_table = left_input_table();
   const auto chunk_count = in_table->chunk_count();
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
@@ -234,9 +234,18 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       }
     }
 
-    if (!pos_list_out->empty() > 0) {
+    if (!pos_list_out->empty()) {
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
+      // after the validate operator.
+      const auto chunk = std::make_shared<Chunk>(output_segments);
+      chunk->finalize();
+
+      const auto& sorted_by = chunk_in->sorted_by();
+      if (!sorted_by.empty()) {
+        chunk->set_sorted_by(sorted_by);
+      }
+      output_chunks.emplace_back(chunk);
     }
   }
 }
