@@ -20,13 +20,13 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 
 def get_parser():
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "results", nargs="+", help="Paths to individual result folders created by benchmark_multithreaded.py"
-        )
-        parser.add_argument("-f", "--format", choices=["pdf", "png"], type=str.lower, default="pdf")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "results", nargs="+", help="Paths to individual result folders created by benchmark_multithreaded.py"
+    )
+    parser.add_argument("-f", "--format", choices=["pdf", "png"], type=str.lower, default="pdf")
 
-        return parser
+    return parser
 
 
 def is_square(n):
