@@ -21,3 +21,6 @@ else
     # Run on all changed as well as untracked cpp/hpp files, as compared to the current master. Skip deleted files.
     { git diff --diff-filter=d --name-only master & git ls-files --others --exclude-standard; } | grep -E "^src.*\.[chi]pp$" | xargs -I{} sh -c "${format_cmd}"
 fi
+
+# Python formatting
+black --line-length 120 scripts

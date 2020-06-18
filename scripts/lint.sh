@@ -85,4 +85,11 @@ for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provide
     fi
 done
 
+# Python linting
+output=$(flake8 --max-line-length 120 scripts)
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
+
 exit $exitcode
