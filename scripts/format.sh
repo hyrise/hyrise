@@ -23,4 +23,4 @@ else
 fi
 
 # Python formatting
-black --line-length 120 scripts
+black --line-length 120 scripts -q
