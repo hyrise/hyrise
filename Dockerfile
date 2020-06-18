@@ -35,6 +35,7 @@ RUN apt-get update \
         parallel \
         postgresql-server-dev-all \
         python3 \
+        python3-pip \
         python3-pexpect \
         software-properties-common \
         sudo \
@@ -44,5 +45,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
+
+RUN pip3 install flake8
 
 ENV OPOSSUM_HEADLESS_SETUP=true
