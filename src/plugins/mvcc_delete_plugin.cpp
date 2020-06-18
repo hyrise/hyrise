@@ -95,7 +95,6 @@ void MvccDeletePlugin::_logical_delete_loop() {
       Hyrise::get().log_manager.add_message("MvccDeletePlugin", message.str(), LogLevel::Info);
     }
   }
-
 }
 
 /**
