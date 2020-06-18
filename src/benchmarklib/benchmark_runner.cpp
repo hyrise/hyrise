@@ -99,7 +99,7 @@ void BenchmarkRunner::run() {
 
       SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(SYSTEM_UTILIZATION_TRACKING_INTERVAL));
+      std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
     }
   }};
 
