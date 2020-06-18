@@ -76,16 +76,18 @@ void BenchmarkRunner::run() {
 
   _benchmark_start = std::chrono::system_clock::now();
 
-  // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
-  // supported.
-  SQLPipelineBuilder{
-      "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
-      "meta_system_utilization"}
-      .create_pipeline()
-      .get_result_table();
-
-  auto track_system_utilization = std::atomic_bool{true};
+  auto track_system_utilization = std::atomic_bool{_config.metrics};
   auto system_utilization_tracker = std::thread{[&] {
+    if (!track_system_utilization) return;
+
+    // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
+    // supported.
+    SQLPipelineBuilder{
+        "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
+        "meta_system_utilization"}
+        .create_pipeline()
+        .get_result_table();
+
     while (track_system_utilization) {
       const auto timestamp =
           std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
@@ -287,7 +289,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
-          if (!_config.sql_metrics) metrics.clear();
+          if (!_config.metrics) metrics.clear();
           const auto item_result =
               BenchmarkItemRunResult{run_start - _benchmark_start, run_end - run_start, std::move(metrics)};
           if (success) {
@@ -345,7 +347,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       for (const auto& run_result : runs) {
         // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
         auto all_pipeline_metrics_json = nlohmann::json::array();
-        // metrics can be empty if _config.sql_metrics is false
+        // metrics can be empty if _config.metrics is false
         for (const auto& pipeline_metrics : run_result.metrics) {
           auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
                                                       {"statements", nlohmann::json::array()}};
@@ -411,18 +413,18 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   const auto benchmark_start_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(_benchmark_start.time_since_epoch()).count();
-  std::cout << std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
-                   " AS \"timestamp\", log_level, reporter, message FROM meta_log"
-            << std::endl;
   auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
                                " AS \"timestamp\", log_level, reporter, message FROM meta_log");
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", std::move(benchmarks)},
-                        {"system_utilization", _sql_to_json("SELECT * FROM benchmark_system_utilization_log")},
                         {"log", std::move(log_json)},
                         {"summary", std::move(summary)},
                         {"table_generation", _table_generator->metrics}};
+
+  if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
+    report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
+  }
 
   stream << std::setw(2) << report << std::endl;
 }
@@ -464,7 +466,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value(default_dont_cache_binary_tables)) // NOLINT
-    ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query and add it to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("metrics", "Track more metrics (Steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;
