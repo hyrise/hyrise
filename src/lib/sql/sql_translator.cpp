@@ -1160,8 +1160,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
               "Mismatching number of input columns for set operation");
 
   // Check to see if both input LQPs use the same data type for each column
-  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size();
-       ++expression_idx) {
+  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size(); ++expression_idx) {
     const auto& left_expression = left_output_expressions[expression_idx];
     const auto& right_expression = right_output_expressions[expression_idx];
 
