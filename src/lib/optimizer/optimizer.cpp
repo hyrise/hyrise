@@ -192,9 +192,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       if (rule_durations) {
         rule_durations->push_back({rule_name, rule_duration});
       }
-    }
 
-    validate_lqp(root_node);
+      validate_lqp(root_node);
+    }
   } else {
     for (const auto& rule : _rules) {
       _apply_rule(*rule, root_node);
