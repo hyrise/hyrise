@@ -45,6 +45,10 @@ try {
   }
 
   node('linux') {
+    stage(‘hostname’) {
+      sh ‘hostname’
+    }
+
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
