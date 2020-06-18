@@ -76,7 +76,8 @@ void BenchmarkRunner::run() {
 
   _benchmark_start = std::chrono::system_clock::now();
 
-  // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet supported
+  // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
+  // supported.
   SQLPipelineBuilder{
       "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
       "meta_system_utilization"}
@@ -518,7 +519,8 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       boost::apply_visitor(
-          [&](const auto value) {
+          // table=table needed because of https://stackoverflow.com/questions/46114214/
+          [&, table = table](const auto value) {
             if constexpr (!std::is_same_v<std::decay_t<decltype(value)>, NullValue>) {
               entry[table->column_name(column_id)] = value;
             } else {
