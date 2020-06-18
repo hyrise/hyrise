@@ -34,7 +34,7 @@ class SQLiteWrapper;
 // The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
 // (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
-class BenchmarkRunner : Noncopyable {
+class BenchmarkRunner : public Noncopyable {
  public:
   // Defines the interval in which the system utilization is collected
   static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = 1000;

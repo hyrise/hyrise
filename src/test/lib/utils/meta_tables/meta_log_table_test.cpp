@@ -40,7 +40,7 @@ TEST_F(MetaLogTest, TableGeneration) {
 
   const auto values = meta_table->get_row(0);
 
-  // Log entry should be creater less than a minute ago but before the meta table was generated
+  // Log entry should be created less than a minute ago but before the meta table was generated
   EXPECT_GT(boost::get<int64_t>(values[0]), timestamp_ns - static_cast<int64_t>(60e9));
   EXPECT_LT(boost::get<int64_t>(values[0]), timestamp_ns);
 

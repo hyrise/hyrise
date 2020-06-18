@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 # Takes a single benchmark output JSON and plots the duration of item executions as well as
-# information about the system utilization (if --metrics is set) and the event log
+# information about the system utilization (if --metrics is set) and the event log.
+#
+# If you are seeing "AttributeError: 'NoneType' object has no attribute 'contains_point'",
+# your matplotlib version is too old.
 
 import colorsys
 import json
@@ -41,10 +44,8 @@ has_system_metrics = 'system_utilization' in data_json
 
 # Build a flat list containing a {name, begin, duration} entry for every benchmark item run
 data = []
-benchmark_names = []
 for benchmark_json in data_json['benchmarks']:
     name = benchmark_json['name']
-    benchmark_names.append(name)
     for run_json in benchmark_json['successful_runs']:
         data.append({'name': name, 'begin': run_json['begin'] / 1e9,
                      'duration': run_json['duration'], 'success': True})
@@ -56,6 +57,7 @@ for benchmark_json in data_json['benchmarks']:
 df = pd.DataFrame(data).reset_index().sort_values('begin')
 
 # Set the colors
+benchmark_names = df['name'].unique()
 benchmark_names.sort()  # Sort the benchmarks for a deterministic color mapping
 name_to_color = {}
 prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -68,6 +70,7 @@ for is_detailed in [False, True]:
     (figw, figh) = (12, 3 * len(benchmark_names) if is_detailed else 5)
     nrows = len(benchmark_names) if is_detailed else 1
 
+    # If --metrics was used, add space and a subplot for the system metrics
     if has_system_metrics:
         figh += 4
         nrows += 1
@@ -77,10 +80,9 @@ for is_detailed in [False, True]:
     axes = [axes] if nrows == 1 else axes
 
     # Add the benchmarks to the plot
-    for i in range(0, len(benchmark_names)):
+    for i, benchmark_name in enumerate(benchmark_names):
         ax = axes[i] if is_detailed else axes[0]
 
-        benchmark_name = benchmark_names[i]
         color = default_colors[i % len(default_colors)]
         name_to_color[benchmark_name] = color
         single_run_color = [colors.to_rgba(lighten_color(color, 0.7), 0.5)]
