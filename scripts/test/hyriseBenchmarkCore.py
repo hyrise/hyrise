@@ -20,7 +20,7 @@ def check_exit_status(benchmark):
 
 
 def check_json(json, argument, error, return_error, difference=None):
-    if not type(json) is float:
+    if type(json) is not float:
         if json != argument:
             print("ERROR: " + error + " " + str(json) + " " + str(argument))
             return True
