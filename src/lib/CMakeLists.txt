@@ -708,8 +708,8 @@ set_source_files_properties(
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 
-if(NOT "${ENABLE_THREAD_SANITIZATION}")
-    # Do not use jemalloc for thread sanitization as tsan on Mac works better with its own allocator.
+if(NOT APPLE)
+    # Do not use jemalloc on Mac as we cannot properly replace the allocator - see third_party/CMakeLists.txt for details.
     target_link_libraries(hyrise_impl PUBLIC custom_jemalloc -rdynamic)
     target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
 
