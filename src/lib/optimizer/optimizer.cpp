@@ -182,7 +182,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       _apply_rule(*rule, root_node);
       auto rule_duration = rule_timer.lap();
 
-      auto rule_name = std::string(typeid(*rule).name());
+      auto& r = *rule.get();
+      auto rule_name = std::string(typeid(r).name());
       rule_name = rule_name.substr(
           rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }),
           rule_name.size());
