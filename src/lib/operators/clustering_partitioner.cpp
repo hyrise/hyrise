@@ -77,7 +77,7 @@ void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
 void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
   // all locks have been acquired by now, so just write the results
 
-  for (ChunkOffset chunk_offset{0}; chunk_offset < _cluster_keys->size(); chunk_offset++) {
+  for (ChunkOffset chunk_offset{0}; chunk_offset < _cluster_keys.size(); chunk_offset++) {
     const auto cluster_key = _cluster_keys[chunk_offset];
 
     std::vector<AllTypeVariant> insertion_values;
