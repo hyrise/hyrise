@@ -119,7 +119,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
-        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached column_expressions)
+        // Copy the LQP for reuse as the LQPTranslator might modify mutable fields (e.g., cached output_expressions)
         // and concurrent translations might conflict.
         _optimized_logical_plan = plan->deep_copy();
         return _optimized_logical_plan;

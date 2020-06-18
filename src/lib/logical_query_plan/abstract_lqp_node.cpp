@@ -221,16 +221,16 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
   return _on_shallow_equals(rhs, node_mapping);
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_expressions() const {
   Assert(left_input() && !right_input(),
          "Can only forward input expressions iff there is a left input and no right input");
-  return left_input()->column_expressions();
+  return left_input()->output_expressions();
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
-  const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
-  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-    if (*column_expressions[column_id] == expression) return column_id;
+  const auto& output_expressions = this->output_expressions();  // Avoid redundant retrieval in loop below
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    if (*output_expressions[column_id] == expression) return column_id;
   }
   return std::nullopt;
 }
@@ -277,19 +277,19 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   auto fds_out = std::vector<FunctionalDependency>();
 
   // Collect non-nullable columns
-  const auto expressions = column_expressions();
-  auto column_expressions_non_nullable = ExpressionUnorderedSet{};
+  const auto expressions = output_expressions();
+  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
     if (!is_column_nullable(column_id)) {
-      column_expressions_non_nullable.insert(expressions.at(column_id));
+      output_expressions_non_nullable.insert(expressions.at(column_id));
     }
   }
 
   for (const auto& fd : fds_in) {
     // Check whether the determinants are a subset of the current node's non-nullable output expressions
     if (std::any_of(fd.determinants.cbegin(), fd.determinants.cend(),
-                    [&column_expressions_non_nullable](const auto& expression) {
-                      return !column_expressions_non_nullable.contains(expression);
+                    [&output_expressions_non_nullable](const auto& expression) {
+                      return !output_expressions_non_nullable.contains(expression);
                     }))
       continue;
 

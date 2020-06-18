@@ -34,6 +34,9 @@
 [submodule "third_party/lz4"]
 	path = third_party/lz4
 	url = https://github.com/lz4/lz4.git
+[submodule "third_party/magic_enum"]
+	path = third_party/magic_enum
+	url = https://github.com/Neargye/magic_enum.git
 [submodule "third_party/nlohmann_json"]
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git

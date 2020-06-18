@@ -34,7 +34,7 @@ class IntersectNodeTest : public BaseTest {
 TEST_F(IntersectNodeTest, Description) { EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: Positions"); }
 
 TEST_F(IntersectNodeTest, OutputColumnExpressions) {
-  EXPECT_TRUE(_intersect_node->column_expressions() == _mock_node1->column_expressions());
+  EXPECT_TRUE(_intersect_node->output_expressions() == _mock_node1->output_expressions());
 }
 
 TEST_F(IntersectNodeTest, HashingAndEqualityCheck) {

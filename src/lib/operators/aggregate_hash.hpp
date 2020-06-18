@@ -106,8 +106,19 @@ class AggregateHash : public AbstractAggregateOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
 
+  enum class OperatorSteps : uint8_t {
+    GroupByKeyPartitioning,
+    Aggregating,
+    GroupByColumnsWriting,
+    AggregateColumnsWriting,
+    OutputWriting
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  template <typename AggregateKey>
+  KeysPerChunk<AggregateKey> _partition_by_groupby_keys() const;
 
   template <typename AggregateKey>
   void _aggregate();

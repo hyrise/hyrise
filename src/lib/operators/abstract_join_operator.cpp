@@ -15,8 +15,8 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                            const OperatorJoinPredicate& primary_predicate,
                                            const std::vector<OperatorJoinPredicate>& secondary_predicates,
-                                           std::unique_ptr<OperatorPerformanceData> performance_data)
-    : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
+                                           std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
+    : AbstractReadOnlyOperator(type, left, right, std::move(init_performance_data)),
       _mode(mode),
       _primary_predicate(primary_predicate),
       _secondary_predicates(secondary_predicates) {
@@ -49,7 +49,7 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     if (lqp_node) {
       // LQP is available, use column name from there
       const auto& input_lqp_node = lqp_node->input(from_left ? LQPInputSide::Left : LQPInputSide::Right);
-      return input_lqp_node->column_expressions()[column_id]->as_column_name();
+      return input_lqp_node->output_expressions()[column_id]->as_column_name();
     }
 
     // Fallback - use column ID

@@ -18,8 +18,8 @@ std::string ExceptNode::description(const DescriptionMode mode) const {
   return "[ExceptNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> ExceptNode::column_expressions() const {
-  return left_input()->column_expressions();
+std::vector<std::shared_ptr<AbstractExpression>> ExceptNode::output_expressions() const {
+  return left_input()->output_expressions();
 }
 
 bool ExceptNode::is_column_nullable(const ColumnID column_id) const {

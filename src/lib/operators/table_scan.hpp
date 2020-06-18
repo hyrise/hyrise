@@ -48,6 +48,30 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   std::vector<ChunkID> excluded_chunk_ids;
 
+  struct PerformanceData : public OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps> {
+    size_t chunk_scans_skipped{0};
+    size_t chunk_scans_sorted{0};
+
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+      if (chunk_scans_skipped == 0 && chunk_scans_sorted == 0) {
+        return;
+      }
+
+      const auto *const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+      stream << separator << "Chunks: ";
+      if (chunk_scans_skipped > 0) {
+        stream << chunk_scans_skipped << " skipped";
+      }
+      if (chunk_scans_skipped > 0 && chunk_scans_sorted > 0) {
+        stream << ", ";
+      }
+      if (chunk_scans_sorted > 0) {
+        stream << chunk_scans_sorted << " scanned using binary search";
+      }
+      stream << ". ";
+    }
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 

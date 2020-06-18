@@ -56,7 +56,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   Hyrise::get().storage_manager.add_table(_tablename, table);
 
-  // must match ImportNode::column_expressions
+  // must match ImportNode::output_expressions
   return nullptr;
 }
 

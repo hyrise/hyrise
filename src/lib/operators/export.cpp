@@ -39,7 +39,7 @@ std::shared_ptr<const Table> Export::_on_execute() {
       Fail("Export: Exporting file type is not supported.");
   }
 
-  // must match ExportNode::column_expressions
+  // must match ExportNode::output_expressions
   return nullptr;
 }
 
