@@ -71,7 +71,6 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-template <typename T>
 size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
   /*
     Setting number of bits for radix clustering:
@@ -193,7 +192,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
           _radix_bits =
-              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+              calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count());
         }
 
         // It needs to be ensured that the build partition does not get too large, because the

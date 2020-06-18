@@ -30,7 +30,6 @@ class JoinHash : public AbstractJoinOperator {
   const std::string& name() const override;
   std::string description(DescriptionMode description_mode) const override;
 
-  template <typename T>
   static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
 
   enum class OperatorSteps : uint8_t {
