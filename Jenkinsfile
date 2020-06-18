@@ -52,7 +52,7 @@ try {
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
-    oppossumCI.inside("-u 0:0") {
+    oppossumCI.inside("--cap-add SYS_PTRACE -u 0:0") {
       try {
         stage("Setup") {
           checkout scm
