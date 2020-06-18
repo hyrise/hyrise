@@ -269,7 +269,7 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
     bool stats_enabled;
     size_t stats_enabled_size{sizeof(stats_enabled)};
 
-    auto error_code = je_mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
+    auto error_code = mallctl("config.stats", &stats_enabled, &stats_enabled_size, nullptr, 0);
     Assert(!error_code, "Cannot check if jemalloc was built with --stats_enabled");
     Assert(stats_enabled, "Hyrise's jemalloc was not build with --stats_enabled");
   }
@@ -279,14 +279,14 @@ std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
   {
     uint64_t epoch = 1;
     auto epoch_size = sizeof(epoch);
-    auto error_code = je_mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
+    auto error_code = mallctl("epoch", &epoch, &epoch_size, &epoch, epoch_size);
     Assert(!error_code, "Setting epoch failed");
   }
 
   size_t allocated;
   auto allocated_size = sizeof(allocated);
 
-  auto error_code = je_mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
+  auto error_code = mallctl("stats.allocated", &allocated, &allocated_size, nullptr, 0);
   Assert(!error_code, std::string{"mallctl failed with error code "} + std::to_string(error_code));
 
   return allocated;
