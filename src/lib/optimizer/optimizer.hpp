@@ -10,6 +10,11 @@
 
 namespace opossum {
 
+struct OptimizerRuleMetrics {
+  std::string name;
+  std::chrono::nanoseconds duration;
+};
+
 class AbstractRule;
 class AbstractLQPNode;
 
@@ -34,7 +39,7 @@ class Optimizer final {
 
   std::shared_ptr<AbstractLQPNode> optimize(
       std::shared_ptr<AbstractLQPNode> input,
-      std::shared_ptr<std::vector<std::pair<std::string, std::chrono::nanoseconds>>> rule_durations = nullptr) const;
+      std::shared_ptr<std::vector<OptimizerRuleMetrics>> rule_durations = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 

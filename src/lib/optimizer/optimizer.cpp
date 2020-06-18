@@ -23,9 +23,6 @@
 #include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
-
-#include <fstream>
-#include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
 /**
@@ -166,7 +163,7 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     std::shared_ptr<AbstractLQPNode> input,
-    std::shared_ptr<std::vector<std::pair<std::string, std::chrono::nanoseconds>>> rule_durations) const {
+    std::shared_ptr<std::vector<OptimizerRuleMetrics>> rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
@@ -178,24 +175,30 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   const auto root_node = LogicalPlanRootNode::make(std::move(input));
   input = nullptr;
 
-  if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+  if constexpr (HYRISE_DEBUG) {
+    validate_lqp(root_node);
 
-  Timer rule_timer{};
-  for (const auto& rule : _rules) {
-    _apply_rule(*rule, root_node);
-    auto rule_duration = rule_timer.lap();
+    Timer rule_timer{};
+    for (const auto& rule : _rules) {
+      _apply_rule(*rule, root_node);
+      auto rule_duration = rule_timer.lap();
 
-    auto rule_name = std::string(typeid(*rule).name());
-    rule_name = rule_name.substr(
-        rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }),
-        rule_name.find("Rule") + 4);
+      auto rule_name = std::string(typeid(*rule).name());
+      rule_name = rule_name.substr(rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }), rule_name.size());
+      rule_name = rule_name.substr(0, rule_name.find("Rule") + 4);
 
-    if (rule_durations) {
-      rule_durations->push_back(std::make_pair(rule_name, rule_duration));
+      if (rule_durations) {
+        rule_durations->push_back({rule_name, rule_duration});
+      }
     }
 
-    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+    validate_lqp(root_node);
+  } else {
+    for (const auto& rule : _rules) {
+      _apply_rule(*rule, root_node);
+    }
   }
+
 
   // Remove LogicalPlanRootNode
   auto optimized_node = root_node->left_input();
