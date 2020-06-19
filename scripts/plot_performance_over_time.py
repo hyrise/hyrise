@@ -43,21 +43,21 @@ with open(sys.argv[1]) as json_file:
 has_system_metrics = 'system_utilization' in data_json
 
 # Build a flat list containing a {name, begin, duration} entry for every benchmark item run
-data = []
+run_durations_list = []
 for benchmark_json in data_json['benchmarks']:
     name = benchmark_json['name']
     for run_json in benchmark_json['successful_runs']:
-        data.append({'name': name, 'begin': run_json['begin'] / 1e9,
+        run_durations_list.append({'name': name, 'begin': run_json['begin'] / 1e9,
                      'duration': run_json['duration'], 'success': True})
     for run_json in benchmark_json['unsuccessful_runs']:
-        data.append({'name': name, 'begin': run_json['begin'] / 1e9,
+        run_durations_list.append({'name': name, 'begin': run_json['begin'] / 1e9,
                      'duration': run_json['duration'], 'success': False})
 
 # Convert it into a data frame
-df = pd.DataFrame(data).reset_index().sort_values('begin')
+run_durations_df = pd.DataFrame(run_durations_list).reset_index().sort_values('begin')
 
 # Set the colors
-benchmark_names = df['name'].unique()
+benchmark_names = run_durations_df['name'].unique()
 benchmark_names.sort()  # Sort the benchmarks for a deterministic color mapping
 name_to_color = {}
 prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -88,7 +88,7 @@ for is_detailed in [False, True]:
         single_run_color = [colors.to_rgba(lighten_color(color, 0.7), 0.5)]
 
         # Filter the runs that belong to this benchmark item
-        filtered_df = df[df['name'] == benchmark_name]
+        filtered_df = run_durations_df[run_durations_df['name'] == benchmark_name]
 
         # Plot runs into combined graph
         for success in [True, False]:
