@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 
 #include "operators/abstract_operator.hpp"
@@ -32,6 +33,8 @@ class OperatorFeatureExporter {
       std::make_shared<Table>(TableColumnDefinitions{{"OPERATOR_NAME", DataType::String, false},
                                                      {"INPUT_ROWS_LEFT", DataType::Long, false},
                                                      {"INPUT_ROWS_RIGHT", DataType::Long, false},
+                                                     {"INPUT_COLUMNS_LEFT", DataType::Int, false},
+                                                     {"INPUT_COLUMNS_RIGHT", DataType::Int, false},
                                                      {"OUTPUT_ROWS", DataType::Long, false},
                                                      {"RUNTIME_NS", DataType::Long, false},
                                                      {"OPERATOR_DETAIL", DataType::String, true},
@@ -42,5 +45,6 @@ class OperatorFeatureExporter {
 
   const std::string _path_to_dir;
   std::vector<AllTypeVariant> _current_row;
+  mutable std::mutex _mutex;
 };
 }  // namespace opossum

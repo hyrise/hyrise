@@ -23,11 +23,13 @@ namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
-                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
+                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context,
+                                 std::shared_ptr<OperatorFeatureExporter> operator_exporter)
     : _config(config),
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
-      _context(context) {
+      _context(context),
+      _operator_exporter(operator_exporter) {
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
@@ -237,6 +239,10 @@ void BenchmarkRunner::_benchmark_ordered() {
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
+
+    if (_operator_exporter) {
+      _export_pqps();
+    }
   }
 }
 
@@ -465,6 +471,18 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"verify", config.verify},
       {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+}
+
+void BenchmarkRunner::_export_pqps() const {
+  std::cout << "export" << std::endl;
+  const auto& pqp_cache = Hyrise::get().default_pqp_cache;
+  const auto cache_map = pqp_cache->snapshot();
+  for (const auto& [_, entry] : cache_map) {
+    _operator_exporter->export_to_csv(entry.value);
+  }
+  std::cout << "clear" << std::endl;
+  // Clear pqp cache for next benchmark run
+  pqp_cache->clear();
 }
 
 }  // namespace opossum

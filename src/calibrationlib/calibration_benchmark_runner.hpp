@@ -9,7 +9,7 @@
 #include "table_feature_exporter.hpp"
 
 namespace opossum {
-enum BenchmarkType { TCPH };
+enum BenchmarkType { TCPH, TPCC };
 
 class CalibrationBenchmarkRunner {
  public:
@@ -19,7 +19,7 @@ class CalibrationBenchmarkRunner {
   void run_benchmark(const BenchmarkType type, const float scale_factor, const int number_of_executions);
 
  private:
-  OperatorFeatureExporter _feature_exporter;
+  std::shared_ptr<OperatorFeatureExporter> _feature_exporter;
   TableFeatureExporter _table_exporter;
 
   std::shared_ptr<BenchmarkConfig> _config;

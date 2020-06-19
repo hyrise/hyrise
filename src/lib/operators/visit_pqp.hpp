@@ -37,8 +37,8 @@ void visit_pqp(const std::shared_ptr<Operator>& lqp, Visitor visitor) {
     if (!visited_operators.emplace(op).second) continue;
 
     if (visitor(op) == PQPVisitation::VisitInputs) {
-      if (op->input_left()) operator_queue.push(op->input_left());
-      if (op->input_right()) operator_queue.push(op->input_right());
+      if (op->left_input()) operator_queue.push(op->left_input());
+      if (op->right_input()) operator_queue.push(op->right_input());
     }
   }
 }

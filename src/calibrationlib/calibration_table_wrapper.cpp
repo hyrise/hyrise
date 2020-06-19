@@ -1,5 +1,6 @@
 #include "calibration_table_wrapper.hpp"
-#include <storage/base_encoded_segment.hpp>
+
+#include "storage/abstract_encoded_segment.hpp"
 
 namespace opossum {
 CalibrationTableWrapper::CalibrationTableWrapper(

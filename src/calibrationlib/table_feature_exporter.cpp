@@ -5,7 +5,7 @@
 
 #include "constant_mappings.hpp"
 #include "import_export/csv/csv_writer.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 
 namespace opossum {
@@ -60,7 +60,7 @@ void TableFeatureExporter::_export_segment_data(std::shared_ptr<const Calibratio
       AllTypeVariant encoding_type = {pmr_string{encoding_type_to_string.left.at(EncodingType::Unencoded)}};
       AllTypeVariant compression_type = NULL_VALUE;
       // if segment is encoded write out values
-      if (const auto encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
+      if (const auto encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
         // Encoding Type
         encoding_type = AllTypeVariant{pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())}};
 

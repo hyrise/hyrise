@@ -11,13 +11,15 @@
 namespace opossum {
 
 CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir)
-    : _feature_exporter(OperatorFeatureExporter(path_to_dir)), _table_exporter(TableFeatureExporter(path_to_dir)) {
+    : _feature_exporter(std::make_shared<OperatorFeatureExporter>(path_to_dir)),
+      _table_exporter(TableFeatureExporter(path_to_dir)) {
   _config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
 }
 
 CalibrationBenchmarkRunner::CalibrationBenchmarkRunner(const std::string& path_to_dir,
                                                        std::shared_ptr<BenchmarkConfig> config)
-    : _feature_exporter(OperatorFeatureExporter(path_to_dir)), _table_exporter(TableFeatureExporter(path_to_dir)) {
+    : _feature_exporter(std::make_shared<OperatorFeatureExporter>(path_to_dir)),
+      _table_exporter(TableFeatureExporter(path_to_dir)) {
   _config = config;
 }
 
@@ -35,22 +37,11 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
   for (int execution_index = 0; execution_index < number_of_executions; ++execution_index) {
     Hyrise::get().benchmark_runner = benchmark_runner;
     benchmark_runner->run();
-
-    // TO DO: this is not what we want. We only get the PQPs of the LAST 1024 queries here
-    const auto& pqp_cache = Hyrise::get().default_pqp_cache;
-    const auto cache_map = pqp_cache->snapshot();
-
-    for (const auto& [_, entry] : cache_map) {
-      _feature_exporter.export_to_csv(entry.value);
-    }
-
-    // Clear pqp cache for next benchmark run
-    pqp_cache->clear();
   }
 
   std::cout << std::endl << "- Exporting test data" << std::endl;
 
-  _feature_exporter.flush();
+  _feature_exporter->flush();
 
   const std::vector<std::string> table_names = Hyrise::get().storage_manager.table_names();
   for (const auto& table_name : table_names) {
@@ -65,9 +56,9 @@ void CalibrationBenchmarkRunner::run_benchmark(const BenchmarkType type, const f
 
 std::shared_ptr<BenchmarkRunner> CalibrationBenchmarkRunner::_build_tcph(const float scale_factor) const {
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(_config, false, scale_factor);
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(*_config, std::move(item_runner),
-                                                            std::make_unique<TPCHTableGenerator>(scale_factor, _config),
-                                                            BenchmarkRunner::create_context(*_config));
+  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+      *_config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, _config),
+      BenchmarkRunner::create_context(*_config), _feature_exporter);
 
   return benchmark_runner;
 }
