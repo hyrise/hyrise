@@ -45,10 +45,18 @@ try {
   }
 
   node('linux') {
+    stage("Hostname") {
+      // Print the hostname to let us know on which node the docker image was executed for reproducibility.
+      sh "hostname"
+    }
+
     def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
-    oppossumCI.inside("-u 0:0") {
+    // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
+    // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
+    // See also: https://github.com/google/sanitizers/issues/764
+    oppossumCI.inside("--cap-add SYS_PTRACE -u 0:0") {
       try {
         stage("Setup") {
           checkout scm

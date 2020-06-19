@@ -30,7 +30,7 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        lld \
+        lld-9 \
         lsb-release \
         man \
         parallel \
