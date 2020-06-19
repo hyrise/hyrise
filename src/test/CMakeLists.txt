@@ -114,6 +114,7 @@ set(
     lib/operators/update_test.cpp
     lib/operators/validate_test.cpp
     lib/operators/validate_visibility_test.cpp
+    lib/operators/visit_pqp_test.cpp
     lib/optimizer/join_ordering/dp_ccp_test.cpp
     lib/optimizer/join_ordering/enumerate_ccp_test.cpp
     lib/optimizer/join_ordering/greedy_operator_ordering_test.cpp

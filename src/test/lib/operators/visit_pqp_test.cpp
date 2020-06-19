@@ -1,0 +1,52 @@
+#include "base_test.hpp"
+
+#include "expression/expression_functional.hpp"
+#include "operators/get_table.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/limit.hpp"
+#include "operators/visit_pqp.hpp"
+
+namespace opossum {
+
+class VisitPQPTest : public BaseTest {
+ public:
+  void SetUp() override { node_a = std::make_shared<GetTable>("foo"); }
+  std::shared_ptr<AbstractOperator> node_a;
+};
+
+TEST_F(VisitPQPTest, StreamlinePQP) {
+  auto node_b = std::make_shared<GetTable>("bar");
+  auto node_c = std::make_shared<JoinHash>(
+      node_b, node_a, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  auto node_d = std::make_shared<Limit>(node_c, to_expression(int64_t{1}));
+  const auto expected_nodes = std::vector<std::shared_ptr<AbstractOperator>>{node_d, node_c, node_b, node_a};
+
+  auto actual_nodes = std::vector<std::shared_ptr<AbstractOperator>>{};
+  visit_pqp(expected_nodes[0], [&](const auto& node) {
+    actual_nodes.emplace_back(node);
+    return PQPVisitation::VisitInputs;
+  });
+
+  EXPECT_EQ(actual_nodes, expected_nodes);
+}
+
+TEST_F(VisitPQPTest, DiamondStructure) {
+  auto node_b = std::make_shared<Limit>(node_a, to_expression(int64_t{1}));
+  auto node_c = std::make_shared<JoinHash>(
+      node_b, node_b, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  auto node_d = std::make_shared<Limit>(node_c, to_expression(int64_t{1}));
+
+  const auto expected_nodes = std::vector<std::shared_ptr<AbstractOperator>>{node_d, node_c, node_b, node_a};
+
+  auto actual_nodes = std::vector<std::shared_ptr<AbstractOperator>>{};
+  visit_pqp(expected_nodes[0], [&](const auto& node) {
+    actual_nodes.emplace_back(node);
+    return PQPVisitation::VisitInputs;
+  });
+
+  EXPECT_EQ(actual_nodes, expected_nodes);
+}
+
+}  // namespace opossum

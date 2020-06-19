@@ -270,6 +270,7 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    operators/visit_pqp.hpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.cpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.hpp
     optimizer/join_ordering/dp_ccp.cpp
