@@ -96,6 +96,8 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
+  size_t number_of_workers() const;
+
   /**
    * @param task
    * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later

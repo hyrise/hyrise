@@ -21,8 +21,13 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
 void Server::run() {
   _is_initialized = false;
 
+  const auto scheduler = std::make_shared<opossum::NodeQueueScheduler>();
+
   // Set scheduler so that the server can execute the tasks on separate threads.
-  Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(scheduler);
+
+  const auto number_of_workers = scheduler->number_of_workers();
+  std::cout << "Running server with " << number_of_workers << " workers." << std::endl;
 
   // Set caches
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
