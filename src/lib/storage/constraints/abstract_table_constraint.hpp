@@ -14,6 +14,12 @@ namespace opossum {
 class AbstractTableConstraint {
  public:
   explicit AbstractTableConstraint(std::unordered_set<ColumnID> init_columns);
+
+  AbstractTableConstraint(const AbstractTableConstraint&) = default;
+  AbstractTableConstraint(AbstractTableConstraint&&) = default;
+  AbstractTableConstraint& operator=(const AbstractTableConstraint&) = default;
+  AbstractTableConstraint& operator=(AbstractTableConstraint&&) = default;
+
   virtual ~AbstractTableConstraint() = default;
 
   const std::unordered_set<ColumnID>& columns() const;
