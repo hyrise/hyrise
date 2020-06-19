@@ -44,7 +44,6 @@ class AttributeStatistics : public BaseAttributeStatistics {
   std::shared_ptr<AbstractHistogram<T>> histogram;
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
   std::shared_ptr<RangeFilter<T>> range_filter;
-  std::shared_ptr<CountingQuotientFilter<T>> counting_quotient_filter;
   std::shared_ptr<NullValueRatioStatistics> null_value_ratio;
 };
 
@@ -64,11 +63,6 @@ std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& att
   if (attribute_statistics.range_filter) {
     // TODO(anybody) implement printing of RangeFilter if ever required
     stream << "Has RangeFilter" << std::endl;
-  }
-
-  if (attribute_statistics.counting_quotient_filter) {
-    // TODO(anybody) implement printing of CQD if ever required
-    stream << "Has CQF" << std::endl;
   }
 
   if (attribute_statistics.null_value_ratio) {
