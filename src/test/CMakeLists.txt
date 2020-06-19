@@ -157,7 +157,6 @@ set(
     lib/statistics/attribute_statistics_test.cpp
     lib/statistics/cardinality_estimator_test.cpp
     lib/statistics/join_graph_statistics_cache_test.cpp
-    lib/statistics/statistics_objects/counting_quotient_filter_test.cpp
     lib/statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
     lib/statistics/statistics_objects/generic_histogram_test.cpp
     lib/statistics/statistics_objects/min_max_filter_test.cpp
