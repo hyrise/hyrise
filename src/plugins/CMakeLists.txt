@@ -23,7 +23,7 @@ function(add_plugin)
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup" nlohmann_json::nlohmann_json)
+            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
         endif()
     endif()
 endfunction(add_plugin)
