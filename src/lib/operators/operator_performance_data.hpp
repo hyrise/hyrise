@@ -20,8 +20,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 
   virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 
-  enum class NoStages { };
-
   bool executed{false};
   std::chrono::nanoseconds walltime{0};
 
