@@ -4,17 +4,17 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/limit.hpp"
-#include "operators/visit_pqp.hpp"
+#include "operators/pqp_utils.hpp"
 
 namespace opossum {
 
-class VisitPQPTest : public BaseTest {
+class PQPUtilsTest : public BaseTest {
  public:
   void SetUp() override { node_a = std::make_shared<GetTable>("foo"); }
   std::shared_ptr<AbstractOperator> node_a;
 };
 
-TEST_F(VisitPQPTest, StreamlinePQP) {
+TEST_F(PQPUtilsTest, VisitPQPStreamlinePQP) {
   auto node_b = std::make_shared<GetTable>("bar");
   auto node_c = std::make_shared<JoinHash>(
       node_b, node_a, JoinMode::Inner,
@@ -31,7 +31,7 @@ TEST_F(VisitPQPTest, StreamlinePQP) {
   EXPECT_EQ(actual_nodes, expected_nodes);
 }
 
-TEST_F(VisitPQPTest, DiamondStructure) {
+TEST_F(PQPUtilsTest, VisitPQPDiamondStructure) {
   auto node_b = std::make_shared<Limit>(node_a, to_expression(int64_t{1}));
   auto node_c = std::make_shared<JoinHash>(
       node_b, node_b, JoinMode::Inner,
@@ -49,7 +49,7 @@ TEST_F(VisitPQPTest, DiamondStructure) {
   EXPECT_EQ(actual_nodes, expected_nodes);
 }
 
-TEST_F(VisitPQPTest, NonConstOperators) {
+TEST_F(PQPUtilsTest, VisitPQPNonConstOperators) {
   auto node_b = std::make_shared<Limit>(node_a, to_expression(int64_t{1}));
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractOperator>>{node_b, node_a};
 
@@ -63,7 +63,7 @@ TEST_F(VisitPQPTest, NonConstOperators) {
   EXPECT_EQ(actual_nodes, expected_nodes);
 }
 
-TEST_F(VisitPQPTest, ConstOperators) {
+TEST_F(PQPUtilsTest, VisitPQPConstOperators) {
   auto node_b = std::make_shared<const GetTable>("bar");
   auto node_c = std::make_shared<const Limit>(node_b, to_expression(int64_t{1}));
   const auto expected_nodes = std::vector<std::shared_ptr<const AbstractOperator>>{node_c, node_b};

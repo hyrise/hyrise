@@ -19,11 +19,11 @@ enum class PQPVisitation { VisitInputs, DoNotVisitInputs };
  *                      Returns `PQPVisitation`
  */
 template <typename Operator, typename Visitor>
-void visit_pqp(const std::shared_ptr<Operator>& lqp, Visitor visitor) {
+void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
   using AbstractOperatorType = std::conditional_t<std::is_const_v<Operator>, const AbstractOperator, AbstractOperator>;
 
   std::queue<std::shared_ptr<AbstractOperatorType>> operator_queue;
-  operator_queue.push(lqp);
+  operator_queue.push(pqp);
 
   std::unordered_set<std::shared_ptr<AbstractOperatorType>> visited_operators;
 

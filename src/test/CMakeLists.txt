@@ -100,6 +100,7 @@ set(
     lib/operators/operator_join_predicate_test.cpp
     lib/operators/operator_performance_data_test.cpp
     lib/operators/operator_scan_predicate_test.cpp
+    lib/operators/pqp_utils_test.cpp
     lib/operators/print_test.cpp
     lib/operators/product_test.cpp
     lib/operators/projection_test.cpp
@@ -114,7 +115,6 @@ set(
     lib/operators/update_test.cpp
     lib/operators/validate_test.cpp
     lib/operators/validate_visibility_test.cpp
-    lib/operators/visit_pqp_test.cpp
     lib/optimizer/join_ordering/dp_ccp_test.cpp
     lib/optimizer/join_ordering/enumerate_ccp_test.cpp
     lib/optimizer/join_ordering/greedy_operator_ordering_test.cpp

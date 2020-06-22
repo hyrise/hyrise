@@ -234,6 +234,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -270,7 +271,6 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    operators/visit_pqp.hpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.cpp
     optimizer/join_ordering/abstract_join_ordering_algorithm.hpp
     optimizer/join_ordering/dp_ccp.cpp
