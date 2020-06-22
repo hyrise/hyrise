@@ -1,6 +1,6 @@
 black==19.10b0
 flake8==3.8.3
-matplotlib>=2.1.1
+matplotlib>=3.2.1
 numpy==1.16.4
 pandas==0.24.2
 pexpect>=4.7.0
