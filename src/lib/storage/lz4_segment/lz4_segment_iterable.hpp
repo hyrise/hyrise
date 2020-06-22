@@ -16,6 +16,21 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
   explicit LZ4SegmentIterable(const LZ4Segment<T>& segment) : _segment{segment} {}
 
+  // If the LZ4 segment stores strings, the underlying segment will have more blocks than a numeric segment.
+  // To maximize the hitting of cached blocks, we sort the pos list before materializing it. This threshold
+  // shall determine which (type dependent) number of items is necessary to have blocks at all. If we only
+  // expect a single block, no sorting is necessary.
+  template <typename T2>
+  static size_t get_poslist_sorting_threshold() {
+    // Both thresholds have been determined by evluating TPC-H on a recent server machine. Note, both numbers are
+    // chosen to avoid worst-case scenarios and do not reflect the actual break-even.
+    if constexpr (std::is_same_v<T2, pmr_string>) {
+      return size_t{400};
+    } else {
+      return size_t{1'000};
+    }
+  }
+
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
@@ -48,18 +63,46 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
+    if (position_filter_size >= get_poslist_sorting_threshold<T>()) {
+      // In case the pos list is large, LZ4 can benefit from sorting the pos list as the change of hitting the same
+      // decompressed LZ4 block increases. For small pos lists, the sorting causes a unnecessary overhead.
+      std::vector<std::pair<RowID, size_t>> position_filter_indexed(position_filter_size);
 
-    // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
-    // element. If the requested element is not within that block, the next block will be decompressed and written to
-    // `cached_block` while the value and the new block id are returned. In case the requested element is within the
-    // cached block, the value and the input block id are returned.
-    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
-      const auto& position = (*position_filter)[index];
-      // NOLINTNEXTLINE
-      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
-      decompressed_filtered_segment[index] = std::move(value);
-      cached_block_index = block_index;
+      for (auto index = size_t{0}; index < position_filter_size; ++index) {
+        const auto& row_id = (*position_filter)[index];
+        position_filter_indexed[index] = {row_id, index};
+      }
+      std::sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+
+      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+        const auto& position = position_filter_indexed[index].first;
+        // NOLINTNEXTLINE
+        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+        const auto write_position = position_filter_indexed[index].second;
+        decompressed_filtered_segment[write_position] = std::move(value);
+        cached_block_index = block_index;
+      }
+    } else {
+      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+        const auto& position = (*position_filter)[index];
+        // NOLINTNEXTLINE
+        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+        decompressed_filtered_segment[index] = std::move(value);
+        cached_block_index = block_index;
+      }
     }
+
+    // // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
+    // // element. If the requested element is not within that block, the next block will be decompressed and written to
+    // // `cached_block` while the value and the new block id are returned. In case the requested element is within the
+    // // cached block, the value and the input block id are returned.
+    // for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+    //   const auto& position = (*position_filter)[index];
+    //   // NOLINTNEXTLINE
+    //   auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+    //   decompressed_filtered_segment[index] = std::move(value);
+    //   cached_block_index = block_index;
+    // }
 
     using PosListIteratorType = decltype(position_filter->cbegin());
     if (_segment.null_values()) {
