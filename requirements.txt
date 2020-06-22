@@ -1,4 +1,4 @@
-matplotlib>=2.1.1
+matplotlib>=3.2.1
 numpy==1.16.4
 pandas==0.24.2
 pexpect>=4.7.0

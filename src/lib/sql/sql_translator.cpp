@@ -640,6 +640,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
                                         _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
+      // If this statement or any of the subquery's statements is not cacheable (because of meta tables),
+      // this statement should not be cacheable.
+      _cacheable &= subquery_translator._cacheable;
+
       std::vector<std::vector<SQLIdentifier>> identifiers;
       for (const auto& element : subquery_translator._inflated_select_list_elements) {
         identifiers.emplace_back(element.identifiers);
@@ -1160,8 +1164,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
               "Mismatching number of input columns for set operation");
 
   // Check to see if both input LQPs use the same data type for each column
-  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size();
-       ++expression_idx) {
+  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size(); ++expression_idx) {
     const auto& left_expression = left_output_expressions[expression_idx];
     const auto& right_expression = right_output_expressions[expression_idx];
 
@@ -1224,6 +1227,8 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+  _cacheable = false;
+
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables: {
       const auto tables_meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
@@ -1724,6 +1729,10 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
       SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
+
+  // If this statement or any of the subquery's statements is not cacheable (because of meta tables),
+  // this statement should not be cacheable.
+  _cacheable &= subquery_translator._cacheable;
 
   auto parameter_ids = std::vector<ParameterID>{};
   parameter_ids.reserve(parameter_count);
