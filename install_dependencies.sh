@@ -44,6 +44,11 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 echo "Error during installation."
                 exit 1
             fi
+
+            if ! pip3 install -r requirements.txt; then
+                echo "Error during installation of python requirements."
+                exit 1
+            fi
         else
             echo "Error during installation."
             exit 1
@@ -63,10 +68,15 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 # packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-9 man parallel postgresql-server-dev-all python3 python3-pexpect systemtap systemtap-sdt-dev valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld-9 man parallel postgresql-server-dev-all python3 systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
+                    exit 1
+                fi
+
+                if ! pip3 install -r requirements.txt; then
+                    echo "Error during installation of python requirements."
                     exit 1
                 fi
 
