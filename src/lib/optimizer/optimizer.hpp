@@ -11,7 +11,7 @@
 namespace opossum {
 
 struct OptimizerRuleMetrics {
-  std::string name;
+  std::string rule_name;
   std::chrono::nanoseconds duration;
 };
 
@@ -37,6 +37,10 @@ class Optimizer final {
    */
   void add_rule(std::unique_ptr<AbstractRule> rule);
 
+  /**
+   * Returns optimized version of @param input.
+   * @param rule_durations may be set in order to retrieve runtime information for each applied rule.
+   */
   std::shared_ptr<AbstractLQPNode> optimize(
       std::shared_ptr<AbstractLQPNode> input,
       std::shared_ptr<std::vector<OptimizerRuleMetrics>> rule_durations = nullptr) const;

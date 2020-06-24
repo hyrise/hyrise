@@ -323,7 +323,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
           for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
             nlohmann::json rule_metrics_json;
             for (auto rule_duration : sql_statement_metrics->optimizer_rule_durations) {
-              rule_metrics_json[rule_duration.name] = rule_duration.duration.count();
+              rule_metrics_json[rule_duration.rule_name] += rule_duration.duration.count();
             }
 
             auto sql_statement_metrics_json =

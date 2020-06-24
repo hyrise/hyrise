@@ -174,31 +174,25 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   const auto root_node = LogicalPlanRootNode::make(std::move(input));
   input = nullptr;
 
-  if constexpr (HYRISE_DEBUG) {
-    validate_lqp(root_node);
+  if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
-    Timer rule_timer{};
-    for (const auto& rule : _rules) {
-      _apply_rule(*rule, root_node);
-      auto rule_duration = rule_timer.lap();
+  Timer rule_timer{};
+  for (const auto& rule : _rules) {
+    _apply_rule(*rule, root_node);
+    auto rule_duration = rule_timer.lap();
 
-      auto& r = *rule.get();
-      auto rule_name = std::string(typeid(r).name());
-      rule_name = rule_name.substr(
-          rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }),
-          rule_name.size());
-      rule_name = rule_name.substr(0, rule_name.find("Rule") + 4);
+    auto& rule_reference = *rule.get();
+    auto rule_name = std::string(typeid(rule_reference).name());
+    rule_name = rule_name.substr(
+        rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }),
+        rule_name.size());
+    rule_name = rule_name.substr(0, rule_name.find("Rule") + 4);
 
-      if (rule_durations) {
-        rule_durations->push_back({rule_name, rule_duration});
-      }
-
-      validate_lqp(root_node);
+    if (rule_durations) {
+      rule_durations->emplace_back(OptimizerRuleMetrics{rule_name, rule_duration});
     }
-  } else {
-    for (const auto& rule : _rules) {
-      _apply_rule(*rule, root_node);
-    }
+
+    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
   }
 
   // Remove LogicalPlanRootNode
