@@ -27,7 +27,7 @@ class DisjointClustersAlgo : public AbstractClusteringAlgo {
   void _perform_clustering() override;
 
   template <typename ColumnDataType>
-  ClusterBoundaries _get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters) const;
+  ClusterBoundaries _get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters, const bool nullable) const;
 
   std::vector<ClusterBoundaries> _all_cluster_boundaries(const std::vector<size_t>& num_clusters_per_dimension) const;
 

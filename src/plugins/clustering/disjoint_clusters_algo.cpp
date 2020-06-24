@@ -41,19 +41,24 @@ const std::string DisjointClustersAlgo::description() const {
 // NOTE: num_clusters is just an estimate.
 // The greedy logic that computes the boundaries currently sacrifices exact cluster count rather than balanced clusters
 template <typename ColumnDataType>
-ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters) const {
+ClusterBoundaries DisjointClustersAlgo::_get_boundaries(const std::shared_ptr<const AbstractHistogram<ColumnDataType>>& histogram, const size_t row_count, const size_t num_clusters, const bool nullable) const {
   Assert(histogram, "histogram was nullptr");
   Assert(num_clusters > 1, "having less than 2 clusters does not make sense (" + std::to_string(num_clusters) + " cluster(s) requested)");
   Assert(num_clusters <= histogram->bin_count(), "more clusters (" + std::to_string(num_clusters) + ") than histogram bins (" + std::to_string(histogram->bin_count()) + ")");
 
-  const auto num_null_values = row_count - histogram->total_count();
+  // TODO: is that a good estimation?
+  auto num_null_values = row_count - histogram->total_count();
   ClusterBoundaries boundaries;
-  if (num_null_values > 0) {
+  if (nullable) {
     boundaries.push_back(std::make_pair(NULL_VALUE, NULL_VALUE));
+  } else {
+    // For SF 10, there seems to be a bug that causes histograms to contain more entries than the table has values
+    num_null_values = std::max(num_null_values, 0.0f);
   }
   // add the first non-null cluster boundaries. The boundary values will be set later
   boundaries.push_back(std::make_pair(NULL_VALUE, NULL_VALUE));
 
+  // TODO: consider the number of null values?
   const auto ideal_rows_per_cluster = std::max(size_t{1}, row_count / num_clusters);
   AllTypeVariant lower_bound;
   AllTypeVariant upper_bound;
@@ -217,6 +222,7 @@ std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(con
   for (size_t dimension = 0; dimension < _clustering_column_ids.size(); dimension++) {
     const auto num_clusters = num_clusters_per_dimension[dimension];
     const auto clustering_column_id = _clustering_column_ids[dimension];
+    const auto nullable = _table->column_is_nullable(clustering_column_id);
     const auto column_data_type = _table->column_data_type(clustering_column_id);
     resolve_data_type(column_data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
@@ -227,7 +233,7 @@ std::vector<ClusterBoundaries> DisjointClustersAlgo::_all_cluster_boundaries(con
       const auto histogram_total_count = histogram->total_count();
       //Assert(histogram_total_count <= row_count, "Histogram contains more entries than the table has rows: " + std::to_string(histogram_total_count)  + " vs " + std::to_string(row_count));
       std::cout << clustering_column << " has " << row_count - histogram_total_count << " NULL values" << std::endl;
-      const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters);
+      const auto boundaries = _get_boundaries<ColumnDataType>(histogram, row_count, num_clusters, nullable);
 
       cluster_boundaries.push_back(boundaries);
 
