@@ -216,6 +216,7 @@ def plot(args, result_dir):
     for _, _, files in os.walk(result_dir):
         json_files = [f for f in files if f.split(".")[-1] == "json"]
         # Add the results in sorted order (low core count -> high core count) for plotting later
+        # The lambda extracts the number of cores from the filename
         for file in sorted(json_files, key=lambda filename: int(filename.split("-")[0])):
             with open(os.path.join(result_dir, file), "r") as json_file:
                 data = json.load(json_file)

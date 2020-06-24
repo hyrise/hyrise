@@ -15,7 +15,7 @@ import seaborn as sns
 import matplotlib.colors as mplcolors
 from matplotlib.colors import LinearSegmentedColormap
 
-if not len(sys.argv) in [1, 2]:
+if len(sys.argv) not in [1, 2]:
     exit("Call in a folder containing *-PQP.svg files, pass `paper` as an argument to change legend and hatching")
 paper_mode = len(sys.argv) == 2 and sys.argv[1] == "paper"
 

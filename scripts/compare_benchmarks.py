@@ -69,7 +69,7 @@ def calculate_and_format_p_value(old, new):
         return colored("{0:.4f}".format(p_value), color)
 
 
-if not len(sys.argv) in [3, 4]:
+if len(sys.argv) not in [3, 4]:
     exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
 
 # Format the output as a diff (prepending - and +) so that Github shows colors
