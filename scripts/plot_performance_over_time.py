@@ -26,10 +26,9 @@ def lighten_color(input_color, amount=0.5):
     >> lighten_color('#F034A3', 0.6)
     >> lighten_color((.3,.55,.1), 0.5)
     """
-    try:
+    c = input_color
+    if input_color in colors.cnames:
         c = colors.cnames[input_color]
-    except Exception:
-        c = input_color
     c = colorsys.rgb_to_hls(*colors.to_rgb(c))
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
