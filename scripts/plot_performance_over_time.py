@@ -102,9 +102,9 @@ for is_detailed in [False, True]:
                     kind="scatter",
                     x="begin",
                     y="duration",
-                    c=single_run_color,
+                    color=single_run_color,
                     figsize=(figw, figh),
-                    s=5,
+                    s=5,  # marker size
                     marker=("o" if success else "x"),
                     linewidth=1,
                 )
