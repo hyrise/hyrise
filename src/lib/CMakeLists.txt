@@ -234,6 +234,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -392,8 +393,6 @@ set(
     statistics/statistics_objects/abstract_histogram.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
-    statistics/statistics_objects/counting_quotient_filter.cpp
-    statistics/statistics_objects/counting_quotient_filter.hpp
     statistics/statistics_objects/equal_distinct_count_histogram.cpp
     statistics/statistics_objects/equal_distinct_count_histogram.hpp
     statistics/statistics_objects/generic_histogram.cpp
@@ -642,7 +641,6 @@ set(
 
 set(
     LIBRARIES
-    cqf
     lz4
     sqlparser
     uninitialized_vector
