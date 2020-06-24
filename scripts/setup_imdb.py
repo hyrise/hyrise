@@ -35,7 +35,7 @@ def is_setup():
 assert len(sys.argv) == 2
 table_dir = sys.argv[1]
 
-LOCATION = "https://www.dropbox.com/s/ckh4nyqpol70ri3/imdb.zip?dl=1"
+LOCATION = "https://archive.org/download/imdb_20200624/imdb.zip"
 FILE_NAME = "imdb.zip"
 TABLE_NAMES = ["aka_name", "aka_title", "cast_info", "char_name", "company_name", "company_type", "comp_cast_type", "complete_cast", "info_type",
                     "keyword", "kind_type", "link_type", "movie_companies", "movie_info", "movie_info_idx", "movie_keyword", "movie_link", "name",
@@ -84,7 +84,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "270d3b5aa4338c7a452083cf4525c1cd":
+if hash_dl != "6d7cb20581d543bfab3119c18202c887":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
