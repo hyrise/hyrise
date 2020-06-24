@@ -180,7 +180,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
     Timer rule_timer{};
     _apply_rule(*rule, root_node);
     auto rule_duration = rule_timer.lap();
-    
+
     if (rule_durations) {
       auto& rule_reference = *rule.get();
       auto rule_name = std::string(typeid(rule_reference).name());
