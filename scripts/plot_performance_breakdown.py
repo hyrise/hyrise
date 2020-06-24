@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Given a benchmark result json that was generated with --sql_metrics, this script plots the cost of the different
+# Given a benchmark result json that was generated with --metrics, this script plots the cost of the different
 # steps (parsing, optimization, ...) as a normalized stacked bar chart.
 
 import json
@@ -11,7 +11,7 @@ import argparse
 benchmarks = []
 rule_benchmarks = []
 
-parser = argparse.ArgumentParser(description='''Given a benchmark result json that was generated with --sql_metrics,
+parser = argparse.ArgumentParser(description='''Given a benchmark result json that was generated with --metrics,
                                 this script plots the cost of the different steps (parsing, optimization, ...) as a
                                 normalized stacked bar chart.''')
 parser.add_argument('filename', action='store', help='Benchmark json filename')
@@ -36,7 +36,7 @@ for benchmark_json in data['benchmarks']:
 
     for run in benchmark_json['successful_runs']:
         if len(run['metrics']) == 0:
-            exit("No metrics found. Did you run the benchmark with --sql_metrics?")
+            exit("No metrics found. Did you run the benchmark with --metrics?")
         for metrics in run['metrics']:
             sum_parse_duration += metrics['parse_duration']
 
