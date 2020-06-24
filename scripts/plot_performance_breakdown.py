@@ -45,6 +45,8 @@ for benchmark_json in data['benchmarks']:
                 sum_optimization_duration += statement['optimization_duration']
                 if statement['optimizer_rule_durations']:
                     for rule_name, rule_duration in statement['optimizer_rule_durations'].items():
+                        # crop typeid().name down to the actual rule name. This might be compiler dependent
+                        rule_name = rule_name[11:-1]
                         if rule_name not in sum_optimizer_rule_durations:
                             sum_optimizer_rule_durations[rule_name] = rule_duration
                         else:
@@ -56,7 +58,8 @@ for benchmark_json in data['benchmarks']:
     benchmark.append(sum_sql_translation_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_optimization_duration / len(benchmark_json['successful_runs']))
     if options.plot_rules:
-        for rule_duration in sum_optimizer_rule_durations.values():
+        for rule_durations in sum_optimizer_rule_durations.values():
+            rule_duration = sum(rule_durations)
             rule_benchmark.append(rule_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_lqp_translation_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_plan_execution_duration / len(benchmark_json['successful_runs']))
@@ -85,6 +88,7 @@ if options.plot_rules:
     optimizer_total_time = rule_benchmark_df.iloc[:,1:].apply(lambda x: x.sum(), axis=1)
     # Normalize data from nanoseconds to percentage of total cost
     rule_benchmark_df.iloc[:,1:] = rule_benchmark_df.iloc[:,1:].apply(lambda x: x / x.sum(), axis=1)
+
     # aggregate all rule durations below the threshold
     rule_benchmark_df.insert(0, "Other Rules", 0)
     threshold = 0.05

@@ -176,19 +176,14 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 
   if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
 
-  Timer rule_timer{};
   for (const auto& rule : _rules) {
+    Timer rule_timer{};
     _apply_rule(*rule, root_node);
     auto rule_duration = rule_timer.lap();
-
-    auto& rule_reference = *rule.get();
-    auto rule_name = std::string(typeid(rule_reference).name());
-    rule_name = rule_name.substr(
-        rule_name.rend() - std::find_if(rule_name.rbegin(), rule_name.rend(), [](auto c) { return std::isdigit(c); }),
-        rule_name.size());
-    rule_name = rule_name.substr(0, rule_name.find("Rule") + 4);
-
+    
     if (rule_durations) {
+      auto& rule_reference = *rule.get();
+      auto rule_name = std::string(typeid(rule_reference).name());
       rule_durations->emplace_back(OptimizerRuleMetrics{rule_name, rule_duration});
     }
 
