@@ -61,18 +61,26 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     const auto position_filter_size = position_filter->size();
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter_size;
 
-    constexpr auto POSITTIONS_TO_READ_FOR_SEQ_ESTIMATION = 10ul;
-    auto pos_list_is_monotonously_increasing = true;
-    auto previous_position = (*position_filter)[0].chunk_offset;
-    for (auto index = size_t{1}; index < std::min(POSITTIONS_TO_READ_FOR_SEQ_ESTIMATION, position_filter_size) && pos_list_is_monotonously_increasing; ++index) {
-      const auto current_position = (*position_filter)[index].chunk_offset;
-      pos_list_is_monotonously_increasing = current_position >= previous_position;
-      previous_position = current_position;
+    constexpr auto POSITTIONS_TO_READ_FOR_SEQ_ESTIMATION = 20ul;
+    bool check_if_pos_list_sorting_is_advantageous = false;
+    if (position_filter_size > POSITTIONS_TO_READ_FOR_SEQ_ESTIMATION) {
+      auto pos_list_is_monotonously_increasing = true;
+      auto previous_position = (*position_filter)[0].chunk_offset;
+      for (auto index = size_t{1};
+          index < std::min(POSITTIONS_TO_READ_FOR_SEQ_ESTIMATION, position_filter_size)
+          && pos_list_is_monotonously_increasing;
+          ++index) {
+        const auto current_position = (*position_filter)[index].chunk_offset;
+        pos_list_is_monotonously_increasing = current_position >= previous_position;
+        previous_position = current_position;
+      }
+
+      check_if_pos_list_sorting_is_advantageous = !pos_list_is_monotonously_increasing || position_filter_size >= get_poslist_sorting_threshold<T>();
     }
 
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
-    if (!pos_list_is_monotonously_increasing || position_filter_size >= get_poslist_sorting_threshold<T>()) {
+    if (check_if_pos_list_sorting_is_advantageous) {
       // In case the pos list is large, LZ4 can benefit from sorting the pos list as the change of hitting the same
       // decompressed LZ4 block increases. For small pos lists, the sorting causes a unnecessary overhead.
       std::vector<std::pair<RowID, size_t>> position_filter_indexed(position_filter_size);
