@@ -127,17 +127,19 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     const auto mvcc_data = std::make_shared<MvccData>(chunk->size(), commit_id);
 
     // transfer meta information
-    const auto chunk_count = _table->chunk_count();    
-
-    _table->append_chunk(segments, mvcc_data);
-    Assert(_table->chunk_count() == chunk_count + 1, "some additional chunk was added");
-    const auto table_chunk = _table->get_chunk(chunk_count);
-
-    Assert(table_chunk, "Chunk disappeared");
-    Assert(!chunk->sorted_by().empty(), "chunk has no sorting information");
+    std::shared_ptr<Chunk> table_chunk;
+    {
+      const auto append_lock = _table->acquire_append_mutex();
+      _table->append_chunk(segments, mvcc_data);
+      table_chunk = _table->last_chunk();
+      Assert(table_chunk, "Chunk disappeared");
+    }
 
     table_chunk->finalize();
+
+    Assert(!chunk->sorted_by().empty(), "chunk has no sorting information");
     table_chunk->set_sorted_by(chunk->sorted_by());
+
     // TODO (maybe): move encoding to disjoint_clusters_algo
     ChunkEncoder::encode_chunk(table_chunk, _table->column_data_types(), EncodingType::Dictionary);
     //Assert(chunk->pruning_statistics(), "chunk has no pruning statistics");

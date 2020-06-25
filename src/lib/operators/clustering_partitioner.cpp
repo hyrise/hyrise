@@ -65,18 +65,17 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
 }
 
 void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
-  // TODO: hack: assume that no other chunk is appended between append_mutable_chunk() and getting the id of the last chunk
-  const auto num_chunks_before_append = _table->chunk_count();
+  const auto append_lock = _table->acquire_append_mutex();
   _table->append_mutable_chunk();        
   const auto& last_chunk = _table->last_chunk();
   Assert(last_chunk, "failed to get last chunk");
-  Assert(_table->chunk_count() == num_chunks_before_append + 1, "some additional chunk appeared");
-  _clusters[cluster_key] = std::make_pair(num_chunks_before_append, last_chunk);
+  const ChunkID appended_chunk_id {_table->chunk_count() - 1};
+  _clusters[cluster_key] = std::make_pair(appended_chunk_id, last_chunk);
 
   if (_chunk_ids_per_cluster.find(cluster_key) == _chunk_ids_per_cluster.end()) {
     _chunk_ids_per_cluster[cluster_key] = {};
   }
-  _chunk_ids_per_cluster[cluster_key].insert(num_chunks_before_append);
+  _chunk_ids_per_cluster[cluster_key].insert(appended_chunk_id);
 }
 
 void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
