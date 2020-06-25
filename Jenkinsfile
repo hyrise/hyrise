@@ -50,7 +50,7 @@ try {
       sh "hostname"
     }
 
-    def oppossumCI = docker.image('hyrise/opossum-ci:20.04_2');
+    def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
     oppossumCI.pull()
 
     // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
