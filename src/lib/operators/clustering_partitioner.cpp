@@ -41,6 +41,11 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
   _transaction_id = context->transaction_id();
 
   for (ChunkOffset offset{0}; offset < _chunk->size(); offset++) {
+    if (mvcc_data->get_end_cid(offset) != MvccData::MAX_COMMIT_ID) {
+      // The DELETE operator locks rows to delete them, but does not unlock on commit. TODO Bug or feature?
+      continue;
+    }
+
     const auto expected = 0u;
     auto success = mvcc_data->compare_exchange_tid(offset, expected, _transaction_id);
     if (!success) {
@@ -55,7 +60,7 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
     Assert(_chunk->invalid_row_count() > _expected_invalid_row_count, "invalid row count cannot decrease");
     _mark_as_failed();
   }
-  
+
   return nullptr;
 }
 
@@ -76,8 +81,14 @@ void ClusteringPartitioner::_start_new_chunk(ClusterKey cluster_key) {
 
 void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
   // all locks have been acquired by now, so just write the results
+  const auto mvcc_data = _chunk->mvcc_data();
 
   for (ChunkOffset chunk_offset{0}; chunk_offset < _cluster_keys.size(); chunk_offset++) {
+    if (mvcc_data->get_end_cid(chunk_offset) != MvccData::MAX_COMMIT_ID) {
+      // Row is already marked as deleted. Do not cluster it.
+      continue;
+    }
+
     const auto cluster_key = _cluster_keys[chunk_offset];
 
     std::vector<AllTypeVariant> insertion_values;
@@ -109,8 +120,6 @@ void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
 // TODO do we need locks on the cluster-chunks that are added by this operator?
 
 void ClusteringPartitioner::_on_rollback_records() {
-
-
   _unlock_chunk(_chunk);
 }
 
