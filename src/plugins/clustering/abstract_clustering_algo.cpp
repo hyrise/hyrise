@@ -94,12 +94,14 @@ void AbstractClusteringAlgo::_run_assertions() const {
     for (ChunkID chunk_id{0};chunk_id < table->chunk_count();chunk_id++) {
       const auto chunk = table->get_chunk(chunk_id);
       if (chunk) {
+        // ... pruning information is present
+        Assert(chunk->pruning_statistics(), "Chunk " + std::to_string(chunk_id) + " of " + table_name + " has no pruning statistics");
+
         // Clustering algos might generate invalidated chunks as temporary results. Ignore them.
         bool chunk_is_invalidated = chunk->invalid_row_count() == chunk->size();
         if (chunk_is_invalidated) {
           continue;
         }
-
 
         Assert(!chunk->is_mutable(), "Chunk " + std::to_string(chunk_id) + "/" + std::to_string(table->chunk_count()) + " of table \"" + table_name + "\" is still mutable.\nSize: " + std::to_string(chunk->size()));
         // ... ordering information is as expected
@@ -175,7 +177,16 @@ void AbstractClusteringAlgo::_run_assertions() const {
 void AbstractClusteringAlgo::run() {
   const auto& table_names = Hyrise::get().storage_manager.table_names();
   for (const auto& table_name : table_names) {
-    _original_table_sizes[table_name] = Hyrise::get().storage_manager.get_table(table_name)->row_count();
+    const auto table = Hyrise::get().storage_manager.get_table(table_name);
+    const auto total_rows = table->row_count();
+    auto invalidated_rows = 0u;
+    for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      if (chunk) {
+        invalidated_rows += chunk->invalid_row_count();
+      }
+    }
+    _original_table_sizes[table_name] = total_rows - invalidated_rows;
   }
 
   _perform_clustering();
