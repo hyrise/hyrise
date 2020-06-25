@@ -1,3 +1,5 @@
+# IMPORTANT: If you change this file in any way, chances are high that the docker
+# image used by our CI server must be rebuilt. See the wiki for further details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
 FROM ubuntu:20.04
