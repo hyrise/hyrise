@@ -221,16 +221,23 @@ void AbstractClusteringAlgo::_append_chunk_to_table(const std::shared_ptr<Chunk>
   for (ColumnID column_id{0}; column_id < table->column_count(); column_id++) {
     segments.push_back(chunk->get_segment(column_id));
   }
-  table->append_chunk(segments, chunk->mvcc_data());
-  Assert(table->last_chunk()->mvcc_data(), "MVCC data disappeared");
+
+  std::shared_ptr<Chunk> last_chunk;
+  {
+    const auto append_lock = table->acquire_append_mutex();
+    table->append_chunk(segments, chunk->mvcc_data());
+    last_chunk = table->last_chunk();
+  }
+  Assert(last_chunk, "last chunk disappeared");
+  Assert(last_chunk->mvcc_data(), "MVCC data disappeared");
 
   if (!chunk->sorted_by().empty()) {
     const auto sorted_by = chunk->sorted_by();
-    table->last_chunk()->set_sorted_by(sorted_by);
+    last_chunk->set_sorted_by(sorted_by);
   }
 
   if (!chunk->is_mutable()) {
-    table->last_chunk()->finalize();
+    last_chunk->finalize();
   }
 }
 

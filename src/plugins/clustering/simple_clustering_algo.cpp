@@ -95,10 +95,13 @@ void SimpleClusteringAlgo::_append_chunk(const std::shared_ptr<const Chunk> chun
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     segments.emplace_back(chunk->get_segment(column_id));
   }
-  to->append_chunk(segments, mvcc_data);
-  // TODO: make threadsafe
-  to->last_chunk()->finalize();
-  to->last_chunk()->set_sorted_by(sorted_by);
+
+  {
+    const auto append_lock = to->acquire_append_mutex();
+    to->append_chunk(segments, mvcc_data);
+    to->last_chunk()->finalize();
+    to->last_chunk()->set_sorted_by(sorted_by);
+  }
 }
 
 void SimpleClusteringAlgo::_perform_clustering() {
