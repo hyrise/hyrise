@@ -37,9 +37,29 @@ table_dir = sys.argv[1]
 
 LOCATION = "https://archive.org/download/imdb_20200624/imdb.zip"
 FILE_NAME = "imdb.zip"
-TABLE_NAMES = ["aka_name", "aka_title", "cast_info", "char_name", "company_name", "company_type", "comp_cast_type", "complete_cast", "info_type",
-                    "keyword", "kind_type", "link_type", "movie_companies", "movie_info", "movie_info_idx", "movie_keyword", "movie_link", "name",
-                    "person_info", "role_type", "title"]
+TABLE_NAMES = [
+    "aka_name",
+    "aka_title",
+    "cast_info",
+    "char_name",
+    "company_name",
+    "company_type",
+    "comp_cast_type",
+    "complete_cast",
+    "info_type",
+    "keyword",
+    "kind_type",
+    "link_type",
+    "movie_companies",
+    "movie_info",
+    "movie_info_idx",
+    "movie_keyword",
+    "movie_link",
+    "name",
+    "person_info",
+    "role_type",
+    "title",
+]
 
 print("- Retrieving the IMDB dataset.")
 
@@ -52,9 +72,9 @@ hash_md5 = hashlib.md5()
 
 url = urllib.request.urlopen(LOCATION)
 meta = url.info()
-file_size = int(meta['Content-Length'])
+file_size = int(meta["Content-Length"])
 
-file = open(FILE_NAME, 'wb')
+file = open(FILE_NAME, "wb")
 
 print("- Downloading: %s (%.2f GB)" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
 
@@ -70,10 +90,10 @@ try:
 
         already_retrieved += len(buffer)
         file.write(buffer)
-        status = r"- Retrieved %3.2f%% of the data" % (already_retrieved * 100. / file_size)
+        status = r"- Retrieved %3.2f%% of the data" % (already_retrieved * 100.0 / file_size)
         status = status + chr(8) * (len(status) + 1)
-        print(status, end='\r')
-except:
+        print(status, end="\r")
+except Exception:
     print("- Aborting. Something went wrong during the download. Cleaning up.")
     clean_up()
     sys.exit(1)
@@ -96,7 +116,7 @@ try:
     zip = zipfile.ZipFile("imdb.zip", "r")
     zip.extractall(table_dir)
     zip.close()
-except:
+except Exception:
     print("- Aborting. Something went wrong during unzipping. Cleaning up.")
     clean_up(including_table_dir=True)
     sys.exit(3)

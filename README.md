@@ -72,10 +72,10 @@ Usually debug binaries are created.
 To configure a build directory for a release build make sure it is empty and call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
 
 ### Lint
-`./scripts/lint.sh` (Google's cpplint is used which needs python 2.7)
+`./scripts/lint.sh` (Google's cpplint is used for the database code. In addition, we use _flake8_ for linting the Python scripts under /scripts.)
 
 ### Format
-`./scripts/format.sh` (clang-format is used)
+`./scripts/format.sh` (clang-format is used for the database code. We use _black_ for formatting the Python scripts under /scripts.)
 
 ### Test
 Calling `make hyriseTest` from the build directory builds all available tests.
