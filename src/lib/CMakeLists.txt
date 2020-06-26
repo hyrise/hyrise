@@ -234,6 +234,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -393,8 +394,6 @@ set(
     statistics/statistics_objects/abstract_histogram.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
-    statistics/statistics_objects/counting_quotient_filter.cpp
-    statistics/statistics_objects/counting_quotient_filter.hpp
     statistics/statistics_objects/equal_distinct_count_histogram.cpp
     statistics/statistics_objects/equal_distinct_count_histogram.hpp
     statistics/statistics_objects/generic_histogram.cpp
@@ -423,7 +422,10 @@ set(
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/constraints/table_constraint_definition.hpp
+    storage/constraints/abstract_table_constraint.cpp
+    storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/table_key_constraint.cpp
+    storage/constraints/table_key_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
@@ -640,10 +642,9 @@ set(
 
 set(
     LIBRARIES
-    sqlparser
-    cqf
-    uninitialized_vector
     lz4
+    sqlparser
+    uninitialized_vector
     zstd
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}

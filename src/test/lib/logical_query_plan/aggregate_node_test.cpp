@@ -36,11 +36,11 @@ class AggregateNodeTest : public BaseTest {
 };
 
 TEST_F(AggregateNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_aggregate_node->column_expressions().size(), 4u);
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(0), *_a);
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(1), *_c);
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(2), *sum_(add_(_a, _b)));
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum_(add_(_a, _c)));
+  ASSERT_EQ(_aggregate_node->output_expressions().size(), 4u);
+  EXPECT_EQ(*_aggregate_node->output_expressions().at(0), *_a);
+  EXPECT_EQ(*_aggregate_node->output_expressions().at(1), *_c);
+  EXPECT_EQ(*_aggregate_node->output_expressions().at(2), *sum_(add_(_a, _b)));
+  EXPECT_EQ(*_aggregate_node->output_expressions().at(3), *sum_(add_(_a, _c)));
 }
 
 TEST_F(AggregateNodeTest, NodeExpressions) {

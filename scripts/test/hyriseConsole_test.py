@@ -3,33 +3,39 @@
 import os
 import sys
 import pexpect
-import time
+
 
 def initialize():
     if len(sys.argv) == 1:
-        print ("Usage: ./scripts/test/hyriseConsole_test.py <build_dir>")
+        print("Usage: ./scripts/test/hyriseConsole_test.py <build_dir>")
         sys.exit(1)
 
     if not os.path.isdir("resources/test_data/tbl"):
-        print ("Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise repository?")
+        print(
+            "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise"
+            "repository?"
+        )
         sys.exit(1)
 
     build_dir = sys.argv[1]
     console = pexpect.spawn(build_dir + "/hyriseConsole", timeout=120, dimensions=(200, 64))
     return console
 
+
 def close_console(console):
     console.expect(pexpect.EOF)
     console.close()
 
+
 def check_exit_status(console):
-    if console.exitstatus == None:
+    if console.exitstatus is None:
         sys.exit(console.signalstatus)
+
 
 def main():
     # Disable Pagination
-    if 'TERM' in os.environ:
-        del os.environ['TERM']
+    if "TERM" in os.environ:
+        del os.environ["TERM"]
 
     console = initialize()
     console.logfile = sys.stdout.buffer
@@ -60,8 +66,10 @@ def main():
     console.expect('Loading .*bin/float.bin into table "test_bin"')
     console.expect('Table "test_bin" already existed. Replacing it.')
     console.expect('Encoding "test_bin" using RunLength')
-    console.sendline("select encoding_type from meta_segments where table_name='test_bin' and chunk_id=0 and column_id=0")
-    console.expect('RunLength')
+    console.sendline(
+        "select encoding_type from meta_segments where table_name='test_bin' and chunk_id=0 and column_id=0"
+    )
+    console.expect("RunLength")
 
     # Test SQL statement
     console.sendline("select sum(a) from test")
@@ -112,7 +120,7 @@ def main():
     console.sendline("select * from nation")
     console.expect("25 rows total")
 
-    # Test correct chunk size (25 nations, independent of scale factor, with a maximum chunk size of 7 result in 4 chunks)
+    # Test correct chunk size (25 nations, independent of scale factor, with a max chunk size of 7 results in 4 chunks)
     console.sendline("print nation")
     console.expect("=== Chunk 3 ===")
 
@@ -136,5 +144,6 @@ def main():
     close_console(console)
     check_exit_status(console)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

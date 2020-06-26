@@ -488,6 +488,52 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
 }
 
+TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+  auto index_column_ids = std::vector{ColumnID{1}};
+  auto index_chunk_ids = std::vector{ChunkID{0}, ChunkID{2}};
+  auto pruned_chunk_ids = std::vector{ChunkID{0}};
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+
+  stored_table_node->set_pruned_chunk_ids(pruned_chunk_ids);
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
+  predicate_node->set_left_input(stored_table_node);
+  predicate_node->scan_type = ScanType::IndexScan;
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  // As the vector of indexed chunks contains the chunk ids {0, 2} and the vector of pruned chunks
+  // contains the chunk id {0}, the first indexed chunk is pruned. Correspondingly, the ids of the
+  // indexed chunks have to be adapted, so that the indexed chunk with the id 2 now has the id 1.
+  std::vector<ChunkID> index_scan_chunk_ids = {ChunkID{1}};
+
+  /**
+   * Check PQP
+   */
+  const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
+  ASSERT_TRUE(union_op);
+
+  const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
+  ASSERT_TRUE(index_scan_op);
+  EXPECT_EQ(index_scan_op->included_chunk_ids, index_scan_chunk_ids);
+
+  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
+  const auto b = PQPColumnExpression::from_table(*table, "b");
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_scan_chunk_ids);
+  EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
+
+  // Check the setting of LQP nodes for index scans
+  EXPECT_EQ(union_op->lqp_node, predicate_node);
+  EXPECT_EQ(index_scan_op->lqp_node, predicate_node);
+  EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
+}
+
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Build LQP and translate to PQP

@@ -97,8 +97,8 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
   switch (op->type()) {
     case OperatorType::Projection: {
       const auto projection = std::dynamic_pointer_cast<const Projection>(op);
-      for (const auto& column_expression : projection->expressions) {
-        _visualize_subqueries(op, column_expression, visualized_ops);
+      for (const auto& expression : projection->expressions) {
+        _visualize_subqueries(op, expression, visualized_ops);
       }
     } break;
 
@@ -140,7 +140,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
                                     const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  const auto& performance_data = from->performance_data();
+  const auto& performance_data = *from->performance_data;
   if (performance_data.executed && performance_data.has_output) {
     std::stringstream stream;
 
@@ -168,11 +168,15 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   VizVertexInfo info = _default_vertex;
   auto label = op->description(DescriptionMode::MultiLine);
 
-  const auto& performance_data = op->performance_data();
+  const auto& performance_data = *op->performance_data;
   if (performance_data.executed) {
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
     info.pen_width = static_cast<double>(total.count());
+
+    std::stringstream operator_performance_data_stream;
+    performance_data.output_to_stream(operator_performance_data_stream, DescriptionMode::MultiLine);
+    info.tooltip = operator_performance_data_stream.str();
   } else {
     info.pen_width = 1.0;
   }

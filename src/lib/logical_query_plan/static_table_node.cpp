@@ -28,18 +28,18 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::column_expressions() const {
+std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
   // that in the constructor
-  if (!_column_expressions) {
-    _column_expressions.emplace(table->column_count());
+  if (!_output_expressions) {
+    _output_expressions.emplace(table->column_count());
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      (*_column_expressions)[column_id] = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
+      (*_output_expressions)[column_id] = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
     }
   }
 
-  return *_column_expressions;
+  return *_output_expressions;
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {

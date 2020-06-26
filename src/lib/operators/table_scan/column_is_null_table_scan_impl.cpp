@@ -24,7 +24,7 @@ ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const
 
 std::string ColumnIsNullTableScanImpl::description() const { return "IsNullScan"; }
 
-std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
+std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) {
   const auto& chunk = _in_table->get_chunk(chunk_id);
   const auto& segment = chunk->get_segment(_column_id);
 
@@ -38,6 +38,7 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
       for (const auto& sorted_by : chunk_sorted_by) {
         if (sorted_by.column == _column_id) {
           _scan_generic_sorted_segment(*segment, chunk_id, *matches, sorted_by.sort_mode);
+          ++chunk_scans_sorted;
           return matches;
         }
       }
@@ -92,13 +93,14 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegme
 }
 
 void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id,
-                                                    RowIDPosList& matches) const {
+                                                    RowIDPosList& matches) {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, segment.size());
     return;
   }
 
   if (_matches_none(segment)) {
+    ++chunk_scans_skipped;
     return;
   }
 

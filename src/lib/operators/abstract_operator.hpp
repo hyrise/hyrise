@@ -66,10 +66,10 @@ enum class OperatorType {
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(
-      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
-      const std::shared_ptr<const AbstractOperator>& right = nullptr,
-      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
+  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                   const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                   std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
+                       std::make_unique<OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps>>());
 
   virtual ~AbstractOperator() = default;
 
@@ -116,14 +116,13 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> left_input_table() const;
   std::shared_ptr<const Table> right_input_table() const;
 
-  // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
-  const OperatorPerformanceData& performance_data() const;
-
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
   // LQP node with which this operator has been created. Might be uninitialized.
   std::shared_ptr<const AbstractLQPNode> lqp_node;
+
+  std::unique_ptr<AbstractOperatorPerformanceData> performance_data;
 
  protected:
   // abstract method to actually execute the operator
@@ -164,8 +163,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
-
-  const std::unique_ptr<OperatorPerformanceData> _performance_data;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);

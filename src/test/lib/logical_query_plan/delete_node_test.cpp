@@ -25,7 +25,7 @@ TEST_F(DeleteNodeTest, HashingAndEqualityCheck) {
 
 TEST_F(DeleteNodeTest, NodeExpressions) { EXPECT_TRUE(_delete_node->node_expressions.empty()); }
 
-TEST_F(DeleteNodeTest, ColumnExpressions) { EXPECT_TRUE(_delete_node->column_expressions().empty()); }
+TEST_F(DeleteNodeTest, ColumnExpressions) { EXPECT_TRUE(_delete_node->output_expressions().empty()); }
 
 TEST_F(DeleteNodeTest, Copy) { EXPECT_EQ(*_delete_node, *_delete_node->deep_copy()); }
 

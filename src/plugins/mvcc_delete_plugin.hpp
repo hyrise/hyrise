@@ -52,7 +52,7 @@ class MvccDeletePlugin : public AbstractPlugin {
   constexpr static std::chrono::milliseconds IDLE_DELAY_PHYSICAL_DELETE = std::chrono::milliseconds(1000);
 
  private:
-  using TableAndChunkID = std::pair<const std::shared_ptr<Table>&, ChunkID>;
+  using TableAndChunkID = std::pair<const std::shared_ptr<Table>, ChunkID>;
 
   void _logical_delete_loop();
   void _physical_delete_loop();

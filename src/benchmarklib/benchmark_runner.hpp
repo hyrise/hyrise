@@ -35,8 +35,11 @@ class SQLiteWrapper;
 // The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
 // (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
-class BenchmarkRunner : Noncopyable {
+class BenchmarkRunner : public Noncopyable {
  public:
+  // Defines the interval in which the system utilization is collected
+  static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::milliseconds{1000};
+
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context,
                   std::shared_ptr<OperatorFeatureExporter> operator_exporter = nullptr);
@@ -69,6 +72,9 @@ class BenchmarkRunner : Noncopyable {
 
   void _export_pqps() const;
 
+  // Converts the result of a SQL query into a JSON object
+  static nlohmann::json _sql_to_json(const std::string& sql);
+
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
@@ -85,7 +91,7 @@ class BenchmarkRunner : Noncopyable {
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
-  std::chrono::steady_clock::time_point _benchmark_start;
+  std::chrono::system_clock::time_point _benchmark_start;
   Duration _total_run_duration{};
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
