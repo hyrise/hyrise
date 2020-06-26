@@ -17,6 +17,7 @@ RUN apt-get update \
         clang-tidy-10 \
         cmake \
         curl \
+        dos2unix \
         g++-9 \
         gcc-9 \
         gcovr \
