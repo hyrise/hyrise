@@ -94,8 +94,8 @@ endif()
 
 # On Linux, use the lld linker, which is twice as fast for incremental debug builds
 if (NOT APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld-9")
-    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld-9")
+    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
+    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
 endif()
 
 # Require NCurses over Curses
