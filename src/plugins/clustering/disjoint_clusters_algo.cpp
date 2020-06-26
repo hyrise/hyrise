@@ -21,6 +21,8 @@
 #include "storage/table.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/value_segment.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -266,6 +268,21 @@ bool DisjointClustersAlgo::_can_delete_chunk(const std::shared_ptr<Chunk> chunk)
   return !conflicting_transactions;
 }
 
+void _delete_rows(const size_t l_orderkey, const size_t ms_delay, const std::string& table_name) {
+    // dirty hack
+    if (table_name != "lineitem") {
+      std::cout << "dirty hack, aborting" << std::endl;
+      return;
+    }
+
+    std::this_thread::sleep_for (std::chrono::milliseconds(ms_delay));
+    const std::string sql = "DELETE FROM lineitem WHERE l_orderkey = " + std::to_string(l_orderkey);
+    std::cout << "Executing " << sql << std::endl;
+    auto builder = SQLPipelineBuilder{ sql };
+    auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+    sql_pipeline->get_result_tables();
+}
+
 void DisjointClustersAlgo::_perform_clustering() {
   std::cout << "- Performing clustering" << std::endl;
   Timer total_timer;
@@ -309,9 +326,11 @@ void DisjointClustersAlgo::_perform_clustering() {
     const auto chunk_count_before_clustering = _table->chunk_count();
     std::map<ClusterKey, std::set<ChunkID>> chunk_ids_per_cluster;
     std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>> clusters;
+
     for (ChunkID chunk_id{0}; chunk_id < chunk_count_before_clustering; chunk_id++) {
       const auto initial_chunk = _table->get_chunk(chunk_id);
       if (initial_chunk) {
+        std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
         const auto initial_invalidated_rows = initial_chunk->invalid_row_count();
         const auto cluster_keys = _cluster_keys(initial_chunk);
 
@@ -323,12 +342,12 @@ void DisjointClustersAlgo::_perform_clustering() {
         if (clustering_partitioner->execute_failed()) {
           std::cout << "Chunk " << chunk_id << " could not be locked entirely or was modified since cluster keys were computed. Trying again." << std::endl;
           chunk_id--;
-
+          partition_transaction->rollback(RollbackReason::Conflict);
           continue;
         } else {
           partition_transaction->commit();
         }
-      }        
+      }
     }
 
     const auto partition_duration = per_step_timer.lap();
@@ -357,7 +376,7 @@ void DisjointClustersAlgo::_perform_clustering() {
           // "cluster" it again
           const auto initial_invalidated_rows = chunk->invalid_row_count();
           const auto cluster_keys = std::vector<ClusterKey>(chunk->size(), MERGE_CLUSTER);
-          //std::cout << "clustering info initialised, getting merge locks" << std::endl;
+
           auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
           auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, chunk, cluster_keys, initial_invalidated_rows, clusters, chunk_ids_per_cluster);
           clustering_partitioner->set_transaction_context(partition_transaction);
@@ -365,6 +384,7 @@ void DisjointClustersAlgo::_perform_clustering() {
 
           if (clustering_partitioner->execute_failed()) {
             std::cout << "Chunk " << chunk_id << " was supposed to be merged because its chunk size is less than " << SMALL_CHUNK_TRESHOLD << ", but was modified during the merge. Skipping it." << std::endl;
+            partition_transaction->rollback(RollbackReason::Conflict);
             continue;
           } else {
             partition_transaction->commit();
@@ -381,6 +401,7 @@ void DisjointClustersAlgo::_perform_clustering() {
       std::cout << "-   Merging small chunks done (" << format_duration(merge_duration) << ")" << std::endl;
       _runtime_statistics[table_name]["steps"]["merge"] = merge_duration.count();
     }
+
 
     // phase 2: sort within clusters
     std::cout << "-   Sorting clusters" << std::endl;
@@ -408,6 +429,7 @@ void DisjointClustersAlgo::_perform_clustering() {
 
       if (clustering_sorter->execute_failed()) {
         std::cout << "Failed to sort a cluster. Skipping it." << std::endl;
+        sort_transaction->rollback(RollbackReason::Conflict);
       } else {
         sort_transaction->commit();
       }
