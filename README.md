@@ -8,6 +8,9 @@ This is the repository for the current Hyrise version, which has been rewritten 
 
 Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
 
+## Supported Systems
+Hyrise is developed for Linux (preferrably the most current Ubuntu version) and optimized to run on server hardware. We support Mac to facilitate the local development of Hyrise, but do not recommend it for benchmarking.
+
 ## Supported Benchmarks
 We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
 
