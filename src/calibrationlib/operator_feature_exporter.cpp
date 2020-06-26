@@ -10,7 +10,7 @@
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/visit_pqp.hpp"
+#include "operators/pqp_utils.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
