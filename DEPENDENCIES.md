@@ -32,7 +32,6 @@
 - benchmark (https://github.com/google/benchmark)
 - cpp-btree (https://github.com/algorithm-ninja/cpp-btree)
 - cpplint (https://github.com/cpplint/cpplint.git)
-- cqf (https://github.com/ArneMayer/cqf)
 - cxxopts (https://github.com/jarro2783/cxxopts.git)
 - flash_hash_map (https://github.com/skarupke/flat_hash_map)
 - googletest (https://github.com/google/googletest)

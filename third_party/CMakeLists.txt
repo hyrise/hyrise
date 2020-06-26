@@ -70,25 +70,6 @@ target_compile_options(
     -fPIC
 )
 
-add_library(
-    cqf
-
-    cqf/src/cqf2.cpp
-    cqf/src/cqf4.cpp
-    cqf/src/cqf8.cpp
-    cqf/src/cqf16.cpp
-    cqf/src/cqf32.cpp
-)
-
-target_compile_options(cqf PRIVATE -Wno-format -fPIC)
-
-target_include_directories(
-    cqf
-
-    PUBLIC
-    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
-)
-
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()

@@ -95,4 +95,11 @@ if [[ ${output} ]]; then
 	exitcode=1
 fi
 
+# Python linting
+output=$(flake8 --max-line-length 120 scripts)
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
+
 exit $exitcode

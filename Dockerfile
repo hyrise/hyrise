@@ -1,3 +1,5 @@
+# IMPORTANT: Changes in this file do not automatically affect the Docker image used by the CI server.
+# You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
 FROM ubuntu:20.04
@@ -30,13 +32,13 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        lld-9 \
+        lld \
         lsb-release \
         man \
         parallel \
         postgresql-server-dev-all \
         python3 \
-        python3-pexpect \
+        python3-pip \
         software-properties-common \
         sudo \
         systemtap \
