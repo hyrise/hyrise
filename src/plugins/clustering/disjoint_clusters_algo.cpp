@@ -11,8 +11,6 @@
 #include "hyrise.hpp"
 #include "operators/clustering_partitioner.hpp"
 #include "operators/clustering_sorter.hpp"
-#include "operators/sort.hpp"
-#include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -406,24 +404,9 @@ void DisjointClustersAlgo::_perform_clustering() {
     // phase 2: sort within clusters
     std::cout << "-   Sorting clusters" << std::endl;
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
-      auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
-
-      std::vector<size_t> invalid_row_counts;
-      for (const auto chunk_id : chunk_ids) {
-        const auto& chunk = _table->get_chunk(chunk_id);
-        Assert(chunk, "chunk must not be deleted");
-        _append_chunk_to_table(chunk, sorting_table);
-        invalid_row_counts.push_back(chunk->invalid_row_count());
-      }
-
-      auto wrapper = std::make_shared<TableWrapper>(sorting_table);
-      wrapper->execute();
-      const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(sort_column_id, SortMode::Ascending) };
-      auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, _table->target_chunk_size(), Sort::ForceMaterialization::Yes);
-      sort->execute();
-
       auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, invalid_row_counts, sort->get_output());
+      auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id);
+      //_delete_rows(1, 0, table_name);
       clustering_sorter->set_transaction_context(sort_transaction);
       clustering_sorter->execute();
 
