@@ -31,8 +31,7 @@ const std::string& ClusteringSorter::name() const {
 std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<TransactionContext> context) {
   _transaction_id = context->transaction_id();
 
-  // Sort will discard MVCC information anyway, so need to keep it
-  auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::No);
+  auto sorting_table = std::make_shared<Table>(_table->column_definitions(), TableType::Data, _table->target_chunk_size(), UseMvcc::Yes);
 
   std::vector<size_t> invalid_row_counts;
   for (const auto chunk_id : _chunk_ids) {
@@ -46,20 +45,21 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
       segments.push_back(segment);
     }
 
-    sorting_table->append_chunk(segments);
+    sorting_table->append_chunk(segments, chunk->mvcc_data());
   }
 
   auto wrapper = std::make_shared<TableWrapper>(sorting_table);
   wrapper->execute();
 
-  //auto validate = std::make_shared<Validate>(wrapper);
-  //validate->execute();
+  Assert(transaction_context(), "no transaction_context");
+  auto validate = std::make_shared<Validate>(wrapper);
+  validate->set_transaction_context(transaction_context());
+  validate->execute();
 
   const std::vector<SortColumnDefinition> sort_column_definitions = { SortColumnDefinition(_sort_column_id, SortMode::Ascending) };
-  auto sort = std::make_shared<Sort>(wrapper, sort_column_definitions, _table->target_chunk_size(), Sort::ForceMaterialization::Yes);
+  auto sort = std::make_shared<Sort>(validate, sort_column_definitions, _table->target_chunk_size(), Sort::ForceMaterialization::Yes);
   sort->execute();
   _sorted_table = sort->get_output();
-
 
   // get locks for the unsorted chunks in the table
   size_t invalid_row_index = 0;
@@ -67,16 +67,15 @@ std::shared_ptr<const Table> ClusteringSorter::_on_execute(std::shared_ptr<Trans
     const auto& chunk = _table->get_chunk(chunk_id);
     Assert(chunk, "chunk is not supposed to be deleted");
 
-    // TODO @Jan?
-    Assert(chunk->invalid_row_count() == 0, "Cannot handle invalidations in the clustered, unsorted chunks yet. This is because Sort discards MvccData (and thus invalidations). Maybe add a Validate?");
-
     const auto success = _lock_chunk(chunk);
     if (!success) {
+      std::cout << "Failed locking chunks" << std::endl;
       return nullptr;
     }
 
     if (chunk->invalid_row_count() != invalid_row_counts[invalid_row_index]) {
       // chunk was modified between sorting and locking
+      std::cout << "Invalid chunk count was " << invalid_row_counts[invalid_row_index] << ", but is now " << chunk->invalid_row_count() << std::endl;
       _mark_as_failed();
       return nullptr;
     }
@@ -103,6 +102,11 @@ bool ClusteringSorter::_lock_chunk(const std::shared_ptr<Chunk> chunk) {
   const auto mvcc_data = chunk->mvcc_data();
 
   for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
+    if (mvcc_data->get_end_cid(offset) != MvccData::MAX_COMMIT_ID) {
+      // row is invalidated. The Delete-operator seems to invalidate tuples without releasing them. TODO Bug or feature?
+      continue;
+    }
+
     const auto expected = 0u;
     auto success = mvcc_data->compare_exchange_tid(offset, expected, _transaction_id);
     if (!success) {
@@ -136,13 +140,14 @@ void ClusteringSorter::_on_commit_records(const CommitID commit_id) {
     const auto& chunk = _table->get_chunk(chunk_id);
     // TODO can this happen?
     Assert(chunk, "chunk disappeared");
-    Assert(chunk->invalid_row_count() == 0, "chunk should not have invalid rows");
 
     const auto& mvcc_data = chunk->mvcc_data();
     for (ChunkOffset offset{0}; offset < chunk->size(); offset++) {
-      mvcc_data->set_end_cid(offset, commit_id);
+      if (mvcc_data->get_end_cid(offset) == MvccData::MAX_COMMIT_ID) {
+        mvcc_data->set_end_cid(offset, commit_id);
+        chunk->increase_invalid_row_count(1);
+      }
     }
-    chunk->increase_invalid_row_count(chunk->size());
   }
 
   // copy the chunks from the sorted table over and update MVCC accordingly
