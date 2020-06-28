@@ -329,11 +329,10 @@ void DisjointClustersAlgo::_perform_clustering() {
       const auto initial_chunk = _table->get_chunk(chunk_id);
       if (initial_chunk) {
         std::cout << "Clustering chunk " << chunk_id + 1 << " of " << chunk_count_before_clustering << std::endl;
-        const auto initial_invalidated_rows = initial_chunk->invalid_row_count();
         const auto cluster_keys = _cluster_keys(initial_chunk);
 
         auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-        auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, initial_invalidated_rows, clusters, chunk_ids_per_cluster);
+        auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, initial_chunk, cluster_keys, clusters, chunk_ids_per_cluster);
         clustering_partitioner->set_transaction_context(partition_transaction);
         clustering_partitioner->execute();
 
@@ -372,11 +371,10 @@ void DisjointClustersAlgo::_perform_clustering() {
           const auto chunk_id = cluster.first;
 
           // "cluster" it again
-          const auto initial_invalidated_rows = chunk->invalid_row_count();
           const auto cluster_keys = std::vector<ClusterKey>(chunk->size(), MERGE_CLUSTER);
 
           auto partition_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-          auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, chunk, cluster_keys, initial_invalidated_rows, clusters, chunk_ids_per_cluster);
+          auto clustering_partitioner = std::make_shared<ClusteringPartitioner>(nullptr, _table, chunk, cluster_keys, clusters, chunk_ids_per_cluster);
           clustering_partitioner->set_transaction_context(partition_transaction);
           clustering_partitioner->execute();
 
@@ -406,7 +404,6 @@ void DisjointClustersAlgo::_perform_clustering() {
     for (const auto& [key, chunk_ids] : chunk_ids_per_cluster) {
       auto sort_transaction = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
       auto clustering_sorter = std::make_shared<ClusteringSorter>(nullptr, _table, chunk_ids, sort_column_id);
-      //_delete_rows(1, 0, table_name);
       clustering_sorter->set_transaction_context(sort_transaction);
       clustering_sorter->execute();
 

@@ -12,8 +12,8 @@
 namespace opossum {
 
 
-ClusteringPartitioner::ClusteringPartitioner(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::shared_ptr<Chunk> chunk, const std::vector<ClusterKey>& cluster_keys, const size_t expected_invalid_row_count, std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>>& clusters, std::map<ClusterKey, std::set<ChunkID>>& chunk_ids_per_cluster)
-    : AbstractReadWriteOperator{OperatorType::ClusteringPartitioner, referencing_table_op}, _table{table}, _chunk{chunk}, _cluster_keys{cluster_keys}, _expected_invalid_row_count{expected_invalid_row_count}, _clusters{clusters}, _chunk_ids_per_cluster{chunk_ids_per_cluster}, _num_locks{0}, _transaction_id{0} {
+ClusteringPartitioner::ClusteringPartitioner(const std::shared_ptr<const AbstractOperator>& referencing_table_op, std::shared_ptr<Table> table, const std::shared_ptr<Chunk> chunk, const std::vector<ClusterKey>& cluster_keys, std::map<ClusterKey, std::pair<ChunkID, std::shared_ptr<Chunk>>>& clusters, std::map<ClusterKey, std::set<ChunkID>>& chunk_ids_per_cluster)
+    : AbstractReadWriteOperator{OperatorType::ClusteringPartitioner, referencing_table_op}, _table{table}, _chunk{chunk}, _cluster_keys{cluster_keys}, _clusters{clusters}, _chunk_ids_per_cluster{chunk_ids_per_cluster}, _num_locks{0}, _transaction_id{0} {
       Assert(_chunk->size() == _cluster_keys.size(), "We need one cluster key for every row in the chunk.");
     }
 
@@ -54,11 +54,6 @@ std::shared_ptr<const Table> ClusteringPartitioner::_on_execute(std::shared_ptr<
     } else {
       _num_locks++;
     }
-  }
-
-  if (_chunk->invalid_row_count() != _expected_invalid_row_count) {
-    Assert(_chunk->invalid_row_count() > _expected_invalid_row_count, "invalid row count cannot decrease");
-    _mark_as_failed();
   }
 
   return nullptr;
@@ -119,6 +114,7 @@ void ClusteringPartitioner::_on_commit_records(const CommitID commit_id) {
 // TODO do we need locks on the cluster-chunks that are added by this operator?
 
 void ClusteringPartitioner::_on_rollback_records() {
+  std::cout << "Rolling back" << std::endl;
   _unlock_chunk(_chunk);
 }
 
