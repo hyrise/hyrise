@@ -106,8 +106,19 @@ class AggregateHash : public AbstractAggregateOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
 
+  enum class OperatorSteps : uint8_t {
+    GroupByKeyPartitioning,
+    Aggregating,
+    GroupByColumnsWriting,
+    AggregateColumnsWriting,
+    OutputWriting
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  template <typename AggregateKey>
+  KeysPerChunk<AggregateKey> _partition_by_groupby_keys() const;
 
   template <typename AggregateKey>
   void _aggregate();
@@ -127,7 +138,7 @@ class AggregateHash : public AbstractAggregateOperator {
   void _write_groupby_output(RowIDPosList& pos_list);
 
   template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
-  void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
+  void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
                           const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>

@@ -8,7 +8,7 @@ namespace opossum {
 
 CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& init_name,
                                                const std::shared_ptr<PreparedPlan>& init_prepared_plan)
-    : BaseNonQueryNode(LQPNodeType::CreatePreparedPlan), name(init_name), prepared_plan(init_prepared_plan) {}
+    : AbstractNonQueryNode(LQPNodeType::CreatePreparedPlan), name(init_name), prepared_plan(init_prepared_plan) {}
 
 std::string CreatePreparedPlanNode::description(const DescriptionMode mode) const {
   std::stringstream stream;

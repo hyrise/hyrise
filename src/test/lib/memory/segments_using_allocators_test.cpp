@@ -2,7 +2,7 @@
 
 #include "base_test.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_encoded_segment.hpp"
+#include "storage/abstract_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
@@ -71,7 +71,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 
 TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   // Test that migrated segments properly use the assigned memory resource.
-  auto encoded_segment = std::static_pointer_cast<BaseSegment>(original_segment);
+  auto encoded_segment = std::static_pointer_cast<AbstractSegment>(original_segment);
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
     encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
   }
@@ -82,7 +82,7 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
 
   // The segment control structure (i.e., the object itself) and its members are not stored using PMR. Thus, we
   // retrieve the size of an empty segment for later subtraction.
-  auto empty_encoded_segment = std::static_pointer_cast<BaseSegment>(empty_original_segment);
+  auto empty_encoded_segment = std::static_pointer_cast<AbstractSegment>(empty_original_segment);
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
     empty_encoded_segment = ChunkEncoder::encode_segment(empty_original_segment, data_type, encoding_spec);
   }
@@ -103,7 +103,7 @@ TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
 
 TEST_P(SegmentsUsingAllocatorsTest, CountersAfterMigration) {
   // Test that SegmentAccessCounters are correctly copied when a segment is migrated
-  auto encoded_segment = std::static_pointer_cast<BaseSegment>(original_segment);
+  auto encoded_segment = std::static_pointer_cast<AbstractSegment>(original_segment);
   if (encoding_spec.encoding_type != EncodingType::Unencoded) {
     encoded_segment = ChunkEncoder::encode_segment(original_segment, data_type, encoding_spec);
   }

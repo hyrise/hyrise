@@ -57,7 +57,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   const ValueSegment<T>& _segment;
 
  private:
-  class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
+  class NonNullIterator : public AbstractSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
@@ -98,7 +98,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
-  class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
+  class Iterator : public AbstractSegmentIterator<Iterator, SegmentPosition<T>> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
@@ -147,8 +147,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename PosListIteratorType>
   class NonNullPointAccessIterator
-      : public BasePointAccessSegmentIterator<NonNullPointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
-                                              PosListIteratorType> {
+      : public AbstractPointAccessSegmentIterator<NonNullPointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
+                                                  PosListIteratorType> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
@@ -158,9 +158,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it, PosListIteratorType position_filter_begin,
                                         PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+        : AbstractPointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>,
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)} {}
 
    private:
@@ -177,8 +177,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   };
 
   template <typename PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
-                                                                    SegmentPosition<T>, PosListIteratorType> {
+  class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                        SegmentPosition<T>, PosListIteratorType> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
@@ -189,9 +189,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,
                                  PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+        : AbstractPointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>,
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
           _null_values_begin_it{std::move(null_values_begin_it)} {}
 

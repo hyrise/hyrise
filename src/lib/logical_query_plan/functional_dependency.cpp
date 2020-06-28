@@ -16,12 +16,12 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   if (determinants.size() != other.determinants.size() || dependents.size() != other.dependents.size()) return false;
 
   // Compare determinants
-  for (const auto& column_expression : other.determinants) {
-    if (!determinants.contains(column_expression)) return false;
+  for (const auto& expression : other.determinants) {
+    if (!determinants.contains(expression)) return false;
   }
   // Compare dependants
-  for (const auto& column_expression : other.dependents) {
-    if (!dependents.contains(column_expression)) return false;
+  for (const auto& expression : other.dependents) {
+    if (!dependents.contains(expression)) return false;
   }
 
   return true;

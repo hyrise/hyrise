@@ -39,11 +39,13 @@ class JoinIndex : public AbstractJoinOperator {
 
   const std::string& name() const override;
 
-  struct PerformanceData : public OperatorPerformanceData {
+  enum class OperatorSteps : uint8_t { IndexJoining, NestedLoopJoining, OutputWriting };
+
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const;
+
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
-
-    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
 
   std::string description(DescriptionMode description_mode) const override;

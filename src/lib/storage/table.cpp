@@ -324,38 +324,36 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints() const {
-  return _constraint_definitions;
-}
+const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
 
-void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
-  Assert(_type == TableType::Data, "Constraints are not tracked for reference tables across the PQP.");
-  for (const auto& column_id : column_ids) {
+void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
+  Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of specified columns
+  for (const auto& column_id : table_key_constraint.columns()) {
     Assert(column_id < column_count(), "ColumnID out of range");
-    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
-           "Column must be not nullable for primary key constraint");
+
+    // PRIMARY KEY requires non-nullable columns
+    if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
+      Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
+    }
   }
 
   {
     auto scoped_lock = acquire_append_mutex();
-    if (is_primary_key == IsPrimaryKey::Yes) {
-      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                          [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
-                 _constraint_definitions.end(),
+
+    for (const auto& existing_constraint : _table_key_constraints) {
+      // Ensure that no other PRIMARY KEY is defined
+      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
              "Another primary key already exists for this table.");
+
+      // Ensure there is only one key constraint per column set.
+      Assert(table_key_constraint.columns() != existing_constraint.columns(),
+             "Another key constraint for the same column set has already been defined.");
     }
 
-    auto sorted_columns_ids = column_ids;
-    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
-    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
-
-    Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                        [&new_constraint](const auto& existing_constraint) {
-                          return new_constraint.columns == existing_constraint.columns;
-                        }) == _constraint_definitions.end(),
-           "Another constraint on the same columns already exists.");
-
-    _constraint_definitions.push_back(new_constraint);
+    _table_key_constraints.push_back(table_key_constraint);
   }
 }
 

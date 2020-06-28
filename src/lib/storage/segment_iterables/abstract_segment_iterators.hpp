@@ -28,7 +28,7 @@ namespace opossum {
  *
  * Example Usage
  *
- * class Iterator : public BaseSegmentIterator<Iterator, Value> {
+ * class Iterator : public AbstractSegmentIterator<Iterator, Value> {
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *
@@ -38,7 +38,7 @@ namespace opossum {
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator
+class AbstractSegmentIterator
     : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value, std::ptrdiff_t> {};
 
 /**
@@ -61,11 +61,11 @@ struct ChunkOffsetMapping {
  */
 
 template <typename Derived, typename Value, typename PosListIteratorType>
-class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
+class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derived, Value> {
  public:
   typedef std::random_access_iterator_tag iterator_category;
-  explicit BasePointAccessSegmentIterator(PosListIteratorType position_filter_begin,
-                                          PosListIteratorType position_filter_it)
+  explicit AbstractPointAccessSegmentIterator(PosListIteratorType position_filter_begin,
+                                              PosListIteratorType position_filter_it)
       : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
@@ -84,11 +84,11 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
 
   void advance(std::ptrdiff_t n) { _position_filter_it += n; }
 
-  bool equal(const BasePointAccessSegmentIterator& other) const {
+  bool equal(const AbstractPointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);
   }
 
-  std::ptrdiff_t distance_to(const BasePointAccessSegmentIterator& other) const {
+  std::ptrdiff_t distance_to(const AbstractPointAccessSegmentIterator& other) const {
     return other._position_filter_it - _position_filter_it;
   }
 

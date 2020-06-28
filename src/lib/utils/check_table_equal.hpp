@@ -36,8 +36,8 @@ enum class IgnoreNullable { Yes, No };
  * check_table_equals method. As NULLable information is stored in the table, not in the segment,
  * IgnoreNullable::Yes is implied.
  */
-bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
-                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
+bool check_segment_equal(const std::shared_ptr<AbstractSegment>& actual_segment,
+                         const std::shared_ptr<AbstractSegment>& expected_segment, OrderSensitivity order_sensitivity,
                          TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode);
 
 // Compares two tables for equality

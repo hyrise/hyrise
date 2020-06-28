@@ -10,7 +10,7 @@
 #endif
 
 #include "all_type_variant.hpp"
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -43,7 +43,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   friend BTreeIndexTest;
 
  public:
-  explicit BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index,
+  explicit BTreeIndexImpl(const std::shared_ptr<const AbstractSegment>& segments_to_index,
                           std::vector<ChunkOffset>& _null_positions);
 
   size_t memory_consumption() const override;
@@ -57,7 +57,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   Iterator cend() const override;
 
  protected:
-  void _bulk_insert(const std::shared_ptr<const BaseSegment>&, std::vector<ChunkOffset>& _null_positions);
+  void _bulk_insert(const std::shared_ptr<const AbstractSegment>&, std::vector<ChunkOffset>& _null_positions);
   void _add_to_heap_memory_usage(const DataType&);
 
   btree::btree_map<DataType, size_t> _btree;

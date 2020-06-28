@@ -7,7 +7,7 @@
 
 #include "base_test.hpp"
 
-#include "storage/base_segment.hpp"
+#include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "types.hpp"
@@ -23,7 +23,7 @@ class BTreeIndexTest : public BaseTest {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
     segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
-    index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+    index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
@@ -99,7 +99,7 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
-  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
@@ -130,7 +130,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
   const auto& dict_segment_string_nulls =
       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
   const auto& index =
-      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_nulls}));
+      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_nulls}));
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
@@ -162,7 +162,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
                          "b", "z", "x", std::nullopt});
   const auto& index =
-      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_mixed}));
+      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_mixed}));
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
@@ -192,7 +192,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
   const auto& index =
-      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_empty}));
+      std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({dict_segment_string_empty}));
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
@@ -254,7 +254,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
       "hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
       "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
   segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
-  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const AbstractSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__

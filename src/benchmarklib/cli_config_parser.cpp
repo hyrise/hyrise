@@ -30,7 +30,9 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
             << std::endl;
 
   const auto clients = parse_result["clients"].as<uint32_t>();
-  std::cout << "- " + std::to_string(clients) + " simulated clients are scheduling items in parallel" << std::endl;
+  std::cout << "- " + std::to_string(clients) + " simulated ";
+  std::cout << (clients == 1 ? "client is " : "clients are ") << "scheduling items";
+  std::cout << (clients > 1 ? " in parallel" : "") << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
@@ -121,9 +123,9 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
-  const auto sql_metrics = parse_result["sql_metrics"].as<bool>();
-  if (sql_metrics) {
-    Assert(!output_file_string.empty(), "--sql_metrics only makes sense when an output file is set.");
+  const auto metrics = parse_result["metrics"].as<bool>();
+  if (metrics) {
+    Assert(!output_file_string.empty(), "--metrics only makes sense when an output file is set.");
     std::cout << "- Tracking SQL metrics" << std::endl;
   } else {
     std::cout << "- Not tracking SQL metrics" << std::endl;
@@ -132,7 +134,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   return BenchmarkConfig{
       benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
       warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
-      verify,          cache_binary_tables, sql_metrics};
+      verify,          cache_binary_tables, metrics};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

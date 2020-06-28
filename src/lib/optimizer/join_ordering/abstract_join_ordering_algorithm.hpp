@@ -35,7 +35,7 @@ class AbstractJoinOrderingAlgorithm {
    *                         * the subplans from the vertices below them.
    */
   virtual std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph,
-                                              const std::shared_ptr<AbstractCostEstimator>& cost_estimator) = 0;
+                                                      const std::shared_ptr<AbstractCostEstimator>& cost_estimator) = 0;
 
  protected:
   /**

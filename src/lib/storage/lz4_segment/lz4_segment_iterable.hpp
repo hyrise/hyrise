@@ -90,7 +90,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
  private:
   template <typename ValueIterator>
-  class Iterator : public BaseSegmentIterator<Iterator<ValueIterator>, SegmentPosition<T>> {
+  class Iterator : public AbstractSegmentIterator<Iterator<ValueIterator>, SegmentPosition<T>> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
@@ -140,8 +140,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   };
 
   template <typename PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
-                                                                    SegmentPosition<T>, PosListIteratorType> {
+  class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                        SegmentPosition<T>, PosListIteratorType> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = T;
@@ -152,9 +152,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     // Begin Iterator
     PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
                         PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+        : AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _data_it{std::move(data_it)},
           _null_value_it{std::move(null_value_it)} {}
 

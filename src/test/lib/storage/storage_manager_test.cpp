@@ -79,6 +79,9 @@ TEST_F(StorageManagerTest, DropTable) {
   EXPECT_THROW(sm.get_table("first_table"), std::exception);
   EXPECT_THROW(sm.drop_table("first_table"), std::exception);
 
+  const auto& tables = sm.tables();
+  EXPECT_EQ(tables.size(), 1);
+
   sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
   EXPECT_TRUE(sm.has_table("first_table"));
 }
@@ -114,6 +117,9 @@ TEST_F(StorageManagerTest, DropView) {
   sm.drop_view("first_view");
   EXPECT_THROW(sm.get_view("first_view"), std::exception);
   EXPECT_THROW(sm.drop_view("first_view"), std::exception);
+
+  const auto& views = sm.views();
+  EXPECT_EQ(views.size(), 1);
 
   const auto v1_lqp = StoredTableNode::make("first_table");
   const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
@@ -204,6 +210,9 @@ TEST_F(StorageManagerTest, DropPreparedPlan) {
   sm.drop_prepared_plan("first_prepared_plan");
   EXPECT_THROW(sm.get_prepared_plan("first_prepared_plan"), std::exception);
   EXPECT_THROW(sm.drop_prepared_plan("first_prepared_plan"), std::exception);
+
+  const auto& prepared_plans = sm.prepared_plans();
+  EXPECT_EQ(prepared_plans.size(), 1);
 
   const auto pp_lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
   const auto pp = std::make_shared<PreparedPlan>(pp_lqp, std::vector<ParameterID>{});

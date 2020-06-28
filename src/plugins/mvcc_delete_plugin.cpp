@@ -33,8 +33,10 @@ void MvccDeletePlugin::stop() {
  * invalidated rows is exceeded.
  */
 void MvccDeletePlugin::_logical_delete_loop() {
+  const auto tables = Hyrise::get().storage_manager.tables();
+
   // Check all tables
-  for (auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+  for (auto& [table_name, table] : tables) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
     size_t saved_memory = 0;
     size_t num_chunks = 0;

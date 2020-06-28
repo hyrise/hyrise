@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "base_encoded_segment.hpp"
+#include "abstract_encoded_segment.hpp"
 
 namespace opossum {
 
@@ -11,9 +11,9 @@ class BaseCompressedVector;
 /**
  * @brief Base class of DictionarySegment<T> exposing type-independent interface
  */
-class BaseDictionarySegment : public BaseEncodedSegment {
+class BaseDictionarySegment : public AbstractEncodedSegment {
  public:
-  using BaseEncodedSegment::BaseEncodedSegment;
+  using AbstractEncodedSegment::AbstractEncodedSegment;
 
   EncodingType encoding_type() const override = 0;
 
