@@ -14,6 +14,7 @@ class CalibrationLQPGenerator {
  public:
   CalibrationLQPGenerator();
   void generate(OperatorType operator_type, const std::shared_ptr<const CalibrationTableWrapper>& table);
+  void generate_joins(const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables);
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_lqps();
 
  private:
@@ -22,8 +23,10 @@ class CalibrationLQPGenerator {
   void _generate_column_vs_column_scans(const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper);
   [[nodiscard]] std::vector<CalibrationLQPGenerator::ColumnPair> _get_column_pairs(
       const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) const;
+  void _generate_joins(const std::shared_ptr<const CalibrationTableWrapper>& left_table,
+                       const std::shared_ptr<const CalibrationTableWrapper>& right);
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> _generated_lpqs;
+  std::vector<std::shared_ptr<AbstractLQPNode>> _generated_lqps;
 
   // feature flags for the LQPGeneration
   static constexpr bool _enable_like_predicates = true;

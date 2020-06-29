@@ -9,8 +9,8 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/pqp_utils.hpp"
+#include "operators/table_scan.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -45,17 +45,17 @@ void OperatorFeatureExporter::_export_operator(const std::shared_ptr<const Abstr
                   NULL_VALUE};
 
   if (op->left_input()) {
-    _current_row[1] = static_cast<int64_t>(op->left_input()->performance_data().output_row_count);
+    _current_row[1] = static_cast<int64_t>(op->left_input()->performance_data->output_row_count);
     if (op->left_input_table()) _current_row[3] = static_cast<int32_t>(op->left_input_table()->column_count());
   }
   if (op->right_input()) {
-    _current_row[2] = static_cast<int64_t>(op->right_input()->performance_data().output_row_count);
+    _current_row[2] = static_cast<int64_t>(op->right_input()->performance_data->output_row_count);
     if (op->right_input_table()) _current_row[4] = static_cast<int32_t>(op->right_input_table()->column_count());
   }
 
-  if (op->performance_data().has_output) {
-    _current_row[5] = static_cast<int64_t>(op->performance_data().output_row_count);
-    _current_row[6] = static_cast<int64_t>(op->performance_data().walltime.count());
+  if (op->performance_data->has_output) {
+    _current_row[5] = static_cast<int64_t>(op->performance_data->output_row_count);
+    _current_row[6] = static_cast<int64_t>(op->performance_data->walltime.count());
   }
 
   switch (op->type()) {

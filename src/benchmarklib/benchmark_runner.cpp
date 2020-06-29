@@ -525,6 +525,7 @@ void BenchmarkRunner::_export_pqps() const {
   std::cout << "clear" << std::endl;
   // Clear pqp cache for next benchmark run
   pqp_cache->clear();
+}
 
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
   auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();

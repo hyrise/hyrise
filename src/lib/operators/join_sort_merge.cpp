@@ -30,6 +30,10 @@ bool JoinSortMerge::supports(const JoinConfiguration config) {
          config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
 }
 
+bool JoinSortMerge::satisfies_join_preference(const JoinType join_type) {
+  return join_type == JoinType::Auto || join_type == JoinType::SortMerge;
+}
+
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:

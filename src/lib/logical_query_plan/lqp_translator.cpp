@@ -348,14 +348,20 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
   constexpr auto JOIN_OPERATOR_PREFERENCE_ORDER =
       hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
+  bool preffered_join_type_reached = false;
 
   boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
     using JoinOperator = typename decltype(join_operator_t)::type;
 
     if (join_operator) return;
 
+    preffered_join_type_reached =
+        preffered_join_type_reached || JoinOperator::satisfies_join_preference(join_node->preffered_join_type);
+
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-                                right_data_type, !secondary_join_predicates.empty()})) {
+                                right_data_type, !secondary_join_predicates.empty()}) &&
+        preffered_join_type_reached) {
+      // either this operator is the preffered one or the preffered one did not support the join
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }

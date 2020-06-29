@@ -30,6 +30,15 @@ void CalibrationLQPGenerator::generate(OperatorType operator_type,
   Fail("Not implemented yet: Only TableScans are currently supported.");
 }
 
+void CalibrationLQPGenerator::generate_joins(
+    const std::vector<std::shared_ptr<const CalibrationTableWrapper>>& tables) {
+  for (auto left_table : tables) {
+    for (auto right_table : tables) {
+      _generate_joins(left_table, right_table);
+    }
+  }
+}
+
 void CalibrationLQPGenerator::_generate_table_scans(
     const std::shared_ptr<const CalibrationTableWrapper>& table_wrapper) {
   // selectivity resolution determines in how many LQPs with a different selectivity are generated
@@ -79,7 +88,7 @@ void CalibrationLQPGenerator::_generate_table_scans(
         };
 
         // Base LQP for current iteration (without any further modifications)
-        _generated_lpqs.emplace_back(get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
+        _generated_lqps.emplace_back(get_predicate_node_based_on(std::shared_ptr<AbstractLQPNode>(stored_table_node)));
 
         // Add reference scans
         if (_enable_reference_scans) {
@@ -90,19 +99,19 @@ void CalibrationLQPGenerator::_generate_table_scans(
           for (uint32_t step = 0; step < reference_scan_selectivity_resolution; step++) {
             const ColumnDataType upper_bound = SyntheticTableGenerator::generate_value<ColumnDataType>(
                 static_cast<uint32_t>(step * reference_scan_step_size));
-            _generated_lpqs.emplace_back(
+            _generated_lqps.emplace_back(
                 get_predicate_node_based_on(PredicateNode::make(less_than_(column, upper_bound), stored_table_node)));
             if (_enable_between_predicates) {
-              _generated_lpqs.emplace_back(
+              _generated_lqps.emplace_back(
                   PredicateNode::make(between_inclusive_(column, lower_bound, upper_bound), stored_table_node));
             }
           }
 
           // add reference scan with full pos list
-          _generated_lpqs.emplace_back(get_predicate_node_based_on(
+          _generated_lqps.emplace_back(get_predicate_node_based_on(
               PredicateNode::make(greater_than_equals_(column, min_val), stored_table_node)));
           // add reference scan with empty pos list
-          _generated_lpqs.emplace_back(
+          _generated_lqps.emplace_back(
               get_predicate_node_based_on(PredicateNode::make(less_than_(column, min_val), stored_table_node)));
         }
 
@@ -110,15 +119,52 @@ void CalibrationLQPGenerator::_generate_table_scans(
         if (_enable_like_predicates && std::is_same<ColumnDataType, std::string>::value) {
           for (uint32_t step = 0; step < 10; step++) {
             auto const upper_bound = (SyntheticTableGenerator::generate_value<pmr_string>(step));
-            _generated_lpqs.emplace_back(PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
+            _generated_lqps.emplace_back(PredicateNode::make(like_(column, upper_bound + "%"), stored_table_node));
           }
 
           // 100% selectivity
-          _generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%"), stored_table_node));
+          _generated_lqps.emplace_back(PredicateNode::make(like_(column, "%"), stored_table_node));
           // 0% selectivity
-          _generated_lpqs.emplace_back(PredicateNode::make(like_(column, "%not_there%"), stored_table_node));
+          _generated_lqps.emplace_back(PredicateNode::make(like_(column, "%not_there%"), stored_table_node));
         }
       });
+    }
+  }
+}
+
+void CalibrationLQPGenerator::_generate_joins(
+    const std::shared_ptr<const CalibrationTableWrapper>& left_table_wrapper,
+    const std::shared_ptr<const CalibrationTableWrapper>& right_table_wrapper) {
+  const auto left_table = left_table_wrapper->get_table();
+  const auto right_table = right_table_wrapper->get_table();
+  Assert(left_table->column_count() == right_table->column_count(), "Tables must have same column counts.");
+  const auto join_types = {JoinType::Hash, JoinType::SortMerge, JoinType::NestedLoop};
+  const auto join_modes = {JoinMode::Inner, JoinMode::Left,           JoinMode::Right,          JoinMode::FullOuter,
+                           JoinMode::Semi,  JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse};
+  const auto predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
+                                     PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
+                                     PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
+                                     PredicateCondition::Like,        PredicateCondition::NotLike};
+
+  for (auto column_id = ColumnID{0}; column_id < left_table->column_count(); ++column_id) {
+    Assert(left_table->column_data_type(column_id) == right_table->column_data_type(column_id),
+           "DataTypes must match.");
+    for (auto join_type : join_types) {
+      for (auto join_mode : join_modes) {
+        for (auto predicate : predicate_conditions) {
+          const auto left_stored_table_node = StoredTableNode::make(left_table_wrapper->get_name());
+          const auto right_stored_table_node = StoredTableNode::make(right_table_wrapper->get_name());
+          const auto left_column_expression = std::make_shared<LQPColumnExpression>(left_stored_table_node, column_id);
+          const auto right_column_expression =
+              std::make_shared<LQPColumnExpression>(right_stored_table_node, column_id);
+          const auto join_predicate =
+              std::make_shared<BinaryPredicateExpression>(predicate, left_column_expression, right_column_expression);
+
+          const auto join_node = JoinNode::make(join_mode, join_predicate);
+          join_node->preffered_join_type = join_type;
+          _generated_lqps.push_back(join_node);
+        }
+      }
     }
   }
 }
@@ -166,15 +212,15 @@ void CalibrationLQPGenerator::_generate_column_vs_column_scans(
   const auto column_vs_column_scan_pairs = _get_column_pairs(table_wrapper);
 
   for (const ColumnPair& pair : column_vs_column_scan_pairs) {
-    _generated_lpqs.emplace_back(PredicateNode::make(
+    _generated_lqps.emplace_back(PredicateNode::make(
         greater_than_(stored_table_node->get_column(pair.first), stored_table_node->get_column(pair.second)),
         stored_table_node));
   }
 }
 
 CalibrationLQPGenerator::CalibrationLQPGenerator() {
-  _generated_lpqs = std::vector<std::shared_ptr<AbstractLQPNode>>();
+  _generated_lqps = std::vector<std::shared_ptr<AbstractLQPNode>>();
 }
 
-const std::vector<std::shared_ptr<AbstractLQPNode>>& CalibrationLQPGenerator::get_lqps() { return _generated_lpqs; }
+const std::vector<std::shared_ptr<AbstractLQPNode>>& CalibrationLQPGenerator::get_lqps() { return _generated_lqps; }
 }  // namespace opossum

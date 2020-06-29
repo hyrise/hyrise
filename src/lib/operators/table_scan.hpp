@@ -93,7 +93,6 @@ class TableScan : public AbstractReadOnlyOperator {
   const std::shared_ptr<AbstractExpression> _predicate;
 
   std::unique_ptr<AbstractTableScanImpl> _impl;
-  friend class OperatorFeatureExporter;
 
   // The description of the impl, so that it still available after the _impl is resetted in _on_cleanup()
   std::string _impl_description{"Unset"};

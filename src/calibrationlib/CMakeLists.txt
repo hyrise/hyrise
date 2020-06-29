@@ -9,10 +9,10 @@ set(
 
     calibration_benchmark_runner.cpp
     calibration_benchmark_runner.hpp
-    calibration_table_wrapper.cpp
-    calibration_table_wrapper.hpp
     calibration_lqp_generator.cpp
     calibration_lqp_generator.hpp
+    calibration_table_wrapper.cpp
+    calibration_table_wrapper.hpp
     operator_feature_exporter.cpp
     operator_feature_exporter.hpp
     table_feature_exporter.cpp
