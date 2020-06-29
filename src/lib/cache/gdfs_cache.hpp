@@ -2,8 +2,9 @@
 
 #include <shared_mutex>
 
+#include <boost/heap/fibonacci_heap.hpp>
+
 #include "abstract_cache.hpp"
-#include "boost/heap/fibonacci_heap.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -36,9 +37,13 @@ class GDFSCache : public AbstractCache<Key, Value> {
   explicit GDFSCache(size_t capacity = DEFAULT_CACHE_CAPACITY) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
+    auto new_key = key;
+    if constexpr (std::is_same_v<Key, std::string>) {
+      new_key = key + "; -- " + std::to_string(std::chrono::system_clock::now().time_since_epoch() / std::chrono::milliseconds(1));
+    }
     std::unique_lock<std::shared_mutex> lock(_mutex);
     if (this->_capacity == 0) return;
-    auto it = _map.find(key);
+    auto it = _map.find(new_key);
     if (it != _map.end()) {
       // Update priority.
       Handle handle = it->second;
@@ -60,10 +65,10 @@ class GDFSCache : public AbstractCache<Key, Value> {
     }
 
     // Insert new item in cache.
-    GDFSCacheEntry entry{key, value, 1, size, 0.0};
+    GDFSCacheEntry entry{new_key, value, 1, size, 0.0};
     entry.priority = _inflation + static_cast<double>(entry.frequency) / entry.size;
     Handle handle = _queue.push(entry);
-    _map[key] = handle;
+    _map[new_key] = handle;
   }
 
   std::optional<Value> try_get(const Key& query) {
