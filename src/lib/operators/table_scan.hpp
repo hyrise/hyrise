@@ -18,6 +18,7 @@ class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
+  friend class OperatorFeatureExporter;
 
  public:
   TableScan(const std::shared_ptr<const AbstractOperator>& in, const std::shared_ptr<AbstractExpression>& predicate);

@@ -27,7 +27,7 @@ int main() {
   const std::set<int> ROW_COUNTS = {1500, 3000, 6000, 10000, 20000, 30000, 60175, 25, 15000, 2000, 8000, 5, 100};
 
   // test data generation settings
-  constexpr bool GENERATE_TEST_DATA = false;
+  constexpr bool GENERATE_TEST_DATA = true;
   constexpr BenchmarkType BENCHMARK_TYPE = BenchmarkType::TCPH;
   constexpr float SCALE_FACTOR = 0.01f;
   constexpr int NUMBER_BENCHMARK_EXECUTIONS = 1;
