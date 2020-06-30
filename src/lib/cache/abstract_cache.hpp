@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-inline constexpr size_t DEFAULT_CACHE_CAPACITY = 1024;
+inline constexpr size_t DEFAULT_CACHE_CAPACITY = 131'072;
 
 // Generic template for a cache implementation.
 // It guarantees the capacity to be thread-safe. Any other guarantees have to be fulfilled by the implementation.
