@@ -165,15 +165,20 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     return _optimized_logical_plan;
   }
 
+  const auto started_preoptimization_cache = std::chrono::high_resolution_clock::now();
+
+  // In case get_split_unoptimized_logical_plan has already been called on this statement, _unoptimized_logical_plan
+  // contains no more ValueExpressions and another call of this function will leave extracted_values empty.
+  // To avoid crashing when trying to instanciate the prepared plan, it is reset here.
+  _unoptimized_logical_plan = nullptr;
+
+  std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
+  const auto unoptimized_lqp = get_split_unoptimized_logical_plan(extracted_values);
+
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
-
-  const auto started_preoptimization_cache = std::chrono::high_resolution_clock::now();
-
-  std::vector<std::shared_ptr<AbstractExpression>> extracted_values;
-  const auto unoptimized_lqp = get_split_unoptimized_logical_plan(extracted_values);
 
   // DEBUG OUTPUT
   LQPVisualizer visualizer;

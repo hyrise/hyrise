@@ -92,8 +92,14 @@ namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_post_caching_optimizer() {
   const auto optimizer = std::make_shared<Optimizer>();
+  // Constant expressions can only be reduced when the predicate values are substitued.
+  // However, this does not work if the predicate originates from a dummy table
+  // See: SELECT * FROM meta_system_information WHERE cpu_count IN (SELECT 14 + 1)
+  // optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
