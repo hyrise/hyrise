@@ -17,6 +17,7 @@ struct TableGeneratorConfig {
   std::vector<ColumnDataDistribution> column_data_distributions;
   std::set<ChunkOffset> chunk_sizes;
   std::set<int> row_counts;
+  bool generate_sorted_tables;
 };
 
 class CalibrationTableGenerator {

@@ -1,10 +1,15 @@
 #include "calibration_lqp_generator.hpp"
-#include <expression/expression_functional.hpp>
-#include <logical_query_plan/join_node.hpp>
-#include "logical_query_plan/predicate_node.hpp"
 
-#include <synthetic_table_generator.hpp>
+#include <boost/hana/tuple.hpp>
+
+#include "expression/expression_functional.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_nested_loop.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "storage/table.hpp"
+#include "synthetic_table_generator.hpp"
 
 using opossum::expression_functional::between_inclusive_;
 using opossum::expression_functional::equals_;
@@ -138,32 +143,39 @@ void CalibrationLQPGenerator::_generate_joins(
   const auto left_table = left_table_wrapper->get_table();
   const auto right_table = right_table_wrapper->get_table();
   Assert(left_table->column_count() == right_table->column_count(), "Tables must have same column counts.");
-  const auto join_types = {JoinType::Hash, JoinType::SortMerge, JoinType::NestedLoop};
+  const auto join_types = std::vector<JoinType>{JoinType::Hash, JoinType::SortMerge, JoinType::NestedLoop};
   const auto join_modes = {JoinMode::Inner, JoinMode::Left,           JoinMode::Right,          JoinMode::FullOuter,
                            JoinMode::Semi,  JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse};
   const auto predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
                                      PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
                                      PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
                                      PredicateCondition::Like,        PredicateCondition::NotLike};
+  constexpr auto JOIN_OPERATORS = hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
+  size_t join_type_index = 0;
 
   for (auto column_id = ColumnID{0}; column_id < left_table->column_count(); ++column_id) {
     Assert(left_table->column_data_type(column_id) == right_table->column_data_type(column_id),
            "DataTypes must match.");
-    for (auto join_type : join_types) {
-      for (auto join_mode : join_modes) {
-        for (auto predicate : predicate_conditions) {
-          const auto left_stored_table_node = StoredTableNode::make(left_table_wrapper->get_name());
-          const auto right_stored_table_node = StoredTableNode::make(right_table_wrapper->get_name());
-          const auto left_column_expression = std::make_shared<LQPColumnExpression>(left_stored_table_node, column_id);
-          const auto right_column_expression =
-              std::make_shared<LQPColumnExpression>(right_stored_table_node, column_id);
-          const auto join_predicate =
-              std::make_shared<BinaryPredicateExpression>(predicate, left_column_expression, right_column_expression);
+    for (auto join_mode : join_modes) {
+      for (auto predicate : predicate_conditions) {
+        const auto left_stored_table_node = StoredTableNode::make(left_table_wrapper->get_name());
+        const auto right_stored_table_node = StoredTableNode::make(right_table_wrapper->get_name());
+        const auto left_column_expression = std::make_shared<LQPColumnExpression>(left_stored_table_node, column_id);
+        const auto right_column_expression = std::make_shared<LQPColumnExpression>(right_stored_table_node, column_id);
+        const auto join_predicate =
+            std::make_shared<BinaryPredicateExpression>(predicate, left_column_expression, right_column_expression);
+        boost::hana::for_each(JOIN_OPERATORS, [&](const auto join_operator_t) {
+          const auto join_type = join_types.at(join_type_index);
+          join_type_index = (join_type_index + 1) % join_types.size();
 
-          const auto join_node = JoinNode::make(join_mode, join_predicate);
-          join_node->preffered_join_type = join_type;
-          _generated_lqps.push_back(join_node);
-        }
+          using JoinOperator = typename decltype(join_operator_t)::type;
+          if (JoinOperator::supports({join_mode, predicate, left_table->column_data_type(column_id),
+                                      right_table->column_data_type(column_id), false})) {
+            const auto join_node = JoinNode::make(join_mode, join_predicate);
+            join_node->preffered_join_type = join_type;
+            _generated_lqps.push_back(join_node);
+          }
+        });
       }
     }
   }
