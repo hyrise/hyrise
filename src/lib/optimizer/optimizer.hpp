@@ -43,7 +43,7 @@ class Optimizer final {
    */
   std::shared_ptr<AbstractLQPNode> optimize(
       std::shared_ptr<AbstractLQPNode> input,
-      const std::shared_ptr<std::vector<OptimizerRuleMetrics>> &rule_durations = nullptr) const;
+      const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations = nullptr) const;
 
   static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
 

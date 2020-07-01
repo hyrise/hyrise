@@ -162,7 +162,8 @@ void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
 }
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
-    std::shared_ptr<AbstractLQPNode> input, const std::shared_ptr<std::vector<OptimizerRuleMetrics>> &rule_durations) const {
+    std::shared_ptr<AbstractLQPNode> input,
+    const std::shared_ptr<std::vector<OptimizerRuleMetrics>>& rule_durations) const {
   // We cannot allow multiple owners of the LQP as one owner could decide to optimize the plan and others might hold a
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
