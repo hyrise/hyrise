@@ -10,9 +10,6 @@
 [submodule "third_party/cpplint"]
 	path = third_party/cpplint
 	url = https://github.com/cpplint/cpplint.git
-[submodule "third_party/cqf"]
-	path = third_party/cqf
-	url = https://github.com/ArneMayer/cqf.git
 [submodule "third_party/cxxopts"]
 	path = third_party/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
@@ -34,9 +31,13 @@
 [submodule "third_party/lz4"]
 	path = third_party/lz4
 	url = https://github.com/lz4/lz4.git
+[submodule "third_party/magic_enum"]
+	path = third_party/magic_enum
+	url = https://github.com/Neargye/magic_enum.git
 [submodule "third_party/nlohmann_json"]
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git
+	shallow = true
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
 	url = https://github.com/hyrise/sql-parser

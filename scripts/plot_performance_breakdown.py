@@ -10,15 +10,15 @@ import sys
 
 benchmarks = []
 
-if(len(sys.argv) != 2):
+if len(sys.argv) != 2:
     exit("Usage: " + sys.argv[0] + " benchmark.json")
 
 with open(sys.argv[1]) as file:
     data = json.load(file)
 
-for benchmark_json in data['benchmarks']:
+for benchmark_json in data["benchmarks"]:
     benchmark = []
-    benchmark.append(benchmark_json['name'])
+    benchmark.append(benchmark_json["name"])
 
     sum_parse_duration = 0.0
     sum_sql_translation_duration = 0.0
@@ -27,11 +27,11 @@ for benchmark_json in data['benchmarks']:
     sum_lqp_translation_duration = 0.0
     sum_plan_execution_duration = 0.0
 
-    for run in benchmark_json['successful_runs']:
-        if len(run['metrics']) == 0:
+    for run in benchmark_json["successful_runs"]:
+        if len(run["metrics"]) == 0:
             exit("No metrics found. Did you run the benchmark with --sql_metrics?")
-        for metrics in run['metrics']:
-            sum_parse_duration += metrics['parse_duration']
+        for metrics in run["metrics"]:
+            sum_parse_duration += metrics["parse_duration"]
 
             for statement in metrics['statements']:
                 sum_sql_translation_duration += statement['sql_translation_duration']
@@ -49,20 +49,22 @@ for benchmark_json in data['benchmarks']:
 
     benchmarks.append(benchmark)
 
-df = pd.DataFrame(benchmarks, columns=['Benchmark', 'Parser', 'SQLTranslator', 'Cache', 'Optimizer', 'LQPTranslator', 'Execution'])
+df = pd.DataFrame(
+    benchmarks, columns=['Benchmark', 'Parser', 'SQLTranslator', 'Cache', 'Optimizer', 'LQPTranslator', 'Execution']
+)
 
 # Normalize data from nanoseconds to percentage of total cost
-df.iloc[:,1:] = df.iloc[:,1:].apply(lambda x: x / x.sum(), axis=1)
+df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
 print(df)
 
-ax = df.plot.bar(x='Benchmark', stacked=True)
-ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
-ax.set_ylabel('Share of query run time')
+ax = df.plot.bar(x="Benchmark", stacked=True)
+ax.set_yticklabels(["{:,.0%}".format(x) for x in ax.get_yticks()])
+ax.set_ylabel("Share of query run time")
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 
-basename = sys.argv[1].replace('.json', '')
+basename = sys.argv[1].replace(".json", "")
 plt.tight_layout()
-plt.savefig(basename + '_breakdown.png')
+plt.savefig(basename + "_breakdown.png")

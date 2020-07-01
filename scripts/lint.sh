@@ -42,6 +42,13 @@ if [ ! -z "$output" ]; then
 	exitcode=1
 fi
 
+# Tests should not include any type of random behavior, see #1321.
+output=$(grep -rEn '#include <random>|std::random|std::[a-z_]+_engine|std::[a-z_]+_distribution' src/test | grep -v std::random_access_iterator_tag | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Tests should not include any type of random behavior, see #1321./')
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
+
 # Check for included cpp files. You would think that this is not necessary, but history proves you wrong.
 regex='#include .*\.cpp'
 namecheck=$(find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | xargs -0 grep -rn "$regex" | grep -v NOLINT)
@@ -77,5 +84,22 @@ for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provide
         exitcode=1
     fi
 done
+
+# Check for Windows-style line endings
+output=$(find src -type f -exec dos2unix -ic {} +)
+if [[ ${output} ]]; then
+	for file in ${output}
+	do
+		echo "Windows-style file ending: $file"
+	done
+	exitcode=1
+fi
+
+# Python linting
+output=$(flake8 --max-line-length 120 scripts)
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
 
 exit $exitcode

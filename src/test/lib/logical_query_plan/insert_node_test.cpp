@@ -29,6 +29,6 @@ TEST_F(InsertNodeTest, HashingAndEqualityCheck) {
 
 TEST_F(InsertNodeTest, NodeExpressions) { EXPECT_TRUE(_insert_node->node_expressions.empty()); }
 
-TEST_F(InsertNodeTest, ColumnExpressions) { EXPECT_TRUE(_insert_node->column_expressions().empty()); }
+TEST_F(InsertNodeTest, ColumnExpressions) { EXPECT_TRUE(_insert_node->output_expressions().empty()); }
 
 }  // namespace opossum

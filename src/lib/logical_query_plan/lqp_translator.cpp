@@ -211,7 +211,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
 
   DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
-    "Expected sorted vector of ColumnIDs");
+              "Expected sorted vector of ColumnIDs");
 
   const auto table_name = stored_table_node->table_name;
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
@@ -265,9 +265,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
   const auto input_operator = translate_node(input_node);
 
   auto column_ids = std::vector<ColumnID>();
-  column_ids.reserve(alias_node->column_expressions().size());
+  column_ids.reserve(alias_node->output_expressions().size());
 
-  for (const auto& expression : alias_node->column_expressions()) {
+  for (const auto& expression : alias_node->output_expressions()) {
     column_ids.emplace_back(input_node->get_column_id(*expression));
   }
 
@@ -561,7 +561,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     // Try to resolve the Expression to a column from the input node
     const auto column_id = node->find_column_id(*expression);
     if (column_id) {
-      const auto referenced_expression = node->column_expressions()[*column_id];
+      const auto referenced_expression = node->output_expressions()[*column_id];
       expression =
           std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
                                                 node->is_column_nullable(node->get_column_id(*referenced_expression)),
@@ -593,7 +593,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 
       // Only specify a type for the Subquery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
-      if (subquery_expression->lqp->column_expressions().size() == 1u) {
+      if (subquery_expression->lqp->output_expressions().size() == 1u) {
         const auto subquery_data_type = subquery_expression->data_type();
         const auto subquery_nullable = subquery_expression->lqp->is_column_nullable(ColumnID{0});
 

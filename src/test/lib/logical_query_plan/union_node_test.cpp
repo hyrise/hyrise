@@ -36,9 +36,9 @@ class UnionNodeTest : public BaseTest {
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: Positions"); }
 
 TEST_F(UnionNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(*_union_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
-  EXPECT_EQ(*_union_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
-  EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
+  EXPECT_EQ(*_union_node->output_expressions().at(0), *_mock_node1->output_expressions().at(0));
+  EXPECT_EQ(*_union_node->output_expressions().at(1), *_mock_node1->output_expressions().at(1));
+  EXPECT_EQ(*_union_node->output_expressions().at(2), *_mock_node1->output_expressions().at(2));
 }
 
 TEST_F(UnionNodeTest, HashingAndEqualityCheck) {
@@ -84,7 +84,7 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
   const auto table_name = "t_a";
   Hyrise::get().storage_manager.add_table(table_name, load_table("resources/test_data/tbl/int_int_float.tbl", 1));
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  table->add_soft_unique_constraint({_a->original_column_id}, IsPrimaryKey::No);
+  table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
   const auto stored_table_node = StoredTableNode::make(table_name);
   EXPECT_EQ(stored_table_node->functional_dependencies().size(), 1);
   // Create ValidateNode as it is required by UnionPositions
