@@ -11,13 +11,13 @@ import sys
 benchmarks = []
 rule_benchmarks = []
 
-if(len(sys.argv) != 2):
+if len(sys.argv) != 2:
     exit("Usage: " + sys.argv[0] + " benchmark.json")
 
 with open(sys.argv[1]) as file:
     data = json.load(file)
 
-for benchmark_json in data['benchmarks']:
+for benchmark_json in data["benchmarks"]:
     benchmark = []
     rule_benchmark = []
     benchmark.append(benchmark_json['name'])
@@ -36,11 +36,11 @@ for benchmark_json in data['benchmarks']:
         for metrics in run['metrics']:
             sum_parse_duration += metrics['parse_duration']
 
-            for statement in metrics['statements']:
-                sum_sql_translation_duration += statement['sql_translation_duration']
-                sum_optimization_duration += statement['optimization_duration']
-                sum_lqp_translation_duration += statement['lqp_translation_duration']
-                sum_plan_execution_duration += statement['plan_execution_duration']
+            for statement in metrics["statements"]:
+                sum_sql_translation_duration += statement["sql_translation_duration"]
+                sum_optimization_duration += statement["optimization_duration"]
+                sum_lqp_translation_duration += statement["lqp_translation_duration"]
+                sum_plan_execution_duration += statement["plan_execution_duration"]
 
                 if statement['optimizer_rule_durations']:
                     for rule_name, rule_duration in statement['optimizer_rule_durations'].items():
@@ -56,6 +56,7 @@ for benchmark_json in data['benchmarks']:
     benchmark.append(sum_optimization_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_lqp_translation_duration / len(benchmark_json['successful_runs']))
     benchmark.append(sum_plan_execution_duration / len(benchmark_json['successful_runs']))
+
     benchmarks.append(benchmark)
     
     for rule_durations in sum_optimizer_rule_durations.values():
@@ -63,18 +64,20 @@ for benchmark_json in data['benchmarks']:
             rule_benchmark.append(rule_duration / len(benchmark_json['successful_runs']))
     rule_benchmarks.append(rule_benchmark)
 
-benchmark_df = pd.DataFrame(benchmarks, columns=['Benchmark', 'Parser', 'SQLTranslator', 'Optimizer', 'LQPTranslator', 'Execution'])
+benchmark_df = pd.DataFrame(
+    benchmarks, columns=['Benchmark', 'Parser', 'SQLTranslator', 'Optimizer', 'LQPTranslator', 'Execution']
+)
 
 # summing up the runtimes from all stages for each query
 total_time = benchmark_df.iloc[:,1:].apply(lambda x: x.sum(), axis=1)
 
 # Normalize data from nanoseconds to percentage of total cost
 benchmark_df.iloc[:,1:] = benchmark_df.iloc[:,1:].apply(lambda x: x / x.sum(), axis=1)
+print(benchmark_df)
 
 plt.figure()
 ax = benchmark_df.plot.bar(x='Benchmark', stacked=True)
 ax.set_ylabel('Share of query run time')
-
 ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
 
 # Reverse legend so that it matches the stacked bars
@@ -130,5 +133,3 @@ ax.set_xticklabels(xlabels)
 
 plt.tight_layout()
 plt.savefig(basename + '_optimizer_breakdown.png')
-
-
