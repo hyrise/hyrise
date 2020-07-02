@@ -164,7 +164,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
         const auto tokens = LikeMatcher::pattern_string_to_tokens(value);
         if (std::holds_alternative<pmr_string>(tokens[0])) {
           const auto& string = std::get<pmr_string>(tokens[0]);
-          return string > max || string < min
+          return string > max || string < min;
         }
       }
       return false;
