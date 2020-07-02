@@ -620,7 +620,20 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   // Fast path for clustered tables
   const auto chunk_count = input_table->chunk_count();
   if (!input_table->value_clustered_by().empty() && chunk_count > 1) {
-	 // TODO: check if clustered by group_by key
+
+    // set_intersection requires copy of vector for sorting + no early out
+    auto clustered_aggregation_possible = false;
+    for (const auto& clustered_column_id : input_table->value_clustered_by()) {
+      clustered_aggregation_possible = std::any_of(_groupby_column_ids.cbegin(), _groupby_column_ids.cend(), [&](const auto& groupby_column_id) {
+          return clustered_column_id == groupby_column_id; });
+      if (clustered_aggregation_possible) {
+        break;
+      }
+    }
+
+    if (clustered_aggregation_possible) {
+	    std::cout << "opt path" << std::endl;
+   
     std::shared_ptr<Table> result;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
@@ -658,7 +671,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     }
 
     return result;
+    }
   }
+  //std::cout << "unoptimized path" << std::endl;
 
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.

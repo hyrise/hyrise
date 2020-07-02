@@ -576,17 +576,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // std::cout << _column_ids.first << std::endl;
     // std::cout << _column_ids.second << std::endl;
     // TODO: use switch on JoinMode
+    std::cout << "######################" << std::endl;
+    std::cout << _join_hash.description(DescriptionMode::SingleLine) << std::endl;
+    std::cout << _radix_bits << std::endl;
     if (_radix_bits > 0 && _mode == JoinMode::Left) {
+	    std::cout << !_probe_input_table->column_definitions()[_column_ids.first].nullable << std::endl;
       if (!_probe_input_table->column_definitions()[_column_ids.first].nullable) {
+	      std::cout << "clustered" << std::endl;
         result->set_value_clustered_by({_column_ids.second});
       }
-      // else {
-      //   std::cout << "second miss " << std::endl;
-      // }
+      else {
+        std::cout << "second miss " << std::endl;
+      }
     }
-    // else {
-    //   std::cout << "first miss " << std::endl;
-    // }
+    else {
+      std::cout << "first miss " << std::endl;
+    }
 
     return result;
   }
