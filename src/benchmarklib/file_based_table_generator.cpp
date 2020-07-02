@@ -19,6 +19,10 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
                                                  const std::string& path)
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
+AbstractTableGenerator::SortOrderByTable FileBasedTableGenerator::_sort_order_by_table() const {
+  return {{"movie_info", "info"}};
+}
+
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
   Assert(std::filesystem::is_directory(_path), "Table path must be a directory");
 

@@ -4,6 +4,7 @@
 #include <optional>
 #include <utility>
 
+#include "expression/evaluation/like_matcher.hpp"
 #include "abstract_statistics_object.hpp"
 #include "all_type_variant.hpp"
 #include "lossless_cast.hpp"
@@ -157,6 +158,16 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
+    }
+    case PredicateCondition::Like: {
+      if constexpr (!std::is_arithmetic_v<T>) {
+        const auto tokens = LikeMatcher::pattern_string_to_tokens(value);
+        if (std::holds_alternative<pmr_string>(tokens[0])) {
+          const auto& string = std::get<pmr_string>(tokens[0]);
+          return string > max || string < min
+        }
+      }
+      return false;
     }
     default:
       return false;
