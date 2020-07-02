@@ -8,9 +8,13 @@
 
 #include "constant_mappings.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/cardinality_estimator.hpp"
@@ -112,15 +116,36 @@ void PredicateReorderingRule::_reorder_predicates(
   std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
             [&](auto& left, auto& right) { return left.second > right.second; });
 
+  auto nacs = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
+  std::copy_if(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(), std::back_inserter(nacs), [&](auto& nac) {
+    const auto node = nac.first;
+    if (node->type != LQPNodeType::Predicate) return true;
+    const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+    const auto predicate = predicate_node->predicate();
+    if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate)) {
+      const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(is_null_expression->operand());
+      if (!column) return true;
+
+      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
+      if (!stored_table_node) return true;
+
+      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+      const auto original_column_id = column->original_column_id;
+      const auto table_column_definition = table->column_definitions()[original_column_id];
+      if (table_column_definition.nullable == false) return false;
+    }
+    return true;
+  });
+
   // Ensure that nodes are chained correctly
-  nodes_and_cardinalities.back().first->set_left_input(input);
+  nacs.back().first->set_left_input(input);
 
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_cardinalities.front().first);
+    outputs[output_idx]->set_input(input_sides[output_idx], nacs.front().first);
   }
 
-  for (size_t predicate_index = 0; predicate_index + 1 < nodes_and_cardinalities.size(); predicate_index++) {
-    nodes_and_cardinalities[predicate_index].first->set_left_input(nodes_and_cardinalities[predicate_index + 1].first);
+  for (size_t predicate_index = 0; predicate_index + 1 < nacs.size(); predicate_index++) {
+    nacs[predicate_index].first->set_left_input(nacs[predicate_index + 1].first);
   }
 }
 
