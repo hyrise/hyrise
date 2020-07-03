@@ -101,6 +101,7 @@ set(
     lib/operators/operator_join_predicate_test.cpp
     lib/operators/operator_performance_data_test.cpp
     lib/operators/operator_scan_predicate_test.cpp
+    lib/operators/pqp_utils_test.cpp
     lib/operators/print_test.cpp
     lib/operators/product_test.cpp
     lib/operators/projection_test.cpp
@@ -158,7 +159,6 @@ set(
     lib/statistics/attribute_statistics_test.cpp
     lib/statistics/cardinality_estimator_test.cpp
     lib/statistics/join_graph_statistics_cache_test.cpp
-    lib/statistics/statistics_objects/counting_quotient_filter_test.cpp
     lib/statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
     lib/statistics/statistics_objects/generic_histogram_test.cpp
     lib/statistics/statistics_objects/min_max_filter_test.cpp
