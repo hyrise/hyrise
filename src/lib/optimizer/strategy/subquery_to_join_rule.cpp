@@ -98,7 +98,7 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     const auto& [left_result, left_cached] = pull_up_correlated_predicates_recursive(
         node->left_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     left_input_adapted = left_result.adapted_lqp;
-    result.required_column_expressions = left_result.required_column_expressions;
+    result.required_output_expressions = left_result.required_output_expressions;
     // If the sub-LQP was already visited, its join predicates have already been considered somewhere else and will be
     // part of the final result.
     if (!left_cached) {
@@ -110,11 +110,11 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     const auto& [right_result, right_cached] = pull_up_correlated_predicates_recursive(
         node->right_input(), parameter_mapping, result_cache, are_inputs_below_aggregate);
     right_input_adapted = right_result.adapted_lqp;
-    for (const auto& column_expression : right_result.required_column_expressions) {
-      const auto find_it = std::find(result.required_column_expressions.cbegin(),
-                                     result.required_column_expressions.cend(), column_expression);
-      if (find_it == result.required_column_expressions.cend()) {
-        result.required_column_expressions.emplace_back(column_expression);
+    for (const auto& expression : right_result.required_output_expressions) {
+      const auto find_it = std::find(result.required_output_expressions.cbegin(),
+                                     result.required_output_expressions.cend(), expression);
+      if (find_it == result.required_output_expressions.cend()) {
+        result.required_output_expressions.emplace_back(expression);
       }
     }
     if (!right_cached) {
@@ -139,11 +139,11 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
         result.pulled_predicate_node_count++;
         result.join_predicates.insert(result.join_predicates.end(), join_predicates.begin(), join_predicates.end());
         for (const auto& join_predicate : join_predicates) {
-          const auto& column_expression = join_predicate->right_operand();
-          auto find_it = std::find(result.required_column_expressions.begin(), result.required_column_expressions.end(),
-                                   column_expression);
-          if (find_it == result.required_column_expressions.end()) {
-            result.required_column_expressions.emplace_back(column_expression);
+          const auto& expression = join_predicate->right_operand();
+          auto find_it = std::find(result.required_output_expressions.begin(), result.required_output_expressions.end(),
+                                   expression);
+          if (find_it == result.required_output_expressions.end()) {
+            result.required_output_expressions.emplace_back(expression);
           }
         }
       }
@@ -151,22 +151,22 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
     }
     case LQPNodeType::Aggregate:
       result.adapted_lqp = SubqueryToJoinRule::adapt_aggregate_node(std::static_pointer_cast<AggregateNode>(node),
-                                                                    result.required_column_expressions);
+                                                                    result.required_output_expressions);
       result.adapted_lqp->set_left_input(left_input_adapted);
       break;
     case LQPNodeType::Alias:
       result.adapted_lqp = SubqueryToJoinRule::adapt_alias_node(std::static_pointer_cast<AliasNode>(node),
-                                                                result.required_column_expressions);
+                                                                result.required_output_expressions);
       result.adapted_lqp->set_left_input(left_input_adapted);
       break;
     case LQPNodeType::Projection:
       result.adapted_lqp = SubqueryToJoinRule::adapt_projection_node(std::static_pointer_cast<ProjectionNode>(node),
-                                                                     result.required_column_expressions);
+                                                                     result.required_output_expressions);
       result.adapted_lqp->set_left_input(left_input_adapted);
       break;
     case LQPNodeType::Sort: {
       const auto& sort_node = std::static_pointer_cast<SortNode>(node);
-      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->order_by_modes, left_input_adapted);
+      result.adapted_lqp = SortNode::make(sort_node->node_expressions, sort_node->sort_modes, left_input_adapted);
       break;
     }
     case LQPNodeType::Validate:
@@ -241,7 +241,7 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
     result.join_mode = in_expression->is_negated() ? JoinMode::AntiNullAsTrue : JoinMode::Semi;
     // We need to deep_copy the subquery before modifying it as it might be in use somewhere else, too.
     result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(in_expression->set()->deep_copy());
-    result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->column_expressions()[0]);
+    result.join_predicate = equals_(in_expression->value(), result.subquery->lqp->output_expressions()[0]);
 
     // Correlated NOT IN is very weird w.r.t. handling of null values and cannot be turned into a
     // multi-predicate join that treats all its predicates equivalently
@@ -293,13 +293,13 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
       result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(left_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           flip_predicate_condition(binary_predicate->predicate_condition), binary_predicate->right_operand(),
-          result.subquery->lqp->column_expressions()[0]);
+          result.subquery->lqp->output_expressions()[0]);
     } else if (const auto right_subquery_expression =
                    std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->right_operand())) {
       result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(right_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           binary_predicate->predicate_condition, binary_predicate->left_operand(),
-          result.subquery->lqp->column_expressions()[0]);
+          result.subquery->lqp->output_expressions()[0]);
     } else {
       return std::nullopt;
     }
@@ -417,7 +417,7 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
       continue;
     }
 
-    // Check that one side of the expression is a correlated parameter and the other a column expression of the LQP
+    // Check that one side of the expression is a correlated parameter and the other an expression of the LQP
     // below the predicate node (required for turning it into a join predicate). Also order the left/right operands by
     // the subplans they originate from.
     const auto& binary_predicate_expression = std::static_pointer_cast<BinaryPredicateExpression>(predicate_expression);
@@ -470,13 +470,13 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
 
 std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
     const std::shared_ptr<AggregateNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions(
       node->node_expressions.cbegin(), node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx);
   ExpressionUnorderedSet original_group_by_expressions(group_by_expressions.cbegin(), group_by_expressions.cend());
 
   const auto not_found_it = original_group_by_expressions.cend();
-  for (const auto& expression : required_column_expressions) {
+  for (const auto& expression : required_output_expressions) {
     if (original_group_by_expressions.find(expression) == not_found_it) {
       group_by_expressions.emplace_back(expression);
     }
@@ -489,7 +489,7 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
 
 std::shared_ptr<AliasNode> SubqueryToJoinRule::adapt_alias_node(
     const std::shared_ptr<AliasNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions) {
   // As with projection nodes, we don't want to add existing columns, but also don't want to deduplicate the existing
   // columns.
   auto expressions = node->node_expressions;
@@ -497,7 +497,7 @@ std::shared_ptr<AliasNode> SubqueryToJoinRule::adapt_alias_node(
   ExpressionUnorderedSet original_expressions(expressions.cbegin(), expressions.cend());
 
   const auto not_found_it = original_expressions.cend();
-  for (const auto& expression : required_column_expressions) {
+  for (const auto& expression : required_output_expressions) {
     if (original_expressions.find(expression) == not_found_it) {
       expressions.emplace_back(expression);
       aliases.emplace_back(expression->as_column_name());
@@ -509,14 +509,14 @@ std::shared_ptr<AliasNode> SubqueryToJoinRule::adapt_alias_node(
 
 std::shared_ptr<ProjectionNode> SubqueryToJoinRule::adapt_projection_node(
     const std::shared_ptr<ProjectionNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& required_column_expressions) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions) {
   // We don't want to add columns that are already in the projection node. We also don't want to remove duplicates in
   // the expressions of the projection node, so we can't simply build one set containing all expressions
   auto expressions = node->node_expressions;
   ExpressionUnorderedSet original_expressions(expressions.cbegin(), expressions.cend());
 
   const auto not_found_it = original_expressions.cend();
-  for (const auto& expression : required_column_expressions) {
+  for (const auto& expression : required_output_expressions) {
     if (original_expressions.find(expression) == not_found_it) {
       expressions.emplace_back(expression);
     }

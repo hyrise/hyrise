@@ -112,9 +112,9 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   table->last_chunk()->finalize();
 }
 
-std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
-                                                           DataType data_type, bool is_nullable) {
-  std::shared_ptr<BaseSegment> result;
+std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
+                                                               DataType data_type, bool is_nullable) {
+  std::shared_ptr<AbstractSegment> result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     result = _import_segment<ColumnDataType>(file, row_count, is_nullable);
@@ -124,8 +124,8 @@ std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, 
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<BaseSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
-                                                           bool is_nullable) {
+std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
+                                                               bool is_nullable) {
   const auto column_type = _read_value<EncodingType>(file);
 
   switch (column_type) {
@@ -224,20 +224,12 @@ template <typename T>
 std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
   const auto num_elements = _read_value<uint32_t>(file);
   const auto block_count = _read_value<uint32_t>(file);
-
-  uint32_t block_size;
-  uint32_t last_block_size;
-  if (block_count > 1) {
-    block_size = _read_value<uint32_t>(file);
-    last_block_size = _read_value<uint32_t>(file);
-  } else {
-    last_block_size = _read_value<uint32_t>(file);
-    block_size = last_block_size;
-  }
-
-  const size_t compressed_size = (block_count - 1) * block_size + last_block_size;
+  const auto block_size = _read_value<uint32_t>(file);
+  const auto last_block_size = _read_value<uint32_t>(file);
 
   pmr_vector<uint32_t> lz4_block_sizes(_read_values<uint32_t>(file, block_count));
+
+  const auto compressed_size = std::accumulate(lz4_block_sizes.begin(), lz4_block_sizes.end(), size_t{0});
 
   pmr_vector<pmr_vector<char>> lz4_blocks(block_count);
   for (uint32_t block_index = 0; block_index < block_count; ++block_index) {

@@ -36,7 +36,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   const pmr_vector<bool>& _null_values;
 
  private:
-  class Iterator : public BaseSegmentIterator<Iterator, IsNullSegmentPosition> {
+  class Iterator : public AbstractSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = bool;
@@ -66,8 +66,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   };
 
   template <typename PosListIteratorType>
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
-                                                                    IsNullSegmentPosition, PosListIteratorType> {
+  class PointAccessIterator : public AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>,
+                                                                        IsNullSegmentPosition, PosListIteratorType> {
    public:
     typedef std::random_access_iterator_tag iterator_category;
     using ValueType = bool;
@@ -76,9 +76,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
    public:
     explicit PointAccessIterator(const NullValueVector& null_values, const PosListIteratorType position_filter_begin,
                                  PosListIteratorType position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,
-                                         PosListIteratorType>{std::move(position_filter_begin),
-                                                              std::move(position_filter_it)},
+        : AbstractPointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition,
+                                             PosListIteratorType>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:

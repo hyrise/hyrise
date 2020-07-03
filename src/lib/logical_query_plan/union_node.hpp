@@ -21,8 +21,9 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   explicit UnionNode(const SetOperationMode init_set_operation_mode);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+  std::vector<FunctionalDependency> functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;
 

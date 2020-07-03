@@ -35,11 +35,11 @@ class Print : public AbstractReadOnlyOperator {
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max,
                                               const std::shared_ptr<const Table>& table) const;
   static std::string _truncate_cell(const AllTypeVariant& cell, uint16_t max_width);
-  static std::string _segment_type(const std::shared_ptr<BaseSegment>& segment);
+  static std::string _segment_type(const std::shared_ptr<AbstractSegment>& segment);
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   // stream to print the result

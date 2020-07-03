@@ -27,7 +27,7 @@ class Table;
  * cacheable :                            indicates if the resulting LQP can be cached
  * parameter_ids_of_value_placeholders :  the parameter ids of value placeholders
 */
-struct TranslationInfo {
+struct SQLTranslationInfo {
   bool cacheable{true};
   std::vector<ParameterID> parameter_ids_of_value_placeholders{};
 };
@@ -39,7 +39,7 @@ struct TranslationInfo {
 */
 struct SQLTranslationResult {
   std::vector<std::shared_ptr<AbstractLQPNode>> lqp_nodes;
-  TranslationInfo translation_info;
+  SQLTranslationInfo translation_info;
 };
 
 /**
@@ -156,7 +156,6 @@ class SQLTranslator final {
                                         const std::vector<SelectListElement>& select_list_elements);
 
   void _translate_set_operation(const hsql::SetOperation& set_operator);
-
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
 

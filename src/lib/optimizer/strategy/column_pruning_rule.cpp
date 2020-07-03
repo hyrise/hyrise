@@ -67,7 +67,6 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
-    case LQPNodeType::Export:
     case LQPNodeType::Import:
     case LQPNodeType::Limit:
     case LQPNodeType::Root:
@@ -85,7 +84,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-      // Handling COUNT(*) (which is represented as an LQPColumnReference with a valid original_node and an
+      // Handling COUNT(*) (which is represented as an LQPColumnExpression with a valid original_node and an
       // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
       // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
       // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
@@ -98,7 +97,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
         }
       }
       if (has_count_star) {
-        for (const auto& input_expression : node->left_input()->column_expressions()) {
+        for (const auto& input_expression : node->left_input()->output_expressions()) {
           locally_required_expressions.emplace(input_expression);
         }
         break;
@@ -134,7 +133,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           continue;
         }
 
-        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->column_expressions(),
+        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->output_expressions(),
                                                                 locally_required_expressions);
       }
     } break;
@@ -169,13 +168,14 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::CreateTable:
     case LQPNodeType::Delete:
     case LQPNodeType::Insert:
+    case LQPNodeType::Export:
     case LQPNodeType::Update:
     case LQPNodeType::ChangeMetaTable: {
-      const auto& left_input_expressions = node->left_input()->column_expressions();
+      const auto& left_input_expressions = node->left_input()->output_expressions();
       locally_required_expressions.insert(left_input_expressions.begin(), left_input_expressions.end());
 
       if (node->right_input()) {
-        const auto& right_input_expressions = node->right_input()->column_expressions();
+        const auto& right_input_expressions = node->right_input()->output_expressions();
         locally_required_expressions.insert(right_input_expressions.begin(), right_input_expressions.end());
       }
     } break;
@@ -252,16 +252,14 @@ void try_join_to_semi_rewrite(
       const auto& column = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       if (!column) return false;
 
-      const auto& column_reference = column->column_reference;
-      const auto& stored_table_node =
-          std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
+      const auto& stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column->original_node.lock());
       if (!stored_table_node) return false;
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      for (const auto& table_constraint : table->get_soft_unique_constraints()) {
-        // This currently does not handle multi-column constraints, but that should be easy to add once needed.
-        if (table_constraint.columns.size() > 1) continue;
-        if (table_constraint.columns[0] == column_reference.original_column_id()) {
+      for (const auto& key_constraint : table->soft_key_constraints()) {
+        // This currently does not handle multi-column key constraints, but that should be easy to add once needed.
+        if (key_constraint.columns().size() > 1) continue;
+        if (*key_constraint.columns().cbegin() == column->original_column_id) {
           return true;
         }
       }
@@ -328,8 +326,8 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
-  const auto column_expressions = lqp->column_expressions();
-  required_expressions_by_node[lqp].insert(column_expressions.cbegin(), column_expressions.cend());
+  const auto output_expressions = lqp->output_expressions();
+  required_expressions_by_node[lqp].insert(output_expressions.cbegin(), output_expressions.cend());
 
   // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
   // The right side of a diamond might require additional columns - if we only visited each node once, we might miss
@@ -347,16 +345,16 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
       case LQPNodeType::StoredTable: {
         // Prune all unused columns from a StoredTableNode
         auto pruned_column_ids = std::vector<ColumnID>{};
-        for (const auto& expression : node->column_expressions()) {
+        for (const auto& expression : node->output_expressions()) {
           if (required_expressions.find(expression) != required_expressions.end()) {
             continue;
           }
 
           const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-          pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
+          pruned_column_ids.emplace_back(column_expression->original_column_id);
         }
 
-        if (pruned_column_ids.size() == node->column_expressions().size()) {
+        if (pruned_column_ids.size() == node->output_expressions().size()) {
           // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
           // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
           // column from the pruning list. It does not matter which column it is.

@@ -30,8 +30,8 @@ template <typename Functor>
 bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node, Functor contains_fn) {
   if (!node) return false;
   if (contains_fn(node)) return true;
-  return contained_in_query_plan(node->input_left(), contains_fn) ||
-         contained_in_query_plan(node->input_right(), contains_fn);
+  return contained_in_query_plan(node->left_input(), contains_fn) ||
+         contained_in_query_plan(node->right_input(), contains_fn);
 }
 
 }  // namespace opossum

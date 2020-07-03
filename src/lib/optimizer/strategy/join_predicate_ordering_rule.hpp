@@ -15,6 +15,9 @@ namespace opossum {
  * As such, a good predicate order is even more important that it is for regular (i.e., non-join) predicates.
  * Furthermore, the hash join only supports equals predicates, so the most selective equals predicate is moved to the
  * front.
+ *
+ * For inner joins, this is already done in AbstractJoinOrderingAlgorithm::_add_join_to_plan. See the comment over there
+ * for why we have that duplication.
  */
 class JoinPredicateOrderingRule : public AbstractRule {
  public:

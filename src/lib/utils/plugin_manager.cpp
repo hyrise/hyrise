@@ -74,7 +74,7 @@ std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_un
   const auto& plugin_handle_wrapper = plugin_iter->second;
 
   plugin_handle_wrapper.plugin->stop();
-  const auto handle = plugin_handle_wrapper.handle;
+  auto* const handle = plugin_handle_wrapper.handle;
 
   auto next = _plugins.erase(plugin_iter);
 

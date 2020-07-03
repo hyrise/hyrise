@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-const std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
+std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
 
 void MvccDeletePlugin::start() {
   _loop_thread_logical_delete =
@@ -33,8 +33,10 @@ void MvccDeletePlugin::stop() {
  * invalidated rows is exceeded.
  */
 void MvccDeletePlugin::_logical_delete_loop() {
+  const auto tables = Hyrise::get().storage_manager.tables();
+
   // Check all tables
-  for (auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
+  for (auto& [table_name, table] : tables) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
     size_t saved_memory = 0;
     size_t num_chunks = 0;
@@ -55,7 +57,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         }
 
         // Calculate metric 2 – Chunk Hotness
-        CommitID highest_end_commit_id = CommitID{0};
+        auto highest_end_commit_id = CommitID{0};
         const auto chunk_size = chunk->size();
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
           const auto commit_id = chunk->mvcc_data()->get_end_cid(chunk_offset);
@@ -101,7 +103,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
 void MvccDeletePlugin::_physical_delete_loop() {
   std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
 
-  if (_physical_delete_queue.size()) {
+  if (!_physical_delete_queue.empty()) {
     TableAndChunkID table_and_chunk_id = _physical_delete_queue.front();
     const auto& table = table_and_chunk_id.first;
     const auto& chunk = table->get_chunk(table_and_chunk_id.second);
@@ -126,7 +128,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
 }
 
 bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const ChunkID chunk_id,
-                                           std::shared_ptr<TransactionContext> transaction_context) {
+                                           const std::shared_ptr<TransactionContext>& transaction_context) {
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 

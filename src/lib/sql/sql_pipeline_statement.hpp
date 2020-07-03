@@ -4,7 +4,7 @@
 #include <string>
 
 #include "SQLParserResult.h"
-#include "cache/cache.hpp"
+#include "cache/gdfs_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
@@ -70,6 +70,9 @@ class SQLPipelineStatement : public Noncopyable {
   // Returns the unoptimized LQP for this statement.
   const std::shared_ptr<AbstractLQPNode>& get_unoptimized_logical_plan();
 
+  // Returns information obtained during SQL parsing.
+  const SQLTranslationInfo& get_sql_translation_info();
+
   // Returns the optimized LQP for this statement.
   const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
 
@@ -124,7 +127,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output{true};
-  TranslationInfo _translation_info;
+  SQLTranslationInfo _translation_info;
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 

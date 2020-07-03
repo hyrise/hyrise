@@ -7,10 +7,11 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 namespace opossum {
 
+class LQPColumnExpression;
 class TableStatistics;
 
 /**
@@ -26,11 +27,11 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name = {});
 
-  LQPColumnReference get_column(const std::string& column_name) const;
+  std::shared_ptr<LQPColumnExpression> get_column(const std::string& column_name) const;
 
   const ColumnDefinitions& column_definitions() const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
@@ -47,6 +48,15 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
+  // Pure container functionality: MockNode does not use key constraints internally.
+  void set_key_constraints(const TableKeyConstraints& key_constraints);
+  const TableKeyConstraints& key_constraints() const;
+
+  // Pure container functionality: MockNode does not use FDs internally.
+  // Also, unlike StoredTableNode, FDs are not generated from key constraints.
+  void set_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  std::vector<FunctionalDependency> functional_dependencies() const override;
+
   std::optional<std::string> name;
 
  protected:
@@ -55,11 +65,13 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
-  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
+  std::vector<FunctionalDependency> _functional_dependencies;
+  TableKeyConstraints _table_key_constraints;
 };
 }  // namespace opossum

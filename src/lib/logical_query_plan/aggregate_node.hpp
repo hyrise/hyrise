@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -24,7 +23,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
                 const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions);
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // node_expression contains both the group_by- and the aggregate_expressions in that order.

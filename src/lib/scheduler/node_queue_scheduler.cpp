@@ -36,9 +36,9 @@ void NodeQueueScheduler::begin() {
 
     _queues.emplace_back(queue);
 
-    auto& topology_node = Hyrise::get().topology.nodes()[node_id];
+    const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
-    for (auto& topology_cpu : topology_node.cpus) {
+    for (const auto& topology_cpu : topology_node.cpus) {
       _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
     }
   }

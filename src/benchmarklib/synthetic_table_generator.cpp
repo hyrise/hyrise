@@ -49,7 +49,7 @@ namespace opossum {
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
-                                                               const SegmentEncodingSpec segment_encoding_spec) {
+                                                               const SegmentEncodingSpec segment_encoding_spec) const {
   ColumnSpecification column_specification = {
       {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}, DataType::Int, segment_encoding_spec};
   auto table = generate_table({num_columns, column_specification}, num_rows, chunk_size, UseMvcc::No);

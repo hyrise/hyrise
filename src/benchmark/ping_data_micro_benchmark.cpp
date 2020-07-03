@@ -89,7 +89,7 @@ Segments get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, 
 
 std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
     const std::string order_by_column_name, const size_t chunk_size, const std::optional<ChunkEncodingSpec>& chunk_encoding_spec = std::nullopt,
-    const OrderByMode order_by_mode = OrderByMode::Ascending) {
+    const SortMode sort_mode = SortMode::Ascending) {
   // empty table to which we iteratively add the sorted chunks
   auto sorted_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, chunk_size, UseMvcc::No);
 
@@ -106,7 +106,7 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
 
     auto sort = std::make_shared<Sort>(
       table_wrapper, std::vector<SortColumnDefinition>{
-        SortColumnDefinition{single_chunk_table->column_id_by_name(order_by_column_name), order_by_mode}},
+        SortColumnDefinition{single_chunk_table->column_id_by_name(order_by_column_name), sort_mode}},
       chunk_size, Sort::ForceMaterialization::Yes);
     sort->execute();
     const auto immutable_sorted_table = sort->get_output();
@@ -114,10 +114,10 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     // add sorted chunk to output table
     // Note: we do not care about MVCC at all at the moment
     sorted_table->append_chunk(get_segments_of_chunk(immutable_sorted_table, ChunkID{0}));
-    //sorted_table->append_chunk(immutable_sorted_table->get_chunk(ChunkID{0})->segments());
+  
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
-    added_chunk->set_ordered_by(std::make_pair(sorted_table->column_id_by_name(order_by_column_name), order_by_mode));
     added_chunk->finalize();
+    added_chunk->set_sorted_by(SortColumnDefinition(sorted_table->column_id_by_name(order_by_column_name), sort_mode));
 
     // in case a chunk encoding spec is provided, encode chunk
     if (chunk_encoding_spec) {

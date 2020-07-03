@@ -79,7 +79,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  *         /       \                                                                       \              /
  *  Predicate D     |                                                        Predicate B     ---  OR  ---
  *        |      Predicate E                                                        \             /
- *  Predicate C  ´  |                                                                 --- AND ---
+ *  Predicate C     |                                                                 --- AND ---
  *         \       /                                                                       |
  *        Projection                                                               returned expression
  *             |

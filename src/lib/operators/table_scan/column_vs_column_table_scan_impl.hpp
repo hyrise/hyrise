@@ -29,7 +29,7 @@ class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
 
   std::string description() const override;
 
-  std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) const override;
+  std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) override;
 
  private:
   const std::shared_ptr<const Table> _in_table;

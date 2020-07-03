@@ -6,10 +6,6 @@ std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<Abstract
   return expression;
 }
 
-std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& column_reference) {
-  return std::make_shared<LQPColumnExpression>(column_reference);
-}
-
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value) {
   return std::make_shared<ValueExpression>(value);
 }
@@ -28,8 +24,8 @@ std::shared_ptr<PlaceholderExpression> placeholder_(const ParameterID parameter_
   return std::make_shared<PlaceholderExpression>(parameter_id);
 }
 
-std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<LQPColumnExpression>(column_reference);
+std::shared_ptr<LQPColumnExpression> lqp_column_(const std::shared_ptr<const AbstractLQPNode>& original_node, const ColumnID original_column_id) {  // NOLINT - clang-tidy doesn't like the suffix
+  return std::make_shared<LQPColumnExpression>(original_node, original_column_id);
 }
 
 std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
@@ -38,7 +34,7 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
 }
 
 std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode>& lqp_node) {  // NOLINT - clang-tidy doesn't like the suffix
-  const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{lqp_node, INVALID_COLUMN_ID});
+  const auto column_expression = std::make_shared<LQPColumnExpression>(lqp_node, INVALID_COLUMN_ID);
   return std::make_shared<AggregateExpression>(AggregateFunction::Count, column_expression);
 }
 

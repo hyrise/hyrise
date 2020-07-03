@@ -48,12 +48,36 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   std::vector<ChunkID> excluded_chunk_ids;
 
+  struct PerformanceData : public OperatorPerformanceData<AbstractOperatorPerformanceData::NoSteps> {
+    size_t chunk_scans_skipped{0};
+    size_t chunk_scans_sorted{0};
+
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+      if (chunk_scans_skipped == 0 && chunk_scans_sorted == 0) {
+        return;
+      }
+
+      const auto *const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+      stream << separator << "Chunks: ";
+      if (chunk_scans_skipped > 0) {
+        stream << chunk_scans_skipped << " skipped";
+      }
+      if (chunk_scans_skipped > 0 && chunk_scans_sorted > 0) {
+        stream << ", ";
+      }
+      if (chunk_scans_sorted > 0) {
+        stream << chunk_scans_sorted << " scanned using binary search";
+      }
+      stream << ". ";
+    }
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_left_input,
+      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
 
   void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;

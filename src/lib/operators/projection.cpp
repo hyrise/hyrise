@@ -30,9 +30,9 @@ const std::string& Projection::name() const {
 }
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Projection>(copied_input_left, expressions_deep_copy(expressions));
+    const std::shared_ptr<AbstractOperator>& copied_left_input,
+    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+  return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
@@ -44,7 +44,7 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  const auto& input_table = *input_table_left();
+  const auto& input_table = *left_input_table();
 
   /**
    * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
@@ -74,7 +74,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     auto output_segments = Segments{expressions.size()};
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
+    ExpressionEvaluator evaluator(left_input_table(), chunk_id, uncorrelated_subquery_results);
 
     for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
       const auto& expression = expressions[column_id];
@@ -210,15 +210,45 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
 
+  // Maps input columns to output columns (which may be reordered). Only contains input column IDs that are forwarded
+  // to the output without modfications.
+  auto input_column_to_output_column = std::unordered_map<ColumnID, ColumnID>{};
+  for (auto expression_id = ColumnID{0}; expression_id < expressions.size(); ++expression_id) {
+    const auto& expression = expressions[expression_id];
+    if (const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression)) {
+      const auto& original_id = pqp_column_expression->column_id;
+      input_column_to_output_column[original_id] = expression_id;
+    }
+  }
+
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
     // information so that following operators (currently, the Validate operator) can use it for optimizations.
-    output_chunks[chunk_id] =
-        std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
-    output_chunks[chunk_id]->increase_invalid_row_count(input_chunk->invalid_row_count());
+    const auto chunk = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
+    chunk->increase_invalid_row_count(input_chunk->invalid_row_count());
+    chunk->finalize();
+
+    // Forward sorted_by flags, mapping column ids
+    const auto& sorted_by = input_chunk->sorted_by();
+    if (!sorted_by.empty()) {
+      std::vector<SortColumnDefinition> transformed;
+      transformed.reserve(sorted_by.size());
+      for (const auto& [column_id, mode] : sorted_by) {
+        if (!input_column_to_output_column.count(column_id)) {
+          continue;  // column is not present in output expression list
+        }
+        const auto projected_column_id = input_column_to_output_column[column_id];
+        transformed.emplace_back(SortColumnDefinition{projected_column_id, mode});
+      }
+      if (!transformed.empty()) {
+        chunk->set_sorted_by(transformed);
+      }
+    }
+
+    output_chunks[chunk_id] = chunk;
   }
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),

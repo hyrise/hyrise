@@ -8,7 +8,7 @@ namespace opossum {
 
 ImportNode::ImportNode(const std::string& init_table_name, const std::string& init_file_name,
                        const FileType init_file_type)
-    : BaseNonQueryNode(LQPNodeType::Import),
+    : AbstractNonQueryNode(LQPNodeType::Import),
       table_name(init_table_name),
       file_name(init_file_name),
       file_type(init_file_type) {}

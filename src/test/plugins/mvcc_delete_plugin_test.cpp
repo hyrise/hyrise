@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "lib/utils/plugin_test_utils.hpp"
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
-#include "../utils/plugin_test_utils.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -171,7 +171,7 @@ TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
 
   {
     const auto conflicting_sql = "DELETE FROM " + _table_name + " WHERE a < 4";
-    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline_statement();
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline();
     (void)conflicting_sql_pipeline.get_result_table();
   }
 
