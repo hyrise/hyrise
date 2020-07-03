@@ -84,30 +84,30 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
     return;
   }
 
-  if (flat_disjunction.size() == 2 && predicate_node->left_input()->type == LQPNodeType::Validate && predicate_node->left_input()->left_input()->type ==LQPNodeType::StoredTable) {
+  // if (flat_disjunction.size() == 2 && predicate_node->left_input()->type == LQPNodeType::Validate && predicate_node->left_input()->left_input()->type ==LQPNodeType::StoredTable) {
 
-    auto validate_node = predicate_node->left_input();
-    auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(validate_node->left_input());
+  //   auto validate_node = predicate_node->left_input();
+  //   auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(validate_node->left_input());
 
 
-    auto top_union_node = UnionNode::make(SetOperationMode::Positions);
-    const auto diamond_bottom = stored_table_node;
-    auto new_validate = ValidateNode::make();
-    lqp_replace_node(predicate_node, new_validate);
-    new_validate->set_left_input(top_union_node);
-    {
-      const auto new_predicate_node = PredicateNode::make(flat_disjunction[0], diamond_bottom);
-      top_union_node->set_left_input(new_predicate_node);
-      _split_conjunction(new_predicate_node);
-    }
-    {
-      const auto copy_diamond_bottom = StoredTableNode::make(stored_table_node->table_name);
-      const auto new_predicate_node = PredicateNode::make(flat_disjunction[1], copy_diamond_bottom);
-      top_union_node->set_right_input(new_predicate_node);
-      _split_conjunction(new_predicate_node);
-    }
-    return;
-  }
+  //   auto top_union_node = UnionNode::make(SetOperationMode::Positions);
+  //   const auto diamond_bottom = stored_table_node;
+  //   auto new_validate = ValidateNode::make();
+  //   lqp_replace_node(predicate_node, new_validate);
+  //   new_validate->set_left_input(top_union_node);
+  //   {
+  //     const auto new_predicate_node = PredicateNode::make(flat_disjunction[0], diamond_bottom);
+  //     top_union_node->set_left_input(new_predicate_node);
+  //     _split_conjunction(new_predicate_node);
+  //   }
+  //   {
+  //     const auto copy_diamond_bottom = StoredTableNode::make(stored_table_node->table_name);
+  //     const auto new_predicate_node = PredicateNode::make(flat_disjunction[1], copy_diamond_bottom);
+  //     top_union_node->set_right_input(new_predicate_node);
+  //     _split_conjunction(new_predicate_node);
+  //   }
+  //   return;
+  // }
 
   // Step 1: Insert initial diamond
   auto top_union_node = UnionNode::make(SetOperationMode::Positions);
