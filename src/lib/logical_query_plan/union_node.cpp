@@ -53,7 +53,7 @@ const std::shared_ptr<LQPUniqueConstraints> UnionNode::unique_constraints() cons
       // filtered out. As a consequence, existing unique constraints from input tables can be forwarded.
       Assert(*left_input()->unique_constraints() == *right_input()->unique_constraints(),
              "Input tables should have the same constraints.");
-      return forward_unique_constraints();
+      return _forward_unique_constraints();
 
     case SetOperationMode::All:
       // With UnionAll two tables of the same schema become merged. The resulting table might contain duplicates.

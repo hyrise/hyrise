@@ -34,7 +34,7 @@ std::string SortNode::description(const DescriptionMode mode) const {
 }
 
 const std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const {
-  return forward_unique_constraints();
+  return _forward_unique_constraints();
 }
 
 size_t SortNode::_on_shallow_hash() const {

@@ -243,7 +243,8 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 
 std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_output_expression(
     const ColumnID column_id) const {
-  for (auto expr : this->output_expressions()) {
+  const auto& output_expressions = this->output_expressions();
+  for (auto& expr : output_expressions) {
     const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
     if (column_expr && column_expr->original_column_id == column_id) {
       return column_expr;
@@ -263,22 +264,7 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints(
   return std::make_shared<LQPUniqueConstraints>();
 }
 
-const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::forward_unique_constraints() const {
-  Assert(left_input(), "Not possible to forward constraints from empty node.");
-  const auto input_unique_constraints = left_input()->unique_constraints();
-  const auto& expressions = output_expressions();
-  if constexpr (HYRISE_DEBUG) {
-    ExpressionUnorderedSet set{expressions.cbegin(), expressions.cend()};
-    for (const auto& unique_constraint : *input_unique_constraints) {
-      for (const auto& expr : unique_constraint.column_expressions) {
-        Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses column expressions.");
-      }
-    }
-  }
-  return input_unique_constraints;
-}
-
-bool AbstractLQPNode::has_unique_constraint(ExpressionUnorderedSet column_expressions) const {
+bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& column_expressions) const {
   const auto constraints = unique_constraints();
   if (constraints->empty()) return false;
 
@@ -412,6 +398,24 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
 void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output) {
   // Having the same output multiple times is allowed, e.g. for self joins
   _outputs.emplace_back(output);
+}
+
+const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_unique_constraints() const {
+  Assert(left_input(), "Not possible to forward constraints from empty node.");
+  const auto input_unique_constraints = left_input()->unique_constraints();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether output expressions are missing
+    const auto& output_expressions = this->output_expressions();
+    ExpressionUnorderedSet set{output_expressions.cbegin(), output_expressions.cend()};
+    for (const auto& unique_constraint : *input_unique_constraints) {
+      for (const auto& expr : unique_constraint.column_expressions) {
+        Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses output expressions.");
+      }
+    }
+  }
+
+  return input_unique_constraints;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

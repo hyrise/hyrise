@@ -6,7 +6,7 @@
 namespace opossum {
 
 /**
- * Container to define uniqueness constraints for LQP output expressions.
+ * Container structure to define uniqueness for subsets of LQP output expressions.
  * Uniqueness means TODO(Julian)
  */
 struct LQPUniqueConstraint final {

@@ -167,7 +167,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  [[nodiscard]] bool has_unique_constraint(ExpressionUnorderedSet column_expressions) const;
+  [[nodiscard]] bool has_unique_constraint(const ExpressionUnorderedSet& column_expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
@@ -216,9 +216,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * @return TODO(Julian)
+   * Returns unique constraints from the left input node.
    */
-  const std::shared_ptr<LQPUniqueConstraints> forward_unique_constraints() const;
+  const std::shared_ptr<LQPUniqueConstraints> _forward_unique_constraints() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
