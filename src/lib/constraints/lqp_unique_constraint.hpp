@@ -6,7 +6,8 @@
 namespace opossum {
 
 /**
- * Container that allows the definition of LQP unique constraints based on a set of column expressions.
+ * Container to define uniqueness constraints for LQP output expressions.
+ * Uniqueness means TODO(Julian)
  */
 struct LQPUniqueConstraint final {
   explicit LQPUniqueConstraint(ExpressionUnorderedSet init_column_expressions);

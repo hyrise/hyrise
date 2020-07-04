@@ -241,7 +241,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_column_expression(
+std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_output_expression(
     const ColumnID column_id) const {
   for (auto expr : this->output_expressions()) {
     const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);

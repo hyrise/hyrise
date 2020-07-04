@@ -7,7 +7,6 @@
 #include "constraints/lqp_unique_constraint.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "functional_dependency.hpp"
 #include "types.hpp"
 
@@ -149,9 +148,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
-   * @return A shared pointer to LQPColumnExpression of @param column_id or std::nullopt if it can't be found.
+   * @return A shared pointer to the LQPColumnExpression with @param column_id or std::nullopt if it can't be found.
    */
-  std::optional<const std::shared_ptr<LQPColumnExpression>> find_column_expression(const ColumnID column_id) const;
+  std::optional<const std::shared_ptr<LQPColumnExpression>> find_output_expression(const ColumnID column_id) const;
 
   /**
    * @return whether the output column at @param column_id is nullable
@@ -215,6 +214,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
+
+  /**
+   * @return TODO(Julian)
+   */
   const std::shared_ptr<LQPUniqueConstraints> forward_unique_constraints() const;
 
   /*
