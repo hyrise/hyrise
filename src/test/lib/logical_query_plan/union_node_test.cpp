@@ -101,11 +101,9 @@ TEST_F(UnionNodeTest, FunctionalDependencies) {
 
 TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
   // Add two unique constraints to _mock_node1
-  // Primary Key: a, b
-  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
-  // Unique: c
-  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_1, key_constraint_2});
+  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto table_key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints(TableKeyConstraints{table_key_constraint_a_b, table_key_constraint_b});
   EXPECT_EQ(_mock_node1->unique_constraints()->size(), 2);
 
   // Test unique constraint forwarding
@@ -114,7 +112,7 @@ TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
 
   // Negative test - input nodes with differing constraints should lead to failure
   auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
-  mock_node1_changed->set_key_constraints(TableKeyConstraints{key_constraint_1});
+  mock_node1_changed->set_key_constraints(TableKeyConstraints{table_key_constraint_a_b});
   _union_node->set_right_input(mock_node1_changed);
   EXPECT_THROW(_union_node->unique_constraints(), std::logic_error);
 

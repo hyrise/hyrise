@@ -78,18 +78,16 @@ TEST_F(AliasNodeTest, UniqueConstraintsEmpty) {
 
 TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
   // Add constraints to MockNode
-  //  Primary Key: a, b
-  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
-  //  Unique: b
-  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
-  const auto key_constraints = TableKeyConstraints{key_constraint_1, key_constraint_2};
-  mock_node->set_key_constraints(key_constraints);
+  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto table_key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraints = TableKeyConstraints{table_key_constraint_a_b, table_key_constraint_b};
+  mock_node->set_key_constraints(table_key_constraints);
 
   // Basic check
   const auto unique_constraints = alias_node->unique_constraints();
   EXPECT_EQ(unique_constraints->size(), 2);
   // In-depth check
-  check_unique_constraint_mapping(key_constraints, unique_constraints);
+  check_unique_constraint_mapping(table_key_constraints, unique_constraints);
 }
 
 }  // namespace opossum

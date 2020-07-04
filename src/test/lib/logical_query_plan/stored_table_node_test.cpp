@@ -312,10 +312,10 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
   const auto table_key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  const auto table_key_constraint_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto table_key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   table->add_soft_key_constraint(table_key_constraint_a);
-  table->add_soft_key_constraint(table_key_constraint_b);
+  table->add_soft_key_constraint(table_key_constraint_a_b);
   table->add_soft_key_constraint(table_key_constraint_c);
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
@@ -328,8 +328,8 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   EXPECT_EQ(unique_constraints->size(), 1);
 
   // In-depth check
-  const auto& valid_table_constraint = table_key_constraint_c;
-  check_unique_constraint_mapping(TableKeyConstraints{valid_table_constraint}, unique_constraints);
+  const auto& valid_table_key_constraint = table_key_constraint_c;
+  check_unique_constraint_mapping(TableKeyConstraints{valid_table_key_constraint}, unique_constraints);
 }
 
 TEST_F(StoredTableNodeTest, UniqueConstraintsEmpty) {
