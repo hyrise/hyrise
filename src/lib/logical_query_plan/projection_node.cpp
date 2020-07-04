@@ -40,19 +40,19 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
   const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    // Check whether column expressions have been filtered out with this node.
-    bool found_all_column_expressions = std::all_of(
-        input_unique_constraint.column_expressions.cbegin(), input_unique_constraint.column_expressions.cend(),
-        [&](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-          return expressions_set.contains(constraint_column_expr);
+    // Check whether expressions are missing
+    bool found_all_expressions = std::all_of(
+        input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
+        [&](const std::shared_ptr<AbstractExpression>& constraint_expression) {
+          return expressions_set.contains(constraint_expression);
         });
 
-    if (found_all_column_expressions) {
+    if (found_all_expressions) {
       unique_constraints->push_back(input_unique_constraint);
     }  // else { save constraint for the next block - derived constraints }
   }
 
-  // TODO(anyone) Very basic check above. In the future, we also might want to look for
+  // TODO(Julian) Very basic check above. In the future, we also might want to look for
   //  derived column expressions, like 'column + 1', that preserve uniqueness.
   //  However, in case of derived column expressions we also have to create new, derived constraints.
   // { ... }

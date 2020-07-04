@@ -2,15 +2,15 @@
 
 namespace opossum {
 
-LQPUniqueConstraint::LQPUniqueConstraint(ExpressionUnorderedSet init_column_expressions)
-    : column_expressions(std::move(init_column_expressions)) {
-  DebugAssert(!column_expressions.empty(), "LQPUniqueConstraint can not be empty.");
+LQPUniqueConstraint::LQPUniqueConstraint(ExpressionUnorderedSet init_expressions)
+    : expressions(std::move(init_expressions)) {
+  DebugAssert(!expressions.empty(), "LQPUniqueConstraint can not be empty.");
 }
 
 bool LQPUniqueConstraint::operator==(const LQPUniqueConstraint& rhs) const {
-  if (column_expressions.size() != rhs.column_expressions.size()) return false;
-  return std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&rhs](const auto column_expression) {
-    return rhs.column_expressions.contains(column_expression);
+  if (expressions.size() != rhs.expressions.size()) return false;
+  return std::all_of(expressions.cbegin(), expressions.cend(), [&rhs](const auto column_expression) {
+    return rhs.expressions.contains(column_expression);
   });
 }
 

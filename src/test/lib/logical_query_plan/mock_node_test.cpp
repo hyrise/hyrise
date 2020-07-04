@@ -82,12 +82,11 @@ TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions
 
 TEST_F(MockNodeTest, UniqueConstraints) {
   // Add constraints to MockNode
-  // Primary Key: a, b
-  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
-  // Unique: c
-  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  const auto key_constraints = TableKeyConstraints{key_constraint_1, key_constraint_2};
-  _mock_node_a->set_key_constraints(key_constraints);
+  const auto table_key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}},
+                                                           KeyConstraintType::PRIMARY_KEY};
+  const auto table_key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraints = TableKeyConstraints{table_key_constraint_a_b, table_key_constraint_c};
+  _mock_node_a->set_key_constraints(table_key_constraints);
 
   // Basic checks
   const auto unique_constraints_mock_node_a = _mock_node_a->unique_constraints();
@@ -95,14 +94,14 @@ TEST_F(MockNodeTest, UniqueConstraints) {
   EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
 
   // In-depth verification
-  check_unique_constraint_mapping(key_constraints, unique_constraints_mock_node_a);
+  check_unique_constraint_mapping(table_key_constraints, unique_constraints_mock_node_a);
 
-  // Also check whether StoredTableNode is referenced correctly by column expressions
+  // Check whether MockNode is referenced by the column expressions
   for (const auto& unique_constraint : *unique_constraints_mock_node_a) {
-    for (const auto& expr : unique_constraint.column_expressions) {
-      const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-      EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
-      EXPECT_TRUE(column_expr->original_node.lock() == _mock_node_a);
+    for (const auto& expression : unique_constraint.expressions) {
+      const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
+      EXPECT_TRUE(column_expression->original_node.lock() == _mock_node_a);
     }
   }
 }

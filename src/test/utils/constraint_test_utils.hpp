@@ -15,13 +15,13 @@ static void check_unique_constraint_mapping(const TableKeyConstraints& table_key
     const auto matching_unique_constraint = std::find_if(
         unique_constraints->cbegin(), unique_constraints->cend(), [&](const LQPUniqueConstraint& unique_constraint) {
           // Basic comparison
-          if (table_key_constraint.columns().size() != unique_constraint.column_expressions.size()) return false;
+          if (table_key_constraint.columns().size() != unique_constraint.expressions.size()) return false;
 
           // In-depth comparison, verifying column ids
           for (const auto& column_id : table_key_constraint.columns()) {
             // Try to find a column_expression that represents column_id
             const auto matching_column_expr = std::find_if(
-                unique_constraint.column_expressions.cbegin(), unique_constraint.column_expressions.cend(),
+                unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
                 [&](const std::shared_ptr<AbstractExpression>& expression) {
                   const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
                   if (column_expression && column_expression->original_column_id == column_id) {
@@ -32,7 +32,7 @@ static void check_unique_constraint_mapping(const TableKeyConstraints& table_key
                 });
 
             // Check whether a column expression has been found
-            if (matching_column_expr == unique_constraint.column_expressions.cend()) {
+            if (matching_column_expr == unique_constraint.expressions.cend()) {
               // unique_constraint does not match table_key_constraint
               return false;
             }

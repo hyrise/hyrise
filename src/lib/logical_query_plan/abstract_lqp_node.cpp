@@ -6,6 +6,7 @@
 #include "boost/functional/hash.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "join_node.hpp"
 #include "lqp_utils.hpp"
@@ -245,9 +246,9 @@ std::optional<const std::shared_ptr<LQPColumnExpression>> AbstractLQPNode::find_
     const ColumnID column_id) const {
   const auto& output_expressions = this->output_expressions();
   for (auto& expr : output_expressions) {
-    const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
-    if (column_expr && column_expr->original_column_id == column_id) {
-      return column_expr;
+    const auto expression = dynamic_pointer_cast<LQPColumnExpression>(expr);
+    if (expression && expression->original_column_id == column_id) {
+      return expression;
     }
   }
   return std::nullopt;
@@ -264,21 +265,21 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints(
   return std::make_shared<LQPUniqueConstraints>();
 }
 
-bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& column_expressions) const {
-  const auto constraints = unique_constraints();
-  if (constraints->empty()) return false;
+bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output_expressions) const {
+  const auto unique_constraints = this->unique_constraints();
+  if (unique_constraints->empty()) return false;
 
-  // Look for a unique constraint that is solely based on the given column expressions
-  for (const auto& unique_constraint : *constraints) {
-    if (unique_constraint.column_expressions.size() == column_expressions.size() &&
-        std::all_of(column_expressions.cbegin(), column_expressions.cend(), [&](const auto column_expression) {
-          return unique_constraint.column_expressions.contains(column_expression);
+  // Look for a unique constraint that is solely based on the given expressions
+  for (const auto& unique_constraint : *unique_constraints) {
+    if (unique_constraint.expressions.size() == output_expressions.size() &&
+        std::all_of(output_expressions.cbegin(), output_expressions.cend(), [&](const auto output_expression) {
+          return unique_constraint.expressions.contains(output_expression);
         })) {
       // Found match
       return true;
     }
   }
-  // No match found
+  // No match
   return false;
 }
 
@@ -409,7 +410,7 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_unique_con
     const auto& output_expressions = this->output_expressions();
     ExpressionUnorderedSet set{output_expressions.cbegin(), output_expressions.cend()};
     for (const auto& unique_constraint : *input_unique_constraints) {
-      for (const auto& expr : unique_constraint.column_expressions) {
+      for (const auto& expr : unique_constraint.expressions) {
         Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses output expressions.");
       }
     }

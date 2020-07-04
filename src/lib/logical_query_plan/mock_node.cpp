@@ -86,27 +86,16 @@ const std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const
     }();
 
     if (!discard_constraint) {
-      const auto get_column_expression = [this](ColumnID column_id) {
-        for (auto expr : this->output_expressions()) {
-          const auto column_expr = dynamic_pointer_cast<LQPColumnExpression>(expr);
-          Assert(column_expr, "Unexpected expression type in column_expression()");
-          if (column_expr->original_column_id == column_id) {
-            return column_expr;
-          }
-        }
-        return std::shared_ptr<LQPColumnExpression>(nullptr);
-      };
-
-      // Search for column expressions that represent the TableKeyConstraint's ColumnIDs
-      auto constraint_column_expressions = ExpressionUnorderedSet{};
+      // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
+      auto constraint_expressions = ExpressionUnorderedSet{};
       for (const auto& column_id : table_key_constraint.columns()) {
-        const auto column_expr = get_column_expression(column_id);
-        Assert(column_expr, "Did not find column expression for ColumnID in LQPNode");
-        constraint_column_expressions.emplace(column_expr);
+        const auto output_expression = find_output_expression(column_id);
+        Assert(output_expression, "Did not find output expression for ColumnID in MockNode");
+        constraint_expressions.emplace(*output_expression);
       }
 
       // Create LQPUniqueConstraint
-      unique_constraints->emplace_back(constraint_column_expressions);
+      unique_constraints->emplace_back(constraint_expressions);
     }
   }
 

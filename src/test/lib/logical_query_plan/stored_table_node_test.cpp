@@ -288,22 +288,22 @@ TEST_F(StoredTableNodeTest, UniqueConstraints) {
   table->add_soft_key_constraint({{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY});
   table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE});
 
-  const auto key_constraints = table->soft_key_constraints();
-  const auto unique_constraints = _stored_table_node->unique_constraints();
+  const auto table_key_constraints = table->soft_key_constraints();
+  const auto lqp_unique_constraints = _stored_table_node->unique_constraints();
 
   // Basic check
-  EXPECT_EQ(key_constraints.size(), 2);
-  EXPECT_EQ(unique_constraints->size(), 2);
+  EXPECT_EQ(table_key_constraints.size(), 2);
+  EXPECT_EQ(lqp_unique_constraints->size(), 2);
 
   // In-depth - check whether all table constraints are represented in StoredTableNode
-  check_unique_constraint_mapping(key_constraints, unique_constraints);
+  check_unique_constraint_mapping(table_key_constraints, lqp_unique_constraints);
 
-  // Also check whether StoredTableNode is referenced correctly by column expressions
-  for (const auto& unique_constraint : *unique_constraints) {
-    for (const auto& expr : unique_constraint.column_expressions) {
-      const auto& column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(expr);
-      EXPECT_TRUE(column_expr && !column_expr->original_node.expired());
-      EXPECT_TRUE(column_expr->original_node.lock() == _stored_table_node);
+  // Check whether StoredTableNode is referenced by the column expressions
+  for (const auto& lqp_unique_constraint : *lqp_unique_constraints) {
+    for (const auto& expression : lqp_unique_constraint.expressions) {
+      const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
+      EXPECT_TRUE(column_expression->original_node.lock() == _stored_table_node);
     }
   }
 }
@@ -311,16 +311,16 @@ TEST_F(StoredTableNodeTest, UniqueConstraints) {
 TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_3 = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  table->add_soft_key_constraint(key_constraint_1);
-  table->add_soft_key_constraint(key_constraint_2);
-  table->add_soft_key_constraint(key_constraint_3);
+  const auto table_key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto table_key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  table->add_soft_key_constraint(table_key_constraint_a);
+  table->add_soft_key_constraint(table_key_constraint_b);
+  table->add_soft_key_constraint(table_key_constraint_c);
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  const auto& key_constraints = table->soft_key_constraints();
-  EXPECT_EQ(key_constraints.size(), 3);
+  const auto& table_key_constraints = table->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 3);
 
   // After column pruning, only the third table constraint should remain valid (the one based on ColumnID 2)
   // Basic check
@@ -328,7 +328,7 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   EXPECT_EQ(unique_constraints->size(), 1);
 
   // In-depth check
-  const auto& valid_table_constraint = key_constraint_3;
+  const auto& valid_table_constraint = table_key_constraint_c;
   check_unique_constraint_mapping(TableKeyConstraints{valid_table_constraint}, unique_constraints);
 }
 

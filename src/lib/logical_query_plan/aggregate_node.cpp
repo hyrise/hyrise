@@ -80,43 +80,39 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
 const std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
   auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
 
-  // (1) Create a unique constraint covering the group-by column(s).
-  // The set of group-by columns forms a candidate key for the output relation.
+  // (1) Create new unique constraint from the group-by column(s) which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
   ExpressionUnorderedSet group_by_columns(group_by_columns_count);
   std::copy_n(node_expressions.begin(), group_by_columns_count,
               std::inserter(group_by_columns, group_by_columns.begin()));
 
-  // Create LQPUniqueConstraint from column expressions
   unique_constraints->emplace_back(group_by_columns);
-  // TODO(anyone) We also have a functional dependency here. Use it? (group_by_columns) => (aggregate_columns)
 
-  // (2) Check incoming constraints for validity and forward if applicable
-  // We call output_expressions() to avoid the (intermediate) ANY() aggregates
-  // that might be inside of the node_expressions vector. (see DependentGroupByReductionRule for details)
-  const auto output_expressions_vec = output_expressions();
-  const auto output_expressions_set =
+  // (2) Forward input constraints if applicable
+  // We call output_expressions() to avoid ANY() aggregates from the DependentGroupByReductionRule
+  const auto& output_expressions_vec = this->output_expressions();
+  const auto output_expressions =
       ExpressionUnorderedSet{output_expressions_vec.cbegin(), output_expressions_vec.cend()};
 
   // Check each constraint for applicability
   auto input_unique_constraints = left_input()->unique_constraints();
-  for (const auto& input_constraint : *input_unique_constraints) {
-    // Ensure that we do not produce any duplicate constraints
-    bool constraint_already_exists = std::any_of(
+  for (const auto& input_unique_constraint : *input_unique_constraints) {
+
+    // Do not add duplicate constraints
+    bool duplicate = std::any_of(
         unique_constraints->cbegin(), unique_constraints->cend(),
-        [&input_constraint](const auto& existing_constraint) { return input_constraint == existing_constraint; });
-    if (constraint_already_exists) continue;
+        [&input_unique_constraint](const auto& unique_constraint) { return input_unique_constraint == unique_constraint; });
+    if (duplicate) continue;
 
-    // Check, whether involved column expressions are part of the AggregateNode's output expressions
-    bool found_all_column_expressions =
-        std::all_of(input_constraint.column_expressions.cbegin(), input_constraint.column_expressions.cend(),
-                    [&output_expressions_set](const std::shared_ptr<AbstractExpression>& constraint_column_expr) {
-                      return output_expressions_set.contains(constraint_column_expr);
+    // Ensure that the unique constraint's expressions are part of the output
+    bool found_all_expressions =
+        std::all_of(input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
+                    [&output_expressions](const std::shared_ptr<AbstractExpression>& expression) {
+                      return output_expressions.contains(expression);
                     });
-
-    if (found_all_column_expressions) {
+    if (found_all_expressions) {
       // Forward constraint
-      unique_constraints->push_back(input_constraint);
+      unique_constraints->push_back(input_unique_constraint);
     }
   }
 

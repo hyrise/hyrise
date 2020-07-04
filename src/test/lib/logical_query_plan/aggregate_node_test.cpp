@@ -109,11 +109,11 @@ TEST_F(AggregateNodeTest, UniqueConstraintsAdd) {
   EXPECT_EQ(agg_node_b->unique_constraints()->size(), 1);
   const auto unique_constraint_a = *agg_node_a->unique_constraints()->cbegin();
   const auto unique_constraint_b = *agg_node_b->unique_constraints()->cbegin();
-  EXPECT_EQ(unique_constraint_a.column_expressions.size(), 1);
-  EXPECT_EQ(unique_constraint_b.column_expressions.size(), 2);
-  EXPECT_TRUE((unique_constraint_a.column_expressions.contains(_a)));
-  EXPECT_TRUE((unique_constraint_b.column_expressions.contains(_a)));
-  EXPECT_TRUE((unique_constraint_b.column_expressions.contains(_b)));
+  EXPECT_EQ(unique_constraint_a.expressions.size(), 1);
+  EXPECT_EQ(unique_constraint_b.expressions.size(), 2);
+  EXPECT_TRUE((unique_constraint_a.expressions.contains(_a)));
+  EXPECT_TRUE((unique_constraint_b.expressions.contains(_a)));
+  EXPECT_TRUE((unique_constraint_b.expressions.contains(_b)));
 }
 
 TEST_F(AggregateNodeTest, UniqueConstraintsForwarding) {
@@ -134,8 +134,8 @@ TEST_F(AggregateNodeTest, UniqueConstraintsForwarding) {
 
 TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   // Prepare Test
-  const auto table_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
-  _mock_node->set_key_constraints({table_constraint});
+  const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_constraints()->size(), 1);
 
   const auto aggregate = sum_(_b);
@@ -145,8 +145,8 @@ TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
   // However, table_constraint is equivalent and eligible for forwarding.
   // We do not want AggregateNode to output two constraints that are equivalent.
   EXPECT_EQ(_aggregate_node->unique_constraints()->size(), 1);
-  const auto constraint = *_aggregate_node->unique_constraints()->cbegin();
-  EXPECT_TRUE(constraint.column_expressions.contains(_a));
+  const auto unique_constraint = *_aggregate_node->unique_constraints()->cbegin();
+  EXPECT_TRUE(unique_constraint.expressions.contains(_a));
 }
 
 }  // namespace opossum
