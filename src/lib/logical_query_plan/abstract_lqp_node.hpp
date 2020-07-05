@@ -216,7 +216,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * Returns unique constraints from the left input node.
+   * Returns all unique constraints from the left input node.
    */
   const std::shared_ptr<LQPUniqueConstraints> _forward_unique_constraints() const;
 

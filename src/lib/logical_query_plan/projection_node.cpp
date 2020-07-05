@@ -40,7 +40,7 @@ const std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints()
   const auto expressions_set = ExpressionUnorderedSet{expressions.cbegin(), expressions.cend()};
 
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    // Check whether expressions are missing
+    // Check whether expressions are missing in the output relation
     bool found_all_expressions = std::all_of(
         input_unique_constraint.expressions.cbegin(), input_unique_constraint.expressions.cend(),
         [&](const std::shared_ptr<AbstractExpression>& constraint_expression) {
