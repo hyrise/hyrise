@@ -164,10 +164,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> unique_constraints() const;
 
   /**
-   * TODO(Julian)
-   * @return
+   * @return True if a unique constraint exists for the given subset of output expressions. False otherwise.
    */
-  [[nodiscard]] bool has_unique_constraint(const ExpressionUnorderedSet& output_expressions) const;
+  [[nodiscard]] bool has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.

@@ -265,14 +265,29 @@ const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::unique_constraints(
   return std::make_shared<LQPUniqueConstraints>();
 }
 
-bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output_expressions) const {
+bool AbstractLQPNode::has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const {
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether output expressions are missing
+    const auto& output_expressions = this->output_expressions();
+
+    Assert(std::all_of(output_expressions_subset.cbegin(), output_expressions_subset.cend(),
+                            [&output_expressions](const auto& input_expression) {
+                              return std::any_of(output_expressions.cbegin(), output_expressions.cend(),
+                                                 [&input_expression](const auto& output_expression) {
+                                                   return output_expression == input_expression;
+                                                 });
+                            }),
+                "The given expressions are not a subset of the LQP's output expressions.");
+  }
+
   const auto unique_constraints = this->unique_constraints();
   if (unique_constraints->empty()) return false;
 
   // Look for a unique constraint that is solely based on the given expressions
   for (const auto& unique_constraint : *unique_constraints) {
-    if (unique_constraint.expressions.size() == output_expressions.size() &&
-        std::all_of(output_expressions.cbegin(), output_expressions.cend(), [&](const auto output_expression) {
+    if (unique_constraint.expressions.size() == output_expressions_subset.size() &&
+        std::all_of(
+            output_expressions_subset.cbegin(), output_expressions_subset.cend(), [&](const auto output_expression) {
           return unique_constraint.expressions.contains(output_expression);
         })) {
       // Found match
