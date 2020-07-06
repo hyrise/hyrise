@@ -323,10 +323,9 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   EXPECT_EQ(table_key_constraints.size(), 3);
 
   // After column pruning, only the third table constraint should remain valid (the one based on ColumnID 2)
-  // Basic check
   const auto unique_constraints = _stored_table_node->unique_constraints();
+  // Basic check
   EXPECT_EQ(unique_constraints->size(), 1);
-
   // In-depth check
   const auto& valid_table_key_constraint = table_key_constraint_c;
   check_unique_constraint_mapping(TableKeyConstraints{valid_table_key_constraint}, unique_constraints);
