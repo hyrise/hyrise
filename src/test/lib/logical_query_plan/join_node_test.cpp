@@ -289,48 +289,56 @@ TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
 }
 
 TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
-  // TODO(Julian) Test that...
+  // Test the forwarding logic of all, inner and outer joins based on join column uniqueness.
+  // Any join column that is not unique might lead to row-/value-duplication in the opposite table. Hence, unique
+  // constraints might break and should not be forwarded.
+  // Since our current unique constraints implementation is compatible with NULL values, outer joins are handled like
+  // inner joins.
 
-  // Prepare join nodes
   for (const auto join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     // clang-format off
-    const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
-                                          _mock_node_a,
-                                          _mock_node_b);
+    const auto join_node =
+    JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+      _mock_node_a,
+      _mock_node_b);
     // clang-format on
 
-    // Case 1 - Join columns of both, LEFT and RIGHT tables are not unique
-    _mock_node_a->set_key_constraints({});
-    _mock_node_b->set_key_constraints({});
+    // Case 1 – LEFT  table's join column (a) uniqueness : No
+    //          RIGHT table's join column (y) uniqueness : No
+    _mock_node_a->set_key_constraints({*_key_constraint_b_c});
+    _mock_node_b->set_key_constraints({*_key_constraint_x});
     EXPECT_TRUE(join_node->unique_constraints()->empty());
 
-    // Case 2 - Join column of LEFT table (a) is unique whereas join column of RIGHT table (y) is not
+    // Case 2 – LEFT  table's join column (a) uniqueness : Yes
+    //          RIGHT table's join column (y) uniqueness : No
     _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
     _mock_node_b->set_key_constraints({*_key_constraint_x});
 
-    // Expect unique constraints of RIGHT table (x) to be forwarded
-    auto join_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_constraints->size(), 1);
-    EXPECT_TRUE(*join_constraints == *_mock_node_b->unique_constraints());
+    // Expect unique constraints of RIGHT table to be forwarded
+    auto join_unique_constraints = join_node->unique_constraints();
+    EXPECT_EQ(join_unique_constraints->size(), 1);
+    EXPECT_TRUE(*join_unique_constraints == *_mock_node_b->unique_constraints());
 
-    // Case 3 - Join column of LEFT table (a) is not(!) unique whereas join column of RIGHT table (y) is
+    // Case 3 – LEFT  table's join column (a) uniqueness : No
+    //          RIGHT table's join column (y) uniqueness : Yes
     _mock_node_a->set_key_constraints({*_key_constraint_b_c});
     _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 
     // Expect unique constraints of LEFT table (b_c) to be forwarded
-    join_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_constraints->size(), 1);
-    EXPECT_TRUE(*join_constraints == *_mock_node_a->unique_constraints());
+    join_unique_constraints = join_node->unique_constraints();
+    EXPECT_EQ(join_unique_constraints->size(), 1);
+    EXPECT_TRUE(*join_unique_constraints == *_mock_node_a->unique_constraints());
 
-    // Case 4 - Join column of both, LEFT (a) and RIGHT (y) table are unique
+    // Case 4 – LEFT  table's join column (a) uniqueness : Yes
+    //          RIGHT table's join column (y) uniqueness : Yes
     _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
     _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 
     // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
-    join_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_constraints->size(), 4);
+    join_unique_constraints = join_node->unique_constraints();
+    EXPECT_EQ(join_unique_constraints->size(), 4);
     check_unique_constraint_mapping({*_key_constraint_a, *_key_constraint_b_c, *_key_constraint_x, *_key_constraint_y},
-                                    join_constraints);
+                                    join_unique_constraints);
   }
 }
 
