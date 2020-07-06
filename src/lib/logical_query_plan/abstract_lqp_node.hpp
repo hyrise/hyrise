@@ -136,7 +136,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const;
 
   /**
-   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
+   * @return The ColumnID of the @param expression, or std::nullopt if it cannot be found. Note that because COUNT(*)
    *         has a special treatment (it is represented as an LQPColumnExpression with an INVALID_COLUMN_ID), it might
    *         be evaluable even if find_column_id returns nullopt.
    */
@@ -148,7 +148,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
   /**
-   * @return A shared pointer to the LQPColumnExpression with @param column_id or std::nullopt if it can't be found.
+   * @return A shared pointer to the LQPColumnExpression with @param column_id or std::nullopt if it cannot be found.
    */
   std::optional<const std::shared_ptr<LQPColumnExpression>> find_output_expression(const ColumnID column_id) const;
 
@@ -164,7 +164,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   [[nodiscard]] virtual const std::shared_ptr<LQPUniqueConstraints> unique_constraints() const;
 
   /**
-   * @return True if a unique constraint exists for the given subset of output expressions. False otherwise.
+   * @return True, if a unique constraint exists for the given subset of output expressions. False otherwise.
    */
   [[nodiscard]] bool has_unique_constraint(const ExpressionUnorderedSet& output_expressions_subset) const;
 
@@ -215,7 +215,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * Returns all unique constraints from the left input node.
+   * @return Returns all unique constraints from the left input node.
    */
   const std::shared_ptr<LQPUniqueConstraints> _forward_unique_constraints() const;
 

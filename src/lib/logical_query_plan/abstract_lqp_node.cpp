@@ -416,16 +416,17 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
 }
 
 const std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_unique_constraints() const {
-  Assert(left_input(), "Not possible to forward constraints from empty node.");
+  Assert(left_input(), "Cannot forward unique constraints from an empty input node.");
   const auto input_unique_constraints = left_input()->unique_constraints();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
-    const auto& output_expressions = this->output_expressions();
-    ExpressionUnorderedSet set{output_expressions.cbegin(), output_expressions.cend()};
+    const auto& expressions = this->output_expressions();
+    ExpressionUnorderedSet output_expressions{expressions.cbegin(), expressions.cend()};
     for (const auto& unique_constraint : *input_unique_constraints) {
-      for (const auto& expr : unique_constraint.expressions) {
-        Assert(set.contains(expr), "Forwarding of constraints is illegal because node misses output expressions.");
+      for (const auto& expression : unique_constraint.expressions) {
+        Assert(output_expressions.contains(expression), "Forwarding of constraints is illegal because node misses "
+               "output expressions.");
       }
     }
   }

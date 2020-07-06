@@ -95,7 +95,7 @@ TEST_F(MockNodeTest, UniqueConstraints) {
   // In-depth verification
   check_unique_constraint_mapping(table_key_constraints, unique_constraints_mock_node_a);
 
-  // Check whether MockNode is referenced by the column expressions
+  // Check whether MockNode is referenced by the constraint's expressions
   for (const auto& unique_constraint : *unique_constraints_mock_node_a) {
     for (const auto& expression : unique_constraint.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);

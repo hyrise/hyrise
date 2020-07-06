@@ -54,14 +54,18 @@ TEST_F(StaticTableNodeTest, UniqueConstraintsEmpty) {
 }
 
 TEST_F(StaticTableNodeTest, UniqueConstraints) {
-  // Add two constraints
-  const auto constraint1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  const auto constraint2 = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
-  dummy_table->add_soft_key_constraint(constraint1);
-  dummy_table->add_soft_key_constraint(constraint2);
-  // Verify
-  check_unique_constraint_mapping(TableKeyConstraints{constraint1, constraint2},
-                                  static_table_node->unique_constraints());
+  // Prepare two unique constraints
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  dummy_table->add_soft_key_constraint(key_constraint_a);
+  dummy_table->add_soft_key_constraint(key_constraint_a_b);
+
+  // Basic check
+  const auto& unique_constraints = static_table_node->unique_constraints();
+  EXPECT_EQ(unique_constraints->size(), 2);
+  // In-depth check
+  check_unique_constraint_mapping(TableKeyConstraints{key_constraint_a, key_constraint_a_b},
+                                  unique_constraints);
 }
 
 }  // namespace opossum
